@@ -1,0 +1,505 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <title>Cotizador SianEffects</title>
+
+    <style>
+        :root {
+            --sian-pink: #ff6b81;
+            --sian-pink-light: #fff0f3;
+            --sian-teal: #2ec4b6;
+            --sian-teal-dark: #1f8c82;
+            --bg-cream: #fffdf9;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg-cream);
+            color: #555;
+        }
+
+        /* Navbar */
+        .navbar-sian {
+            background-color: #ffffff;
+            border-bottom: 3px solid var(--sian-pink-light);
+            padding: 1rem;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: #333 !important;
+        }
+
+        /* Tarjetas */
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+        }
+
+        .card-header-sian {
+            background-color: #ffffff;
+            border-bottom: 2px solid var(--sian-pink-light);
+            padding: 15px;
+        }
+
+        /* Inputs y Botones */
+        .form-control,
+        .form-select {
+            border-radius: 10px;
+            border: 2px solid #eee;
+            font-weight: 600;
+        }
+
+        .form-control:focus,
+        .form-select:focus {
+            border-color: var(--sian-pink);
+        }
+
+        .btn-primary {
+            background-color: var(--sian-pink);
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+            padding: 12px;
+        }
+
+        .btn-primary:hover {
+            background-color: #ff4765;
+            transform: translateY(-2px);
+        }
+
+        .btn-add-cart {
+            background-color: var(--sian-teal);
+            color: white;
+            font-weight: 800;
+            border: none;
+            border-radius: 12px;
+            padding: 10px 20px;
+        }
+
+        .btn-add-cart:hover {
+            background-color: var(--sian-teal-dark);
+            color: white;
+        }
+
+        /* Utiles */
+        .text-price-main {
+            color: var(--sian-teal);
+            font-weight: 900;
+        }
+
+        .total-ticket {
+            font-size: 2rem;
+            font-weight: 900;
+            color: var(--sian-pink);
+        }
+
+        .check-maquinaria-label {
+            cursor: pointer;
+            user-select: none;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #555;
+        }
+
+        .check-maquinaria-input:checked+span {
+            color: var(--sian-teal-dark);
+            font-weight: 800;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-sian mb-4">
+        <div class="container">
+            <span class="navbar-brand">
+                <span style="color: var(--sian-pink);">🎨 {{ config['nombre_empresa'] }}</span>
+            </span>
+            <div class="d-flex gap-2 align-items-center">
+
+                {% if session.get('role', 0) > 0 %}
+                <a href="{{ url_for('admin.dashboard') }}"
+                    class="btn btn-warning btn-sm rounded-pill px-3 fw-bold border-0 text-dark shadow-sm">
+                    👑 Panel Master
+                </a>
+                <div class="vr mx-1"></div>
+                {% endif %}
+                <a href="{{ url_for('main.historial') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">📜
+                    Historial</a>
+                <a href="{{ url_for('inventory.recetas') }}"
+                    class="btn btn-outline-secondary btn-sm rounded-pill px-3">📒 Recetas</a>
+                <a href="{{ url_for('inventory.equipos') }}" class="btn btn-outline-info btn-sm rounded-pill px-3">🔌
+                    Equipos</a>
+                <a href="{{ url_for('inventory.materiales') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">📦
+                    Inventario</a>
+                <a href="{{ url_for('main.configuracion') }}" class="btn btn-light btn-sm rounded-pill px-3">⚙️
+                    Config</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        <input type="hidden" id="datoMargen" value="{{ config['margen_ganancia'] }}">
+
+        <select id="masterSelect" class="d-none">
+            <option value="0" data-precio="0">-- Seleccionar --</option>
+            {% for mat in materiales %}
+            <option value="{{ mat['id'] }}" data-precio="{{ mat['precio_unitario'] }}">{{ mat['nombre'] }}</option>
+            {% endfor %}
+        </select>
+
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <div class="card h-100">
+                    <div class="card-header-sian">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h5 class="m-0 fw-bold text-uppercase" style="color: var(--sian-pink)">1. Receta del
+                                Producto</h5>
+                            <button class="btn btn-sm btn-outline-danger"
+                                onclick="limpiarCalculadora()">Limpiar</button>
+                        </div>
+                        <div class="mt-2 d-flex gap-2">
+                            <select class="form-select form-select-sm" id="selectCargarProducto"
+                                onchange="cargarProductoDB()">
+                                <option value="">📂 Cargar Receta Guardada...</option>
+                                {% for prod in productos %}
+                                <option value="{{ prod['id'] }}">{{ prod['nombre'] }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-sm btn-success rounded-pill px-3" onclick="agregarFila()"
+                                style="white-space: nowrap;">
+                                <i class="fas fa-plus-circle me-1"></i> + Material
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-3">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 40%">Material</th>
+                                        <th style="width: 20%">$ Unit.</th>
+                                        <th style="width: 20%">Cant.</th>
+                                        <th style="width: 15%">Subtotal</th>
+                                        <th style="width: 5%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaCuerpo"></tbody>
+                            </table>
+                        </div>
+
+                        <div class="p-3 bg-light rounded-3 mt-3 border">
+                            <label class="fw-bold small text-muted d-block mb-2">2. Maquinaria y Procesos</label>
+                            <div class="row g-2">
+                                {% for eq in equipos %}
+                                <div class="col-6 col-md-4">
+                                    <label
+                                        class="check-maquinaria-label d-flex align-items-center gap-2 border bg-white p-2 rounded">
+                                        <input type="checkbox" class="form-check-input check-maquinaria-input m-0"
+                                            value="{{ eq['costo_desgaste'] }}" data-id="{{ eq['id'] }}"
+                                            onchange="calcularTotal()">
+                                        <span>{{ eq['nombre'] }} <small class="text-success">(+${{ eq['costo_desgaste']
+                                                }})</small></span>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="p-3 bg-light rounded-3 mt-3 d-flex align-items-center justify-content-between">
+                            <label class="fw-bold small text-muted m-0">Extras (Mano de Obra)</label>
+                            <div class="input-group w-50">
+                                <span class="input-group-text border-0">$</span>
+                                <input type="number" class="form-control border-0" id="costosExtra" value="0"
+                                    oninput="calcularTotal()">
+                            </div>
+                        </div>
+
+                        <div class="mt-3">
+                            <label class="small fw-bold text-muted">Nombre del Producto Final</label>
+                            <input type="text" id="nombreProductoActual" class="form-control fw-bold"
+                                placeholder="Ej. Termo Mágico">
+                        </div>
+
+                        <div class="row mt-3 align-items-end">
+                            <div class="col-4"><small class="text-muted fw-bold">Costo Unit.</small>
+                                <div id="resultadoCosto" class="text-secondary fw-bold">$0.00</div>
+                            </div>
+                            <div class="col-4"><small class="text-muted fw-bold">Precio Unit.</small>
+                                <div id="resultadoPrecio" class="text-price-main fw-bold">$0.00</div>
+                            </div>
+                            <div class="col-4"><label class="small fw-bold text-sian-teal">Cantidad</label><input
+                                    type="number" id="cantidadParaCarrito"
+                                    class="form-control text-center border-success fw-bold" value="1"></div>
+                        </div>
+
+                        <div class="d-grid mt-3">
+                            <button class="btn btn-add-cart shadow-sm" onclick="agregarAlCarrito()">
+                                <i class="fas fa-cart-plus me-2"></i> AGREGAR AL CARRITO
+                            </button>
+                        </div>
+
+                        <div class="text-end mt-2"><a href="#" class="small text-muted text-decoration-none"
+                                onclick="mostrarGuardar()">Guardar esta receta</a></div>
+                        <div class="mt-2 p-3 border rounded d-none" id="boxGuardar" style="background: #fff;">
+                            <div class="input-group mb-2">
+                                <input type="text" id="nombreNuevoProducto" class="form-control"
+                                    placeholder="Nombre para guardar">
+                                <button class="btn btn-primary" onclick="guardarProductoDB()">Guardar</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-5">
+                <div class="card h-100 border-0 shadow-sm">
+                    <div class="card-header bg-dark text-white rounded-top">
+                        <h5 class="m-0"><i class="fas fa-shopping-cart me-2"></i> Carrito</h5>
+                    </div>
+                    <div class="card-body p-0 d-flex flex-column">
+                        <div class="table-responsive flex-grow-1" style="max-height: 350px; overflow-y: auto;">
+                            <table class="table table-striped mb-0">
+                                <thead class="bg-light sticky-top">
+                                    <tr>
+                                        <th>Concepto</th>
+                                        <th class="text-center">Cant.</th>
+                                        <th class="text-end">Total</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tablaCarrito"></tbody>
+                            </table>
+                            <div id="carritoVacio" class="text-center py-5 text-muted"><i
+                                    class="fas fa-basket-shopping fa-3x mb-3 opacity-25"></i>
+                                <p>Carrito vacío</p>
+                            </div>
+                        </div>
+
+                        <div class="p-4 bg-light border-top">
+                            <div class="mb-3 bg-white p-2 rounded border">
+                                <label class="fw-bold small text-muted d-block mb-1">Descuento (%)</label>
+                                <div class="d-flex align-items-center gap-2">
+                                    <input type="range" class="form-range flex-grow-1" min="0" max="100" step="5"
+                                        id="sliderDescuento" value="0" oninput="actualizarDescuento(this.value)">
+                                    <div class="input-group" style="width: 110px;">
+                                        <input type="number" id="inputDescuento"
+                                            class="form-control text-center fw-bold p-1" value="0" min="0" max="100"
+                                            oninput="actualizarDescuento(this.value)">
+                                        <span class="input-group-text p-1">%</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center mb-1"><span
+                                    class="small text-muted">Subtotal:</span><span id="labelSubtotal"
+                                    class="fw-bold">$0.00</span></div>
+                            <div class="d-flex justify-content-between align-items-center mb-3 text-success"><span
+                                    class="small fw-bold">Descuento:</span><span id="labelDescuento">- $0.00</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-3 pt-2 border-top"><span
+                                    class="h5 text-muted mb-0">Total:</span><span id="totalTicket"
+                                    class="total-ticket">$0.00</span></div>
+
+                            <div class="mb-3"><input type="text" id="nombreCliente" class="form-control"
+                                    placeholder="Nombre del Cliente"></div>
+
+                            <div class="row g-2">
+                                <div class="col-6">
+                                    <button class="btn btn-outline-dark w-100 py-2 fw-bold"
+                                        onclick="finalizarCompra('cotizacion')">
+                                        <i class="fas fa-file-invoice me-1"></i> Cotizar
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <button class="btn btn-primary w-100 py-2 fw-bold" data-bs-toggle="modal"
+                                        data-bs-target="#modalCobro">
+                                        <i class="fas fa-dollar-sign me-1"></i> Cobrar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="modalCobro" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content border-0 rounded-4">
+                <div class="modal-header bg-primary text-white">
+                    <h6 class="modal-title fw-bold">Registrar Pago</h6>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3 text-center">
+                        <label class="small text-muted">Total a Pagar</label>
+                        <h4 class="fw-bold text-dark" id="modalTotalPago">$0.00</h4>
+                    </div>
+                    <div class="mb-3">
+                        <label class="small fw-bold">¿Cuánto paga hoy?</label>
+                        <input type="number" id="inputPagoInicial" class="form-control text-center fw-bold fs-5"
+                            placeholder="0.00">
+                    </div>
+                    <div class="d-grid gap-2">
+                        <button class="btn btn-success fw-bold" onclick="finalizarCompra('venta_completa')">Paga Todo
+                            (100%)</button>
+                        <button class="btn btn-warning fw-bold text-dark" onclick="finalizarCompra('anticipo')">Solo
+                            Anticipo</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. VARIABLES GLOBALES DE COSTOS ---
+        let precioVentaCalculado = 0;
+        let costoProduccionCalculado = 0; // Para calcular ganancias reales
+        let carrito = [];
+
+        function obtenerOpciones() { return document.getElementById('masterSelect').innerHTML }
+
+        // --- 2. FILAS DE MATERIALES ---
+        function agregarFila(idMat = 0, cantidad = 1) {
+            const tbody = document.getElementById('tablaCuerpo'), row = document.createElement('tr');
+            row.innerHTML = `<td><select class="form-select form-select-sm" onchange="actualizarFila(this)">${obtenerOpciones()}</select></td><td><input class="form-control form-control-sm input-precio" readonly></td><td><input type="number" class="form-control form-control-sm input-cantidad" value="${cantidad}" oninput="calcularFila(this)"></td><td class="fw-bold text-end subtotal">$0.00</td><td class="text-center"><i class="fas fa-times btn-remove" onclick="borrarFila(this)"></i></td>`;
+            tbody.appendChild(row);
+            if (idMat > 0) { const s = row.querySelector('select'); s.value = idMat; actualizarFila(s); row.querySelector('.input-cantidad').value = cantidad; calcularFila(s); }
+        }
+        function actualizarFila(sel) { const r = sel.closest('tr'), p = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-precio')) || 0; r.querySelector('.input-precio').value = p.toFixed(2); calcularFila(sel); }
+        function calcularFila(el) { const r = el.closest('tr'), p = parseFloat(r.querySelector('.input-precio').value) || 0, c = parseFloat(r.querySelector('.input-cantidad').value) || 0; r.querySelector('.subtotal').innerText = '$' + (p * c).toFixed(2); calcularTotal(); }
+        function borrarFila(btn) { btn.closest('tr').remove(); calcularTotal(); }
+
+        // --- 3. CÁLCULO DE TOTALES (CON COSTO DE PRODUCCIÓN) ---
+        function calcularTotal() {
+            let totalMat = 0; document.querySelectorAll('#tablaCuerpo tr').forEach(r => { totalMat += parseFloat(r.querySelector('.subtotal').innerText.replace('$', '')) || 0 });
+            let totalMaq = 0; document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => { totalMaq += parseFloat(c.value) || 0 });
+            const extra = parseFloat(document.getElementById('costosExtra').value) || 0;
+            const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
+
+            // COSTO REAL (Materiales + Máquinas + Extra)
+            costoProduccionCalculado = totalMat + totalMaq + extra;
+
+            // PRECIO VENTA (Costo + Margen)
+            precioVentaCalculado = costoProduccionCalculado * (1 + (margen / 100));
+
+            document.getElementById('resultadoCosto').innerText = '$' + costoProduccionCalculado.toFixed(2);
+            document.getElementById('resultadoPrecio').innerText = '$' + precioVentaCalculado.toFixed(2);
+        }
+
+        function limpiarCalculadora() {
+            document.getElementById('tablaCuerpo').innerHTML = ''; document.getElementById('nombreProductoActual').value = '';
+            document.getElementById('cantidadParaCarrito').value = 1; document.getElementById('costosExtra').value = 0;
+            document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
+            calcularTotal(); agregarFila();
+        }
+
+        // --- 4. CARRITO (ENVIANDO COSTO UNITARIO) ---
+        function agregarAlCarrito() {
+            if (precioVentaCalculado <= 0) return alert("Calcula primero.");
+            const nom = document.getElementById('nombreProductoActual').value || "Producto";
+            const cant = parseFloat(document.getElementById('cantidadParaCarrito').value) || 1;
+
+            carrito.push({
+                concepto: nom,
+                precio_unitario: precioVentaCalculado,
+                costo_unitario: costoProduccionCalculado, // <--- DATO CLAVE PARA GANANCIAS
+                cantidad: cant,
+                subtotal: precioVentaCalculado * cant
+            });
+            renderizarCarrito();
+        }
+
+        function renderizarCarrito() {
+            const tb = document.getElementById('tablaCarrito'), vac = document.getElementById('carritoVacio'); tb.innerHTML = '';
+            if (carrito.length === 0) { vac.classList.remove('d-none'); actualizarTotales(0); }
+            else { vac.classList.add('d-none'); let s = 0; carrito.forEach((i, x) => { s += i.subtotal; tb.innerHTML += `<tr><td><small>${i.concepto}</small></td><td class="text-center">${i.cantidad}</td><td class="text-end">$${i.subtotal.toFixed(2)}</td><td><i class="fas fa-trash text-danger" onclick="eliminarDelCarrito(${x})" style="cursor:pointer"></i></td></tr>`; }); actualizarTotales(s); }
+        }
+
+        function actualizarTotales(sub) {
+            const d = parseInt(document.getElementById('inputDescuento').value) || 0, mont = sub * (d / 100);
+            document.getElementById('labelSubtotal').innerText = '$' + sub.toFixed(2);
+            document.getElementById('labelDescuento').innerText = '-$' + mont.toFixed(2);
+            document.getElementById('totalTicket').innerText = '$' + (sub - mont).toFixed(2);
+        }
+        function actualizarDescuento(v) { document.getElementById('sliderDescuento').value = v; document.getElementById('inputDescuento').value = v; let s = 0; carrito.forEach(i => s += i.subtotal); actualizarTotales(s); }
+        function eliminarDelCarrito(x) { carrito.splice(x, 1); renderizarCarrito(); }
+
+        // --- 5. CHECKOUT / COBRO ---
+        function finalizarCompra(tipo) {
+            if (carrito.length === 0) return alert("Carrito vacío");
+            const cli = document.getElementById('nombreCliente').value || "Cliente General";
+            let sub = 0; carrito.forEach(i => sub += i.subtotal);
+            const desc = parseInt(document.getElementById('inputDescuento').value) || 0;
+            const total = sub - (sub * (desc / 100));
+
+            let estado = 'pagado';
+            let pago_inicial = total;
+
+            if (tipo === 'cotizacion') {
+                estado = 'cotizacion';
+                pago_inicial = 0;
+            } else if (tipo === 'anticipo') {
+                estado = 'anticipo';
+                pago_inicial = parseFloat(document.getElementById('inputPagoInicial').value) || 0;
+                if (pago_inicial >= total) estado = 'pagado';
+            }
+
+            fetch('/api/checkout', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    cliente: cli, carrito: carrito, subtotal: sub,
+                    descuento_porcentaje: desc, estado: estado, pago_inicial: pago_inicial
+                })
+            }).then(res => res.json()).then(data => {
+                if (data.success) {
+                    window.open('/ticket/' + data.ticket_id, '_blank');
+                    location.reload();
+                } else { alert("Error: " + data.message); }
+            });
+        }
+
+        // --- 6. GUARDAR/CARGAR RECETAS ---
+        function mostrarGuardar() { document.getElementById('boxGuardar').classList.remove('d-none'); }
+        function guardarProductoDB() {
+            const nom = document.getElementById('nombreNuevoProducto').value.trim(); if (!nom) return alert("Pon nombre.");
+            const items = [], maqs = [];
+            document.querySelectorAll('#tablaCuerpo tr').forEach(r => { const s = r.querySelector('select'); if (s.value > 0) items.push({ id: s.value, cantidad: r.querySelector('.input-cantidad').value }) });
+            document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => maqs.push(c.dataset.id));
+            if (items.length === 0) return alert("Faltan materiales.");
+            fetch('/api/guardar_producto', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: nom, items: items, maquinaria: maqs }) }).then(r => r.json()).then(d => { if (d.success) { alert("Guardado"); location.reload(); } else alert(d.message) });
+        }
+        function cargarProductoDB() {
+            const id = document.getElementById('selectCargarProducto').value; if (!id) return;
+            fetch('/api/cargar_producto/' + id).then(r => r.json()).then(d => {
+                limpiarCalculadora(); document.getElementById('tablaCuerpo').innerHTML = '';
+                d.materiales.forEach(i => agregarFila(i.id, i.cantidad));
+                d.maquinaria.forEach(m => { const c = document.querySelector(`.check-maquinaria-input[data-id="${m}"]`); if (c) c.checked = true });
+                setTimeout(calcularTotal, 100);
+            });
+        }
+
+        // Eventos Iniciales
+        document.getElementById('modalCobro').addEventListener('show.bs.modal', () => {
+            document.getElementById('modalTotalPago').innerText = document.getElementById('totalTicket').innerText;
+            document.getElementById('inputPagoInicial').value = '';
+        });
+        document.addEventListener('DOMContentLoaded', () => agregarFila());
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

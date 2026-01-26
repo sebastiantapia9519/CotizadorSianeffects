@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Iniciar Sesión - SianEffects</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #ffeef0;
+            font-family: 'Nunito', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        .card-login {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(255, 107, 129, 0.2);
+            width: 100%;
+            max-width: 400px;
+            overflow: hidden;
+        }
+
+        .card-header {
+            background-color: white;
+            border-bottom: none;
+            padding-top: 40px;
+            text-align: center;
+        }
+
+        .brand {
+            color: #ff6b81;
+            font-weight: 900;
+            font-size: 2rem;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary {
+            background-color: #ff6b81;
+            border: none;
+            border-radius: 50px;
+            padding: 12px;
+            font-weight: 800;
+        }
+
+        .btn-primary:hover {
+            background-color: #ff4765;
+        }
+
+        .form-control {
+            border-radius: 10px;
+            padding: 12px;
+            border: 2px solid #eee;
+        }
+
+        .form-control:focus {
+            border-color: #ff6b81;
+            box-shadow: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card card-login">
+        <div class="card-header">
+            <h1 class="brand">SianEffects</h1>
+            <p class="text-muted">Gestión Creativa & Costos</p>
+        </div>
+        <div class="card-body p-4">
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, message in messages %}<div
+                class="alert alert-{{ category }} text-center small">{{ message }}</div>{% endfor %}{% endif %}
+            {% endwith %}
+
+            <form method="post">
+                <div class="mb-3">
+                    <input type="text" name="username" class="form-control" placeholder="Usuario" required autofocus>
+                </div>
+                <div class="mb-4">
+                    <input type="password" name="password" class="form-control" placeholder="Contraseña" required>
+                </div>
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-primary">ENTRAR</button>
+                    <a href="{{ url_for('auth.registro') }}"
+                        class="btn btn-light text-muted btn-sm mt-2 rounded-pill">¿No
+                        tienes cuenta? Regístrate</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</body>
+
+</html>

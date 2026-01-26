@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <title>Inventario Sianeffects</title>
+
+    <style>
+        :root {
+            --sian-pink: #ff6b81;
+            --sian-pink-hover: #ff4765;
+            --sian-pink-light: #fff0f3;
+            --sian-teal: #2ec4b6;
+            --sian-teal-dark: #1f8c82;
+            --bg-cream: #fffdf9;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg-cream);
+            color: #555;
+        }
+
+        .navbar-sian {
+            background-color: #ffffff;
+            border-bottom: 3px solid var(--sian-teal);
+            padding: 1rem;
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: #333 !important;
+        }
+
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+        }
+
+        .card-header-sian {
+            background-color: #ffffff;
+            border-bottom: 2px solid var(--sian-pink-light);
+            padding: 15px 20px;
+        }
+
+        .form-control,
+        .form-select {
+            border-radius: 12px;
+            border: 2px solid #eee;
+            padding: 10px;
+        }
+
+        .form-control:focus {
+            border-color: var(--sian-teal);
+        }
+
+        .btn-success {
+            background-color: var(--sian-teal);
+            border: none;
+            border-radius: 12px;
+            font-weight: 800;
+        }
+
+        .btn-success:hover {
+            background-color: var(--sian-teal-dark);
+        }
+
+        .btn-action {
+            border-radius: 8px;
+            width: 35px;
+            height: 35px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.2s;
+        }
+
+        .btn-edit {
+            background-color: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .btn-delete {
+            background-color: #ffebee;
+            color: #c62828;
+        }
+
+        .btn-edit:hover,
+        .btn-delete:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-sian mb-5">
+        <div class="container">
+            <span class="navbar-brand">
+                <span style="color: var(--sian-pink);">📦 Sianeffects</span> <span
+                    style="color: var(--sian-teal);">Inventario</span>
+            </span>
+            <a href="{{ url_for('main.cotizador') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">🧮 Ir al
+                Cotizador</a>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm rounded-4 border-0 mb-4">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <div class="row g-4">
+            <div class="col-md-4">
+                <div class="card h-100">
+                    <div class="card-header-sian">
+                        <h5>
+                            {% if edicion %} ✏️ Editar Material {% else %} ➕ Agregar Material {% endif %}
+                        </h5>
+                    </div>
+                    <div class="card-body p-4">
+                        <form method="post" action="{{ url_for('inventory.materiales') }}">
+                            {% if edicion %}
+                            <input type="hidden" name="id_actualizar" value="{{ edicion['id'] }}">
+                            {% endif %}
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Nombre del Material</label>
+                                <input type="text" name="nombre" class="form-control"
+                                    value="{{ edicion['nombre'] if edicion else '' }}" placeholder="Ej. Termo" required>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">¿Cómo lo compras?</label>
+                                <select name="tipo_entrada" id="tipoEntrada" class="form-select"
+                                    onchange="togglePaquete()">
+                                    <option value="unitario" {% if edicion and not edicion['es_paquete'] %}selected{%
+                                        endif %}>Unidad (Pieza única)</option>
+                                    <option value="paquete" {% if edicion and edicion['es_paquete'] %}selected{% endif
+                                        %}>Paquete (Mayoreo)</option>
+                                </select>
+                            </div>
+
+                            <div class="mb-3">
+                                <label class="form-label fw-bold small">Costo de Compra ($)</label>
+                                <input type="number" step="any" name="precio_compra" class="form-control"
+                                    value="{{ edicion['precio_compra'] if edicion else '' }}" required>
+                                <div class="form-text small text-muted">Precio que pagaste.</div>
+                            </div>
+
+                            <div class="mb-3 {% if not edicion or not edicion['es_paquete'] %}d-none{% endif %}"
+                                id="divCantidad">
+                                <label class="form-label fw-bold small">Cantidad en Paquete</label>
+                                <input type="number" name="cantidad_paquete" class="form-control"
+                                    value="{{ edicion['cantidad_paquete'] if edicion else '' }}">
+                                <div class="form-text small text-sian-teal">Si es listón, puedes poner los metros.</div>
+                            </div>
+
+                            <div class="d-grid gap-2 pt-3">
+                                <button type="submit" class="btn btn-success shadow-sm">
+                                    {% if edicion %} Actualizar {% else %} Guardar Material {% endif %}
+                                </button>
+                                {% if edicion %}
+                                <a href="{{ url_for('inventory.materiales') }}"
+                                    class="btn btn-light btn-sm">Cancelar</a>
+                                {% endif %}
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card h-100">
+                    <div class="card-header-sian">
+                        <h5 style="color: var(--sian-pink);">📋 Lista de Materiales</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-striped align-middle mb-0">
+                                <thead class="bg-light">
+                                    <tr>
+                                        <th class="ps-4">Material</th>
+                                        <th>Tipo</th>
+                                        <th>Costo Unit.</th>
+                                        <th class="text-end pe-4">Acciones</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for mat in materiales %}
+                                    <tr>
+                                        <td class="ps-4 fw-bold">{{ mat['nombre'] }}</td>
+                                        <td>
+                                            {% if mat['es_paquete'] %}
+                                            <span class="badge bg-info text-dark">Paquete ({{
+                                                mat['cantidad_paquete']|int }})</span>
+                                            {% else %}
+                                            <span class="badge bg-secondary">Unidad</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-success fw-bold">${{ "%.2f"|format(mat['precio_unitario']) }}
+                                        </td>
+                                        <td class="text-end pe-4">
+                                            <a href="{{ url_for('inventory.materiales', editar=mat['id']) }}"
+                                                class="btn btn-action btn-edit" title="Editar">
+                                                <i class="fas fa-pencil-alt"></i>
+                                            </a>
+                                            <a href="{{ url_for('inventory.eliminar_material', id=mat['id']) }}"
+                                                class="btn btn-action btn-delete"
+                                                onclick="return confirm('¿Seguro que deseas eliminar este material?');"
+                                                title="Eliminar">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr>
+                                        <td colspan="4" class="text-center py-4 text-muted">Sin materiales aún.</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function togglePaquete() {
+            let tipo = document.getElementById('tipoEntrada').value;
+            let divCant = document.getElementById('divCantidad');
+            if (tipo === 'paquete') divCant.classList.remove('d-none');
+            else divCant.classList.add('d-none');
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
