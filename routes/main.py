@@ -34,15 +34,34 @@ def historial():
     conn.close()
     return render_template('historial.html', ventas=ventas)
 
+# --- EN routes/main.py ---
+
+# NOTA: Quitamos el @login_required para que el cliente pueda ver el link
 @main_bp.route('/ticket/<int:id>')
-@login_required
 def ver_ticket(id):
-    conn = get_db_connection()
-    venta = conn.execute('SELECT * FROM ventas WHERE id=? AND user_id=?', (id, session['user_id'])).fetchone()
-    detalles = conn.execute('SELECT * FROM venta_detalles WHERE venta_id=?', (id,)).fetchall()
-    config = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (session['user_id'],)).fetchone()
+    conn = get_db()
+    
+    # 1. Buscamos la venta SOLO por el ID del ticket (sin pedir usuario en sesión)
+    venta = conn.execute('SELECT * FROM ventas WHERE id = ?', (id,)).fetchone()
+    
+    if venta is None:
+        conn.close()
+        return "Ticket no encontrado o enlace inválido", 404
+
+    # 2. Buscamos los productos de esa venta
+    detalles = conn.execute('SELECT * FROM venta_detalles WHERE venta_id = ?', (id,)).fetchall()
+
+    # 3. TRUCO: Buscamos la configuración de LA PERSONA QUE VENDIÓ (Tú)
+    # Usamos venta['usuario_id'] porque el cliente que mira el link no tiene sesión iniciada.
+    config = conn.execute('SELECT * FROM configuracion WHERE usuario_id = ?', (venta['usuario_id'],)).fetchone()
+
+    # Si por alguna razón no hay config, ponemos datos genéricos para que no falle
+    if config is None:
+        config = {'nombre_empresa': 'Mi Negocio', 'slogan': 'Gracias por su compra', 'website': ''}
+
     conn.close()
-    if not venta: return "No encontrado"
+    
+    # Mostramos el ticket
     return render_template('ticket.html', venta=venta, detalles=detalles, config=config)
 
 @main_bp.route('/configuracion', methods=('GET', 'POST'))
