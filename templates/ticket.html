@@ -8,6 +8,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
     <style>
         body {
             font-family: 'Nunito', sans-serif;
@@ -18,6 +20,8 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
+            padding-bottom: 100px;
+            /* Espacio para que el botón no tape el final */
         }
 
         .ticket {
@@ -28,8 +32,6 @@
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             position: relative;
-            margin-bottom: 80px;
-            /* Espacio extra para que no tapen los botones */
         }
 
         .brand {
@@ -102,56 +104,44 @@
             color: #888;
         }
 
-        /* --- BOTONES FLOTANTES SIMPLIFICADOS --- */
+        /* --- BOTONES FLOTANTES --- */
         .no-print {
             position: fixed;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
-            background: white;
-            padding: 10px 20px;
-            border-radius: 50px;
             display: flex;
             gap: 15px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
             z-index: 100;
-            border: 1px solid #eee;
         }
 
-        .btn {
+        .btn-accion {
             border: none;
             color: white;
-            padding: 12px 20px;
-            text-decoration: none;
+            padding: 15px 25px;
             border-radius: 50px;
-            font-size: 0.9rem;
+            font-size: 1rem;
             font-weight: 800;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 8px;
-            transition: transform 0.2s;
+            gap: 10px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s;
         }
 
-        .btn:active {
+        .btn-accion:active {
             transform: scale(0.95);
         }
 
-        /* Colores Específicos */
-        .btn-whatsapp {
-            background: #25D366;
-        }
-
-        .btn-whatsapp:hover {
-            background: #1ebc57;
+        .btn-share {
+            background: linear-gradient(45deg, #ff6b81, #ff4757);
         }
 
         .btn-print {
             background: #333;
-        }
-
-        .btn-print:hover {
-            background: #000;
+            padding: 15px;
+            border-radius: 50%;
         }
 
         @media print {
@@ -175,7 +165,7 @@
 
 <body>
 
-    <div class="ticket">
+    <div class="ticket" id="ticketVisual">
         <div class="brand">
             <h2>{{ config['nombre_empresa'] }}</h2>
             <p>{{ config['slogan'] }}</p>
@@ -223,32 +213,70 @@
         </div>
 
         <div class="footer">
-            <p>¡Gracias por tu preferencia!</p>
+            <p>¡Gracias por tu compra!</p>
             {% if config['website'] %}<p style="color:#2ec4b6; font-weight:bold;">{{ config['website'] }}</p>{% endif %}
         </div>
     </div>
 
     <div class="no-print">
-        <button onclick="enviarWhatsapp()" class="btn btn-whatsapp">
-            <i class="fab fa-whatsapp fa-lg"></i> Enviar Link
+        <button onclick="compartirNativo()" class="btn-accion btn-share" id="btnShare">
+            <i class="fas fa-share-alt"></i> Compartir
         </button>
 
-        <button onclick="window.print()" class="btn btn-print">
+        <button onclick="window.print()" class="btn-accion btn-print">
             <i class="fas fa-print"></i>
         </button>
     </div>
 
     <script>
-        function enviarWhatsapp() {
-            // 1. Obtenemos la dirección web de ESTE ticket
-            const urlTicket = window.location.href;
+        function compartirNativo() {
+            const btn = document.getElementById("btnShare");
+            const originalText = btn.innerHTML;
 
-            // 2. Preparamos el mensaje
-            const mensaje = "Hola! 👋 Aquí tienes tu ticket digital de *{{ config['nombre_empresa'] }}*: " + urlTicket;
+            // 1. Feedback visual
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
 
-            // 3. Abrimos WhatsApp
-            const urlWhatsapp = "https://wa.me/?text=" + encodeURIComponent(mensaje);
-            window.open(urlWhatsapp, '_blank');
+            const ticketElement = document.getElementById("ticketVisual");
+
+            // 2. Generar la imagen
+            html2canvas(ticketElement, {
+                scale: 2, // Calidad x2
+                backgroundColor: "#ffffff",
+                useCORS: true
+            }).then(canvas => {
+                // 3. Convertir a Blob (archivo en memoria)
+                canvas.toBlob(async blob => {
+                    // Creamos un archivo "virtual"
+                    const file = new File([blob], "ticket_sianeffects.png", { type: "image/png" });
+
+                    // 4. VERIFICAR SI EL NAVEGADOR SOPORTA COMPARTIR ARCHIVOS
+                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                        try {
+                            // 5. ABRIR EL MENÚ NATIVO (WhatsApp, Guardar, etc.)
+                            await navigator.share({
+                                files: [file],
+                                title: 'Ticket de Compra',
+                                text: 'Aquí tienes tu ticket de compra 📄'
+                            });
+                            // Si se compartió con éxito
+                            btn.innerHTML = originalText;
+                        } catch (error) {
+                            console.log('Error compartiendo:', error);
+                            // Si el usuario cancela, solo restauramos el botón
+                            btn.innerHTML = originalText;
+                        }
+                    } else {
+                        // 6. FALLBACK PARA PC (Donde no existe ese menú)
+                        // Si no soporta compartir nativo, lo descargamos.
+                        const link = document.createElement('a');
+                        link.download = 'ticket_{{ venta["id"] }}.png';
+                        link.href = canvas.toDataURL();
+                        link.click();
+                        alert("Tu navegador no soporta el menú de compartir nativo.\nSe ha descargado la imagen.");
+                        btn.innerHTML = originalText;
+                    }
+                }, 'image/png');
+            });
         }
     </script>
 </body>

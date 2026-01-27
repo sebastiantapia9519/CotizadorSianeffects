@@ -7,12 +7,12 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Recibimos lo que escribió (puede ser 'admin' o 'juan@gmail.com')
+        # --- CAMBIO IMPORTANTE: Aceptamos "email_or_user" ---
         credencial = request.form['email_or_user']
         password = request.form['password']
         
         conn = get_db()
-        # --- EL TRUCO: Buscamos en las DOS columnas ---
+        # Buscamos si coincide con el EMAIL o con el USERNAME
         user = conn.execute('SELECT * FROM users WHERE email = ? OR username = ?', (credencial, credencial)).fetchone()
         conn.close()
         
@@ -32,7 +32,7 @@ def login():
 @auth_bp.route('/registro', methods=['GET', 'POST'])
 def registro():
     if request.method == 'POST':
-        nombre = request.form['username'] # Nombre Completo
+        nombre = request.form['username']
         email = request.form['email']
         password = request.form['password']
         
@@ -40,7 +40,6 @@ def registro():
         
         conn = get_db()
         try:
-            # Guardamos Nombre y Correo
             conn.execute('INSERT INTO users (username, email, password, role) VALUES (?, ?, ?, 1)', 
                          (nombre, email, hashed_pw))
             conn.commit()
