@@ -30,12 +30,12 @@ def materiales():
             conn.execute('''
                 UPDATE materiales 
                 SET nombre=?, tipo_entrada=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?
-                WHERE id=? AND usuario_id=?
+                WHERE id=? AND user_id=?
             ''', (nombre, tipo, precio_compra, cantidad, precio_unitario, id_act, session['user_id']))
             flash('Material actualizado correctamente', 'success')
         else: # NUEVO
             conn.execute('''
-                INSERT INTO materiales (usuario_id, nombre, tipo_entrada, precio_compra, cantidad_paquete, precio_unitario)
+                INSERT INTO materiales (user_id, nombre, tipo_entrada, precio_compra, cantidad_paquete, precio_unitario)
                 VALUES (?, ?, ?, ?, ?, ?)
             ''', (session['user_id'], nombre, tipo, precio_compra, cantidad, precio_unitario))
             flash('Material agregado correctamente', 'success')
@@ -45,9 +45,10 @@ def materiales():
         return redirect(url_for('inventory.materiales'))
 
     # --- GET: Obtener lista ---
-    rows = conn.execute('SELECT * FROM materiales WHERE usuario_id = ? ORDER BY nombre', (session['user_id'],)).fetchall()
+    # AQUÍ ESTABA EL ERROR: Cambiamos usuario_id por user_id
+    rows = conn.execute('SELECT * FROM materiales WHERE user_id = ? ORDER BY nombre', (session['user_id'],)).fetchall()
     
-    # CONVERTIR ROWS A DICCIONARIOS PARA QUE NO FALLE EL JSON
+    # CONVERTIR ROWS A DICCIONARIOS
     mats = [dict(row) for row in rows]
     
     conn.close()
@@ -57,8 +58,7 @@ def materiales():
 @login_required
 def eliminar_material(id):
     conn = get_db()
-    # Corregido: Usamos 'usuario_id' para ser consistentes con la tabla materiales
-    conn.execute('DELETE FROM materiales WHERE id=? AND usuario_id=?', (id, session['user_id']))
+    conn.execute('DELETE FROM materiales WHERE id=? AND user_id=?', (id, session['user_id']))
     conn.commit()
     conn.close()
     return redirect(url_for('inventory.materiales'))
@@ -76,7 +76,7 @@ def equipos():
         conn.execute('INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (?, ?, ?)', 
                      (uid, request.form['nombre'], request.form['costo_desgaste']))
         conn.commit()
-        conn.close() # Importante cerrar si rediriges
+        conn.close()
         return redirect(url_for('inventory.equipos'))
     
     eqs = conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (uid,)).fetchall()
@@ -99,7 +99,6 @@ def eliminar_equipo(id):
 @login_required
 def recetas():
     conn = get_db()
-    # Consulta un poco compleja, mejor dejarla clara
     query = '''
         SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
         FROM productos p 
@@ -115,11 +114,9 @@ def recetas():
 @login_required
 def eliminar_receta(id):
     conn = get_db()
-    # Borrado en cascada manual (por seguridad)
     conn.execute('DELETE FROM productos WHERE id=? AND user_id=?', (id, session['user_id']))
     conn.execute('DELETE FROM producto_detalles WHERE producto_id=?', (id,))
     conn.execute('DELETE FROM producto_maquinaria WHERE producto_id=?', (id,))
     conn.commit()
     conn.close()
     return redirect(url_for('inventory.recetas'))
-    # Actualizacion forzada
