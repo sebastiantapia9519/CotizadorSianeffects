@@ -3,53 +3,150 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Historial de Ventas</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Historial | SianEffects</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
     <style>
+        :root {
+            --sian-pink: #ff6b81;
+            --sian-pink-light: #fff0f3;
+            --sian-teal: #2ec4b6;
+            --sian-teal-dark: #1f8c82;
+            --bg-cream: #fffdf9;
+        }
+
         body {
             font-family: 'Nunito', sans-serif;
-            background: #fffdf9;
+            background-color: var(--bg-cream);
+            padding-top: 80px;
+            /* Espacio para navbar fijo */
+            color: #555;
         }
 
-        .cursor-pointer {
-            cursor: pointer;
+        /* Navbar Sian */
+        .navbar-sian {
+            background-color: #ffffff;
+            border-bottom: 3px solid var(--sian-pink-light);
         }
 
-        .hover-bg:hover {
-            background-color: #f8f9fa;
+        .navbar-brand {
+            font-weight: 800;
+            color: #333 !important;
+        }
+
+        /* Tarjetas */
+        .card-historial {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        /* Badges de Estado más bonitos */
+        .badge-status {
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            padding: 8px 12px;
+        }
+
+        /* Botones de Acción */
+        .btn-icon {
+            width: 35px;
+            height: 35px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: all 0.2s;
+        }
+
+        .btn-icon:hover {
+            transform: scale(1.1);
         }
     </style>
 </head>
 
 <body>
-    <div class="container mt-5 pb-5">
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="fw-bold text-dark">📜 Historial de Ventas</h3>
-            <div class="d-flex gap-2">
-                <a href="{{ url_for('main.descargar_excel') }}" class="btn btn-success rounded-pill shadow-sm">
-                    <i class="fas fa-file-excel me-1"></i> Excel
-                </a>
-                <a href="{{ url_for('main.cotizador') }}" class="btn btn-outline-dark rounded-pill shadow-sm">
-                    <i class="fas fa-arrow-left me-1"></i> Volver
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top navbar-sian">
+        <div class="container">
+            <a class="navbar-brand" href="{{ url_for('main.cotizador') }}">
+                <span style="color: var(--sian-pink);">🎨 SianEffects</span> <span
+                    class="text-muted small">Historial</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#miMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="miMenu">
+                <ul class="navbar-nav ms-auto gap-2 align-items-center mt-3 mt-lg-0">
+                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
+                            href="{{ url_for('main.cotizador') }}">🧮 Cotizador</a></li>
+                    <li class="nav-item w-100"><a
+                            class="nav-link active fw-bold text-center border rounded-pill px-3 bg-light"
+                            href="{{ url_for('main.historial') }}">📜 Historial</a></li>
+
+                    <li class="nav-item dropdown w-100 text-center">
+                        <a class="nav-link dropdown-toggle rounded-pill px-3" href="#" role="button"
+                            data-bs-toggle="dropdown">📦 Inventario</a>
+                        <ul class="dropdown-menu border-0 shadow text-center text-lg-start">
+                            <li><a class="dropdown-item" href="{{ url_for('inventory.materiales') }}">Materiales</a>
+                            </li>
+                            <li><a class="dropdown-item" href="{{ url_for('inventory.equipos') }}">Equipos</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('inventory.recetas') }}">Recetas</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
+                            href="{{ url_for('main.configuracion') }}">⚙️ Config</a></li>
+
+                    {% if session.get('role') == 2 %}
+                    <li class="nav-item w-100 mt-2 mt-lg-0">
+                        <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm"
+                            href="{{ url_for('admin.dashboard') }}">👑 Panel Master</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="nav-item w-100 mt-2 mt-lg-0">
+                        <a class="btn btn-outline-danger rounded-pill w-100 btn-sm" href="{{ url_for('auth.logout') }}">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+
+        <div class="row g-3 align-items-center mb-4">
+            <div class="col-md-6">
+                <h3 class="fw-bold m-0 text-secondary">📜 Bitácora de Ventas</h3>
+                <small class="text-muted">Consulta y gestiona tus pedidos pasados.</small>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <a href="{{ url_for('main.descargar_excel') }}"
+                    class="btn btn-success rounded-pill shadow-sm fw-bold px-4">
+                    <i class="fas fa-file-excel me-2"></i> Reporte Excel
                 </a>
             </div>
         </div>
 
-        <div class="card border-0 shadow-sm mb-4 rounded-4">
-            <div class="card-body">
-                <form action="{{ url_for('inventory.recetas') }}" method="GET" class="d-flex gap-2">
-                    <input type="text" name="q" class="form-control rounded-pill border-2"
-                        placeholder="🔍 Buscar por Folio o Nombre del Cliente..."
+        <div class="card card-historial mb-4">
+            <div class="card-body p-2">
+                <form action="{{ url_for('main.historial') }}" method="GET" class="d-flex gap-2">
+                    <input type="text" name="q" class="form-control border-0 bg-light rounded-pill px-4"
+                        placeholder="🔍 Buscar por Folio (ej. 1) o Nombre del Cliente..."
                         value="{{ request.args.get('q', '') }}">
                     <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Buscar</button>
                 </form>
             </div>
         </div>
 
-        <div class="card shadow border-0 rounded-4 overflow-hidden">
+        <div class="card card-historial overflow-hidden">
             <div class="table-responsive">
                 <table class="table table-hover align-middle mb-0">
                     <thead class="bg-light text-secondary small text-uppercase">
@@ -57,69 +154,82 @@
                             <th class="ps-4 py-3">Folio</th>
                             <th>Cliente</th>
                             <th>Estado</th>
-                            <th>Total</th>
+                            <th>Finanzas</th>
                             <th class="text-end pe-4">Acciones</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for v in ventas %}
-                        <tr class="{{ 'bg-light text-muted' if v['estado'] == 'cancelada' else '' }}">
-                            <td class="ps-4 fw-bold text-primary">#{{ v['id'] }}</td>
-
-                            <td>
-                                <div class="fw-bold text-dark">{{ v['cliente'] }}</div>
-                                <small class="text-muted"><i class="far fa-clock me-1"></i> {{ v['fecha'][:16]
-                                    }}</small>
+                        <tr class="{{ 'bg-light opacity-75' if v['estado'] == 'cancelada' else '' }}">
+                            <td class="ps-4">
+                                <span
+                                    class="fw-bold fs-5 {{ 'text-muted' if v['estado'] == 'cancelada' else 'text-primary' }}">#{{
+                                    v['id'] }}</span><br>
+                                <small class="text-muted" style="font-size: 0.75rem">{{ v['fecha'][:10] }}</small>
                             </td>
 
                             <td>
-                                {% if v['estado']=='pagado' %} <span class="badge rounded-pill bg-success">Pagado</span>
+                                <div class="fw-bold text-dark">{{ v['cliente'] }}</div>
+                                <small class="text-muted d-block text-truncate" style="max-width: 200px;">
+                                    <i class="fas fa-box-open me-1"></i> Ver detalles...
+                                </small>
+                            </td>
+
+                            <td>
+                                {% if v['estado']=='pagado' %} <span
+                                    class="badge badge-status rounded-pill bg-success">PAGADO</span>
                                 {% elif v['estado']=='anticipo' %} <span
-                                    class="badge rounded-pill bg-warning text-dark">Anticipo</span>
-                                {% elif v['estado']=='cotizacion' %} <span
-                                    class="badge rounded-pill bg-secondary">Cotización</span>
+                                    class="badge badge-status rounded-pill bg-warning text-dark">ANTICIPO</span>
+                                {% elif v['estado']=='cotizacion' %}
+                                <span class="badge badge-status rounded-pill bg-secondary">COTIZACIÓN</span>
+                                {% if v['fecha_vencimiento'] %}
+                                <div class="small text-danger fw-bold mt-1" style="font-size:0.65rem;">
+                                    <i class="fas fa-hourglass-end"></i> Expira: {{ v['fecha_vencimiento'][:10] }}
+                                </div>
+                                {% endif %}
                                 {% elif v['estado']=='cancelada' %} <span
-                                    class="badge rounded-pill bg-dark">CANCELADA</span>
-                                {% else %} <span class="badge rounded-pill bg-danger">{{ v['estado'] }}</span>
+                                    class="badge badge-status rounded-pill bg-dark">CANCELADA</span>
+                                {% else %} <span class="badge badge-status rounded-pill bg-danger">{{ v['estado']
+                                    }}</span>
                                 {% endif %}
                             </td>
 
                             <td>
                                 <div
-                                    class="fw-bold {% if v['estado'] == 'cancelada' %}text-decoration-line-through{% endif %}">
+                                    class="fw-bold {{ 'text-decoration-line-through text-muted' if v['estado'] == 'cancelada' else 'text-dark' }}">
                                     ${{ "%.2f"|format(v['total']) }}
                                 </div>
                                 {% if v['saldo_pendiente'] > 0.5 and v['estado'] != 'cancelada' %}
-                                <small class="text-danger fw-bold bg-danger bg-opacity-10 px-2 rounded-pill"
-                                    style="font-size: 0.75rem;">
+                                <span
+                                    class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-2">
                                     Debe: ${{ "%.2f"|format(v['saldo_pendiente']) }}
-                                </small>
+                                </span>
                                 {% endif %}
                             </td>
 
                             <td class="text-end pe-4">
-                                <button class="btn btn-light text-primary border rounded-circle shadow-sm"
-                                    onclick="verDetalles({{ v['id'] }})" title="Ver Detalles">
+                                <button class="btn btn-icon btn-light text-primary border shadow-sm"
+                                    onclick="verDetalles({{ v['id'] }})" title="Ver Detalles y Ganancia">
                                     <i class="fas fa-eye"></i>
                                 </button>
 
                                 {% if v['estado'] != 'cancelada' %}
                                 <a href="{{ url_for('main.ver_ticket', id=v['id']) }}" target="_blank"
-                                    class="btn btn-light text-dark border rounded-circle shadow-sm ms-1"
-                                    title="Ticket PDF">
+                                    class="btn btn-icon btn-light text-dark border shadow-sm ms-1"
+                                    title="Imprimir Ticket">
                                     <i class="fas fa-print"></i>
                                 </a>
 
                                 {% if v['saldo_pendiente']>0.5 or v['estado']=='cotizacion' %}
-                                <button class="btn btn-success rounded-circle shadow-sm ms-1"
+                                <button class="btn btn-icon btn-success shadow-sm ms-1"
                                     onclick="abonar({{v['id']}}, {{v['saldo_pendiente']}}, '{{v['estado']}}')"
-                                    title="Cobrar">
+                                    title="Cobrar / Abonar">
                                     <i class="fas fa-dollar-sign"></i>
                                 </button>
                                 {% endif %}
 
-                                <button class="btn btn-outline-danger border-0 rounded-circle ms-1"
-                                    onclick="cancelarVenta({{v['id']}})" title="Cancelar">
+                                <button class="btn btn-icon btn-outline-danger border-0 ms-1"
+                                    onclick="cancelarVenta({{v['id']}})" title="Cancelar Venta">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
                                 {% endif %}
@@ -127,7 +237,8 @@
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center py-5 text-muted">No hay registros aún.</td>
+                            <td colspan="5" class="text-center py-5 text-muted opacity-50"><i
+                                    class="fas fa-folder-open fa-3x mb-3"></i><br>No hay ventas registradas aún.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -139,29 +250,31 @@
     <div class="modal fade" id="modalDetalle" tabindex="-1">
         <div class="modal-dialog modal-lg modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-receipt me-2"></i> Detalle Financiero #<span
-                            id="modalFolio"></span></h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                <div class="modal-header bg-white border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold text-secondary">
+                        <span class="badge bg-primary rounded-pill me-2">#<span id="modalFolio"></span></span>
+                        Detalle de Venta
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
 
-                <div class="modal-body p-0">
-                    <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                <div class="modal-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3 px-2">
                         <div>
                             <small class="text-muted text-uppercase fw-bold">Cliente</small>
-                            <h5 class="fw-bold m-0 text-dark" id="modalCliente"></h5>
+                            <h4 class="fw-bold m-0 text-dark" id="modalCliente"></h4>
                         </div>
-                        <span id="modalEstado" class="badge fs-6"></span>
+                        <div id="modalEstadoDiv"></div>
                     </div>
 
-                    <div class="table-responsive" style="max-height: 300px;">
+                    <div class="table-responsive rounded-3 border mb-3" style="max-height: 300px;">
                         <table class="table table-striped mb-0 align-middle">
-                            <thead class="sticky-top bg-white small text-secondary">
+                            <thead class="sticky-top bg-light small text-secondary">
                                 <tr>
-                                    <th class="ps-3">Concepto</th>
+                                    <th class="ps-3">Producto / Servicio</th>
                                     <th class="text-center">Cant.</th>
-                                    <th class="text-end">$ Unit. Venta</th>
-                                    <th class="text-end text-muted">$ Unit. Costo</th>
+                                    <th class="text-end">$ Venta</th>
+                                    <th class="text-end text-muted">$ Costo</th>
                                     <th class="text-end pe-3 fw-bold">Subtotal</th>
                                 </tr>
                             </thead>
@@ -169,34 +282,31 @@
                         </table>
                     </div>
 
-                    <div class="p-3 border-top bg-light">
-                        <div class="row text-center g-2" id="panelFinanciero">
-                            <div class="col-4">
-                                <div class="border rounded p-2 bg-white shadow-sm">
+                    <div class="card bg-light border-0 rounded-4">
+                        <div class="card-body">
+                            <div class="row text-center g-2" id="panelFinanciero">
+                                <div class="col-4 border-end">
                                     <small class="text-muted fw-bold d-block">VENTA TOTAL</small>
                                     <span class="h5 fw-bold text-primary" id="modalTotal">$0.00</span>
                                 </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="border rounded p-2 bg-white shadow-sm">
-                                    <small class="text-muted fw-bold d-block">GASTO (COSTO)</small>
+                                <div class="col-4 border-end">
+                                    <small class="text-muted fw-bold d-block">COSTO PROD.</small>
                                     <span class="h5 fw-bold text-secondary" id="modalCosto">-$0.00</span>
                                 </div>
-                            </div>
-                            <div class="col-4">
-                                <div class="border rounded p-2 bg-white shadow-sm border-success">
-                                    <small class="text-success fw-bold d-block">GANANCIA NETA</small>
+                                <div class="col-4">
+                                    <small class="text-success fw-bold d-block">GANANCIA</small>
                                     <span class="h5 fw-bold text-success" id="modalGanancia">$0.00</span>
                                 </div>
                             </div>
                         </div>
-                        <div id="avisoCotizacion" class="text-center text-muted small mt-2 d-none">
-                            <i class="fas fa-info-circle"></i> Estos valores son estimados. Se confirmarán al pagar.
-                        </div>
+                    </div>
+
+                    <div id="avisoCotizacion" class="text-center text-warning small mt-2 d-none fw-bold">
+                        <i class="fas fa-info-circle"></i> Esto es una cotización. Los datos financieros son estimados.
                     </div>
                 </div>
 
-                <div class="modal-footer border-0 bg-light">
+                <div class="modal-footer border-0">
                     <button type="button" class="btn btn-secondary rounded-pill px-4"
                         data-bs-dismiss="modal">Cerrar</button>
                 </div>
@@ -208,31 +318,26 @@
     <script>
         function verDetalles(id) {
             const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
-            document.getElementById('modalFolio').innerText = id + "...";
-            document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="5" class="text-center p-3">Cargando datos financieros...</td></tr>';
+            document.getElementById('modalFolio').innerText = id;
+            document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="5" class="text-center p-3">Cargando datos...</td></tr>';
             modal.show();
 
             fetch('/api/obtener_detalles/' + id)
                 .then(response => response.json())
                 .then(data => {
                     if (data.success) {
-                        // 1. Cabecera
                         document.getElementById('modalFolio').innerText = data.folio;
                         document.getElementById('modalCliente').innerText = data.cliente;
 
                         // Estado Badge
-                        const badge = document.getElementById('modalEstado');
-                        badge.innerText = data.estado.toUpperCase();
-                        badge.className = 'badge ' + (data.estado === 'pagado' ? 'bg-success' : (data.estado === 'cancelada' ? 'bg-dark' : 'bg-warning text-dark'));
+                        const estadoDiv = document.getElementById('modalEstadoDiv');
+                        let badgeClass = data.estado === 'pagado' ? 'bg-success' : (data.estado === 'cancelada' ? 'bg-dark' : 'bg-warning text-dark');
+                        estadoDiv.innerHTML = `<span class="badge ${badgeClass} fs-6 px-3 py-2 rounded-pill text-uppercase">${data.estado}</span>`;
 
-                        // 2. Tabla de Items
                         const tbody = document.getElementById('modalTablaCuerpo');
                         tbody.innerHTML = '';
                         data.items.forEach(item => {
-                            let cant = item.cantidad;
-                            if (cant % 1 === 0) cant = Math.round(cant);
-
-                            // Mostramos Precio Venta y Costo Unitario (en gris)
+                            let cant = item.cantidad % 1 === 0 ? Math.round(item.cantidad) : item.cantidad;
                             tbody.innerHTML += `
                                 <tr>
                                     <td class="ps-3 fw-bold small">${item.concepto}</td>
@@ -244,10 +349,8 @@
                             `;
                         });
 
-                        // 3. Panel Financiero (Footer)
                         document.getElementById('modalTotal').innerText = '$' + data.total.toFixed(2);
 
-                        // Si está cancelada, ocultamos costos/ganancias para no confundir
                         if (data.estado === 'cancelada') {
                             document.getElementById('modalCosto').innerText = '-';
                             document.getElementById('modalGanancia').innerText = '-';
@@ -255,18 +358,15 @@
                         } else {
                             const costo = data.costo_total || 0;
                             const ganancia = data.total - costo;
-
                             document.getElementById('modalCosto').innerText = '-$' + costo.toFixed(2);
                             document.getElementById('modalGanancia').innerText = '$' + ganancia.toFixed(2);
 
-                            // Si es cotización, mostramos aviso
                             if (data.estado === 'cotizacion') {
                                 document.getElementById('avisoCotizacion').classList.remove('d-none');
                             } else {
                                 document.getElementById('avisoCotizacion').classList.add('d-none');
                             }
                         }
-
                     } else {
                         alert("Error al cargar detalles.");
                         modal.hide();
@@ -274,21 +374,33 @@
                 });
         }
 
-        // (Mantén aquí las funciones abonar() y cancelarVenta() que ya tenías)
         function abonar(id, saldo, estado) {
-            let msg = "Debe $" + saldo.toFixed(2);
-            if (estado === 'cotizacion') msg = "Cotización por $" + saldo.toFixed(2) + ". ¿Cuánto paga para confirmar?";
+            let msg = "El cliente debe $" + saldo.toFixed(2);
+            if (estado === 'cotizacion') msg = "Cotización por $" + saldo.toFixed(2) + ". ¿Con cuánto confirma el pedido?";
+
             const abono = prompt(msg);
             if (abono && parseFloat(abono) > 0) {
-                fetch('/api/actualizar_venta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id, abono: abono }) })
-                    .then(r => r.json()).then(d => { if (d.success) location.reload(); else alert("Error"); });
+                fetch('/api/actualizar_venta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id, abono: abono })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) location.reload();
+                    else alert("Error al registrar el pago.");
+                });
             }
         }
 
         function cancelarVenta(id) {
-            if (confirm("¿Estás SEGURO de cancelar esta venta?")) {
-                fetch('/api/cancelar_venta', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: id }) })
-                    .then(r => r.json()).then(d => { if (d.success) location.reload(); else alert("Error: " + d.message); });
+            if (confirm("⚠️ ¿Estás SEGURO de cancelar esta venta? \n\nEsta acción no se puede deshacer y los montos se anularán.")) {
+                fetch('/api/cancelar_venta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) location.reload();
+                    else alert("Error: " + d.message);
+                });
             }
         }
     </script>

@@ -4,104 +4,246 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Configuración | SianEffects</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <title>Configuración</title>
+
     <style>
+        :root {
+            --sian-pink: #ff6b81;
+            --sian-pink-light: #fff0f3;
+            --sian-teal: #2ec4b6;
+            --bg-cream: #fffdf9;
+        }
+
         body {
             font-family: 'Nunito', sans-serif;
-            background-color: #fffdf9;
+            background-color: var(--bg-cream);
+            padding-top: 80px;
+            /* Espacio para navbar fijo */
+            color: #555;
+        }
+
+        /* Navbar Sian */
+        .navbar-sian {
+            background-color: #ffffff;
+            border-bottom: 3px solid var(--sian-pink-light);
+        }
+
+        .navbar-brand {
+            font-weight: 800;
+            color: #333 !important;
+        }
+
+        /* Tarjetas */
+        .card-config {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
+        }
+
+        .card-config:hover {
+            transform: translateY(-3px);
+        }
+
+        .card-header-config {
+            background: white;
+            border-bottom: 2px solid var(--sian-pink-light);
+            padding: 20px;
+            border-radius: 20px 20px 0 0;
+        }
+
+        /* Inputs */
+        .form-control {
+            border-radius: 12px;
+            border: 2px solid #eee;
+            padding: 10px;
+            font-weight: 600;
+        }
+
+        .form-control:focus {
+            border-color: var(--sian-pink);
+            box-shadow: none;
         }
     </style>
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top navbar-sian">
         <div class="container">
-            <span class="navbar-brand fw-bold">⚙️ Configuración</span>
-            <a href="{{ url_for('main.cotizador') }}" class="btn btn-outline-light btn-sm rounded-pill">← Volver al
-                Cotizador</a>
+            <a class="navbar-brand" href="{{ url_for('main.cotizador') }}">
+                <span style="color: var(--sian-pink);">🎨 SianEffects</span> <span
+                    class="text-muted small">Config</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#miMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="miMenu">
+                <ul class="navbar-nav ms-auto gap-2 align-items-center mt-3 mt-lg-0">
+                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
+                            href="{{ url_for('main.cotizador') }}">🧮 Cotizador</a></li>
+                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
+                            href="{{ url_for('main.historial') }}">📜 Historial</a></li>
+
+                    <li class="nav-item dropdown w-100 text-center">
+                        <a class="nav-link dropdown-toggle rounded-pill px-3" href="#" role="button"
+                            data-bs-toggle="dropdown">📦 Inventario</a>
+                        <ul class="dropdown-menu border-0 shadow text-center text-lg-start">
+                            <li><a class="dropdown-item" href="{{ url_for('inventory.materiales') }}">Materiales</a>
+                            </li>
+                            <li><a class="dropdown-item" href="{{ url_for('inventory.equipos') }}">Equipos</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('inventory.recetas') }}">Recetas</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item w-100"><a
+                            class="nav-link active fw-bold text-center border rounded-pill px-3 bg-light" href="#">⚙️
+                            Config</a></li>
+
+                    {% if session.get('role') == 2 %}
+                    <li class="nav-item w-100 mt-2 mt-lg-0">
+                        <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm"
+                            href="{{ url_for('admin.dashboard') }}">👑 Panel Master</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="nav-item w-100 mt-2 mt-lg-0">
+                        <a class="btn btn-outline-danger rounded-pill w-100 btn-sm" href="{{ url_for('auth.logout') }}">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
 
     <div class="container pb-5">
+
         {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }} shadow-sm">{{
-            message }}</div>{% endfor %}{% endif %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} shadow-sm rounded-4 border-0 mb-4 d-flex align-items-center">
+            <i class="fas fa-info-circle me-2"></i> {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
         {% endwith %}
 
         <div class="row g-4">
-            <div class="col-md-7">
-                <div class="card shadow border-0 rounded-4 h-100">
-                    <div class="card-header bg-white border-bottom-0 pt-4 px-4">
-                        <h5 class="fw-bold text-secondary"><i class="fas fa-store me-2"></i> Identidad del Negocio</h5>
-                        <small class="text-muted">Esta información aparece en tus Tickets.</small>
+
+            <div class="col-lg-7">
+                <div class="card card-config h-100">
+                    <div class="card-header-config">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary">
+                                <i class="fas fa-store fa-lg"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold m-0 text-dark">Identidad del Negocio</h5>
+                                <small class="text-muted">Esta información aparecerá en tus Tickets PDF.</small>
+                            </div>
+                        </div>
                     </div>
                     <div class="card-body p-4">
                         <form method="post">
                             <div class="mb-3">
-                                <label class="form-label fw-bold small">Nombre de tu Empresa</label>
+                                <label class="form-label fw-bold small text-muted">Nombre de tu Empresa</label>
                                 <input type="text" class="form-control" name="nombre_empresa"
-                                    value="{{ config['nombre_empresa'] }}" required>
+                                    value="{{ config['nombre_empresa'] }}" required placeholder="Ej. Creaciones Sian">
                             </div>
+
                             <div class="mb-3">
-                                <label class="form-label fw-bold small">Slogan o Giro</label>
+                                <label class="form-label fw-bold small text-muted">Slogan o Giro</label>
                                 <input type="text" class="form-control" name="slogan" value="{{ config['slogan'] }}"
-                                    placeholder="Ej. Diseño & Papelería">
+                                    placeholder="Ej. Diseño & Personalización">
                             </div>
+
                             <div class="row">
                                 <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold small">Sitio Web / Red Social</label>
-                                    <input type="text" class="form-control" name="website"
-                                        value="{{ config['website'] }}" placeholder="Ej. instagram.com/mi_marca">
+                                    <label class="form-label fw-bold small text-muted">Sitio Web / Red Social</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light border-end-0 text-muted"><i
+                                                class="fab fa-instagram"></i></span>
+                                        <input type="text" class="form-control border-start-0" name="website"
+                                            value="{{ config['website'] }}" placeholder="@mi_negocio">
+                                    </div>
                                 </div>
                                 <div class="col-md-6 mb-3">
                                     <label class="form-label fw-bold small text-success">Margen Ganancia (%)</label>
-                                    <input type="number" class="form-control border-success" name="margen"
-                                        value="{{ config['margen_ganancia'] }}">
+                                    <div class="input-group">
+                                        <input type="number" class="form-control border-success text-success fw-bold"
+                                            name="margen" value="{{ config['margen_ganancia'] }}">
+                                        <span class="input-group-text bg-success text-white fw-bold">%</span>
+                                    </div>
+                                    <div class="form-text small">Esto multiplica tus costos automáticamente.</div>
                                 </div>
                             </div>
-                            <button type="submit" class="btn btn-primary w-100 fw-bold">Guardar Cambios del
-                                Negocio</button>
+
+                            <button type="submit"
+                                class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm mt-2">
+                                <i class="fas fa-save me-2"></i> Guardar Cambios del Negocio
+                            </button>
                         </form>
                     </div>
                 </div>
             </div>
 
-            <div class="col-md-5">
-                <div class="card shadow border-0 rounded-4 h-100">
-                    <div class="card-header bg-danger text-white border-bottom-0 pt-4 px-4 rounded-top">
-                        <h5 class="fw-bold mb-0"><i class="fas fa-user-shield me-2"></i> Seguridad de Cuenta</h5>
+            <div class="col-lg-5">
+                <div class="card card-config h-100">
+                    <div class="card-header-config bg-danger bg-opacity-10 border-danger border-opacity-25">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="bg-white p-3 rounded-circle text-danger shadow-sm">
+                                <i class="fas fa-user-shield fa-lg"></i>
+                            </div>
+                            <div>
+                                <h5 class="fw-bold m-0 text-danger">Seguridad de Cuenta</h5>
+                                <small class="text-dark">Actualiza tus credenciales de acceso.</small>
+                            </div>
+                        </div>
                     </div>
                     <div class="card-body p-4">
-                        <div class="alert alert-warning small">
-                            <i class="fas fa-exclamation-triangle"></i> Si cambias esto, asegúrate de recordar tu nueva
-                            contraseña.
-                        </div>
-
                         <form method="post">
                             <div class="mb-3">
-                                <label class="form-label fw-bold small">Nombre de Usuario (Login)</label>
-                                <input type="text" class="form-control" name="new_username"
+                                <label class="form-label fw-bold small text-muted">Usuario (Login)</label>
+                                <input type="text" class="form-control bg-light" name="new_username"
                                     value="{{ usuario['username'] }}" required>
                             </div>
+
                             <div class="mb-4">
-                                <label class="form-label fw-bold small">Nueva Contraseña</label>
-                                <input type="password" class="form-control" name="new_password"
-                                    placeholder="Escribe nueva contraseña" required>
+                                <label class="form-label fw-bold small text-muted">Nueva Contraseña</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0 text-muted"><i
+                                            class="fas fa-lock"></i></span>
+                                    <input type="password" class="form-control border-start-0" name="new_password"
+                                        placeholder="Dejar vacío si no cambiarás" required>
+                                </div>
                             </div>
 
                             <div class="d-grid">
-                                <button type="submit" class="btn btn-danger fw-bold">Actualizar Usuario y
-                                    Contraseña</button>
+                                <button type="submit" class="btn btn-outline-danger py-3 rounded-pill fw-bold border-2">
+                                    <i class="fas fa-key me-2"></i> Actualizar Credenciales
+                                </button>
+                            </div>
+
+                            <div class="mt-3 text-center">
+                                <small class="text-muted fst-italic">
+                                    <i class="fas fa-info-circle"></i> Si cambias esto, tendrás que volver a iniciar
+                                    sesión.
+                                </small>
                             </div>
                         </form>
                     </div>
                 </div>
             </div>
+
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>

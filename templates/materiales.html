@@ -4,253 +4,322 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Inventario de Materiales | SianEffects</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
-    <title>Inventario Sianeffects</title>
-
     <style>
         :root {
             --sian-pink: #ff6b81;
-            --sian-pink-hover: #ff4765;
             --sian-pink-light: #fff0f3;
             --sian-teal: #2ec4b6;
-            --sian-teal-dark: #1f8c82;
             --bg-cream: #fffdf9;
         }
 
         body {
             font-family: 'Nunito', sans-serif;
             background-color: var(--bg-cream);
+            padding-top: 80px;
             color: #555;
         }
 
+        /* Navbar Sian */
         .navbar-sian {
             background-color: #ffffff;
-            border-bottom: 3px solid var(--sian-teal);
-            padding: 1rem;
+            border-bottom: 3px solid var(--sian-pink-light);
         }
 
         .navbar-brand {
             font-weight: 800;
-            font-size: 1.4rem;
             color: #333 !important;
         }
 
-        .card {
+        /* Tarjetas */
+        .card-material {
             border: none;
             border-radius: 20px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
-            overflow: hidden;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+            transition: transform 0.2s;
         }
 
-        .card-header-sian {
-            background-color: #ffffff;
-            border-bottom: 2px solid var(--sian-pink-light);
-            padding: 15px 20px;
-        }
-
-        .form-control,
-        .form-select {
-            border-radius: 12px;
+        /* Buscador */
+        .search-input {
+            border-radius: 50px;
+            padding-left: 20px;
             border: 2px solid #eee;
-            padding: 10px;
         }
 
-        .form-control:focus {
-            border-color: var(--sian-teal);
-        }
-
-        .btn-success {
-            background-color: var(--sian-teal);
-            border: none;
-            border-radius: 12px;
-            font-weight: 800;
-        }
-
-        .btn-success:hover {
-            background-color: var(--sian-teal-dark);
-        }
-
-        .btn-action {
-            border-radius: 8px;
-            width: 35px;
-            height: 35px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: 0.2s;
-        }
-
-        .btn-edit {
-            background-color: #e3f2fd;
-            color: #1976d2;
-        }
-
-        .btn-delete {
-            background-color: #ffebee;
-            color: #c62828;
-        }
-
-        .btn-edit:hover,
-        .btn-delete:hover {
-            transform: scale(1.1);
+        .search-input:focus {
+            border-color: var(--sian-pink);
+            box-shadow: none;
         }
     </style>
 </head>
 
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-sian mb-5">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top navbar-sian">
         <div class="container">
-            <span class="navbar-brand">
-                <span style="color: var(--sian-pink);">📦 Sianeffects</span> <span
-                    style="color: var(--sian-teal);">Inventario</span>
-            </span>
-            <a href="{{ url_for('main.cotizador') }}" class="btn btn-outline-dark btn-sm rounded-pill px-3">🧮 Ir al
-                Cotizador</a>
+            <a class="navbar-brand" href="{{ url_for('main.cotizador') }}">
+                <span style="color: var(--sian-pink);">🎨 SianEffects</span> <span
+                    class="text-muted small">Materiales</span>
+            </a>
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#miMenu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+
+            <div class="collapse navbar-collapse" id="miMenu">
+                <ul class="navbar-nav ms-auto gap-2 align-items-center mt-3 mt-lg-0">
+                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
+                            href="{{ url_for('main.cotizador') }}">🧮 Cotizador</a></li>
+                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
+                            href="{{ url_for('main.historial') }}">📜 Historial</a></li>
+
+                    <li class="nav-item dropdown w-100 text-center">
+                        <a class="nav-link dropdown-toggle active fw-bold rounded-pill px-3 bg-light" href="#"
+                            role="button" data-bs-toggle="dropdown">📦 Inventario</a>
+                        <ul class="dropdown-menu border-0 shadow text-center text-lg-start">
+                            <li><a class="dropdown-item fw-bold bg-light"
+                                    href="{{ url_for('inventory.materiales') }}">Materiales</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('inventory.equipos') }}">Equipos</a></li>
+                            <li><a class="dropdown-item" href="{{ url_for('inventory.recetas') }}">Recetas</a></li>
+                        </ul>
+                    </li>
+
+                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
+                            href="{{ url_for('main.configuracion') }}">⚙️ Config</a></li>
+
+                    {% if session.get('role') == 2 %}
+                    <li class="nav-item w-100 mt-2 mt-lg-0">
+                        <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm"
+                            href="{{ url_for('admin.dashboard') }}">👑 Panel Master</a>
+                    </li>
+                    {% endif %}
+
+                    <li class="nav-item w-100 mt-2 mt-lg-0">
+                        <a class="btn btn-outline-danger rounded-pill w-100 btn-sm" href="{{ url_for('auth.logout') }}">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
 
     <div class="container pb-5">
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm rounded-4 border-0 mb-4">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
 
-        <div class="row g-4">
-            <div class="col-md-4">
-                <div class="card h-100">
-                    <div class="card-header-sian">
-                        <h5>
-                            {% if edicion %} ✏️ Editar Material {% else %} ➕ Agregar Material {% endif %}
-                        </h5>
-                    </div>
-                    <div class="card-body p-4">
-                        <form method="post" action="{{ url_for('inventory.materiales') }}">
-                            {% if edicion %}
-                            <input type="hidden" name="id_actualizar" value="{{ edicion['id'] }}">
-                            {% endif %}
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small">Nombre del Material</label>
-                                <input type="text" name="nombre" class="form-control"
-                                    value="{{ edicion['nombre'] if edicion else '' }}" placeholder="Ej. Termo" required>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small">¿Cómo lo compras?</label>
-                                <select name="tipo_entrada" id="tipoEntrada" class="form-select"
-                                    onchange="togglePaquete()">
-                                    <option value="unitario" {% if edicion and not edicion['es_paquete'] %}selected{%
-                                        endif %}>Unidad (Pieza única)</option>
-                                    <option value="paquete" {% if edicion and edicion['es_paquete'] %}selected{% endif
-                                        %}>Paquete (Mayoreo)</option>
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small">Costo de Compra ($)</label>
-                                <input type="number" step="any" name="precio_compra" class="form-control"
-                                    value="{{ edicion['precio_compra'] if edicion else '' }}" required>
-                                <div class="form-text small text-muted">Precio que pagaste.</div>
-                            </div>
-
-                            <div class="mb-3 {% if not edicion or not edicion['es_paquete'] %}d-none{% endif %}"
-                                id="divCantidad">
-                                <label class="form-label fw-bold small">Cantidad en Paquete</label>
-                                <input type="number" name="cantidad_paquete" class="form-control"
-                                    value="{{ edicion['cantidad_paquete'] if edicion else '' }}">
-                                <div class="form-text small text-sian-teal">Si es listón, puedes poner los metros.</div>
-                            </div>
-
-                            <div class="d-grid gap-2 pt-3">
-                                <button type="submit" class="btn btn-success shadow-sm">
-                                    {% if edicion %} Actualizar {% else %} Guardar Material {% endif %}
-                                </button>
-                                {% if edicion %}
-                                <a href="{{ url_for('inventory.materiales') }}"
-                                    class="btn btn-light btn-sm">Cancelar</a>
-                                {% endif %}
-                            </div>
-                        </form>
-                    </div>
+        <div class="row align-items-center mb-4 g-3">
+            <div class="col-md-6">
+                <h3 class="fw-bold text-secondary m-0">📦 Almacén de Insumos</h3>
+                <small class="text-muted">Gestiona tus materias primas.</small>
+            </div>
+            <div class="col-md-6">
+                <div class="d-flex gap-2">
+                    <input type="text" id="buscador" class="form-control search-input"
+                        placeholder="🔍 Buscar material..." onkeyup="filtrarTabla()">
+                    <button class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal"
+                        data-bs-target="#modalMaterial" onclick="resetModal()">
+                        <i class="fas fa-plus"></i> Nuevo
+                    </button>
                 </div>
             </div>
+        </div>
 
-            <div class="col-md-8">
-                <div class="card h-100">
-                    <div class="card-header-sian">
-                        <h5 style="color: var(--sian-pink);">📋 Lista de Materiales</h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div class="table-responsive">
-                            <table class="table table-striped align-middle mb-0">
-                                <thead class="bg-light">
-                                    <tr>
-                                        <th class="ps-4">Material</th>
-                                        <th>Tipo</th>
-                                        <th>Costo Unit.</th>
-                                        <th class="text-end pe-4">Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for mat in materiales %}
-                                    <tr>
-                                        <td class="ps-4 fw-bold">{{ mat['nombre'] }}</td>
-                                        <td>
-                                            {% if mat['es_paquete'] %}
-                                            <span class="badge bg-info text-dark">Paquete ({{
-                                                mat['cantidad_paquete']|int }})</span>
-                                            {% else %}
-                                            <span class="badge bg-secondary">Unidad</span>
-                                            {% endif %}
-                                        </td>
-                                        <td class="text-success fw-bold">${{ "%.2f"|format(mat['precio_unitario']) }}
-                                        </td>
-                                        <td class="text-end pe-4">
-                                            <a href="{{ url_for('inventory.materiales', editar=mat['id']) }}"
-                                                class="btn btn-action btn-edit" title="Editar">
-                                                <i class="fas fa-pencil-alt"></i>
-                                            </a>
-                                            <a href="{{ url_for('inventory.eliminar_material', id=mat['id']) }}"
-                                                class="btn btn-action btn-delete"
-                                                onclick="return confirm('¿Seguro que deseas eliminar este material?');"
-                                                title="Eliminar">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    {% else %}
-                                    <tr>
-                                        <td colspan="4" class="text-center py-4 text-muted">Sin materiales aún.</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
+        <div class="card card-material overflow-hidden">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tablaMateriales">
+                    <thead class="bg-light text-uppercase small text-muted">
+                        <tr>
+                            <th class="ps-4 py-3">Material</th>
+                            <th>Tipo Compra</th>
+                            <th>Costo Unitario</th>
+                            <th class="text-end pe-4">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in materiales %}
+                        <tr>
+                            <td class="ps-4">
+                                <span class="fw-bold text-dark">{{ m['nombre'] }}</span>
+                                {% if m['es_paquete'] %}
+                                <div class="small text-muted">
+                                    <i class="fas fa-box-open me-1"></i> Compras en paquete (${{ m['precio_compra'] }})
+                                </div>
+                                {% else %}
+                                <div class="small text-muted">
+                                    <i class="fas fa-cube me-1"></i> Compras por unidad
+                                </div>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if m['es_paquete'] %}
+                                <span class="badge bg-info text-dark rounded-pill">Paquete ({{ m['cantidad_paquete']|int
+                                    }})</span>
+                                {% else %}
+                                <span class="badge bg-secondary rounded-pill">Unidad</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <div class="fw-bold text-success fs-5">
+                                    ${{ "%.2f"|format(m['precio_unitario']) }}
+                                </div>
+                                <small class="text-muted" style="font-size: 0.75rem;">Costo base para cotizar</small>
+                            </td>
+                            <td class="text-end pe-4">
+                                <button class="btn btn-light text-primary border rounded-circle btn-sm shadow-sm me-1"
+                                    onclick='editarMaterial({{ m|tojson }})' title="Editar">
+                                    <i class="fas fa-pen"></i>
+                                </button>
+                                <a href="{{ url_for('inventory.eliminar_material', id=m['id']) }}"
+                                    class="btn btn-light text-danger border rounded-circle btn-sm shadow-sm"
+                                    onclick="return confirm('¿Borrar este material?')" title="Eliminar">
+                                    <i class="fas fa-trash-alt"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="4" class="text-center py-5 text-muted opacity-50"><i
+                                    class="fas fa-boxes fa-3x mb-3"></i><br>No hay materiales registrados.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
 
+    <div class="modal fade" id="modalMaterial" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title fw-bold" id="modalTitle">Nuevo Material</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form method="post">
+                    <div class="modal-body p-4">
+                        <input type="hidden" name="id_actualizar" id="inputId">
+
+                        <div class="mb-3">
+                            <label class="fw-bold small text-muted">Nombre del Material</label>
+                            <input type="text" name="nombre" id="inputNombre" class="form-control"
+                                placeholder="Ej. Vinil Textil Rojo" required>
+                        </div>
+
+                        <label class="fw-bold small text-muted mb-2">¿Cómo lo compras?</label>
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="tipo_entrada" id="tipoUnidad" value="unidad"
+                                    checked onclick="togglePaquete(false)">
+                                <label class="btn btn-outline-secondary w-100 rounded-pill" for="tipoUnidad">Por
+                                    Unidad</label>
+                            </div>
+                            <div class="col-6">
+                                <input type="radio" class="btn-check" name="tipo_entrada" id="tipoPaquete"
+                                    value="paquete" onclick="togglePaquete(true)">
+                                <label class="btn btn-outline-info w-100 rounded-pill" for="tipoPaquete">Por
+                                    Paquete</label>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-6">
+                                <label class="fw-bold small text-muted">Precio de Compra ($)</label>
+                                <input type="number" step="any" name="precio_compra" id="inputPrecio"
+                                    class="form-control" placeholder="0.00" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="fw-bold small text-muted" id="lblCantidad">Cantidad</label>
+                                <input type="number" step="any" name="cantidad_paquete" id="inputCantidad"
+                                    class="form-control" value="1" readonly>
+                            </div>
+                        </div>
+
+                        <div class="alert alert-light border mt-3 mb-0 small text-center">
+                            <i class="fas fa-calculator me-1"></i> Costo Unitario Calculado:
+                            <strong class="text-success" id="lblCalculo">$0.00</strong>
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 bg-light">
+                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold w-100">Guardar
+                            Material</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        function togglePaquete() {
-            let tipo = document.getElementById('tipoEntrada').value;
-            let divCant = document.getElementById('divCantidad');
-            if (tipo === 'paquete') divCant.classList.remove('d-none');
-            else divCant.classList.add('d-none');
+        function togglePaquete(esPaquete) {
+            const inputCant = document.getElementById('inputCantidad');
+            const lbl = document.getElementById('lblCantidad');
+            if (esPaquete) {
+                inputCant.readOnly = false;
+                inputCant.value = '';
+                inputCant.placeholder = "Ej. 50 (hojas)";
+                lbl.innerText = "Contenido del Paquete";
+            } else {
+                inputCant.readOnly = true;
+                inputCant.value = 1;
+                lbl.innerText = "Unidad (1)";
+            }
+            calcularUnitario();
+        }
+
+        // Auto-Cálculo en el Modal
+        const inputs = ['inputPrecio', 'inputCantidad'];
+        inputs.forEach(id => document.getElementById(id).addEventListener('input', calcularUnitario));
+
+        function calcularUnitario() {
+            const p = parseFloat(document.getElementById('inputPrecio').value) || 0;
+            const c = parseFloat(document.getElementById('inputCantidad').value) || 1;
+            const res = c > 0 ? (p / c) : 0;
+            document.getElementById('lblCalculo').innerText = '$' + res.toFixed(2);
+        }
+
+        // Función Editar (Rellena el modal con datos)
+        function editarMaterial(mat) {
+            resetModal();
+            document.getElementById('modalTitle').innerText = "Editar Material";
+            document.getElementById('inputId').value = mat.id;
+            document.getElementById('inputNombre').value = mat.nombre;
+            document.getElementById('inputPrecio').value = mat.precio_compra;
+
+            if (mat.es_paquete) {
+                document.getElementById('tipoPaquete').checked = true;
+                togglePaquete(true);
+                document.getElementById('inputCantidad').value = mat.cantidad_paquete;
+            } else {
+                document.getElementById('tipoUnidad').checked = true;
+                togglePaquete(false);
+            }
+            calcularUnitario();
+            new bootstrap.Modal(document.getElementById('modalMaterial')).show();
+        }
+
+        function resetModal() {
+            document.getElementById('modalTitle').innerText = "Nuevo Material";
+            document.getElementById('inputId').value = "";
+            document.querySelector('form').reset();
+            togglePaquete(false);
+            document.getElementById('lblCalculo').innerText = "$0.00";
+        }
+
+        // Filtro de Tabla (Buscador JS)
+        function filtrarTabla() {
+            const filter = document.getElementById('buscador').value.toUpperCase();
+            const rows = document.getElementById('tablaMateriales').getElementsByTagName('tr');
+            for (let i = 0; i < rows.length; i++) {
+                const td = rows[i].getElementsByTagName('td')[0];
+                if (td) {
+                    const txtValue = td.textContent || td.innerText;
+                    rows[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
+                }
+            }
         }
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 
 </html>
