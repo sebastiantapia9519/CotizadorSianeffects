@@ -450,56 +450,54 @@
         function agregarFila(idMat = 0, cantidad = 1) {
             const container = document.getElementById('listaMateriales');
             const div = document.createElement('div');
-            // Clases para grilla responsiva: en móvil apilado, en desktop (md) en línea
             div.className = 'row g-2 align-items-end mb-3 item-row border-bottom pb-3 pb-md-0 border-md-0 position-relative';
 
             div.innerHTML = `
-                <div class="col-12 col-md-5">
-                    <label class="small text-muted d-md-none fw-bold">Material</label>
-                    <select class="form-select material-select" onchange="actualizarFila(this)">
-                        ${obtenerOpciones()}
-                    </select>
+            <div class="col-12 col-md-5">
+                <label class="small text-muted d-md-none fw-bold">Material</label>
+                <select class="form-select material-select" onchange="actualizarFila(this)">
+                    ${obtenerOpciones()}
+                </select>
+            </div>
+            <div class="col-4 col-md-2">
+                <label class="small text-muted d-md-none fw-bold">$ Unit.</label>
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-light border-end-0 text-muted px-1">$</span>
+                    <input type="number" class="form-control bg-light border-start-0 ps-1 input-precio" readonly placeholder="0">
                 </div>
-
-                <div class="col-4 col-md-2">
-                    <label class="small text-muted d-md-none fw-bold">$ Unit.</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light border-end-0 text-muted px-1">$</span>
-                        <input type="number" class="form-control bg-light border-start-0 ps-1 input-precio" readonly placeholder="0">
-                    </div>
-                </div>
-
-                <div class="col-4 col-md-2">
-                    <label class="small text-muted d-md-none fw-bold">Cant.</label>
-                    <input type="number" class="form-control form-control-sm text-center input-cantidad" value="${cantidad}" oninput="calcularFila(this)">
-                </div>
-
-                <div class="col-4 col-md-2">
-                    <label class="small text-muted d-md-none fw-bold">Total</label>
-                    <div class="fw-bold text-dark subtotal text-md-start text-end pt-1">$0.00</div>
-                </div>
-
-                <div class="col-12 col-md-1 text-end text-md-center mt-2 mt-md-0">
-                    <button type="button" class="btn btn-outline-danger btn-sm w-100 w-md-auto border-0 bg-light" onclick="borrarFila(this)">
-                        <i class="fas fa-trash-alt"></i> <span class="d-md-none ms-2">Eliminar</span>
-                    </button>
-                </div>
-            `;
+            </div>
+            <div class="col-4 col-md-2">
+                <label class="small text-muted d-md-none fw-bold">Cant.</label>
+                <input type="number" class="form-control form-control-sm text-center input-cantidad" value="${cantidad}" oninput="calcularFila(this)">
+            </div>
+            <div class="col-4 col-md-2">
+                <label class="small text-muted d-md-none fw-bold">Total</label>
+                <div class="fw-bold text-dark subtotal text-md-start text-end pt-1">$0.00</div>
+            </div>
+            <div class="col-12 col-md-1 text-end text-md-center mt-2 mt-md-0">
+                <button type="button" class="btn btn-outline-danger btn-sm w-100 w-md-auto border-0 bg-light" onclick="borrarFila(this)">
+                    <i class="fas fa-trash-alt"></i> <span class="d-md-none ms-2">Eliminar</span>
+                </button>
+            </div>
+        `;
 
             container.appendChild(div);
 
             if (idMat > 0) {
                 const s = div.querySelector('select');
                 s.value = idMat;
-                actualizarFila(s);
+                actualizarFila(s); // Esto carga el precio
                 div.querySelector('.input-cantidad').value = cantidad;
-                calcularFila(s);
+                setTimeout(() => calcularFila(s), 50); // Recalcular total
             }
         }
 
         function actualizarFila(sel) {
             const row = sel.closest('.item-row');
-            const precio = parseFloat(sel.options[sel.selectedIndex].getAttribute('data-precio')) || 0;
+            // Aseguramos que data-precio exista y sea número
+            const opcion = sel.options[sel.selectedIndex];
+            const precio = parseFloat(opcion.getAttribute('data-precio')) || 0;
+
             row.querySelector('.input-precio').value = precio.toFixed(2);
             calcularFila(sel);
         }
@@ -521,18 +519,20 @@
         function calcularTotal() {
             let totalMat = 0;
             document.querySelectorAll('.item-row').forEach(row => {
-                totalMat += parseFloat(row.querySelector('.subtotal').innerText.replace('$', '')) || 0
+                const txt = row.querySelector('.subtotal').innerText.replace('$', '').trim();
+                totalMat += parseFloat(txt) || 0;
             });
 
             let totalMaq = 0;
             document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
-                totalMaq += parseFloat(c.value) || 0
+                totalMaq += parseFloat(c.value) || 0;
             });
 
             const extra = parseFloat(document.getElementById('costosExtra').value) || 0;
             const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
 
             costoProduccionCalculado = totalMat + totalMaq + extra;
+            // Fórmula del margen: Costo * (1 + (margen/100))
             precioVentaCalculado = costoProduccionCalculado * (1 + (margen / 100));
 
             document.getElementById('resultadoCosto').innerText = '$' + costoProduccionCalculado.toFixed(2);
@@ -546,7 +546,7 @@
             document.getElementById('costosExtra').value = 0;
             document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
             calcularTotal();
-            agregarFila();
+            agregarFila(); // Agrega una fila vacía al limpiar
         }
 
         // --- 4. CARRITO ---
@@ -579,14 +579,14 @@
                 carrito.forEach((i, x) => {
                     s += i.subtotal;
                     tb.innerHTML += `
-                        <tr>
-                            <td class="ps-3"><small class="fw-bold">${i.concepto}</small></td>
-                            <td class="text-center small">${i.cantidad}</td>
-                            <td class="text-end small fw-bold">$${i.subtotal.toFixed(2)}</td>
-                            <td class="text-end pe-3">
-                                <i class="fas fa-trash-alt text-danger" onclick="eliminarDelCarrito(${x})" style="cursor:pointer"></i>
-                            </td>
-                        </tr>`;
+                    <tr>
+                        <td class="ps-3"><small class="fw-bold">${i.concepto}</small></td>
+                        <td class="text-center small">${i.cantidad}</td>
+                        <td class="text-end small fw-bold">$${i.subtotal.toFixed(2)}</td>
+                        <td class="text-end pe-3">
+                            <i class="fas fa-trash-alt text-danger" onclick="eliminarDelCarrito(${x})" style="cursor:pointer"></i>
+                        </td>
+                    </tr>`;
                 });
                 actualizarTotales(s);
             }
@@ -613,14 +613,15 @@
             renderizarCarrito();
         }
 
-        // --- 5. CHECKOUT (TRUCO ANTI-BLOQUEO POPUP) ---
+        // --- 5. CHECKOUT ---
         function finalizarCompra(tipo) {
             if (carrito.length === 0) return alert("El carrito está vacío.");
 
             const cli = document.getElementById('nombreCliente').value || "Cliente General";
             let sub = 0; carrito.forEach(i => sub += i.subtotal);
             const desc = parseInt(document.getElementById('inputDescuento').value) || 0;
-            const total = sub - (sub * (desc / 100));
+            const desc_monto = sub * (desc / 100);
+            const total = sub - desc_monto;
 
             let estado = 'pagado';
             let pago_inicial = total;
@@ -632,50 +633,57 @@
                 estado = 'anticipo';
                 const inputPago = document.getElementById('inputPagoInicial').value;
                 pago_inicial = parseFloat(inputPago) || 0;
-
                 if (!inputPago || pago_inicial <= 0) return alert("Ingresa un monto válido para el anticipo.");
                 if (pago_inicial >= total) estado = 'pagado';
             }
 
-            // ABRIR VENTANA ANTES DEL FETCH PARA EVITAR BLOQUEO EN MÓVIL
             const ventanaTicket = window.open('', '_blank');
-
             if (ventanaTicket) {
-                ventanaTicket.document.write(`
-                    <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
-                        <h1>Generando Ticket... 🧾</h1>
-                        <p>Por favor espera un momento...</p>
-                        <div style="font-size: 3rem;">⏳</div>
-                    </div>
-                `);
-            } else {
-                alert("⚠️ Tu celular bloqueó la ventana. Por favor permite 'Ventanas Emergentes' para este sitio.");
-                return;
+                ventanaTicket.document.write('<h2 style="text-align:center;font-family:sans-serif;margin-top:50px">Generando Ticket... 🧾</h2>');
             }
 
-            fetch('/api/checkout', {
+            // Enviamos a la ruta CORRECTA en routes/main.py
+            fetch('/guardar_venta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    cliente: cli, carrito: carrito, subtotal: sub,
-                    descuento_porcentaje: desc, estado: estado, pago_inicial: pago_inicial
+                    cliente: cli,
+                    items: carrito.map(i => ({
+                        concepto: i.concepto,
+                        cantidad: i.cantidad,
+                        precio: i.precio_unitario,
+                        costo: i.costo_unitario,
+                        subtotal: i.subtotal
+                    })),
+                    subtotal: sub,
+                    descuento_porcentaje: desc,
+                    descuento_monto: desc_monto,
+                    total: total,
+                    costo_total: carrito.reduce((sum, i) => sum + (i.costo_unitario * i.cantidad), 0),
+                    estado: estado,
+                    pago_inicial: pago_inicial
                 })
             }).then(res => res.json()).then(data => {
                 if (data.success) {
-                    ventanaTicket.location.href = '/ticket/' + data.ticket_id;
-                    setTimeout(() => location.reload(), 500);
+                    if (ventanaTicket) ventanaTicket.location.href = '/ticket/' + data.ticket_id;
+                    else window.location.href = '/ticket/' + data.ticket_id;
+
+                    setTimeout(() => window.location.reload(), 1000);
                 } else {
-                    ventanaTicket.close();
-                    alert("Error: " + data.message);
+                    if (ventanaTicket) ventanaTicket.close();
+                    alert("Error: " + data.error);
                 }
             }).catch(err => {
-                ventanaTicket.close();
-                alert("Error de conexión con el servidor.");
+                if (ventanaTicket) ventanaTicket.close();
+                console.error(err);
+                alert("Error de conexión.");
             });
         }
 
-        // --- 6. GUARDAR RECETA ---
+        // --- 6. GUARDAR RECETA (CORREGIDO) ---
         function mostrarGuardar() {
+            // PREVENIMOS QUE EL LINK SALTE
+            event.preventDefault();
             document.getElementById('boxGuardar').classList.remove('d-none');
         }
 
@@ -683,49 +691,78 @@
             const nom = document.getElementById('nombreNuevoProducto').value.trim();
             if (!nom) return alert("Escribe un nombre para el producto.");
 
-            const items = [], maqs = [];
+            const materiales = [];
+            const maquinaria = [];
+
+            // Recolectar Materiales
             document.querySelectorAll('.item-row').forEach(row => {
-                const s = row.querySelector('select');
-                if (s.value > 0) items.push({ id: s.value, cantidad: row.querySelector('.input-cantidad').value });
+                const s = row.querySelector('.material-select');
+                const c = row.querySelector('.input-cantidad');
+                if (s && s.value > 0) {
+                    materiales.push({ id: parseInt(s.value), cantidad: parseFloat(c.value) });
+                }
             });
 
-            document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => maqs.push(c.dataset.id));
+            // Recolectar Maquinaria
+            document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
+                maquinaria.push({ id: parseInt(c.getAttribute('data-id')) });
+            });
 
-            if (items.length === 0) return alert("Agrega al menos un material.");
+            if (materiales.length === 0) return alert("Agrega al menos un material.");
 
-            fetch('/api/guardar_producto', {
+            // RUTA CORRECTA: /inventory/guardar_receta
+            fetch('/inventory/guardar_receta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre: nom, items: items, maquinaria: maqs })
+                body: JSON.stringify({ nombre: nom, materiales: materiales, maquinaria: maquinaria })
             }).then(r => r.json()).then(d => {
                 if (d.success) {
                     alert("¡Receta guardada con éxito!");
                     location.reload();
-                } else alert(d.message);
-            });
+                } else {
+                    alert("Error al guardar: " + (d.error || d.message));
+                }
+            }).catch(e => alert("Error de conexión"));
         }
 
+        // --- 7. CARGAR RECETA (CORREGIDO) ---
         function cargarProductoDB() {
             const id = document.getElementById('selectCargarProducto').value;
             if (!id) return;
-            fetch('/api/cargar_producto/' + id).then(r => r.json()).then(d => {
-                limpiarCalculadora();
-                document.getElementById('listaMateriales').innerHTML = '';
 
-                d.materiales.forEach(i => agregarFila(i.id, i.cantidad));
+            // RUTA CORRECTA: /api/receta/
+            fetch('/api/receta/' + id).then(r => r.json()).then(d => {
+                if (d.error) return alert(d.error);
+
+                limpiarCalculadora();
+                document.getElementById('listaMateriales').innerHTML = ''; // Limpiar fila vacía inicial
+                document.getElementById('nombreProductoActual').value = d.nombre;
+
+                // Cargar materiales
+                d.materiales.forEach(i => {
+                    // i.id es el material_id en tu base de datos
+                    agregarFila(i.id, i.cantidad);
+                });
+
+                // Cargar maquinaria
                 d.maquinaria.forEach(m => {
-                    const c = document.querySelector(`.check-maquinaria-input[data-id="${m}"]`);
+                    // Buscamos el checkbox con ese data-id
+                    const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
                     if (c) c.checked = true;
                 });
-                setTimeout(calcularTotal, 100);
+
+                setTimeout(calcularTotal, 200); // Esperar a que se renderice
             });
         }
 
         // Eventos
-        document.getElementById('modalCobro').addEventListener('show.bs.modal', () => {
-            document.getElementById('modalTotalPago').innerText = document.getElementById('totalTicket').innerText;
-            document.getElementById('inputPagoInicial').value = '';
-        });
+        const modalCobro = document.getElementById('modalCobro');
+        if (modalCobro) {
+            modalCobro.addEventListener('show.bs.modal', () => {
+                document.getElementById('modalTotalPago').innerText = document.getElementById('totalTicket').innerText;
+                document.getElementById('inputPagoInicial').value = '';
+            });
+        }
 
         document.addEventListener('DOMContentLoaded', () => agregarFila());
     </script>
