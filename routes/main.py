@@ -65,7 +65,7 @@ def configuracion():
     conn.close()
     return render_template('configuracion.html', config=config, usuario=user)
 
-@main.route('/terminos')
+@main_bp.route('/terminos')
 def terminos():
     return render_template('terminos.html')
 
