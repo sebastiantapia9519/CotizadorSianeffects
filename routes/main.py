@@ -65,6 +65,10 @@ def configuracion():
     conn.close()
     return render_template('configuracion.html', config=config, usuario=user)
 
+@main.route('/terminos')
+def terminos():
+    return render_template('terminos.html')
+
 @main_bp.route('/descargar_excel')
 @login_required
 def descargar_excel():
