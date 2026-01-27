@@ -4,19 +4,51 @@ from helpers import login_required
 
 inventory_bp = Blueprint('inventory', __name__)
 
-@inventory_bp.route('/materiales', methods=('GET', 'POST'))
+@inventory_bp.route('/materiales', methods=['GET', 'POST'])
 @login_required
 def materiales():
-    conn = get_db_connection(); uid = session['user_id']
+    conn = get_db()
+    
     if request.method == 'POST':
-        n, t, p = request.form['nombre'], request.form['tipo_entrada'], float(request.form['precio_compra'])
-        cant = float(request.form['cantidad_paquete']) if t == 'paquete' else 1
-        if request.form.get('id_actualizar'): conn.execute('UPDATE materiales SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=? WHERE id=?', (n, t=='paquete', p, cant, p/cant, request.form['id_actualizar']))
-        else: conn.execute('INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario) VALUES (?,?,?,?,?,?)', (uid, n, t=='paquete', p, cant, p/cant))
-        conn.commit(); return redirect(url_for('inventory.materiales'))
-    mats = conn.execute('SELECT * FROM materiales WHERE user_id=?', (uid,)).fetchall()
-    edit = conn.execute('SELECT * FROM materiales WHERE id=?', (request.args.get('editar'),)).fetchone() if request.args.get('editar') else None
-    conn.close(); return render_template('materiales.html', materiales=mats, edicion=edit)
+        nombre = request.form['nombre']
+        tipo = request.form['tipo_entrada'] # 'unidad' o 'paquete'
+        precio_compra = float(request.form['precio_compra'])
+        
+        cantidad = 1.0
+        if tipo == 'paquete':
+            cantidad = float(request.form['cantidad_paquete'])
+            
+        precio_unitario = precio_compra / cantidad if cantidad > 0 else 0
+        
+        # Revisar si es actualización o nuevo
+        id_act = request.form.get('id_actualizar')
+        
+        if id_act: # ACTUALIZAR
+            conn.execute('''
+                UPDATE materiales 
+                SET nombre=?, tipo_entrada=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?
+                WHERE id=? AND usuario_id=?
+            ''', (nombre, tipo, precio_compra, cantidad, precio_unitario, id_act, session['user_id']))
+            flash('Material actualizado correctamente', 'success')
+        else: # NUEVO
+            conn.execute('''
+                INSERT INTO materiales (usuario_id, nombre, tipo_entrada, precio_compra, cantidad_paquete, precio_unitario)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (session['user_id'], nombre, tipo, precio_compra, cantidad, precio_unitario))
+            flash('Material agregado correctamente', 'success')
+            
+        conn.commit()
+        conn.close()
+        return redirect(url_for('inventory.materiales'))
+
+    # --- GET: Obtener lista ---
+    rows = conn.execute('SELECT * FROM materiales WHERE usuario_id = ? ORDER BY nombre', (session['user_id'],)).fetchall()
+    
+    # CONVERTIR ROWS A DICCIONARIOS PARA QUE NO FALLE EL JSON
+    mats = [dict(row) for row in rows]
+    
+    conn.close()
+    return render_template('materiales.html', materiales=mats)
 
 @inventory_bp.route('/eliminar_material/<int:id>')
 @login_required
