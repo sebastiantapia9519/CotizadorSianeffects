@@ -7,32 +7,31 @@
     <title>Ticket #{{ '%04d' % venta['id'] }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <style>
         body {
             font-family: 'Nunito', sans-serif;
-            background: #f0f0f0;
+            background: #e0e0e0;
+            /* Fondo un poco más oscuro para resaltar el ticket */
             padding: 20px;
             display: flex;
             flex-direction: column;
-            /* Para apilar ticket y botones */
             align-items: center;
             min-height: 100vh;
             margin: 0;
         }
 
-        /* EL TICKET (LO QUE SE VA A FOTOGRAFIAR) */
         .ticket {
             width: 320px;
             background: white;
             padding: 25px 20px;
             border: 2px dashed #ff6b81;
-            /* Tu borde rosa */
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             position: relative;
+            margin-bottom: 30px;
+            /* Espacio para que no pegue con los botones */
         }
 
         .brand {
@@ -46,7 +45,6 @@
             color: #ff6b81;
             font-size: 1.8rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
         }
 
         .brand p {
@@ -106,53 +104,57 @@
             color: #888;
         }
 
-        /* ZONA DE BOTONES (NO SALE EN LA IMPRESIÓN NI EN LA FOTO) */
+        /* BOTONES FLOTANTES MÁS BONITOS */
         .no-print {
-            margin-top: 30px;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            padding: 15px;
             display: flex;
             gap: 10px;
-            flex-wrap: wrap;
             justify-content: center;
+            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+            z-index: 100;
         }
 
         .btn {
             border: none;
             color: white;
-            padding: 12px 25px;
+            padding: 12px 20px;
             text-decoration: none;
             border-radius: 50px;
-            font-size: 0.9rem;
+            font-size: 0.85rem;
             font-weight: 800;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s;
         }
 
-        .btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        .btn:active {
+            transform: scale(0.95);
+        }
+
+        .btn-img {
+            background: linear-gradient(45deg, #ff6b81, #ff4757);
+        }
+
+        .btn-link {
+            background: linear-gradient(45deg, #25D366, #128C7E);
         }
 
         .btn-print {
             background: #333;
         }
 
-        .btn-whatsapp {
-            background: #25D366;
-        }
-
-        /* Verde WhatsApp */
-        .btn-close {
-            background: #ff4757;
-        }
-
         @media print {
             body {
                 background: none;
-                display: block;
             }
 
             .ticket {
@@ -194,7 +196,7 @@
             <tbody>
                 {% for item in detalles %}
                 <tr>
-                    <td style="font-weight: bold; color: #333;">{{ item['cantidad']|int }}</td>
+                    <td style="font-weight: bold;">{{ item['cantidad']|int }}</td>
                     <td>{{ item['concepto'] }}</td>
                     <td style="text-align: right;">${{ "%.2f"|format(item['subtotal']) }}</td>
                 </tr>
@@ -210,7 +212,6 @@
             </span><br>
             {% endif %}
             <div class="total-amount">${{ "%.2f"|format(venta['total']) }}</div>
-
             {% if venta['saldo_pendiente'] > 0 %}
             <div style="font-size: 0.9rem; color: #dc3545; font-weight: bold; margin-top: 5px;">
                 Pendiente: ${{ "%.2f"|format(venta['saldo_pendiente']) }}
@@ -219,62 +220,72 @@
         </div>
 
         <div class="footer">
-            <p>¡Gracias por tu preferencia!</p>
+            <p>¡Gracias por tu compra!</p>
             {% if config['website'] %}<p style="color:#2ec4b6; font-weight:bold;">{{ config['website'] }}</p>{% endif %}
         </div>
     </div>
 
     <div class="no-print">
+        <button onclick="compartirImagen()" class="btn btn-img">
+            <i class="fas fa-camera"></i> Foto
+        </button>
+
+        <button onclick="enviarEnlace()" class="btn btn-link">
+            <i class="fab fa-whatsapp"></i> Link
+        </button>
+
         <button onclick="window.print()" class="btn btn-print">
-            <i class="fas fa-print"></i> Imprimir
-        </button>
-
-        <button onclick="compartirImagen()" class="btn btn-whatsapp">
-            <i class="fab fa-whatsapp"></i> Enviar Ticket
-        </button>
-
-        <button onclick="window.close()" class="btn btn-close">
-            <i class="fas fa-times"></i> Cerrar
+            <i class="fas fa-print"></i>
         </button>
     </div>
 
     <script>
+        // OPCIÓN 1: GENERAR FOTO
         function compartirImagen() {
-            const ticketElement = document.getElementById("ticketVisual");
-            const btn = document.querySelector('.btn-whatsapp');
-
-            // Efecto visual de "Cargando..."
+            const btn = document.querySelector('.btn-img');
             const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
 
-            html2canvas(ticketElement, {
-                scale: 2, // Mejora la calidad de la imagen
-                backgroundColor: "#ffffff" // Asegura fondo blanco
-            }).then(canvas => {
+            const ticket = document.getElementById("ticketVisual");
+
+            html2canvas(ticket, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
                 canvas.toBlob(blob => {
-                    const file = new File([blob], "ticket_sianeffects.png", { type: "image/png" });
+                    const file = new File([blob], "ticket_compra.png", { type: "image/png" });
 
-                    // SI ES CELULAR (Soporta compartir archivos directo)
+                    // Intenta compartir nativamente
                     if (navigator.canShare && navigator.canShare({ files: [file] })) {
                         navigator.share({
                             files: [file],
-                            title: 'Tu Ticket de Compra',
-                            text: '¡Hola! Aquí tienes tu ticket de compra en {{ config["nombre_empresa"] }}. ¡Gracias!',
-                        }).catch(console.error);
-                    }
-                    // SI ES PC (Descarga la imagen para que la arrastren a Web WhatsApp)
-                    else {
+                            title: 'Ticket de Compra',
+                            text: 'Gracias por tu compra en {{ config["nombre_empresa"] }}!'
+                        }).catch(err => {
+                            console.log("Cancelado o error", err);
+                        });
+                    } else {
+                        // SI FALLA (Plan de Respaldo): Descarga la imagen
                         const link = document.createElement('a');
                         link.download = 'ticket_{{ venta["id"] }}.png';
                         link.href = canvas.toDataURL();
                         link.click();
-                        alert("📸 ¡Ticket descargado como imagen!\n\nAhora puedes enviarlo por WhatsApp Web.");
+                        alert("📲 La imagen se descargó en tu celular.\n\nAhora abre WhatsApp y adjúntala desde tu galería.");
                     }
-
-                    // Restaurar botón
                     btn.innerHTML = originalText;
                 });
+            }).catch(err => {
+                alert("Error creando imagen: " + err);
+                btn.innerHTML = originalText;
             });
+        }
+
+        // OPCIÓN 2: ENVIAR ENLACE (INFALIBLE)
+        function enviarEnlace() {
+            // URL actual del ticket
+            const urlTicket = window.location.href;
+            const mensaje = "Hola! 👋 Aquí tienes tu ticket digital de *{{ config['nombre_empresa'] }}*: " + urlTicket;
+
+            // Abrir WhatsApp con el texto pre-escrito
+            const urlWhatsapp = "https://wa.me/?text=" + encodeURIComponent(mensaje);
+            window.open(urlWhatsapp, '_blank');
         }
     </script>
 </body>
