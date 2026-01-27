@@ -7,13 +7,11 @@
     <title>Ticket #{{ '%04d' % venta['id'] }}</title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <style>
         body {
             font-family: 'Nunito', sans-serif;
             background: #e0e0e0;
-            /* Fondo un poco más oscuro para resaltar el ticket */
             padding: 20px;
             display: flex;
             flex-direction: column;
@@ -30,8 +28,8 @@
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             position: relative;
-            margin-bottom: 30px;
-            /* Espacio para que no pegue con los botones */
+            margin-bottom: 80px;
+            /* Espacio extra para que no tapen los botones */
         }
 
         .brand {
@@ -104,20 +102,20 @@
             color: #888;
         }
 
-        /* BOTONES FLOTANTES MÁS BONITOS */
+        /* --- BOTONES FLOTANTES SIMPLIFICADOS --- */
         .no-print {
             position: fixed;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(5px);
-            padding: 15px;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 10px 20px;
+            border-radius: 50px;
             display: flex;
-            gap: 10px;
-            justify-content: center;
-            box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+            gap: 15px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.15);
             z-index: 100;
+            border: 1px solid #eee;
         }
 
         .btn {
@@ -126,35 +124,39 @@
             padding: 12px 20px;
             text-decoration: none;
             border-radius: 50px;
-            font-size: 0.85rem;
+            font-size: 0.9rem;
             font-weight: 800;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 8px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-            transition: transform 0.1s;
+            transition: transform 0.2s;
         }
 
         .btn:active {
             transform: scale(0.95);
         }
 
-        .btn-img {
-            background: linear-gradient(45deg, #ff6b81, #ff4757);
+        /* Colores Específicos */
+        .btn-whatsapp {
+            background: #25D366;
         }
 
-        .btn-link {
-            background: linear-gradient(45deg, #25D366, #128C7E);
+        .btn-whatsapp:hover {
+            background: #1ebc57;
         }
 
         .btn-print {
             background: #333;
         }
 
+        .btn-print:hover {
+            background: #000;
+        }
+
         @media print {
             body {
-                background: none;
+                background: white;
             }
 
             .ticket {
@@ -173,7 +175,7 @@
 
 <body>
 
-    <div class="ticket" id="ticketVisual">
+    <div class="ticket">
         <div class="brand">
             <h2>{{ config['nombre_empresa'] }}</h2>
             <p>{{ config['slogan'] }}</p>
@@ -196,7 +198,7 @@
             <tbody>
                 {% for item in detalles %}
                 <tr>
-                    <td style="font-weight: bold;">{{ item['cantidad']|int }}</td>
+                    <td style="font-weight: bold; color: #333;">{{ item['cantidad']|int }}</td>
                     <td>{{ item['concepto'] }}</td>
                     <td style="text-align: right;">${{ "%.2f"|format(item['subtotal']) }}</td>
                 </tr>
@@ -212,6 +214,7 @@
             </span><br>
             {% endif %}
             <div class="total-amount">${{ "%.2f"|format(venta['total']) }}</div>
+
             {% if venta['saldo_pendiente'] > 0 %}
             <div style="font-size: 0.9rem; color: #dc3545; font-weight: bold; margin-top: 5px;">
                 Pendiente: ${{ "%.2f"|format(venta['saldo_pendiente']) }}
@@ -220,18 +223,14 @@
         </div>
 
         <div class="footer">
-            <p>¡Gracias por tu compra!</p>
+            <p>¡Gracias por tu preferencia!</p>
             {% if config['website'] %}<p style="color:#2ec4b6; font-weight:bold;">{{ config['website'] }}</p>{% endif %}
         </div>
     </div>
 
     <div class="no-print">
-        <button onclick="compartirImagen()" class="btn btn-img">
-            <i class="fas fa-camera"></i> Foto
-        </button>
-
-        <button onclick="enviarEnlace()" class="btn btn-link">
-            <i class="fab fa-whatsapp"></i> Link
+        <button onclick="enviarWhatsapp()" class="btn btn-whatsapp">
+            <i class="fab fa-whatsapp fa-lg"></i> Enviar Link
         </button>
 
         <button onclick="window.print()" class="btn btn-print">
@@ -240,50 +239,14 @@
     </div>
 
     <script>
-        // OPCIÓN 1: GENERAR FOTO
-        function compartirImagen() {
-            const btn = document.querySelector('.btn-img');
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ...';
-
-            const ticket = document.getElementById("ticketVisual");
-
-            html2canvas(ticket, { scale: 2, backgroundColor: "#ffffff" }).then(canvas => {
-                canvas.toBlob(blob => {
-                    const file = new File([blob], "ticket_compra.png", { type: "image/png" });
-
-                    // Intenta compartir nativamente
-                    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-                        navigator.share({
-                            files: [file],
-                            title: 'Ticket de Compra',
-                            text: 'Gracias por tu compra en {{ config["nombre_empresa"] }}!'
-                        }).catch(err => {
-                            console.log("Cancelado o error", err);
-                        });
-                    } else {
-                        // SI FALLA (Plan de Respaldo): Descarga la imagen
-                        const link = document.createElement('a');
-                        link.download = 'ticket_{{ venta["id"] }}.png';
-                        link.href = canvas.toDataURL();
-                        link.click();
-                        alert("📲 La imagen se descargó en tu celular.\n\nAhora abre WhatsApp y adjúntala desde tu galería.");
-                    }
-                    btn.innerHTML = originalText;
-                });
-            }).catch(err => {
-                alert("Error creando imagen: " + err);
-                btn.innerHTML = originalText;
-            });
-        }
-
-        // OPCIÓN 2: ENVIAR ENLACE (INFALIBLE)
-        function enviarEnlace() {
-            // URL actual del ticket
+        function enviarWhatsapp() {
+            // 1. Obtenemos la dirección web de ESTE ticket
             const urlTicket = window.location.href;
-            const mensaje = "Hola! Gracias por tu compra 👋 Aquí tienes tu ticket digital de *{{ config['nombre_empresa'] }}*: " + urlTicket;
 
-            // Abrir WhatsApp con el texto pre-escrito
+            // 2. Preparamos el mensaje
+            const mensaje = "Hola! 👋 Aquí tienes tu ticket digital de *{{ config['nombre_empresa'] }}*: " + urlTicket;
+
+            // 3. Abrimos WhatsApp
             const urlWhatsapp = "https://wa.me/?text=" + encodeURIComponent(mensaje);
             window.open(urlWhatsapp, '_blank');
         }
