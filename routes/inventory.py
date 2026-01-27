@@ -1,9 +1,12 @@
-from flask import Blueprint, render_template, request, redirect, url_for, session
-from db import get_db_connection
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from db import get_db  # Usaremos get_db para todo, es más estándar
 from helpers import login_required
 
 inventory_bp = Blueprint('inventory', __name__)
 
+# ---------------------------------------------------
+# 1. GESTIÓN DE MATERIALES
+# ---------------------------------------------------
 @inventory_bp.route('/materiales', methods=['GET', 'POST'])
 @login_required
 def materiales():
@@ -53,26 +56,69 @@ def materiales():
 @inventory_bp.route('/eliminar_material/<int:id>')
 @login_required
 def eliminar_material(id):
-    conn = get_db_connection(); conn.execute('DELETE FROM materiales WHERE id=? AND user_id=?', (id, session['user_id'])); conn.commit(); conn.close(); return redirect(url_for('inventory.materiales'))
+    conn = get_db()
+    # Corregido: Usamos 'usuario_id' para ser consistentes con la tabla materiales
+    conn.execute('DELETE FROM materiales WHERE id=? AND usuario_id=?', (id, session['user_id']))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('inventory.materiales'))
 
+# ---------------------------------------------------
+# 2. GESTIÓN DE EQUIPOS (MAQUINARIA)
+# ---------------------------------------------------
 @inventory_bp.route('/equipos', methods=('GET', 'POST'))
 @login_required
 def equipos():
-    conn = get_db_connection(); uid = session['user_id']
-    if request.method == 'POST': conn.execute('INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (?, ?, ?)', (uid, request.form['nombre'], request.form['costo_desgaste'])); conn.commit(); return redirect(url_for('inventory.equipos'))
-    eqs = conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (uid,)).fetchall(); conn.close(); return render_template('equipos.html', equipos=eqs)
+    conn = get_db()
+    uid = session['user_id']
+    
+    if request.method == 'POST':
+        conn.execute('INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (?, ?, ?)', 
+                     (uid, request.form['nombre'], request.form['costo_desgaste']))
+        conn.commit()
+        conn.close() # Importante cerrar si rediriges
+        return redirect(url_for('inventory.equipos'))
+    
+    eqs = conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (uid,)).fetchall()
+    conn.close()
+    return render_template('equipos.html', equipos=eqs)
 
 @inventory_bp.route('/eliminar_equipo/<int:id>')
 @login_required
 def eliminar_equipo(id):
-    conn = get_db_connection(); conn.execute('DELETE FROM maquinaria WHERE id=? AND user_id=?', (id, session['user_id'])); conn.commit(); conn.close(); return redirect(url_for('inventory.equipos'))
+    conn = get_db()
+    conn.execute('DELETE FROM maquinaria WHERE id=? AND user_id=?', (id, session['user_id']))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('inventory.equipos'))
 
+# ---------------------------------------------------
+# 3. GESTIÓN DE RECETAS
+# ---------------------------------------------------
 @inventory_bp.route('/recetas')
 @login_required
 def recetas():
-    conn = get_db_connection(); r = conn.execute('SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales FROM productos p LEFT JOIN producto_detalles pd ON p.id=pd.producto_id WHERE p.user_id=? GROUP BY p.id', (session['user_id'],)).fetchall(); conn.close(); return render_template('recetas.html', recetas=r)
+    conn = get_db()
+    # Consulta un poco compleja, mejor dejarla clara
+    query = '''
+        SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
+        FROM productos p 
+        LEFT JOIN producto_detalles pd ON p.id=pd.producto_id 
+        WHERE p.user_id=? 
+        GROUP BY p.id
+    '''
+    r = conn.execute(query, (session['user_id'],)).fetchall()
+    conn.close()
+    return render_template('recetas.html', recetas=r)
 
 @inventory_bp.route('/eliminar_receta/<int:id>')
 @login_required
 def eliminar_receta(id):
-    conn = get_db_connection(); conn.execute('DELETE FROM productos WHERE id=? AND user_id=?', (id, session['user_id'])); conn.execute('DELETE FROM producto_detalles WHERE producto_id=?',(id,)); conn.execute('DELETE FROM producto_maquinaria WHERE producto_id=?',(id,)); conn.commit(); conn.close(); return redirect(url_for('inventory.recetas'))
+    conn = get_db()
+    # Borrado en cascada manual (por seguridad)
+    conn.execute('DELETE FROM productos WHERE id=? AND user_id=?', (id, session['user_id']))
+    conn.execute('DELETE FROM producto_detalles WHERE producto_id=?', (id,))
+    conn.execute('DELETE FROM producto_maquinaria WHERE producto_id=?', (id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('inventory.recetas'))
