@@ -617,8 +617,11 @@
         }
 
         // --- 5. CHECKOUT ---
+        // --- 5. CHECKOUT (TRUCO ANTI-BLOQUEO POPUP) ---
         function finalizarCompra(tipo) {
             if (carrito.length === 0) return alert("El carrito está vacío.");
+
+            // 1. Preparar datos
             const cli = document.getElementById('nombreCliente').value || "Cliente General";
             let sub = 0; carrito.forEach(i => sub += i.subtotal);
             const desc = parseInt(document.getElementById('inputDescuento').value) || 0;
@@ -632,10 +635,33 @@
                 pago_inicial = 0;
             } else if (tipo === 'anticipo') {
                 estado = 'anticipo';
-                pago_inicial = parseFloat(document.getElementById('inputPagoInicial').value) || 0;
+                const inputPago = document.getElementById('inputPagoInicial').value;
+                pago_inicial = parseFloat(inputPago) || 0;
+
+                // Pequeña validación extra
+                if (!inputPago || pago_inicial <= 0) return alert("Ingresa un monto válido para el anticipo.");
                 if (pago_inicial >= total) estado = 'pagado';
             }
 
+            // ---------------------------------------------------------
+            // EL TRUCO: Abrir la ventana INMEDIATAMENTE (antes del fetch)
+            // ---------------------------------------------------------
+            const ventanaTicket = window.open('', '_blank');
+
+            if (ventanaTicket) {
+                ventanaTicket.document.write(`
+                    <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+                        <h1>Generando Ticket... 🧾</h1>
+                        <p>Por favor espera un momento...</p>
+                        <div style="font-size: 3rem;">⏳</div>
+                    </div>
+                `);
+            } else {
+                alert("⚠️ Tu celular bloqueó la ventana. Por favor permite 'Ventanas Emergentes' para este sitio.");
+                return;
+            }
+
+            // 2. Enviar al servidor
             fetch('/api/checkout', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -645,11 +671,19 @@
                 })
             }).then(res => res.json()).then(data => {
                 if (data.success) {
-                    window.open('/ticket/' + data.ticket_id, '_blank');
-                    location.reload();
+                    // 3. ¡ÉXITO! Redirigimos la ventana que ya teníamos abierta
+                    ventanaTicket.location.href = '/ticket/' + data.ticket_id;
+
+                    // Recargamos el POS en segundo plano
+                    setTimeout(() => location.reload(), 500);
                 } else {
+                    // Si falló, cerramos la ventana que abrimos por gusto
+                    ventanaTicket.close();
                     alert("Error: " + data.message);
                 }
+            }).catch(err => {
+                ventanaTicket.close();
+                alert("Error de conexión con el servidor.");
             });
         }
 
