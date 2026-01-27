@@ -11,9 +11,7 @@ def login():
         password = request.form['password']
         
         conn = get_db()
-        
-        # --- CORRECCIÓN AQUÍ: Cambiamos 'users' por 'usuarios' ---
-        # Buscamos en la tabla 'usuarios'
+        # CORRECCIÓN: Tabla 'usuarios' (no users)
         user = conn.execute('SELECT * FROM usuarios WHERE email = ? OR username = ?', (credencial, credencial)).fetchone()
         conn.close()
         
@@ -36,12 +34,11 @@ def registro():
         nombre = request.form['username']
         email = request.form['email']
         password = request.form['password']
-        
         hashed_pw = generate_password_hash(password)
         
         conn = get_db()
         try:
-            
+            # CORRECCIÓN: Tabla 'usuarios'
             conn.execute('INSERT INTO usuarios (username, email, password, role) VALUES (?, ?, ?, 1)', 
                          (nombre, email, hashed_pw))
             conn.commit()
