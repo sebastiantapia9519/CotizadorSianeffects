@@ -440,14 +440,14 @@
     </div>
 
     <script>
-        // --- 1. VARIABLES GLOBALES ---
+        // --- 1. GLOBAL VARIABLES ---
         let precioVentaCalculado = 0;
         let costoProduccionCalculado = 0;
         let carrito = [];
 
         function obtenerOpciones() { return document.getElementById('masterSelect').innerHTML }
 
-        // --- 2. GESTIÓN DE FILAS RESPONSIVAS ---
+        // --- 2. RESPONSIVE ROW MANAGEMENT ---
         function agregarFila(idMat = 0, cantidad = 1) {
             const container = document.getElementById('listaMateriales');
             const div = document.createElement('div');
@@ -514,7 +514,7 @@
             calcularTotal();
         }
 
-        // --- 3. CÁLCULO DE TOTALES ---
+        // --- 3. TOTALS CALCULATION ---
         function calcularTotal() {
             let totalMat = 0;
             document.querySelectorAll('.item-row').forEach(row => {
@@ -547,7 +547,7 @@
             agregarFila();
         }
 
-        // --- 4. CARRITO ---
+        // --- 4. CART LOGIC ---
         function agregarAlCarrito() {
             if (precioVentaCalculado <= 0) return alert("Calcula primero el precio.");
             const nom = document.getElementById('nombreProductoActual').value || "Producto Personalizado";
@@ -675,9 +675,9 @@
             });
         }
 
-        // --- 6. GUARDAR RECETA (CORREGIDO) ---
+        // --- 6. SAVE RECIPE (FIXED) ---
         function mostrarGuardar() {
-            // Esto evita que la página salte al inicio
+            // Prevents the page from jumping to top
             event.preventDefault();
             document.getElementById('boxGuardar').classList.remove('d-none');
         }
@@ -689,7 +689,7 @@
             const materiales = [];
             const maquinaria = [];
 
-            // Recolectar Materiales
+            // Collect Materials
             document.querySelectorAll('.item-row').forEach(row => {
                 const s = row.querySelector('.material-select');
                 const c = row.querySelector('.input-cantidad');
@@ -698,20 +698,20 @@
                 }
             });
 
-            // Recolectar Maquinaria (ids)
+            // Collect Machinery (ids)
             document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
                 maquinaria.push({ id: parseInt(c.getAttribute('data-id')) });
             });
 
             if (materiales.length === 0) return alert("Agrega al menos un material.");
 
-            // --- AQUÍ ESTABA EL ERROR: RUTA CORRECTA Y NOMBRES CORRECTOS ---
+            // FIXED ROUTE: /inventory/guardar_receta
             fetch('/inventory/guardar_receta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     nombre: nom,
-                    materiales: materiales, // Antes decía 'items'
+                    materiales: materiales,
                     maquinaria: maquinaria
                 })
             }).then(r => r.json()).then(d => {
@@ -727,12 +727,12 @@
             });
         }
 
-        // --- 7. CARGAR RECETA (CORREGIDO) ---
+        // --- 7. LOAD RECIPE (FIXED) ---
         function cargarProductoDB() {
             const id = document.getElementById('selectCargarProducto').value;
             if (!id) return;
 
-            // RUTA CORRECTA: /api/receta/
+            // FIXED ROUTE: /api/receta/
             fetch('/api/receta/' + id).then(r => r.json()).then(d => {
                 if (d.error) return alert(d.error);
 
@@ -740,13 +740,12 @@
                 document.getElementById('listaMateriales').innerHTML = '';
                 document.getElementById('nombreProductoActual').value = d.nombre;
 
-                // Cargar materiales
+                // Load materials
                 d.materiales.forEach(i => {
-                    // i.id en la respuesta es el material_id
                     agregarFila(i.id, i.cantidad);
                 });
 
-                // Cargar maquinaria
+                // Load machinery
                 d.maquinaria.forEach(m => {
                     const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
                     if (c) c.checked = true;
@@ -756,7 +755,7 @@
             });
         }
 
-        // Eventos
+        // Event Listeners
         const modalCobro = document.getElementById('modalCobro');
         if (modalCobro) {
             modalCobro.addEventListener('show.bs.modal', () => {
