@@ -122,3 +122,4 @@ def eliminar_receta(id):
     conn.commit()
     conn.close()
     return redirect(url_for('inventory.recetas'))
+    # Actualizacion forzada
