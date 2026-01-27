@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from db import get_db  # Usaremos get_db para todo, es más estándar
+from db import get_db_connection as get_db
 from helpers import login_required
 
 inventory_bp = Blueprint('inventory', __name__)
