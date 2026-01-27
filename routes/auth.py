@@ -41,7 +41,7 @@ def registro():
         
         conn = get_db()
         try:
-            # --- CORRECCIÓN AQUÍ: Insertamos en 'usuarios' ---
+            
             conn.execute('INSERT INTO usuarios (username, email, password, role) VALUES (?, ?, ?, 1)', 
                          (nombre, email, hashed_pw))
             conn.commit()
