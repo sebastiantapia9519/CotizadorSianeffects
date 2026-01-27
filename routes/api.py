@@ -1,7 +1,7 @@
 from flask import Blueprint, jsonify, session, request
 from db import get_db_connection as get_db
 
-# ESTO ES LO QUE BUSCA EL SERVIDOR: 'api_bp'
+# ESTA LÍNEA ES LA QUE BUSCA EL SERVIDOR
 api_bp = Blueprint('api', __name__)
 
 @api_bp.route('/material/<int:id>')
