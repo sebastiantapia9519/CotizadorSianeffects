@@ -310,7 +310,8 @@
                             </button>
 
                             <div class="text-end mt-2">
-                                <a href="#" class="small text-muted text-decoration-none" onclick="mostrarGuardar()">
+                                <a href="javascript:void(0)" class="small text-muted text-decoration-none"
+                                    onclick="mostrarGuardar()">
                                     <i class="fas fa-save me-1"></i> Guardar esta receta
                                 </a>
                             </div>
@@ -486,18 +487,16 @@
             if (idMat > 0) {
                 const s = div.querySelector('select');
                 s.value = idMat;
-                actualizarFila(s); // Esto carga el precio
+                actualizarFila(s);
                 div.querySelector('.input-cantidad').value = cantidad;
-                setTimeout(() => calcularFila(s), 50); // Recalcular total
+                setTimeout(() => calcularFila(s), 50);
             }
         }
 
         function actualizarFila(sel) {
             const row = sel.closest('.item-row');
-            // Aseguramos que data-precio exista y sea número
             const opcion = sel.options[sel.selectedIndex];
             const precio = parseFloat(opcion.getAttribute('data-precio')) || 0;
-
             row.querySelector('.input-precio').value = precio.toFixed(2);
             calcularFila(sel);
         }
@@ -532,7 +531,6 @@
             const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
 
             costoProduccionCalculado = totalMat + totalMaq + extra;
-            // Fórmula del margen: Costo * (1 + (margen/100))
             precioVentaCalculado = costoProduccionCalculado * (1 + (margen / 100));
 
             document.getElementById('resultadoCosto').innerText = '$' + costoProduccionCalculado.toFixed(2);
@@ -546,7 +544,7 @@
             document.getElementById('costosExtra').value = 0;
             document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
             calcularTotal();
-            agregarFila(); // Agrega una fila vacía al limpiar
+            agregarFila();
         }
 
         // --- 4. CARRITO ---
@@ -642,7 +640,6 @@
                 ventanaTicket.document.write('<h2 style="text-align:center;font-family:sans-serif;margin-top:50px">Generando Ticket... 🧾</h2>');
             }
 
-            // Enviamos a la ruta CORRECTA en routes/main.py
             fetch('/guardar_venta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -667,7 +664,6 @@
                 if (data.success) {
                     if (ventanaTicket) ventanaTicket.location.href = '/ticket/' + data.ticket_id;
                     else window.location.href = '/ticket/' + data.ticket_id;
-
                     setTimeout(() => window.location.reload(), 1000);
                 } else {
                     if (ventanaTicket) ventanaTicket.close();
@@ -675,14 +671,13 @@
                 }
             }).catch(err => {
                 if (ventanaTicket) ventanaTicket.close();
-                console.error(err);
                 alert("Error de conexión.");
             });
         }
 
         // --- 6. GUARDAR RECETA (CORREGIDO) ---
         function mostrarGuardar() {
-            // PREVENIMOS QUE EL LINK SALTE
+            // Esto evita que la página salte al inicio
             event.preventDefault();
             document.getElementById('boxGuardar').classList.remove('d-none');
         }
@@ -703,18 +698,22 @@
                 }
             });
 
-            // Recolectar Maquinaria
+            // Recolectar Maquinaria (ids)
             document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
                 maquinaria.push({ id: parseInt(c.getAttribute('data-id')) });
             });
 
             if (materiales.length === 0) return alert("Agrega al menos un material.");
 
-            // RUTA CORRECTA: /inventory/guardar_receta
+            // --- AQUÍ ESTABA EL ERROR: RUTA CORRECTA Y NOMBRES CORRECTOS ---
             fetch('/inventory/guardar_receta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ nombre: nom, materiales: materiales, maquinaria: maquinaria })
+                body: JSON.stringify({
+                    nombre: nom,
+                    materiales: materiales, // Antes decía 'items'
+                    maquinaria: maquinaria
+                })
             }).then(r => r.json()).then(d => {
                 if (d.success) {
                     alert("¡Receta guardada con éxito!");
@@ -722,7 +721,10 @@
                 } else {
                     alert("Error al guardar: " + (d.error || d.message));
                 }
-            }).catch(e => alert("Error de conexión"));
+            }).catch(e => {
+                console.error(e);
+                alert("Error de conexión al guardar receta.");
+            });
         }
 
         // --- 7. CARGAR RECETA (CORREGIDO) ---
@@ -735,23 +737,22 @@
                 if (d.error) return alert(d.error);
 
                 limpiarCalculadora();
-                document.getElementById('listaMateriales').innerHTML = ''; // Limpiar fila vacía inicial
+                document.getElementById('listaMateriales').innerHTML = '';
                 document.getElementById('nombreProductoActual').value = d.nombre;
 
                 // Cargar materiales
                 d.materiales.forEach(i => {
-                    // i.id es el material_id en tu base de datos
+                    // i.id en la respuesta es el material_id
                     agregarFila(i.id, i.cantidad);
                 });
 
                 // Cargar maquinaria
                 d.maquinaria.forEach(m => {
-                    // Buscamos el checkbox con ese data-id
                     const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
                     if (c) c.checked = true;
                 });
 
-                setTimeout(calcularTotal, 200); // Esperar a que se renderice
+                setTimeout(calcularTotal, 200);
             });
         }
 
