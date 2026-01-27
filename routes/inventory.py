@@ -2,10 +2,10 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from db import get_db_connection as get_db
 from helpers import login_required
 
-# --- ESTA LÍNEA ES VITAL (Si falta, el servidor explota) ---
+# --- ¡ESTA LÍNEA ES LA QUE TE FALTA! ---
 inventory_bp = Blueprint('inventory', __name__)
 
-# --- RUTA PARA GUARDAR LA RECETA (Esta recibe los datos del botón) ---
+# --- RUTA PARA GUARDAR RECETA (La que necesita el botón) ---
 @inventory_bp.route('/guardar_receta', methods=['POST'])
 @login_required
 def guardar_receta():
@@ -99,7 +99,7 @@ def eliminar_equipo(id):
     conn.commit(); conn.close()
     return redirect(url_for('inventory.equipos'))
 
-# --- GESTIÓN DE RECETAS (Vista) ---
+# --- GESTIÓN DE RECETAS (VISTA) ---
 @inventory_bp.route('/recetas')
 @login_required
 def recetas():
