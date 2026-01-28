@@ -7,6 +7,10 @@ from helpers import login_required
 # 🔥 FIX CLAVE AQUÍ
 inventory_bp = Blueprint('inventory', __name__, url_prefix='/inventory')
 
+@inventory_bp.route('/test')
+def test_inventory():
+    return 'INVENTORY OK'
+
 @inventory_bp.route('/guardar_receta', methods=['POST'])
 @login_required
 def guardar_receta():
