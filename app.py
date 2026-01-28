@@ -8,7 +8,12 @@ app.secret_key = 'sianeffects_master_key_final'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 
 # 1. BASE DE DATOS
-init_db()
+try:
+    scheduler.init_app(app)
+    scheduler.start()
+except Exception as e:
+    print("Scheduler no iniciado:", e)
+
 
 # 2. TAREAS AUTOMÁTICAS
 scheduler = APScheduler()
@@ -44,9 +49,7 @@ from routes.api import api_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
-
-# ✅ INVENTORY CORRECTO
-app.register_blueprint(inventory_bp, url_prefix='/inventory')
+app.register_blueprint(inventory_bp)
 
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(api_bp, url_prefix='/api')
