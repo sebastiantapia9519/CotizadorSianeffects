@@ -3,12 +3,14 @@ from flask_apscheduler import APScheduler
 from datetime import timedelta, datetime
 from db import init_db, get_db_connection
 
+
 app = Flask(__name__)
 app.secret_key = 'sianeffects_master_key_final'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 
 # 1. BASE DE DATOS
 try:
+    init_db()
     scheduler.init_app(app)
     scheduler.start()
 except Exception as e:
