@@ -4,8 +4,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from db import get_db_connection as get_db
 from helpers import login_required
 
-# 🔥 FIX CLAVE AQUÍ
-inventory_bp = Blueprint('inventory', __name__, url_prefix='/inventory')
+app.register_blueprint(inventory_bp)
 
 @inventory_bp.route('/test')
 def test_inventory():

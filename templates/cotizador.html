@@ -714,14 +714,27 @@
                     materiales: materiales,
                     maquinaria: maquinaria
                 })
-            }).then(r => r.json()).then(d => {
-                if (d.success) {
+            })
+                .then(async response => {
+                    // Verificamos si la respuesta es OK (código 200-299)
+                    const isJson = response.headers.get('content-type')?.includes('application/json');
+                    const data = isJson ? await response.json() : null;
+
+                    if (!response.ok) {
+                        // Si hay error (404, 500), lanzamos el error con detalle
+                        const error = (data && data.error) || response.statusText;
+                        return Promise.reject(error);
+                    }
+
+                    // Si todo salió bien
                     alert("¡Receta guardada con éxito!");
                     location.reload();
-                } else {
-                    alert("Error al guardar: " + (d.error || d.message));
-                }
-            })
+                })
+                .catch(error => {
+                    console.error("Detalle del error:", error);
+                    // Ahora sí verás si es un 404, 500 o un error de lógica
+                    alert("Error al guardar: " + error);
+                });
         }
 
         // --- 7. LOAD RECIPE (FIXED) ---
