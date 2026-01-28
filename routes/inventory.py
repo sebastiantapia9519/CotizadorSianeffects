@@ -3,7 +3,7 @@ import traceback
 from flask import Blueprint, request, session, jsonify
 from db import get_db_connection as get_db
 
-inventory_bp = Blueprint('inventory', __name__, url_prefix='/inventory')
+inventory_bp = Blueprint('inventory', __name__)
 
 
 @inventory_bp.route('/test')
