@@ -18,7 +18,17 @@ except Exception as e:
 
 
 # 2. TAREAS AUTOMÁTICAS
-scheduler = APScheduler()
+if not app.debug:
+    scheduler = APScheduler()
+    scheduler.add_job(
+        id='Limpieza',
+        func=tarea_limpieza,
+        trigger='interval',
+        minutes=60
+    )
+    scheduler.init_app(app)
+    scheduler.start()
+
 
 def tarea_limpieza():
     with app.app_context():
