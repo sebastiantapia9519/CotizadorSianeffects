@@ -16,3 +16,4 @@ def admin_required(view):
             return redirect(url_for('main.cotizador'))
         return view(**kwargs)
     return wrapped_view
+    

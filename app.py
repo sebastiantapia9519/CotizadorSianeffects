@@ -24,17 +24,21 @@ scheduler.add_job(id='Limpieza', func=tarea_limpieza, trigger='interval', minute
 scheduler.init_app(app); scheduler.start()
 
 # 3. REGISTRAR LOS MÓDULOS (BLUEPRINTS)
+# Importamos después de crear la app para evitar ciclos
 from routes.auth import auth_bp
 from routes.main import main_bp
 from routes.inventory import inventory_bp
 from routes.admin import admin_bp
 from routes.api import api_bp
 
-app.register_blueprint(auth_bp)
-app.register_blueprint(main_bp)
-app.register_blueprint(inventory_bp)
-app.register_blueprint(admin_bp)
-app.register_blueprint(api_bp)
+# --- AQUÍ ESTABA EL ERROR: FALTABAN LOS PREFIJOS ---
+app.register_blueprint(auth_bp) # Login y Registro se quedan en la raíz
+app.register_blueprint(main_bp) # Cotizador y Home se quedan en la raíz
+
+# Estos 3 NECESITAN prefijo para que el JavaScript los encuentre
+app.register_blueprint(inventory_bp, url_prefix='/inventory') 
+app.register_blueprint(admin_bp, url_prefix='/admin')
+app.register_blueprint(api_bp, url_prefix='/api')
 
 # 4. ANTI-CACHÉ
 @app.after_request
