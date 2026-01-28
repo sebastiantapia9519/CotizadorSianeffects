@@ -2,21 +2,22 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from db import get_db_connection as get_db
 from helpers import login_required
 
-# --- ¡ESTA LÍNEA ES LA QUE TE FALTA! ---
+# --- ESTA LÍNEA ES LA QUE TE FALTA Y ROMPE TODO ---
 inventory_bp = Blueprint('inventory', __name__)
 
-# --- RUTA PARA GUARDAR RECETA (La que necesita el botón) ---
+# --- RUTA PARA GUARDAR LA RECETA (Desde el Cotizador) ---
 @inventory_bp.route('/guardar_receta', methods=['POST'])
 @login_required
 def guardar_receta():
     data = request.get_json()
     
+    # Validación básica
     if not data or 'nombre' not in data:
-        return jsonify({'error': 'Datos incompletos'}), 400
+        return jsonify({'error': 'Datos incompletos: Falta nombre'}), 400
         
     conn = get_db()
     try:
-        # 1. Guardar Producto
+        # 1. Guardar el Producto (Nombre de la receta)
         cursor = conn.execute('INSERT INTO productos (user_id, nombre) VALUES (?, ?)', 
                               (session['user_id'], data['nombre']))
         producto_id = cursor.lastrowid
@@ -45,27 +46,41 @@ def guardar_receta():
 @login_required
 def materiales():
     conn = get_db()
+    
     if request.method == 'POST':
         nombre = request.form['nombre']
         tipo = request.form['tipo_entrada']
         precio_compra = float(request.form['precio_compra'])
-        cantidad = float(request.form['cantidad_paquete']) if tipo == 'paquete' else 1.0
+        
+        cantidad = 1.0
+        if tipo == 'paquete':
+            cantidad = float(request.form['cantidad_paquete'])
+            
         precio_unitario = precio_compra / cantidad if cantidad > 0 else 0
+        
         id_act = request.form.get('id_actualizar')
         
-        if id_act:
-            conn.execute('UPDATE materiales SET nombre=?, tipo_entrada=?, precio_compra=?, cantidad_paquete=?, precio_unitario=? WHERE id=? AND user_id=?', 
-                         (nombre, tipo, precio_compra, cantidad, precio_unitario, id_act, session['user_id']))
-            flash('Material actualizado', 'success')
-        else:
-            conn.execute('INSERT INTO materiales (user_id, nombre, tipo_entrada, precio_compra, cantidad_paquete, precio_unitario) VALUES (?, ?, ?, ?, ?, ?)', 
-                         (session['user_id'], nombre, tipo, precio_compra, cantidad, precio_unitario))
-            flash('Material agregado', 'success')
-        conn.commit(); conn.close()
+        if id_act: # ACTUALIZAR
+            conn.execute('''
+                UPDATE materiales 
+                SET nombre=?, tipo_entrada=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?
+                WHERE id=? AND user_id=?
+            ''', (nombre, tipo, precio_compra, cantidad, precio_unitario, id_act, session['user_id']))
+            flash('Material actualizado correctamente', 'success')
+        else: # NUEVO
+            conn.execute('''
+                INSERT INTO materiales (user_id, nombre, tipo_entrada, precio_compra, cantidad_paquete, precio_unitario)
+                VALUES (?, ?, ?, ?, ?, ?)
+            ''', (session['user_id'], nombre, tipo, precio_compra, cantidad, precio_unitario))
+            flash('Material agregado correctamente', 'success')
+            
+        conn.commit()
+        conn.close()
         return redirect(url_for('inventory.materiales'))
 
     rows = conn.execute('SELECT * FROM materiales WHERE user_id = ? ORDER BY nombre', (session['user_id'],)).fetchall()
     mats = [dict(row) for row in rows]
+    
     conn.close()
     return render_template('materiales.html', materiales=mats)
 
@@ -74,19 +89,24 @@ def materiales():
 def eliminar_material(id):
     conn = get_db()
     conn.execute('DELETE FROM materiales WHERE id=? AND user_id=?', (id, session['user_id']))
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
     return redirect(url_for('inventory.materiales'))
 
-# --- GESTIÓN DE EQUIPOS ---
+# --- GESTIÓN DE EQUIPOS (MAQUINARIA) ---
 @inventory_bp.route('/equipos', methods=('GET', 'POST'))
 @login_required
 def equipos():
     conn = get_db()
     uid = session['user_id']
+    
     if request.method == 'POST':
-        conn.execute('INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (?, ?, ?)', (uid, request.form['nombre'], request.form['costo_desgaste']))
-        conn.commit(); conn.close()
+        conn.execute('INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (?, ?, ?)', 
+                     (uid, request.form['nombre'], request.form['costo_desgaste']))
+        conn.commit()
+        conn.close()
         return redirect(url_for('inventory.equipos'))
+    
     eqs = conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (uid,)).fetchall()
     conn.close()
     return render_template('equipos.html', equipos=eqs)
@@ -96,7 +116,8 @@ def equipos():
 def eliminar_equipo(id):
     conn = get_db()
     conn.execute('DELETE FROM maquinaria WHERE id=? AND user_id=?', (id, session['user_id']))
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
     return redirect(url_for('inventory.equipos'))
 
 # --- GESTIÓN DE RECETAS (VISTA) ---
@@ -106,9 +127,17 @@ def recetas():
     conn = get_db()
     materiales = conn.execute('SELECT * FROM materiales WHERE user_id=?', (session['user_id'],)).fetchall()
     equipos = conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (session['user_id'],)).fetchall()
-    query = 'SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales FROM productos p LEFT JOIN producto_detalles pd ON p.id=pd.producto_id WHERE p.user_id=? GROUP BY p.id'
+    
+    query = '''
+        SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
+        FROM productos p 
+        LEFT JOIN producto_detalles pd ON p.id=pd.producto_id 
+        WHERE p.user_id=? 
+        GROUP BY p.id
+    '''
     recetas = conn.execute(query, (session['user_id'],)).fetchall()
     conn.close()
+    
     return render_template('recetas.html', recetas=recetas, materiales=materiales, equipos=equipos)
 
 @inventory_bp.route('/eliminar_receta/<int:id>')
@@ -118,5 +147,6 @@ def eliminar_receta(id):
     conn.execute('DELETE FROM productos WHERE id=? AND user_id=?', (id, session['user_id']))
     conn.execute('DELETE FROM producto_detalles WHERE producto_id=?', (id,))
     conn.execute('DELETE FROM producto_maquinaria WHERE producto_id=?', (id,))
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
     return redirect(url_for('inventory.recetas'))
