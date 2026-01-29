@@ -41,7 +41,7 @@ def reparar_materiales():
         conn.close()
 
 # =========================
-# 2. VISTAS DE MATERIALES
+# MATERIALES (VER, CREAR, EDITAR)
 # =========================
 @inventory_bp.route('/materiales', methods=['GET', 'POST'])
 @login_required
@@ -55,7 +55,7 @@ def materiales():
             nombre = request.form.get('nombre')
             tipo = request.form.get('tipo_entrada') # 'unidad' o 'paquete'
             
-            # Convertimos a números, si falla usamos 0
+            # Convertimos a números seguros
             try:
                 precio_compra = float(request.form.get('precio_compra') or 0)
                 cantidad_paquete = float(request.form.get('cantidad_paquete') or 1)
@@ -86,22 +86,23 @@ def materiales():
                 """, (session['user_id'], nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario))
             
             conn.commit()
+            conn.close()
             return redirect(url_for('inventory.materiales'))
             
         except Exception as e:
-            # Si falla al guardar, probablemente faltan columnas. Redirigimos a reparar.
             conn.close()
-            return f"Error al guardar: {e}. <br> Intenta ejecutar <a href='/reparar-materiales'>Reparar DB</a>"
+            return f"Error al guardar: {e}"
 
     # --- VER LISTA (GET) ---
-    try:
-        materiales = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (session['user_id'],)).fetchall()
-    except Exception:
-        # Si falla al leer, es porque faltan columnas
-        materiales = []
-    
+    # Aquí es donde leía la base de datos
+    rows = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (session['user_id'],)).fetchall()
     conn.close()
-    return render_template('materiales.html', materiales=materiales)
+
+    # TRUCO DE MAGIA: Convertimos las 'Rows' a 'Diccionarios' reales de Python
+    # Esto arregla el error "Object of type Row is not JSON serializable"
+    materiales_lista = [dict(row) for row in rows]
+    
+    return render_template('materiales.html', materiales=materiales_lista)
 
 @inventory_bp.route('/materiales/eliminar/<int:id>')
 @login_required
