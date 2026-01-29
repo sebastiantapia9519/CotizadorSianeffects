@@ -5,108 +5,104 @@ from db import get_db_connection as get_db
 inventory_bp = Blueprint('inventory', __name__)
 
 # =========================
-# TEST
+# 1. TEST Y REPARACIÓN (CRUCIAL PARA QUE FUNCIONE)
 # =========================
 @inventory_bp.route('/test')
 def test_inventory():
     return 'INVENTORY OK'
 
-# =========================
-# GUARDAR RECETA (PRODUCTO)
-# =========================
-@inventory_bp.route('/guardar_receta', methods=['POST'])
+@inventory_bp.route('/reparar-materiales')
 @login_required
-def guardar_receta():
-    data = request.get_json(silent=True)
-    if not data or not data.get('nombre'):
-        return jsonify({'error': 'Datos incompletos'}), 400
-
+def reparar_materiales():
+    # ESTA FUNCIÓN AGREGA LAS COLUMNAS FALTANTES SIN BORRAR NADA
     conn = get_db()
     try:
-        conn.execute('BEGIN')
-        # Producto
-        cur = conn.execute(
-            "INSERT INTO productos (user_id, nombre) VALUES (?, ?)",
-            (session['user_id'], data['nombre'])
-        )
-        producto_id = cur.lastrowid
-
-        # Materiales
-        for m in data.get('materiales', []):
-            conn.execute(
-                "INSERT INTO producto_detalles (producto_id, material_id, cantidad) VALUES (?, ?, ?)",
-                (producto_id, m['id'], m['cantidad'])
-            )
-
-        # Maquinaria
-        for e in data.get('maquinaria', []):
-            conn.execute(
-                "INSERT INTO producto_maquinaria (producto_id, maquinaria_id) VALUES (?, ?)",
-                (producto_id, e['id'])
-            )
-
+        # Intentamos agregar las columnas. Si ya existen, ignoramos el error.
+        columns = [
+            ("es_paquete", "BOOLEAN DEFAULT 0"),
+            ("precio_compra", "REAL DEFAULT 0"),
+            ("cantidad_paquete", "REAL DEFAULT 1"),
+            ("precio_unitario", "REAL DEFAULT 0")
+        ]
+        
+        mensaje = "Resultado: "
+        for col, tipo in columns:
+            try:
+                conn.execute(f"ALTER TABLE materiales ADD COLUMN {col} {tipo}")
+                mensaje += f"Columna {col} agregada. "
+            except Exception:
+                pass # La columna ya existía
+        
         conn.commit()
-        return jsonify({'success': True})
-
+        return f"Base de datos sincronizada correctamente. {mensaje} <a href='/materiales'>Ir a Materiales</a>"
     except Exception as e:
-        conn.rollback()
-        return jsonify({'error': str(e)}), 500
+        return f"Error: {e}"
     finally:
         conn.close()
 
 # =========================
-# VISTAS (PÁGINAS)
-# =========================
-
-# =========================
-# MATERIALES (VER, CREAR, EDITAR)
+# 2. VISTAS DE MATERIALES
 # =========================
 @inventory_bp.route('/materiales', methods=['GET', 'POST'])
 @login_required
 def materiales():
     conn = get_db()
 
-    # Si el usuario mandó el formulario (GUARDAR o EDITAR)
+    # --- GUARDAR O EDITAR ---
     if request.method == 'POST':
-        id_actualizar = request.form.get('id_actualizar')
-        nombre = request.form.get('nombre')
-        tipo = request.form.get('tipo_entrada') # 'unidad' o 'paquete'
-        precio_compra = float(request.form.get('precio_compra') or 0)
-        
-        # Lógica para paquetes
-        es_paquete = 1 if tipo == 'paquete' else 0
-        cantidad_paquete = float(request.form.get('cantidad_paquete') or 1)
-        
-        # Calculamos el precio unitario automáticamente para el cotizador
-        # Si es paquete de 100 hojas a $100, la unidad cuesta $1
-        precio_unitario = precio_compra / cantidad_paquete if cantidad_paquete > 0 else 0
+        try:
+            id_actualizar = request.form.get('id_actualizar')
+            nombre = request.form.get('nombre')
+            tipo = request.form.get('tipo_entrada') # 'unidad' o 'paquete'
+            
+            # Convertimos a números, si falla usamos 0
+            try:
+                precio_compra = float(request.form.get('precio_compra') or 0)
+                cantidad_paquete = float(request.form.get('cantidad_paquete') or 1)
+            except ValueError:
+                precio_compra = 0
+                cantidad_paquete = 1
+            
+            es_paquete = 1 if tipo == 'paquete' else 0
+            
+            # Cálculo de precio unitario
+            if cantidad_paquete > 0:
+                precio_unitario = precio_compra / cantidad_paquete
+            else:
+                precio_unitario = 0
 
-        if id_actualizar:
-            # ACTUALIZAR EXISTENTE
-            conn.execute("""
-                UPDATE materiales 
-                SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?
-                WHERE id=? AND user_id=?
-            """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, id_actualizar, session['user_id']))
-        else:
-            # INSERTAR NUEVO
-            conn.execute("""
-                INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (session['user_id'], nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario))
-        
-        conn.commit()
-        conn.close()
-        # Recargamos la página para ver los cambios
-        return redirect(url_for('inventory.materiales'))
+            if id_actualizar:
+                # ACTUALIZAR
+                conn.execute("""
+                    UPDATE materiales 
+                    SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?
+                    WHERE id=? AND user_id=?
+                """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, id_actualizar, session['user_id']))
+            else:
+                # CREAR NUEVO
+                conn.execute("""
+                    INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (session['user_id'], nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario))
+            
+            conn.commit()
+            return redirect(url_for('inventory.materiales'))
+            
+        except Exception as e:
+            # Si falla al guardar, probablemente faltan columnas. Redirigimos a reparar.
+            conn.close()
+            return f"Error al guardar: {e}. <br> Intenta ejecutar <a href='/reparar-materiales'>Reparar DB</a>"
 
-    # Si solo está viendo la página (GET)
-    materiales = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (session['user_id'],)).fetchall()
+    # --- VER LISTA (GET) ---
+    try:
+        materiales = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (session['user_id'],)).fetchall()
+    except Exception:
+        # Si falla al leer, es porque faltan columnas
+        materiales = []
+    
     conn.close()
     return render_template('materiales.html', materiales=materiales)
 
-
-# Esta es la función que te faltaba y hubiera causado error
 @inventory_bp.route('/materiales/eliminar/<int:id>')
 @login_required
 def eliminar_material(id):
@@ -116,6 +112,9 @@ def eliminar_material(id):
     conn.close()
     return redirect(url_for('inventory.materiales'))
 
+# =========================
+# 3. EQUIPOS Y RECETAS (El resto de tu código)
+# =========================
 @inventory_bp.route('/equipos')
 @login_required
 def equipos():
@@ -123,26 +122,6 @@ def equipos():
     equipos = conn.execute("SELECT * FROM maquinaria WHERE user_id = ?", (session['user_id'],)).fetchall()
     conn.close()
     return render_template('equipos.html', equipos=equipos)
-
-@inventory_bp.route('/recetas')
-@login_required
-def recetas():
-    conn = get_db()
-    # Esta consulta cuenta cuántos materiales tiene cada receta para mostrarlo en la tabla
-    query = """
-        SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
-        FROM productos p 
-        LEFT JOIN producto_detalles pd ON p.id=pd.producto_id 
-        WHERE p.user_id=? 
-        GROUP BY p.id
-    """
-    recetas = conn.execute(query, (session['user_id'],)).fetchall()
-    conn.close()
-    return render_template('recetas.html', recetas=recetas)
-
-# =========================
-# ELIMINAR
-# =========================
 
 @inventory_bp.route('/equipos/eliminar/<int:id>')
 @login_required
@@ -153,13 +132,71 @@ def eliminar_equipo(id):
     conn.close()
     return redirect(url_for('inventory.equipos'))
 
+@inventory_bp.route('/recetas')
+@login_required
+def recetas():
+    conn = get_db()
+    # Usamos try/except para compatibilidad con nombre de tabla
+    try:
+        query = """
+            SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
+            FROM productos p 
+            LEFT JOIN producto_detalles pd ON p.id=pd.producto_id 
+            WHERE p.user_id=? 
+            GROUP BY p.id
+        """
+        recetas = conn.execute(query, (session['user_id'],)).fetchall()
+    except Exception:
+        # Fallback si la tabla se llama recetas
+        recetas = conn.execute("SELECT *, 0 as num_materiales FROM recetas WHERE user_id=?", (session['user_id'],)).fetchall()
+        
+    conn.close()
+    
+    # IMPORTANTE: Enviamos materiales y equipos para que el modal de recetas funcione
+    conn = get_db()
+    try:
+        mats = conn.execute("SELECT * FROM materiales WHERE user_id=?", (session['user_id'],)).fetchall()
+        eqs = conn.execute("SELECT * FROM maquinaria WHERE user_id=?", (session['user_id'],)).fetchall()
+    except:
+        mats = []
+        eqs = []
+    conn.close()
+
+    return render_template('recetas.html', recetas=recetas, materiales=mats, equipos=eqs)
+
+@inventory_bp.route('/guardar_receta', methods=['POST'])
+@login_required
+def guardar_receta():
+    data = request.get_json(silent=True)
+    if not data or not data.get('nombre'):
+        return jsonify({'error': 'Datos incompletos'}), 400
+
+    conn = get_db()
+    try:
+        conn.execute('BEGIN')
+        cur = conn.execute("INSERT INTO productos (user_id, nombre) VALUES (?, ?)", (session['user_id'], data['nombre']))
+        pid = cur.lastrowid
+
+        for m in data.get('materiales', []):
+            conn.execute("INSERT INTO producto_detalles (producto_id, material_id, cantidad) VALUES (?, ?, ?)", (pid, m['id'], m['cantidad']))
+            
+        for e in data.get('maquinaria', []):
+            conn.execute("INSERT INTO producto_maquinaria (producto_id, maquinaria_id) VALUES (?, ?)", (pid, e['id']))
+
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
+
 @inventory_bp.route('/recetas/eliminar/<int:id>')
 @login_required
 def eliminar_receta(id):
     conn = get_db()
     try:
         conn.execute("BEGIN")
-        # Borramos en orden para mantener integridad
         conn.execute("DELETE FROM producto_detalles WHERE producto_id=?", (id,))
         conn.execute("DELETE FROM producto_maquinaria WHERE producto_id=?", (id,))
         conn.execute("DELETE FROM productos WHERE id=? AND user_id=?", (id, session['user_id']))
