@@ -3,7 +3,13 @@ from flask_apscheduler import APScheduler
 from datetime import timedelta, datetime
 from db import init_db, get_db_connection
 
+app = Flask(__name__)
+app.secret_key = 'sianeffects_master_key_final'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 
+# =========================
+# TAREA AUTOMÁTICA
+# =========================
 def tarea_limpieza():
     with app.app_context():
         try:
@@ -14,47 +20,34 @@ def tarea_limpieza():
             )
             conn.commit()
             conn.close()
-        except:
-            pass
+        except Exception as e:
+            print("Error en tarea_limpieza:", e)
 
-app = Flask(__name__)
-app.secret_key = 'sianeffects_master_key_final'
-app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
+# =========================
+# BASE DE DATOS
+# =========================
+init_db()
 
-# 1. BASE DE DATOS
-try:
-    init_db()
-    scheduler.init_app(app)
-    scheduler.start()
-except Exception as e:
-    print("Scheduler no iniciado:", e)
+# =========================
+# SCHEDULER (UNA SOLA VEZ)
+# =========================
+scheduler = APScheduler()
+scheduler.init_app(app)
+scheduler.start()
 
-
-# 2. TAREAS AUTOMÁTICAS
-if not app.debug:
-    scheduler = APScheduler()
+# Evitar duplicar el job (CRÍTICO)
+if not scheduler.get_job('Limpieza'):
     scheduler.add_job(
         id='Limpieza',
         func=tarea_limpieza,
         trigger='interval',
-        minutes=60
+        minutes=60,
+        replace_existing=True
     )
-    scheduler.init_app(app)
-    scheduler.start()
 
-
-
-
-scheduler.add_job(
-    id='Limpieza',
-    func=tarea_limpieza,
-    trigger='interval',
-    minutes=60
-)
-scheduler.init_app(app)
-scheduler.start()
-
-# 3. REGISTRAR RUTAS
+# =========================
+# REGISTRO DE RUTAS
+# =========================
 from routes.auth import auth_bp
 from routes.main import main_bp
 from routes.inventory import inventory_bp
@@ -64,15 +57,19 @@ from routes.api import api_bp
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
 app.register_blueprint(inventory_bp)
-
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(api_bp, url_prefix='/api')
 
-# 4. ANTI-CACHÉ
+# =========================
+# ANTI-CACHÉ
+# =========================
 @app.after_request
 def add_header(response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
 
+# =========================
+# MAIN
+# =========================
 if __name__ == '__main__':
     app.run(debug=True)
