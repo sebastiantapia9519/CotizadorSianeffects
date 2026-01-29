@@ -98,45 +98,11 @@ def equipos():
     return render_template('equipos.html', equipos=equipos)
 
 
-# =========================
-# RECETAS (PRODUCTOS)
-# =========================
-@inventory_bp.route('/recetas')
+@app.route('/recetas')
 @login_required
 def recetas():
-    conn = get_db()
-    user_id = session['user_id']
+    conn = get_db_connection(); r = conn.execute('SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales FROM productos p LEFT JOIN producto_detalles pd ON p.id=pd.producto_id WHERE p.user_id=? GROUP BY p.id', (session['user_id'],)).fetchall(); conn.close(); return render_template('recetas.html', recetas=r)
 
-    # 1. Obtener Recetas (con el truco para contar materiales)
-    # Hacemos una subconsulta para que 'num_materiales' exista y el HTML no falle
-    query_recetas = """
-        SELECT r.*, 
-        (SELECT COUNT(*) FROM receta_materiales rm WHERE rm.receta_id = r.id) as num_materiales
-        FROM recetas r
-        WHERE r.user_id = ?
-    """
-    # Si te da error por la tabla 'receta_materiales', cambia la query de arriba por: "SELECT *, 0 as num_materiales FROM recetas WHERE user_id = ?"
-    recetas = conn.execute(query_recetas, (user_id,)).fetchall()
-
-    # 2. Obtener Materiales (Para el dropdown del modal)
-    materiales = conn.execute(
-        "SELECT * FROM materiales WHERE user_id = ?", 
-        (user_id,)
-    ).fetchall()
-
-    # 3. Obtener Equipos (Para el dropdown del modal)
-    equipos = conn.execute(
-        "SELECT * FROM maquinaria WHERE user_id = ?", 
-        (user_id,)
-    ).fetchall()
-
-    conn.close()
-
-    # 4. Enviamos TODO al HTML
-    return render_template('recetas.html', 
-                           recetas=recetas, 
-                           materiales=materiales, 
-                           equipos=equipos)
 @inventory_bp.route('/recetas/eliminar/<int:id>')
 @login_required
 def eliminar_receta(id):
