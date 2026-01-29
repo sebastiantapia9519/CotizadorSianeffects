@@ -107,8 +107,8 @@ def obtener_detalles_venta(id):
         'total': venta['total'],
         'costo_total': venta['costo_total'],
         # Datos clave para el cobro
-        'monto_pagado': venta['monto_pagado'],
-        'saldo_pendiente': venta['saldo_pendiente'],
+        'monto_pagado': venta['monto_pagado'],      # <--- AQUÍ ESTÁ (YA LO TIENES)
+        'saldo_pendiente': venta['saldo_pendiente'],# <--- AQUÍ TAMBIÉN
         'items': items
     })
 
