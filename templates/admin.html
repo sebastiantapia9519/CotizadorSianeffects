@@ -5,8 +5,6 @@
 {% block extra_css %}
 <style>
     /* Estilos específicos del Admin Panel */
-
-    /* Fondo gris claro distintivo para el admin */
     body {
         background-color: #f8f9fa;
     }
@@ -50,7 +48,17 @@
         border: none;
         border-radius: 20px;
         box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-        overflow: hidden;
+        /* ELIMINAMOS overflow: hidden PARA QUE NO CORTE EL MENU */
+        /* overflow: hidden;  <-- ESTO CAUSABA EL CORTE */
+    }
+
+    /* Ajuste para que la tabla responda bien pero deje ver el menú */
+    .table-responsive {
+        min-height: 300px;
+        /* Dar altura mínima ayuda al menú a abrirse hacia abajo */
+        overflow-x: auto;
+        overflow-y: visible;
+        /* Importante para dropdowns */
     }
 </style>
 {% endblock %}
@@ -130,11 +138,12 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0" style="min-width: 600px;">
+            <table class="table table-hover align-middle mb-0" style="min-width: 800px;">
                 <thead class="bg-light small text-muted text-uppercase">
                     <tr>
                         <th class="ps-4 py-3">Usuario / Empresa</th>
                         <th>Rol</th>
+                        <th>Última Vez</th>
                         <th>Suscripción</th>
                         <th>Estado</th>
                         <th class="text-end pe-4">Acciones</th>
@@ -142,7 +151,7 @@
                 </thead>
                 <tbody>
                     {% for u in users %}
-                    {% set sub_end = u['subscription_end']|string %}
+                    {% set sub_end = u['subscription_end']|string if u['subscription_end'] else '2000-01-01' %}
                     {% set is_active = sub_end[:19] > now|string %}
 
                     <tr>
@@ -172,7 +181,19 @@
                         </td>
 
                         <td>
-                            <small class="fw-bold text-dark">{{ sub_end[:10] }}</small>
+                            {% if u['last_login'] %}
+                            <small class="fw-bold text-dark">{{ u['last_login'][:16] }}</small>
+                            {% else %}
+                            <span class="badge bg-light text-muted border">Nunca</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            {% if u['subscription_end'] %}
+                            <small class="fw-bold text-dark">{{ u['subscription_end'][:10] }}</small>
+                            {% else %}
+                            <small class="text-muted">Sin fecha</small>
+                            {% endif %}
                         </td>
 
                         <td>
@@ -188,7 +209,7 @@
                         <td class="text-end pe-4">
                             <div class="dropdown">
                                 <button class="btn btn-sm btn-light border rounded-pill px-3" type="button"
-                                    data-bs-toggle="dropdown">
+                                    data-bs-toggle="dropdown" data-bs-display="static">
                                     <i class="fas fa-ellipsis-h text-muted"></i>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
