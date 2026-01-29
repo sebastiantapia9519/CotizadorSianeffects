@@ -116,13 +116,51 @@ def eliminar_material(id):
 # =========================
 # 3. EQUIPOS Y RECETAS (El resto de tu código)
 # =========================
-@inventory_bp.route('/equipos')
+# =========================
+# EQUIPOS / MAQUINARIA
+# =========================
+@inventory_bp.route('/equipos', methods=['GET', 'POST'])
 @login_required
 def equipos():
     conn = get_db()
-    equipos = conn.execute("SELECT * FROM maquinaria WHERE user_id = ?", (session['user_id'],)).fetchall()
+
+    # --- GUARDAR O EDITAR (POST) ---
+    if request.method == 'POST':
+        try:
+            # Recibimos los datos del formulario HTML
+            nombre = request.form.get('nombre')
+            
+            # Convertimos costo a número (si falla o viene vacío, ponemos 0)
+            try:
+                costo_desgaste = float(request.form.get('costo_desgaste') or 0)
+            except ValueError:
+                costo_desgaste = 0
+
+            # Guardamos en la base de datos
+            conn.execute("""
+                INSERT INTO maquinaria (user_id, nombre, costo_desgaste)
+                VALUES (?, ?, ?)
+            """, (session['user_id'], nombre, costo_desgaste))
+            
+            conn.commit()
+            conn.close()
+            # Recargamos la página para ver el nuevo equipo
+            return redirect(url_for('inventory.equipos'))
+            
+        except Exception as e:
+            conn.close()
+            return f"Error al guardar equipo: {e}"
+
+    # --- VER LISTA (GET) ---
+    # Leemos la tabla maquinaria
+    rows = conn.execute("SELECT * FROM maquinaria WHERE user_id = ?", (session['user_id'],)).fetchall()
     conn.close()
-    return render_template('equipos.html', equipos=equipos)
+    
+    # Convertimos a diccionarios (TRUCO para que no falle el HTML si agregas botón editar después)
+    equipos_lista = [dict(row) for row in rows]
+
+    return render_template('equipos.html', equipos=equipos_lista)
+
 
 @inventory_bp.route('/equipos/eliminar/<int:id>')
 @login_required
