@@ -11,10 +11,29 @@ admin_bp = Blueprint('admin', __name__)
 def dashboard():
     conn = get_db_connection(); users = conn.execute('SELECT * FROM usuarios ORDER BY created_at DESC').fetchall(); conn.close()
     stats = {'total': len(users), 'activos': 0, 'vencidos': 0, 'admins': 0}
+# ... (código anterior) ...
+    
+    # 2. Calcular estadísticas (CORREGIDO)
     for u in users:
-        if u['role'] > 0: stats['admins'] += 1
-        if datetime.strptime(str(u['subscription_end'])[:19], '%Y-%m-%d %H:%M:%S') > datetime.now(): stats['activos'] += 1
-        else: stats['vencidos'] += 1
+        # Verificamos si tiene fecha. Si es None, lo contamos como vencido o ignoramos
+        if u['subscription_end']:
+            try:
+                # Intentamos convertir la fecha
+                fecha_fin = datetime.strptime(str(u['subscription_end'])[:19], '%Y-%m-%d %H:%M:%S')
+                
+                if fecha_fin > datetime.now():
+                    stats['activos'] += 1
+                else:
+                    stats['vencidos'] += 1
+            except ValueError:
+                # Si el formato de fecha está corrupto, lo contamos como vencido
+                stats['vencidos'] += 1
+        else:
+            # Si es None (sin fecha), lo contamos como vencido (o infinito si es admin, pero para stats cuenta vencido)
+            stats['vencidos'] += 1
+
+        if u['role'] > 0:  # 1=Admin, 2=Dueño
+            stats['admins'] += 1
     return render_template('admin.html', users=users, now=datetime.now(), stats=stats)
 
 @admin_bp.route('/admin/renovar/<int:user_id>/<int:meses>')
