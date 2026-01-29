@@ -1,6 +1,8 @@
 import sys
 import traceback
-from flask import Blueprint, request, session, jsonify
+
+from flask import Blueprint, request, session, jsonify, render_template
+from helpers import login_required
 from db import get_db_connection as get_db
 
 inventory_bp = Blueprint('inventory', __name__)
@@ -15,12 +17,11 @@ def test_inventory():
 def guardar_receta():
     print("--- [DEBUG] INICIO INTENTO GUARDAR RECETA ---", file=sys.stderr)
 
-    # 🔐 VALIDACIÓN DE SESIÓN (API-SAFE, sin redirects)
+    # 🔐 VALIDACIÓN DE SESIÓN (API-SAFE)
     if 'user_id' not in session:
         return jsonify({'error': 'No autorizado'}), 401
 
     try:
-        # 📦 Validar JSON
         data = request.get_json(silent=True)
         print(f"--- [DEBUG] DATOS RECIBIDOS: {data}", file=sys.stderr)
 
@@ -28,11 +29,9 @@ def guardar_receta():
             return jsonify({'error': 'Datos incompletos'}), 400
 
         conn = get_db()
-
-        # 🧱 Transacción explícita
         conn.execute('BEGIN')
 
-        # 🧾 Insert producto
+        # 🧾 Producto
         cursor = conn.execute(
             'INSERT INTO productos (user_id, nombre) VALUES (?, ?)',
             (session['user_id'], data['nombre'])
@@ -65,7 +64,6 @@ def guardar_receta():
                 (producto_id, maq['id'])
             )
 
-        # ✅ Commit final
         conn.commit()
         conn.close()
 
@@ -85,17 +83,6 @@ def guardar_receta():
         }), 500
 
 
-@inventory_bp.route('/materiales', methods=['GET', 'POST'])
-@login_required
-def materiales():
-    conn = get_db()
-    materiales = conn.execute(
-        'SELECT * FROM materiales WHERE user_id = ?',
-        (session['user_id'],)
-    ).fetchall()
-    conn.close()
-    return render_template('materiales.html', materiales=materiales)
-    
 @inventory_bp.route('/materiales', methods=['GET'])
 @login_required
 def materiales():
@@ -105,4 +92,5 @@ def materiales():
         (session['user_id'],)
     ).fetchall()
     conn.close()
+
     return render_template('materiales.html', materiales=materiales)
