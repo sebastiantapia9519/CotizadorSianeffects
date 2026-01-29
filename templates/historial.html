@@ -287,7 +287,10 @@
     function verDetalles(id) {
         const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
         document.getElementById('modalFolio').innerText = id;
+        // Loader mientras carga
         document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Cargando datos...</td></tr>';
+        // Limpiamos los totales visualmente para que no se vean los anteriores
+        document.getElementById('panelFinanciero').innerHTML = '';
         modal.show();
 
         fetch('/api/obtener_detalles/' + id)
@@ -297,7 +300,7 @@
                     document.getElementById('modalFolio').innerText = data.folio;
                     document.getElementById('modalCliente').innerText = data.cliente;
 
-                    // Badge de Estado en Modal
+                    // 1. Badge de Estado
                     const estadoDiv = document.getElementById('modalEstadoDiv');
                     let badgeClass = '';
                     let icon = '';
@@ -310,7 +313,7 @@
 
                     estadoDiv.innerHTML = `<span class="badge ${badgeClass} fs-6 px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-${icon} me-1"></i> ${label}</span>`;
 
-                    // Tabla de items
+                    // 2. Tabla de items
                     const tbody = document.getElementById('modalTablaCuerpo');
                     tbody.innerHTML = '';
                     data.items.forEach(item => {
@@ -326,25 +329,49 @@
                         `;
                     });
 
-                    // Panel Financiero
-                    document.getElementById('modalTotal').innerText = '$' + data.total.toFixed(2);
+                    // 3. PANEL FINANCIERO (AQUÍ ESTÁ LA MAGIA NUEVA)
+                    // Calculamos la ganancia
+                    const costo = data.costo_total || 0;
+                    const ganancia = data.total - costo;
 
+                    // Definimos colores para los montos
+                    let colorSaldo = data.saldo_pendiente > 0.5 ? "text-danger" : "text-muted";
+                    let textoSaldo = data.saldo_pendiente > 0.5 ? `$${data.saldo_pendiente.toFixed(2)}` : "$0.00";
+
+                    // Inyectamos el nuevo HTML con 4 columnas
+                    const panelHTML = `
+                        <div class="col-3 border-end">
+                            <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Total Venta</small>
+                            <span class="h5 fw-bold text-dark">$${data.total.toFixed(2)}</span>
+                        </div>
+                        <div class="col-3 border-end">
+                            <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Abonado</small>
+                            <span class="h5 fw-bold text-primary">$${data.monto_pagado.toFixed(2)}</span>
+                        </div>
+                        <div class="col-3 border-end">
+                            <small class="text-danger fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Resta</small>
+                            <span class="h5 fw-bold ${colorSaldo}">${textoSaldo}</span>
+                        </div>
+                        <div class="col-3">
+                            <small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Ganancia</small>
+                            <span class="h5 fw-bold text-success">$${ganancia.toFixed(2)}</span>
+                        </div>
+                    `;
+
+                    document.getElementById('panelFinanciero').innerHTML = panelHTML;
+
+                    // Manejo del aviso de cotización/cancelado
+                    const aviso = document.getElementById('avisoCotizacion');
                     if (data.estado === 'cancelada') {
-                        document.getElementById('modalCosto').innerText = '-';
-                        document.getElementById('modalGanancia').innerText = '-';
-                        document.getElementById('avisoCotizacion').classList.add('d-none');
+                        aviso.classList.add('d-none');
+                        // Si está cancelada, tachamos los valores visualmente o los dejamos en 0
+                    } else if (data.estado === 'cotizacion') {
+                        aviso.classList.remove('d-none');
+                        aviso.innerHTML = '<div class="d-flex align-items-center small fw-bold"><i class="fas fa-info-circle fs-5 me-2"></i><div>Esta es una cotización. No se ha recibido dinero aún.</div></div>';
                     } else {
-                        const costo = data.costo_total || 0;
-                        const ganancia = data.total - costo;
-                        document.getElementById('modalCosto').innerText = '-$' + costo.toFixed(2);
-                        document.getElementById('modalGanancia').innerText = '$' + ganancia.toFixed(2);
-
-                        if (data.estado === 'cotizacion') {
-                            document.getElementById('avisoCotizacion').classList.remove('d-none');
-                        } else {
-                            document.getElementById('avisoCotizacion').classList.add('d-none');
-                        }
+                        aviso.classList.add('d-none');
                     }
+
                 } else {
                     alert("Error al cargar detalles.");
                     modal.hide();

@@ -3,10 +3,11 @@ from db import get_db_connection as get_db
 
 api_bp = Blueprint('api', __name__)
 
-# ---------------------------------------------------------
-# 1. RUTAS DE INVENTARIO (MATERIALES Y RECETAS)
-# ---------------------------------------------------------
+# ==========================================
+# 1. GESTIÓN DE INVENTARIO (COTIZADOR)
+# ==========================================
 
+# A. OBTENER UN SOLO MATERIAL (Para el dropdown del cotizador)
 @api_bp.route('/material/<int:id>')
 def obtener_material(id):
     if 'user_id' not in session:
@@ -26,6 +27,7 @@ def obtener_material(id):
         })
     return jsonify({'error': 'Material no encontrado'}), 404
 
+# B. OBTENER RECETA COMPLETA (Para cargar recetas guardadas)
 @api_bp.route('/receta/<int:id>')
 def obtener_receta(id):
     if 'user_id' not in session:
@@ -33,7 +35,7 @@ def obtener_receta(id):
 
     conn = get_db()
     
-    # A. Datos básicos del producto
+    # 1. Datos básicos del producto
     producto = conn.execute('SELECT * FROM productos WHERE id = ? AND user_id = ?', 
                            (id, session['user_id'])).fetchone()
     
@@ -41,7 +43,7 @@ def obtener_receta(id):
         conn.close()
         return jsonify({'error': 'Receta no encontrada'}), 404
 
-    # B. Sus materiales
+    # 2. Sus materiales
     detalles = conn.execute('''
         SELECT m.id, m.nombre, m.precio_unitario, pd.cantidad 
         FROM producto_detalles pd
@@ -49,7 +51,7 @@ def obtener_receta(id):
         WHERE pd.producto_id = ?
     ''', (id,)).fetchall()
 
-    # C. Su maquinaria
+    # 3. Su maquinaria
     maquinaria = conn.execute('''
         SELECT mq.id, mq.nombre, mq.costo_desgaste
         FROM producto_maquinaria pm
@@ -66,18 +68,18 @@ def obtener_receta(id):
         'maquinaria': [dict(m) for m in maquinaria]
     })
 
-# ---------------------------------------------------------
-# 2. RUTAS DE GESTIÓN DE VENTAS (HISTORIAL)
-# ---------------------------------------------------------
+# ==========================================
+# 2. GESTIÓN DE VENTAS (HISTORIAL Y COBROS)
+# ==========================================
 
-# A. OBTENER DETALLES (Para el Modal del Ojo)
+# C. OBTENER DETALLES DE UNA VENTA (Para el Modal del Ojo)
 @api_bp.route('/obtener_detalles/<int:id>')
 def obtener_detalles_venta(id):
     if 'user_id' not in session:
         return jsonify({'error': 'No autorizado'}), 401
 
     conn = get_db()
-    # Verificar propiedad de la venta
+    # Verificar que la venta pertenezca al usuario
     venta = conn.execute('SELECT * FROM ventas WHERE id = ? AND user_id = ?', 
                          (id, session['user_id'])).fetchone()
     
@@ -104,10 +106,13 @@ def obtener_detalles_venta(id):
         'estado': venta['estado'],
         'total': venta['total'],
         'costo_total': venta['costo_total'],
+        # Datos clave para el cobro
+        'monto_pagado': venta['monto_pagado'],
+        'saldo_pendiente': venta['saldo_pendiente'],
         'items': items
     })
 
-# B. ACTUALIZAR VENTA (Abonar dinero)
+# D. ACTUALIZAR VENTA (Registrar Abono)
 @api_bp.route('/actualizar_venta', methods=['POST'])
 def actualizar_venta():
     if 'user_id' not in session:
@@ -158,7 +163,7 @@ def actualizar_venta():
     finally:
         conn.close()
 
-# C. CANCELAR VENTA
+# E. CANCELAR VENTA (Botón de Basura)
 @api_bp.route('/cancelar_venta', methods=['POST'])
 def cancelar_venta():
     if 'user_id' not in session:
