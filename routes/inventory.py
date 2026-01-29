@@ -95,3 +95,14 @@ def materiales():
     ).fetchall()
     conn.close()
     return render_template('materiales.html', materiales=materiales)
+    
+@inventory_bp.route('/materiales', methods=['GET'])
+@login_required
+def materiales():
+    conn = get_db()
+    materiales = conn.execute(
+        'SELECT * FROM materiales WHERE user_id = ?',
+        (session['user_id'],)
+    ).fetchall()
+    conn.close()
+    return render_template('materiales.html', materiales=materiales)

@@ -4,6 +4,19 @@ from datetime import timedelta, datetime
 from db import init_db, get_db_connection
 
 
+def tarea_limpieza():
+    with app.app_context():
+        try:
+            conn = get_db_connection()
+            conn.execute(
+                "DELETE FROM ventas WHERE estado='cotizacion' AND fecha_vencimiento < ?",
+                (datetime.now(),)
+            )
+            conn.commit()
+            conn.close()
+        except:
+            pass
+
 app = Flask(__name__)
 app.secret_key = 'sianeffects_master_key_final'
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
@@ -30,18 +43,7 @@ if not app.debug:
     scheduler.start()
 
 
-def tarea_limpieza():
-    with app.app_context():
-        try:
-            conn = get_db_connection()
-            conn.execute(
-                "DELETE FROM ventas WHERE estado='cotizacion' AND fecha_vencimiento < ?",
-                (datetime.now(),)
-            )
-            conn.commit()
-            conn.close()
-        except:
-            pass
+
 
 scheduler.add_job(
     id='Limpieza',
