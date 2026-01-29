@@ -109,3 +109,15 @@ def equipos():
     conn.close()
     return render_template('equipos.html', equipos=equipos)
 
+from flask import render_template
+
+@inventory_bp.route('/equipos')
+@login_required
+def equipos():
+    return render_template('equipos.html')
+
+
+@inventory_bp.route('/recetas')
+@login_required
+def recetas():
+    return render_template('recetas.html')
