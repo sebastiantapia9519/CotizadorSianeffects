@@ -94,3 +94,18 @@ def materiales():
     conn.close()
 
     return render_template('materiales.html', materiales=materiales)
+
+    from flask import render_template, session
+from helpers import login_required
+
+@inventory_bp.route('/equipos')
+@login_required
+def equipos():
+    conn = get_db()
+    equipos = conn.execute(
+        'SELECT * FROM equipos WHERE user_id = ?',
+        (session['user_id'],)
+    ).fetchall()
+    conn.close()
+    return render_template('equipos.html', equipos=equipos)
+
