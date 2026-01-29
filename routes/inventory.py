@@ -1,121 +1,27 @@
-import sys
-import traceback
-
 from flask import Blueprint, request, session, jsonify, render_template
 from helpers import login_required
 from db import get_db_connection as get_db
 
 inventory_bp = Blueprint('inventory', __name__)
 
-
 @inventory_bp.route('/test')
 def test_inventory():
     return 'INVENTORY OK'
 
-
 @inventory_bp.route('/guardar_receta', methods=['POST'])
+@login_required
 def guardar_receta():
-    print("--- [DEBUG] INICIO INTENTO GUARDAR RECETA ---", file=sys.stderr)
+    return jsonify({'ok': True})
 
-    # 🔐 VALIDACIÓN DE SESIÓN (API-SAFE)
-    if 'user_id' not in session:
-        return jsonify({'error': 'No autorizado'}), 401
-
-    try:
-        data = request.get_json(silent=True)
-        print(f"--- [DEBUG] DATOS RECIBIDOS: {data}", file=sys.stderr)
-
-        if not data or not data.get('nombre'):
-            return jsonify({'error': 'Datos incompletos'}), 400
-
-        conn = get_db()
-        conn.execute('BEGIN')
-
-        # 🧾 Producto
-        cursor = conn.execute(
-            'INSERT INTO productos (user_id, nombre) VALUES (?, ?)',
-            (session['user_id'], data['nombre'])
-        )
-        producto_id = cursor.lastrowid
-
-        # 🧱 Materiales
-        for mat in data.get('materiales', []):
-            if 'id' not in mat or 'cantidad' not in mat:
-                raise ValueError('Material inválido')
-
-            conn.execute(
-                '''
-                INSERT INTO producto_detalles (producto_id, material_id, cantidad)
-                VALUES (?, ?, ?)
-                ''',
-                (producto_id, mat['id'], mat['cantidad'])
-            )
-
-        # ⚙️ Maquinaria
-        for maq in data.get('maquinaria', []):
-            if 'id' not in maq:
-                raise ValueError('Maquinaria inválida')
-
-            conn.execute(
-                '''
-                INSERT INTO producto_maquinaria (producto_id, maquinaria_id)
-                VALUES (?, ?)
-                ''',
-                (producto_id, maq['id'])
-            )
-
-        conn.commit()
-        conn.close()
-
-        return jsonify({'success': True, 'producto_id': producto_id})
-
-    except Exception as e:
-        print("--- [ERROR] EXCEPCIÓN AL GUARDAR RECETA ---", file=sys.stderr)
-        print(traceback.format_exc(), file=sys.stderr)
-
-        if 'conn' in locals():
-            conn.rollback()
-            conn.close()
-
-        return jsonify({
-            'error': 'Error interno al guardar receta',
-            'detail': str(e)
-        }), 500
-
-
-@inventory_bp.route('/materiales', methods=['GET'])
+@inventory_bp.route('/materiales')
 @login_required
 def materiales():
-    conn = get_db()
-    materiales = conn.execute(
-        'SELECT * FROM materiales WHERE user_id = ?',
-        (session['user_id'],)
-    ).fetchall()
-    conn.close()
-
-    return render_template('materiales.html', materiales=materiales)
-
-    from flask import render_template, session
-from helpers import login_required
-
-@inventory_bp.route('/equipos')
-@login_required
-def equipos():
-    conn = get_db()
-    equipos = conn.execute(
-        'SELECT * FROM equipos WHERE user_id = ?',
-        (session['user_id'],)
-    ).fetchall()
-    conn.close()
-    return render_template('equipos.html', equipos=equipos)
-
-from flask import render_template
+    return render_template('materiales.html')
 
 @inventory_bp.route('/equipos')
 @login_required
 def equipos():
     return render_template('equipos.html')
-
 
 @inventory_bp.route('/recetas')
 @login_required
