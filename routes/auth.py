@@ -39,4 +39,7 @@ def registro():
             
     return render_template('registro.html')
 
-# ... (El logout déjalo igual) ...
+@auth_bp.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('auth.login'))
