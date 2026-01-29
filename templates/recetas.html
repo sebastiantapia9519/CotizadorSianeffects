@@ -18,19 +18,21 @@
                     <p class="text-muted small">{{ r.num_materiales }} materiales</p>
                     <a href="{{ url_for('inventory.eliminar_receta', id=r.id) }}"
                         class="btn btn-outline-danger btn-sm rounded-pill w-100"
-                        onclick="return confirm('¿Borrar esta receta?')">Eliminar</a>
+                        onclick="return confirm('¿Borrar esta receta?')">
+                        Eliminar
+                    </a>
                 </div>
             </div>
         </div>
         {% else %}
         <div class="col-12 text-center text-muted py-5">
-            <i class="fas fa-book-open fa-3x mb-3" style="color:#ddd"></i>
             <p>No tienes recetas guardadas aún.</p>
         </div>
         {% endfor %}
     </div>
 </div>
 
+<!-- MODAL -->
 <div class="modal fade" id="modalReceta" tabindex="-1">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -38,16 +40,16 @@
                 <h5 class="modal-title fw-bold">Crear Nueva Receta</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
 
+            <div class="modal-body">
                 <div class="mb-3">
                     <label class="form-label">Nombre del Producto</label>
-                    <input type="text" id="nombreReceta" class="form-control" placeholder="Ej. Playera Vinil Textil">
+                    <input type="text" id="nombreReceta" class="form-control">
                 </div>
 
                 <hr>
 
-                <h6 class="fw-bold mt-4">Agregar Materiales</h6>
+                <h6 class="fw-bold">Materiales</h6>
                 <div class="row g-2 mb-2">
                     <div class="col-6">
                         <select id="selectMaterial" class="form-select">
@@ -58,27 +60,20 @@
                         </select>
                     </div>
                     <div class="col-3">
-                        <input type="number" id="cantidadMaterial" class="form-control" placeholder="Cant." step="0.1">
+                        <input type="number" id="cantidadMaterial" class="form-control" step="0.1">
                     </div>
                     <div class="col-3">
                         <button class="btn btn-secondary w-100" onclick="agregarFilaMaterial()">Agregar</button>
                     </div>
                 </div>
 
-                <table class="table table-sm table-striped" id="tablaMateriales">
-                    <thead>
-                        <tr>
-                            <th>Material</th>
-                            <th>Cantidad</th>
-                            <th></th>
-                        </tr>
-                    </thead>
+                <table class="table table-sm" id="tablaMateriales">
                     <tbody></tbody>
                 </table>
 
                 <hr>
 
-                <h6 class="fw-bold mt-4">Agregar Maquinaria</h6>
+                <h6 class="fw-bold">Maquinaria</h6>
                 <div class="input-group mb-2">
                     <select id="selectMaquinaria" class="form-select">
                         <option value="">Selecciona equipo...</option>
@@ -89,128 +84,106 @@
                     <button class="btn btn-secondary" onclick="agregarFilaMaquinaria()">Agregar</button>
                 </div>
 
-                <table class="table table-sm table-striped" id="tablaMaquinaria">
-                    <thead>
-                        <tr>
-                            <th>Equipo</th>
-                            <th></th>
-                        </tr>
-                    </thead>
+                <table class="table table-sm" id="tablaMaquinaria">
                     <tbody></tbody>
                 </table>
-
             </div>
-            <div class="modal-footer border-0">
-                <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
 
-                <button type="button" class="btn btn-primary rounded-pill px-4" onclick="guardarReceta()">
-                    Guardar Receta
-                </button>
+            <div class="modal-footer border-0">
+                <button class="btn btn-light" data-bs-dismiss="modal">Cancelar</button>
+                <button class="btn btn-primary" onclick="guardarReceta()">Guardar Receta</button>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Listas temporales para guardar lo que el usuario va agregando
     let listaMateriales = [];
     let listaMaquinaria = [];
 
     function agregarFilaMaterial() {
         const sel = document.getElementById('selectMaterial');
         const cant = document.getElementById('cantidadMaterial').value;
-        const id = sel.value;
-        const nombre = sel.options[sel.selectedIndex].text;
 
-        if (!id || !cant) return alert("Selecciona material y cantidad");
+        if (!sel.value || !cant) return alert('Completa material y cantidad');
 
-        listaMateriales.push({ id: id, nombre: nombre, cantidad: cant });
+        listaMateriales.push({
+            id: sel.value,
+            nombre: sel.options[sel.selectedIndex].text,
+            cantidad: cant
+        });
+
         renderMateriales();
-
-        // Limpiar inputs
-        sel.value = "";
-        document.getElementById('cantidadMaterial').value = "";
+        sel.value = '';
+        document.getElementById('cantidadMaterial').value = '';
     }
 
     function renderMateriales() {
         const tbody = document.querySelector('#tablaMateriales tbody');
-        tbody.innerHTML = "";
-        listaMateriales.forEach((item, index) => {
+        tbody.innerHTML = '';
+        listaMateriales.forEach((m, i) => {
             tbody.innerHTML += `
-                <tr>
-                    <td>${item.nombre}</td>
-                    <td>${item.cantidad}</td>
-                    <td><button class="btn btn-xs btn-danger" onclick="borrarMat(${index})">x</button></td>
-                </tr>`;
+            <tr>
+                <td>${m.nombre}</td>
+                <td>${m.cantidad}</td>
+                <td><button class="btn btn-sm btn-danger" onclick="borrarMat(${i})">x</button></td>
+            </tr>`;
         });
     }
 
-    function borrarMat(index) {
-        listaMateriales.splice(index, 1);
+    function borrarMat(i) {
+        listaMateriales.splice(i, 1);
         renderMateriales();
     }
 
     function agregarFilaMaquinaria() {
         const sel = document.getElementById('selectMaquinaria');
-        const id = sel.value;
-        const nombre = sel.options[sel.selectedIndex].text;
+        if (!sel.value) return alert('Selecciona equipo');
 
-        if (!id) return alert("Selecciona un equipo");
+        listaMaquinaria.push({
+            id: sel.value,
+            nombre: sel.options[sel.selectedIndex].text
+        });
 
-        listaMaquinaria.push({ id: id, nombre: nombre });
         renderMaquinaria();
-        sel.value = "";
+        sel.value = '';
     }
 
     function renderMaquinaria() {
         const tbody = document.querySelector('#tablaMaquinaria tbody');
-        tbody.innerHTML = "";
-        listaMaquinaria.forEach((item, index) => {
+        tbody.innerHTML = '';
+        listaMaquinaria.forEach((m, i) => {
             tbody.innerHTML += `
-                <tr>
-                    <td>${item.nombre}</td>
-                    <td><button class="btn btn-xs btn-danger" onclick="borrarMaq(${index})">x</button></td>
-                </tr>`;
+            <tr>
+                <td>${m.nombre}</td>
+                <td><button class="btn btn-sm btn-danger" onclick="borrarMaq(${i})">x</button></td>
+            </tr>`;
         });
     }
 
-    function borrarMaq(index) {
-        listaMaquinaria.splice(index, 1);
+    function borrarMaq(i) {
+        listaMaquinaria.splice(i, 1);
         renderMaquinaria();
     }
 
-    // --- LA FUNCIÓN QUE ENVÍA TODO AL SERVIDOR ---
     async function guardarReceta() {
         const nombre = document.getElementById('nombreReceta').value;
+        if (!nombre || listaMateriales.length === 0)
+            return alert('Nombre y al menos un material');
 
-        if (!nombre) return alert("Ponle un nombre a la receta");
-        if (listaMateriales.length === 0) return alert("Agrega al menos un material");
+        const res = await fetch("{{ url_for('inventory.guardar_receta') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nombre,
+                materiales: listaMateriales,
+                maquinaria: listaMaquinaria
+            })
+        });
 
-        const payload = {
-            nombre: nombre,
-            materiales: listaMateriales,
-            maquinaria: listaMaquinaria
-        };
-
-        try {
-            const res = await fetch('/guardar_receta', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-                // Si todo salió bien, recargamos la página para ver la nueva receta
-                window.location.reload();
-            } else {
-                alert("Error: " + data.error);
-            }
-        } catch (e) {
-            console.error(e);
-            alert("Error al conectar con el servidor");
-        }
+        const data = await res.json();
+        if (data.success) location.reload();
+        else alert(data.error || 'Error');
     }
 </script>
 {% endblock %}
