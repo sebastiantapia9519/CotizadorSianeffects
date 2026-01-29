@@ -110,10 +110,12 @@ def eliminar_receta(id):
     try:
         conn.execute("BEGIN")
         # Borramos en orden para mantener integridad
-        conn.execute("DELETE FROM producto_detalles WHERE producto_id=?", (id,))
-        conn.execute("DELETE FROM producto_maquinaria WHERE producto_id=?", (id,))
-        conn.execute("DELETE FROM productos WHERE id=? AND user_id=?", (id, session['user_id']))
-        conn.commit()
+        conn.execute('DELETE FROM productos WHERE id=? AND user_id=?', (id, session['user_id'])); 
+        conn.execute('DELETE FROM producto_detalles WHERE producto_id=?',(id,)); 
+        conn.execute('DELETE FROM producto_maquinaria WHERE producto_id=?',(id,)); 
+        conn.commit(); 
+        conn.close(); 
+        return redirect(url_for('recetas'))
     except Exception:
         conn.rollback()
     finally:
