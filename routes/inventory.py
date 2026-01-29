@@ -83,3 +83,15 @@ def guardar_receta():
             'error': 'Error interno al guardar receta',
             'detail': str(e)
         }), 500
+
+
+@inventory_bp.route('/materiales', methods=['GET', 'POST'])
+@login_required
+def materiales():
+    conn = get_db()
+    materiales = conn.execute(
+        'SELECT * FROM materiales WHERE user_id = ?',
+        (session['user_id'],)
+    ).fetchall()
+    conn.close()
+    return render_template('materiales.html', materiales=materiales)
