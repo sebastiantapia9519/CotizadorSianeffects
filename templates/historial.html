@@ -4,13 +4,13 @@
 
 {% block extra_css %}
 <style>
-    /* Variables locales para esta vista */
+    /* Variables locales */
     :root {
         --sian-pink-hover: #ff4757;
         --text-dark: #2f3542;
     }
 
-    /* UI Elements específicos del Historial */
+    /* UI Elements */
     .card-custom {
         border: none;
         border-radius: 20px;
@@ -31,7 +31,7 @@
         box-shadow: 0 0 0 4px var(--sian-pink-light);
     }
 
-    /* Override del botón primario para esta vista */
+    /* Botones */
     .btn-primary {
         background-color: var(--sian-pink);
         border-color: var(--sian-pink);
@@ -44,10 +44,9 @@
         background-color: var(--sian-pink-hover);
         border-color: var(--sian-pink-hover);
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(255, 107, 129, 0.3);
     }
 
-    /* Badges & Status */
+    /* Badges de Estado */
     .badge-status {
         font-weight: 700;
         letter-spacing: 0.5px;
@@ -55,6 +54,7 @@
         border-radius: 30px;
     }
 
+    /* Filas Canceladas */
     .row-cancelada {
         background-color: #f8f9fa;
         opacity: 0.7;
@@ -112,6 +112,7 @@
             <tbody class="border-top-0">
                 {% for v in ventas %}
                 <tr class="{{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}">
+
                     <td class="ps-4">
                         <span class="fw-bold fs-5 text-dark">#{{ v['id'] }}</span><br>
                         <small class="text-muted" style="font-size: 0.75rem">{{ v['fecha'][:10] }}</small>
@@ -119,29 +120,32 @@
 
                     <td>
                         <div class="fw-bold text-dark">{{ v['cliente'] }}</div>
-                        {% if v['estado'] != 'cancelada' %}
-                        <small class="text-muted"><i class="fas fa-box-open me-1"></i> Ver detalles...</small>
-                        {% else %}
+                        {% if v['estado'] == 'cancelada' %}
                         <small class="text-danger fw-bold">Cancelada</small>
+                        {% else %}
+                        <small class="text-muted"><i class="fas fa-box-open me-1"></i> Ver detalles...</small>
                         {% endif %}
                     </td>
 
                     <td>
-                        {% if v['estado']=='pagado' %}
-                        <span class="badge badge-status bg-success"><i class="fas fa-check me-1"></i>
-                            PAGADO</span>
-                        {% elif v['estado']=='anticipo' %}
-                        <span class="badge badge-status bg-warning text-dark"><i class="fas fa-clock me-1"></i>
-                            ANTICIPO</span>
-                        {% elif v['estado']=='cotizacion' %}
-                        <span class="badge badge-status bg-secondary"><i class="fas fa-file-alt me-1"></i>
-                            COTIZACIÓN</span>
+                        {% if v['estado'] == 'pagado' %}
+                        <span class="badge badge-status bg-success">
+                            <i class="fas fa-check-circle me-1"></i> PAGADO
+                        </span>
+                        {% elif v['estado'] == 'anticipo' %}
+                        <span class="badge badge-status bg-warning text-dark">
+                            <i class="fas fa-hourglass-half me-1"></i> ANTICIPO
+                        </span>
+                        {% elif v['estado'] == 'cotizacion' %}
+                        <span class="badge badge-status bg-secondary">
+                            <i class="fas fa-file-alt me-1"></i> COTIZACIÓN
+                        </span>
                         {% if v['fecha_vencimiento'] %}
                         <div class="small text-danger fw-bold mt-1" style="font-size:0.65rem;">
                             Expira: {{ v['fecha_vencimiento'][:10] }}
                         </div>
                         {% endif %}
-                        {% elif v['estado']=='cancelada' %}
+                        {% elif v['estado'] == 'cancelada' %}
                         <span class="badge badge-status bg-dark">ANULADA</span>
                         {% else %}
                         <span class="badge badge-status bg-light text-dark border">{{ v['estado'] }}</span>
@@ -150,6 +154,7 @@
 
                     <td>
                         <div class="fw-bold text-dark fs-6">${{ "%.2f"|format(v['total']) }}</div>
+
                         {% if v['saldo_pendiente'] > 0.5 and v['estado'] != 'cancelada' %}
                         <span
                             class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-2 mt-1">
@@ -171,10 +176,10 @@
                             <i class="fas fa-print"></i>
                         </a>
 
-                        {% if v['saldo_pendiente'] > 0.5 or v['estado']=='cotizacion' %}
+                        {% if v['saldo_pendiente'] > 0.5 %}
                         <button class="btn btn-sm btn-success rounded-circle shadow-sm me-1"
                             onclick="abonar({{v['id']}}, {{v['saldo_pendiente']}}, '{{v['estado']}}')"
-                            title="Cobrar / Abonar">
+                            title="Registrar Pago / Abono">
                             <i class="fas fa-dollar-sign"></i>
                         </button>
                         {% endif %}
@@ -262,14 +267,14 @@
                 <div id="avisoCotizacion" class="alert alert-warning border-0 rounded-3 mt-3 mb-0 d-none">
                     <div class="d-flex align-items-center small fw-bold">
                         <i class="fas fa-info-circle fs-5 me-2"></i>
-                        <div>Esto es una cotización. Los datos financieros son proyecciones estimadas.</div>
+                        <div>Esta cotización aún no ha sido pagada.</div>
                     </div>
                 </div>
             </div>
 
             <div class="modal-footer border-0 px-4 pb-4">
                 <button type="button" class="btn btn-light rounded-pill px-4 fw-bold text-muted w-100"
-                    data-bs-dismiss="modal">Cerrar Detalle</button>
+                    data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
@@ -278,6 +283,7 @@
 
 {% block scripts %}
 <script>
+    // --- LÓGICA DE DETALLES ---
     function verDetalles(id) {
         const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
         document.getElementById('modalFolio').innerText = id;
@@ -291,18 +297,20 @@
                     document.getElementById('modalFolio').innerText = data.folio;
                     document.getElementById('modalCliente').innerText = data.cliente;
 
-                    // Estado Badge
+                    // Badge de Estado en Modal
                     const estadoDiv = document.getElementById('modalEstadoDiv');
                     let badgeClass = '';
                     let icon = '';
+                    let label = data.estado;
 
-                    if (data.estado === 'pagado') { badgeClass = 'bg-success'; icon = 'check'; }
-                    else if (data.estado === 'cancelada') { badgeClass = 'bg-dark'; icon = 'ban'; }
-                    else if (data.estado === 'anticipo') { badgeClass = 'bg-warning text-dark'; icon = 'clock'; }
-                    else { badgeClass = 'bg-secondary'; icon = 'file-alt'; }
+                    if (data.estado === 'pagado') { badgeClass = 'bg-success'; icon = 'check-circle'; label = 'PAGADO'; }
+                    else if (data.estado === 'cancelada') { badgeClass = 'bg-dark'; icon = 'ban'; label = 'ANULADA'; }
+                    else if (data.estado === 'anticipo') { badgeClass = 'bg-warning text-dark'; icon = 'hourglass-half'; label = 'ANTICIPO'; }
+                    else { badgeClass = 'bg-secondary'; icon = 'file-alt'; label = 'COTIZACIÓN'; }
 
-                    estadoDiv.innerHTML = `<span class="badge ${badgeClass} fs-6 px-3 py-2 rounded-pill text-uppercase shadow-sm"><i class="fas fa-${icon} me-1"></i> ${data.estado}</span>`;
+                    estadoDiv.innerHTML = `<span class="badge ${badgeClass} fs-6 px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-${icon} me-1"></i> ${label}</span>`;
 
+                    // Tabla de items
                     const tbody = document.getElementById('modalTablaCuerpo');
                     tbody.innerHTML = '';
                     data.items.forEach(item => {
@@ -318,6 +326,7 @@
                         `;
                     });
 
+                    // Panel Financiero
                     document.getElementById('modalTotal').innerText = '$' + data.total.toFixed(2);
 
                     if (data.estado === 'cancelada') {
@@ -343,32 +352,47 @@
             });
     }
 
+    // --- LÓGICA DE ABONO ---
     function abonar(id, saldo, estado) {
-        let msg = "💰 El cliente debe $" + saldo.toFixed(2) + ".\nIngrese el monto a abonar:";
-        if (estado === 'cotizacion') msg = "📄 Cotización por $" + saldo.toFixed(2) + ".\n¿Con cuánto anticipo confirma el pedido?";
+        let msg = "";
+
+        if (estado === 'cotizacion') {
+            msg = `📄 COTIZACIÓN PENDIENTE\nTotal a Pagar: $${saldo.toFixed(2)}\n\n¿Cuánto dinero recibes ahora para confirmar el pedido?`;
+        } else {
+            msg = `💰 CUENTA POR COBRAR\nSaldo Restante: $${saldo.toFixed(2)}\n\n¿Cuánto dinero recibes de abono?`;
+        }
 
         const abono = prompt(msg);
+
         if (abono && parseFloat(abono) > 0) {
             fetch('/api/actualizar_venta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: id, abono: abono })
             }).then(r => r.json()).then(d => {
-                if (d.success) location.reload();
-                else alert("Error al registrar el pago.");
-            });
+                if (d.success) {
+                    alert("✅ Pago registrado. El estado de la venta ha sido actualizado.");
+                    location.reload();
+                } else {
+                    alert("❌ Error: " + d.message);
+                }
+            }).catch(err => alert("Error de conexión"));
         }
     }
 
+    // --- LÓGICA DE CANCELACIÓN ---
     function cancelarVenta(id) {
-        if (confirm("🛑 ¿Estás SEGURO de cancelar esta venta? \n\nEl stock será devuelto y los montos se anularán. Esta acción no se puede deshacer.")) {
+        if (confirm("🛑 ¿Estás SEGURO de anular esta venta? \n\nEsta acción cambiará el estado a 'Cancelada' y no se sumará a tus ingresos.")) {
             fetch('/api/cancelar_venta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: id })
             }).then(r => r.json()).then(d => {
-                if (d.success) location.reload();
-                else alert("Error: " + d.message);
+                if (d.success) {
+                    location.reload();
+                } else {
+                    alert("Error: " + d.message);
+                }
             });
         }
     }

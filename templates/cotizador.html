@@ -503,15 +503,23 @@
         renderizarCarrito();
     }
 
-    // --- 5. CHECKOUT (VENTA) ---
+    // --- 5. CHECKOUT (VENTA CON ESTADOS) ---
     function finalizarCompra(tipo) {
         if (carrito.length === 0) return alert("El carrito está vacío.");
 
         const cli = document.getElementById('nombreCliente').value || "Cliente General";
-        let sub = 0; carrito.forEach(i => sub += i.subtotal);
-        const desc = parseInt(document.getElementById('inputDescuento').value) || 0;
-        const desc_monto = sub * (desc / 100);
-        const total = sub - desc_monto;
+
+        // Calcular valores financieros
+        let subtotal = 0;
+        let costo_total = 0;
+        carrito.forEach(i => {
+            subtotal += i.subtotal;
+            costo_total += (i.costo_unitario * i.cantidad);
+        });
+
+        const desc_porcentaje = parseInt(document.getElementById('inputDescuento').value) || 0;
+        const desc_monto = subtotal * (desc_porcentaje / 100);
+        const total = subtotal - desc_monto;
 
         let estado = 'pagado';
         let pago_inicial = total;
@@ -524,7 +532,10 @@
             const inputPago = document.getElementById('inputPagoInicial').value;
             pago_inicial = parseFloat(inputPago) || 0;
             if (!inputPago || pago_inicial <= 0) return alert("Ingresa un monto válido para el anticipo.");
-            if (pago_inicial >= total) estado = 'pagado';
+            if (pago_inicial >= total) estado = 'venta_completa';
+        } else if (tipo === 'venta_completa') {
+            estado = 'venta_completa';
+            pago_inicial = total;
         }
 
         const ventanaTicket = window.open('', '_blank');
@@ -537,6 +548,7 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 cliente: cli,
+                // Mapeo correcto para el backend
                 items: carrito.map(i => ({
                     concepto: i.concepto,
                     cantidad: i.cantidad,
@@ -544,11 +556,11 @@
                     costo: i.costo_unitario,
                     subtotal: i.subtotal
                 })),
-                subtotal: sub,
-                descuento_porcentaje: desc,
+                subtotal: subtotal,
+                descuento_porcentaje: desc_porcentaje,
                 descuento_monto: desc_monto,
                 total: total,
-                costo_total: carrito.reduce((sum, i) => sum + (i.costo_unitario * i.cantidad), 0),
+                costo_total: costo_total,
                 estado: estado,
                 pago_inicial: pago_inicial
             })
@@ -580,7 +592,6 @@
         const materiales = [];
         const maquinaria = [];
 
-        // Recolectar Materiales
         document.querySelectorAll('.item-row').forEach(row => {
             const s = row.querySelector('.material-select');
             const c = row.querySelector('.input-cantidad');
@@ -589,7 +600,6 @@
             }
         });
 
-        // Recolectar Maquinaria
         document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
             maquinaria.push({ id: parseInt(c.getAttribute('data-id')) });
         });
@@ -635,12 +645,10 @@
             document.getElementById('listaMateriales').innerHTML = '';
             document.getElementById('nombreProductoActual').value = d.nombre;
 
-            // Cargar materiales
             d.materiales.forEach(i => {
                 agregarFila(i.id, i.cantidad);
             });
 
-            // Cargar maquinaria
             d.maquinaria.forEach(m => {
                 const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
                 if (c) c.checked = true;

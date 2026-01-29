@@ -4,7 +4,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ticket #{{ '%04d' % venta['id'] }}</title>
+    <title>
+        {% if venta['estado'] == 'cotizacion' %}Cotización{% else %}Ticket{% endif %} #{{ '%04d' % venta['id'] }}
+    </title>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -32,6 +34,8 @@
             border-radius: 15px;
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             position: relative;
+            overflow: hidden;
+            /* Para la marca de agua */
         }
 
         .brand {
@@ -52,6 +56,34 @@
             font-size: 0.9rem;
             color: #2ec4b6;
             font-weight: 700;
+        }
+
+        .doc-type {
+            text-align: center;
+            font-size: 1rem;
+            font-weight: 900;
+            margin-bottom: 10px;
+            padding: 5px;
+            border-radius: 5px;
+            text-transform: uppercase;
+            color: white;
+        }
+
+        .bg-pagado {
+            background-color: #2ec4b6;
+        }
+
+        .bg-anticipo {
+            background-color: #ffc107;
+            color: #333;
+        }
+
+        .bg-cotizacion {
+            background-color: #6c757d;
+        }
+
+        .bg-cancelada {
+            background-color: #343a40;
         }
 
         .info {
@@ -171,10 +203,24 @@
             <p>{{ config['slogan'] }}</p>
         </div>
 
+        {% if venta['estado'] == 'cotizacion' %}
+        <div class="doc-type bg-cotizacion">COTIZACIÓN</div>
+        {% elif venta['estado'] == 'anticipo' %}
+        <div class="doc-type bg-anticipo">ANTICIPO / ABONO</div>
+        {% elif venta['estado'] == 'pagado' %}
+        <div class="doc-type bg-pagado">RECIBO DE VENTA</div>
+        {% else %}
+        <div class="doc-type bg-cancelada">CANCELADA</div>
+        {% endif %}
+
         <div class="info">
-            <strong>Ticket #{{ '%04d' % venta['id'] }}</strong><br>
+            <strong>Folio #{{ '%04d' % venta['id'] }}</strong><br>
             {{ venta['fecha'][:16] }}<br>
             Cliente: <strong>{{ venta['cliente'] }}</strong>
+
+            {% if venta['estado'] == 'cotizacion' and venta['fecha_vencimiento'] %}
+            <br><span style="color: #dc3545; font-weight: bold;">Vence: {{ venta['fecha_vencimiento'][:10] }}</span>
+            {% endif %}
         </div>
 
         <table class="items">
@@ -203,17 +249,32 @@
                 Desc ({{ venta['descuento_porcentaje'] }}%): -${{ "%.2f"|format(venta['descuento_monto']) }}
             </span><br>
             {% endif %}
+
             <div class="total-amount">${{ "%.2f"|format(venta['total']) }}</div>
 
-            {% if venta['saldo_pendiente'] > 0 %}
-            <div style="font-size: 0.9rem; color: #dc3545; font-weight: bold; margin-top: 5px;">
-                Pendiente: ${{ "%.2f"|format(venta['saldo_pendiente']) }}
+            {% if venta['estado'] != 'pagado' and venta['estado'] != 'cancelada' %}
+            <div style="margin-top: 10px; border-top: 1px dotted #ccc; padding-top: 5px;">
+                {% if venta['monto_pagado'] > 0 %}
+                <span style="color: #28a745; font-weight: bold;">Abonado: ${{ "%.2f"|format(venta['monto_pagado'])
+                    }}</span><br>
+                {% endif %}
+
+                {% if venta['saldo_pendiente'] > 0 %}
+                <span style="color: #dc3545; font-weight: 900; font-size: 1.1rem;">Resta: ${{
+                    "%.2f"|format(venta['saldo_pendiente']) }}</span>
+                {% endif %}
             </div>
             {% endif %}
         </div>
 
         <div class="footer">
-            <p>¡Gracias por tu compra!</p>
+            <p>
+                {% if venta['estado'] == 'cotizacion' %}
+                Precios sujetos a cambio sin previo aviso.
+                {% else %}
+                ¡Gracias por tu compra!
+                {% endif %}
+            </p>
             {% if config['website'] %}<p style="color:#2ec4b6; font-weight:bold;">{{ config['website'] }}</p>{% endif %}
         </div>
     </div>
