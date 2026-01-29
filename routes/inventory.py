@@ -98,6 +98,13 @@ def equipos():
     return render_template('equipos.html', equipos=equipos)
 
 
+@app.route('/eliminar_equipo/<int:id>')
+@login_required
+def eliminar_equipo(id):
+    conn = get_db_connection(); conn.execute('DELETE FROM maquinaria WHERE id=? AND user_id=?', (id, session['user_id'])); conn.commit(); conn.close(); return redirect(url_for('equipos'))
+
+
+
 @app.route('/recetas')
 @login_required
 def recetas():
