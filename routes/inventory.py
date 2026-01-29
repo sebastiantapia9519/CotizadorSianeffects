@@ -171,11 +171,29 @@ def eliminar_equipo(id):
     conn.close()
     return redirect(url_for('inventory.equipos'))
 
-@inventory_bp.route('/recetas')
+@inventory_bp.route('/recetas', methods=['GET', 'POST'])
 @login_required
 def recetas():
     conn = get_db()
-    # Usamos try/except para compatibilidad con nombre de tabla
+
+    # --- LÓGICA PARA RENOMBRAR RECETA (EDITAR) ---
+    if request.method == 'POST':
+        try:
+            id_actualizar = request.form.get('id_actualizar')
+            nombre = request.form.get('nombre')
+            
+            if id_actualizar and nombre:
+                conn.execute("UPDATE productos SET nombre=? WHERE id=? AND user_id=?", 
+                             (nombre, id_actualizar, session['user_id']))
+                conn.commit()
+            
+            conn.close()
+            return redirect(url_for('inventory.recetas'))
+        except Exception as e:
+            conn.close()
+            return f"Error al actualizar: {e}"
+
+    # --- VER LISTA (GET) ---
     try:
         query = """
             SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
@@ -186,22 +204,14 @@ def recetas():
         """
         recetas = conn.execute(query, (session['user_id'],)).fetchall()
     except Exception:
-        # Fallback si la tabla se llama recetas
-        recetas = conn.execute("SELECT *, 0 as num_materiales FROM recetas WHERE user_id=?", (session['user_id'],)).fetchall()
+        recetas = []
         
     conn.close()
     
-    # IMPORTANTE: Enviamos materiales y equipos para que el modal de recetas funcione
-    conn = get_db()
-    try:
-        mats = conn.execute("SELECT * FROM materiales WHERE user_id=?", (session['user_id'],)).fetchall()
-        eqs = conn.execute("SELECT * FROM maquinaria WHERE user_id=?", (session['user_id'],)).fetchall()
-    except:
-        mats = []
-        eqs = []
-    conn.close()
+    # Truco de diccionario para el JSON del botón editar
+    recetas_lista = [dict(row) for row in recetas]
 
-    return render_template('recetas.html', recetas=recetas, materiales=mats, equipos=eqs)
+    return render_template('recetas.html', recetas=recetas_lista)
 
 @inventory_bp.route('/guardar_receta', methods=['POST'])
 @login_required
