@@ -135,3 +135,28 @@ def recetas():
         materiales=materiales,
         equipos=equipos
     )
+@inventory_bp.route('/recetas/eliminar/<int:id>')
+@login_required
+def eliminar_receta(id):
+    conn = get_db()
+    try:
+        conn.execute("BEGIN")
+
+        conn.execute(
+            "DELETE FROM producto_detalles WHERE producto_id=?",
+            (id,)
+        )
+        conn.execute(
+            "DELETE FROM producto_maquinaria WHERE producto_id=?",
+            (id,)
+        )
+        conn.execute(
+            "DELETE FROM productos WHERE id=? AND user_id=?",
+            (id, session['user_id'])
+        )
+
+        conn.commit()
+    finally:
+        conn.close()
+
+    return redirect(url_for('inventory.recetas'))
