@@ -103,6 +103,10 @@ def equipos():
 def eliminar_equipo(id):
     conn = get_db_connection(); conn.execute('DELETE FROM maquinaria WHERE id=? AND user_id=?', (id, session['user_id'])); conn.commit(); conn.close(); return redirect(url_for('equipos'))
 
+@app.route('/eliminar_receta/<int:id>')
+@login_required
+def eliminar_receta(id):
+    conn = get_db_connection(); conn.execute('DELETE FROM productos WHERE id=? AND user_id=?', (id, session['user_id'])); conn.execute('DELETE FROM producto_detalles WHERE producto_id=?',(id,)); conn.execute('DELETE FROM producto_maquinaria WHERE producto_id=?',(id,)); conn.commit(); conn.close(); return redirect(url_for('recetas'))
 
 
 @app.route('/recetas')
