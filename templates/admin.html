@@ -1,326 +1,278 @@
-<!doctype html>
-<html lang="es">
+{% extends "layout.html" %}
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SianEffects | Panel Master</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% block title %}Panel Master | SianEffects{% endblock %}
 
-    <style>
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: #f8f9fa;
-            padding-top: 80px;
-        }
+{% block extra_css %}
+<style>
+    /* Estilos específicos del Admin Panel */
 
-        /* Navbar (Igual que en Cotizador) */
-        .navbar-sian {
-            background-color: #fff;
-            border-bottom: 3px solid #ffebee;
-        }
+    /* Fondo gris claro distintivo para el admin */
+    body {
+        background-color: #f8f9fa;
+    }
 
-        .navbar-brand {
-            font-weight: 800;
-            color: #333 !important;
-        }
+    /* Tarjetas de Estadísticas */
+    .stat-card {
+        border: none;
+        border-radius: 15px;
+        transition: transform 0.2s;
+    }
 
-        /* Tarjetas de Estadísticas */
-        .stat-card {
-            border: none;
-            border-radius: 15px;
-            transition: transform 0.2s;
-        }
+    .stat-card:hover {
+        transform: translateY(-3px);
+    }
 
-        .stat-card:hover {
-            transform: translateY(-3px);
-        }
+    .icon-box {
+        width: 45px;
+        height: 45px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+    }
 
-        .icon-box {
-            width: 45px;
-            height: 45px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.2rem;
-        }
+    /* Tabla y Avatars */
+    .avatar-circle {
+        width: 40px;
+        height: 40px;
+        background-color: #e9ecef;
+        color: #495057;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 800;
+        font-size: 0.9rem;
+    }
 
-        /* Tabla y Avatars */
-        .avatar-circle {
-            width: 40px;
-            height: 40px;
-            background-color: #e9ecef;
-            color: #495057;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: 0.9rem;
-        }
+    .table-card {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        overflow: hidden;
+    }
+</style>
+{% endblock %}
 
-        .table-card {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-            overflow: hidden;
-        }
-    </style>
-</head>
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold m-0 text-dark">Panel de Control</h4>
+        <small class="text-muted">Gestión de Usuarios y Suscripciones</small>
+    </div>
+    <span class="badge bg-white text-dark border px-3 py-2 rounded-pill shadow-sm">
+        <i class="fas fa-calendar-alt me-2"></i> {{ now.strftime('%d/%m/%Y') }}
+    </span>
+</div>
 
-<body>
-
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top navbar-sian">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('main.cotizador') }}">
-                <span style="color: #ff6b81;">🎨 SianEffects</span> <span class="text-muted small">Admin</span>
-            </a>
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#miMenu">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="miMenu">
-                <ul class="navbar-nav ms-auto gap-2 align-items-center mt-3 mt-lg-0">
-                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
-                            href="{{ url_for('main.cotizador') }}">🧮 Cotizador</a></li>
-                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
-                            href="{{ url_for('main.historial') }}">📜 Historial</a></li>
-                    <li class="nav-item w-100 mt-2 mt-lg-0">
-                        <a class="btn btn-outline-danger rounded-pill w-100 btn-sm" href="{{ url_for('auth.logout') }}">
-                            <i class="fas fa-sign-out-alt"></i> Salir
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container pb-5">
-
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h4 class="fw-bold m-0 text-dark">Panel de Control</h4>
-                <small class="text-muted">Gestión de Usuarios y Suscripciones</small>
-            </div>
-            <span class="badge bg-light text-dark border px-3 py-2 rounded-pill">
-                {{ now.strftime('%d/%m/%Y') }}
-            </span>
-        </div>
-
-        <div class="row g-3 mb-4">
-            <div class="col-6 col-md-3">
-                <div class="card stat-card shadow-sm bg-white h-100">
-                    <div class="card-body p-3 d-flex align-items-center gap-3">
-                        <div class="icon-box bg-primary bg-opacity-10 text-primary">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <div>
-                            <h3 class="fw-bold m-0">{{ stats['total'] }}</h3>
-                            <small class="text-muted small fw-bold">Usuarios</small>
-                        </div>
-                    </div>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card stat-card shadow-sm bg-white h-100">
+            <div class="card-body p-3 d-flex align-items-center gap-3">
+                <div class="icon-box bg-primary bg-opacity-10 text-primary">
+                    <i class="fas fa-users"></i>
                 </div>
-            </div>
-
-            <div class="col-6 col-md-3">
-                <div class="card stat-card shadow-sm bg-white h-100">
-                    <div class="card-body p-3 d-flex align-items-center gap-3">
-                        <div class="icon-box bg-success bg-opacity-10 text-success">
-                            <i class="fas fa-check-circle"></i>
-                        </div>
-                        <div>
-                            <h3 class="fw-bold m-0">{{ stats['activos'] }}</h3>
-                            <small class="text-muted small fw-bold">Activos</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-3">
-                <div class="card stat-card shadow-sm bg-white h-100">
-                    <div class="card-body p-3 d-flex align-items-center gap-3">
-                        <div class="icon-box bg-danger bg-opacity-10 text-danger">
-                            <i class="fas fa-clock"></i>
-                        </div>
-                        <div>
-                            <h3 class="fw-bold m-0">{{ stats['vencidos'] }}</h3>
-                            <small class="text-muted small fw-bold">Vencidos</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-6 col-md-3">
-                <div class="card stat-card shadow-sm bg-white h-100">
-                    <div class="card-body p-3 d-flex align-items-center gap-3">
-                        <div class="icon-box bg-warning bg-opacity-10 text-dark">
-                            <i class="fas fa-crown"></i>
-                        </div>
-                        <div>
-                            <h3 class="fw-bold m-0">{{ stats['admins'] }}</h3>
-                            <small class="text-muted small fw-bold">Staff</small>
-                        </div>
-                    </div>
+                <div>
+                    <h3 class="fw-bold m-0">{{ stats['total'] }}</h3>
+                    <small class="text-muted small fw-bold">Usuarios</small>
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="card table-card">
-            <div class="card-header bg-white py-3 border-bottom">
-                <h6 class="m-0 fw-bold text-uppercase text-muted small">Base de Datos de Clientes</h6>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card shadow-sm bg-white h-100">
+            <div class="card-body p-3 d-flex align-items-center gap-3">
+                <div class="icon-box bg-success bg-opacity-10 text-success">
+                    <i class="fas fa-check-circle"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold m-0">{{ stats['activos'] }}</h3>
+                    <small class="text-muted small fw-bold">Activos</small>
+                </div>
             </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" style="min-width: 600px;">
-                        <thead class="bg-light small text-muted text-uppercase">
-                            <tr>
-                                <th class="ps-4 py-3">Usuario / Empresa</th>
-                                <th>Rol</th>
-                                <th>Suscripción</th>
-                                <th>Estado</th>
-                                <th class="text-end pe-4">Acciones</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for u in users %}
-                            {% set sub_end = u['subscription_end']|string %} {% set is_active = sub_end[:19] >
-                            now|string %}
+        </div>
+    </div>
 
-                            <tr>
-                                <td class="ps-4 py-3">
-                                    <div class="d-flex align-items-center gap-3">
-                                        <div class="avatar-circle">
-                                            {{ u['username'][0]|upper }}
-                                        </div>
-                                        <div>
-                                            <div class="fw-bold text-dark">{{ u['username'] }}</div>
-                                            <small class="text-muted">{{ u['email'] }}</small><br>
-                                            <small class="text-primary" style="font-size: 0.75rem;">
-                                                <i class="fas fa-building me-1"></i> {{ u['company_name'] }}
-                                            </small>
-                                        </div>
-                                    </div>
-                                </td>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card shadow-sm bg-white h-100">
+            <div class="card-body p-3 d-flex align-items-center gap-3">
+                <div class="icon-box bg-danger bg-opacity-10 text-danger">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold m-0">{{ stats['vencidos'] }}</h3>
+                    <small class="text-muted small fw-bold">Vencidos</small>
+                </div>
+            </div>
+        </div>
+    </div>
 
-                                <td>
-                                    {% if u['role'] == 2 %}
-                                    <span class="badge bg-warning text-dark border border-warning rounded-pill">👑
-                                        DUEÑO</span>
-                                    {% elif u['role'] == 1 %}
-                                    <span class="badge bg-info text-dark rounded-pill">🛡️ Admin</span>
-                                    {% else %}
-                                    <span class="badge bg-light text-secondary border rounded-pill">👤 Usuario</span>
-                                    {% endif %}
-                                </td>
+    <div class="col-6 col-md-3">
+        <div class="card stat-card shadow-sm bg-white h-100">
+            <div class="card-body p-3 d-flex align-items-center gap-3">
+                <div class="icon-box bg-warning bg-opacity-10 text-dark">
+                    <i class="fas fa-crown"></i>
+                </div>
+                <div>
+                    <h3 class="fw-bold m-0">{{ stats['admins'] }}</h3>
+                    <small class="text-muted small fw-bold">Staff</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-                                <td>
-                                    <small class="fw-bold text-dark">{{ sub_end[:10] }}</small>
-                                </td>
+<div class="card table-card">
+    <div class="card-header bg-white py-3 border-bottom">
+        <h6 class="m-0 fw-bold text-uppercase text-muted small">Base de Datos de Clientes</h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="min-width: 600px;">
+                <thead class="bg-light small text-muted text-uppercase">
+                    <tr>
+                        <th class="ps-4 py-3">Usuario / Empresa</th>
+                        <th>Rol</th>
+                        <th>Suscripción</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in users %}
+                    {% set sub_end = u['subscription_end']|string %}
+                    {% set is_active = sub_end[:19] > now|string %}
 
-                                <td>
-                                    {% if u['role'] == 2 %}
-                                    <span class="badge bg-success bg-opacity-10 text-success">∞ Infinito</span>
-                                    {% elif is_active %}
-                                    <span class="badge bg-success rounded-pill">Activo</span>
-                                    {% else %}
-                                    <span class="badge bg-danger rounded-pill">Vencido</span>
-                                    {% endif %}
-                                </td>
+                    <tr>
+                        <td class="ps-4 py-3">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="avatar-circle">
+                                    {{ u['username'][0]|upper }}
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark">{{ u['username'] }}</div>
+                                    <small class="text-muted">{{ u['email'] }}</small><br>
+                                    <small class="text-primary" style="font-size: 0.75rem;">
+                                        <i class="fas fa-building me-1"></i> {{ u['company_name'] }}
+                                    </small>
+                                </div>
+                            </div>
+                        </td>
 
-                                <td class="text-end pe-4">
-                                    <div class="dropdown">
-                                        <button class="btn btn-sm btn-light border rounded-pill px-3" type="button"
-                                            data-bs-toggle="dropdown">
-                                            <i class="fas fa-ellipsis-h text-muted"></i>
+                        <td>
+                            {% if u['role'] == 2 %}
+                            <span class="badge bg-warning text-dark border border-warning rounded-pill">👑 DUEÑO</span>
+                            {% elif u['role'] == 1 %}
+                            <span class="badge bg-info text-dark rounded-pill">🛡️ Admin</span>
+                            {% else %}
+                            <span class="badge bg-light text-secondary border rounded-pill">👤 Usuario</span>
+                            {% endif %}
+                        </td>
+
+                        <td>
+                            <small class="fw-bold text-dark">{{ sub_end[:10] }}</small>
+                        </td>
+
+                        <td>
+                            {% if u['role'] == 2 %}
+                            <span class="badge bg-success bg-opacity-10 text-success">∞ Infinito</span>
+                            {% elif is_active %}
+                            <span class="badge bg-success rounded-pill">Activo</span>
+                            {% else %}
+                            <span class="badge bg-danger rounded-pill">Vencido</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-end pe-4">
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-light border rounded-pill px-3" type="button"
+                                    data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-h text-muted"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
+                                    <li>
+                                        <h6 class="dropdown-header small text-uppercase">Suscripción</h6>
+                                    </li>
+                                    <li><a class="dropdown-item text-success"
+                                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=1) }}"><i
+                                                class="fas fa-plus-circle me-2"></i>+1 Mes</a></li>
+                                    <li><a class="dropdown-item text-success"
+                                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=12) }}"><i
+                                                class="fas fa-calendar-check me-2"></i>+1 Año</a></li>
+
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <h6 class="dropdown-header small text-uppercase">Seguridad</h6>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item text-warning"
+                                            onclick="abrirReset({{u['id']}}, '{{u['username']}}')">
+                                            <i class="fas fa-key me-2"></i> Resetear Password
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
-                                            <li>
-                                                <h6 class="dropdown-header small text-uppercase">Suscripción</h6>
-                                            </li>
-                                            <li><a class="dropdown-item text-success"
-                                                    href="{{ url_for('admin.renovar', user_id=u['id'], meses=1) }}"><i
-                                                        class="fas fa-plus-circle me-2"></i>+1 Mes</a></li>
-                                            <li><a class="dropdown-item text-success"
-                                                    href="{{ url_for('admin.renovar', user_id=u['id'], meses=12) }}"><i
-                                                        class="fas fa-calendar-check me-2"></i>+1 Año</a></li>
+                                    </li>
 
-                                            <li>
-                                                <hr class="dropdown-divider">
-                                            </li>
-                                            <li>
-                                                <h6 class="dropdown-header small text-uppercase">Seguridad</h6>
-                                            </li>
-                                            <li>
-                                                <button class="dropdown-item text-warning"
-                                                    onclick="abrirReset({{u['id']}}, '{{u['username']}}')">
-                                                    <i class="fas fa-key me-2"></i> Resetear Password
-                                                </button>
-                                            </li>
-
-                                            {% if session['role'] == 2 and u['id'] != session['user_id'] %}
-                                            <li>
-                                                <hr class="dropdown-divider">
-                                            </li>
-                                            <li>
-                                                <h6 class="dropdown-header small text-uppercase">Permisos</h6>
-                                            </li>
-                                            {% if u['role'] == 0 %}
-                                            <li><a class="dropdown-item text-info"
-                                                    href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=1) }}">Hacer
-                                                    Admin</a></li>
-                                            {% else %}
-                                            <li><a class="dropdown-item text-muted"
-                                                    href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=0) }}">Quitar
-                                                    Admin</a></li>
-                                            {% endif %}
-                                            {% endif %}
-                                        </ul>
-                                    </div>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                                    {% if session['role'] == 2 and u['id'] != session['user_id'] %}
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <h6 class="dropdown-header small text-uppercase">Permisos</h6>
+                                    </li>
+                                    {% if u['role'] == 0 %}
+                                    <li><a class="dropdown-item text-info"
+                                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=1) }}">Hacer
+                                            Admin</a></li>
+                                    {% else %}
+                                    <li><a class="dropdown-item text-muted"
+                                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=0) }}">Quitar
+                                            Admin</a></li>
+                                    {% endif %}
+                                    {% endif %}
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
+</div>
 
-    <div class="modal fade" id="modalReset" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered modal-sm">
-            <div class="modal-content border-0 rounded-4 shadow">
-                <div class="modal-header bg-warning border-0">
-                    <h6 class="modal-title fw-bold text-dark">Cambiar Contraseña</h6>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <form action="{{ url_for('admin.reset_password') }}" method="POST">
-                    <div class="modal-body">
-                        <p class="small text-muted mb-2">Usuario: <strong id="resetUsername" class="text-dark"></strong>
-                        </p>
-                        <input type="hidden" name="user_id" id="resetUserId">
-                        <label class="small fw-bold">Nueva Contraseña</label>
-                        <input type="text" name="new_password" class="form-control text-center fw-bold mt-1"
-                            placeholder="Ej. 123456" required>
-                    </div>
-                    <div class="modal-footer border-0 p-2">
-                        <button type="submit" class="btn btn-dark w-100 rounded-pill">Guardar Cambio</button>
-                    </div>
-                </form>
+<div class="modal fade" id="modalReset" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-warning border-0">
+                <h6 class="modal-title fw-bold text-dark">Cambiar Contraseña</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
+            <form action="{{ url_for('admin.reset_password') }}" method="POST">
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">Usuario: <strong id="resetUsername" class="text-dark"></strong></p>
+                    <input type="hidden" name="user_id" id="resetUserId">
+                    <label class="small fw-bold">Nueva Contraseña</label>
+                    <input type="text" name="new_password" class="form-control text-center fw-bold mt-1"
+                        placeholder="Ej. 123456" required>
+                </div>
+                <div class="modal-footer border-0 p-2">
+                    <button type="submit" class="btn btn-dark w-100 rounded-pill">Guardar Cambio</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function abrirReset(id, name) {
-            document.getElementById('resetUserId').value = id;
-            document.getElementById('resetUsername').innerText = name;
-            new bootstrap.Modal(document.getElementById('modalReset')).show();
-        }
-    </script>
-</body>
-
-</html>
+{% block scripts %}
+<script>
+    function abrirReset(id, name) {
+        document.getElementById('resetUserId').value = id;
+        document.getElementById('resetUsername').innerText = name;
+        new bootstrap.Modal(document.getElementById('modalReset')).show();
+    }
+</script>
+{% endblock %}

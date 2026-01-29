@@ -1,342 +1,213 @@
-<!doctype html>
-<html lang="es">
+{% extends "layout.html" %}
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Recetas | SianEffects</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% block title %}Recetas | SianEffects{% endblock %}
 
-    <style>
-        :root {
-            --sian-pink: #ff6b81;
-            --sian-pink-hover: #ff4757;
-            --sian-pink-light: #fff0f3;
-            --sian-teal: #2ec4b6;
-            --bg-cream: #fffdf9;
-            --text-dark: #2f3542;
-        }
+{% block extra_css %}
+<style>
+    /* Variables locales */
+    :root {
+        --sian-pink-hover: #ff4757;
+        --text-dark: #2f3542;
+    }
 
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: var(--bg-cream);
-            padding-top: 80px;
-            /* Espacio para la navbar fija */
-            color: #555;
-        }
+    /* UI Elements específicos */
+    .card-custom {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+        background: white;
+        transition: transform 0.2s;
+    }
 
-        /* --- Navbar Sian --- */
-        .navbar-sian {
-            background-color: #ffffff;
-            border-bottom: 3px solid var(--sian-pink-light);
-        }
+    .search-input {
+        border-radius: 50px;
+        padding-left: 20px;
+        border: 2px solid #eee;
+        background-color: white;
+        transition: all 0.3s;
+    }
 
-        .navbar-brand {
-            font-weight: 800;
-            color: var(--text-dark) !important;
-            letter-spacing: -0.5px;
-        }
+    .search-input:focus {
+        border-color: var(--sian-pink);
+        box-shadow: 0 0 0 4px var(--sian-pink-light);
+    }
 
-        .nav-link {
-            font-weight: 700;
-            color: #777;
-            transition: all 0.2s;
-        }
+    /* Botones */
+    .btn-primary {
+        background-color: var(--sian-pink);
+        border-color: var(--sian-pink);
+        border-radius: 50px;
+        padding: 8px 24px;
+        font-weight: 700;
+        transition: all 0.3s;
+    }
 
-        .nav-link:hover,
-        .nav-link.active {
-            color: var(--sian-pink) !important;
-            background-color: var(--sian-pink-light);
-        }
+    .btn-primary:hover {
+        background-color: var(--sian-pink-hover);
+        border-color: var(--sian-pink-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 107, 129, 0.3);
+    }
 
-        /* --- Cards & UI --- */
-        .card-custom {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
-            background: white;
-            transition: transform 0.2s;
-        }
+    /* Tabla Hover Color */
+    .table-hover tbody tr:hover {
+        background-color: var(--sian-pink-light);
+    }
 
-        .search-input {
-            border-radius: 50px;
-            padding-left: 20px;
-            border: 2px solid #eee;
-            background-color: white;
-            transition: all 0.3s;
-        }
+    /* Badge Personalizado */
+    .badge-sian {
+        background-color: var(--sian-teal);
+        color: white;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
 
-        .search-input:focus {
-            border-color: var(--sian-pink);
-            box-shadow: 0 0 0 4px var(--sian-pink-light);
-        }
-
-        /* --- Botones --- */
-        .btn-primary {
-            background-color: var(--sian-pink);
-            border-color: var(--sian-pink);
-            border-radius: 50px;
-            padding: 8px 24px;
-            font-weight: 700;
-            transition: all 0.3s;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--sian-pink-hover);
-            border-color: var(--sian-pink-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 107, 129, 0.3);
-        }
-
-        /* --- Tabla --- */
-        .table-hover tbody tr:hover {
-            background-color: var(--sian-pink-light);
-        }
-
-        .badge-sian {
-            background-color: var(--sian-teal);
-            color: white;
-            font-weight: 600;
-        }
-    </style>
-</head>
-
-<body>
-
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4 fixed-top navbar-sian">
-        <div class="container">
-            <a class="navbar-brand fw-bold text-primary" href="{{ url_for('main.cotizador') }}">
-                <span style="color: var(--sian-pink);">🎨 {{ config['nombre_empresa'] }}</span>
+{% block content %}
+<div class="row align-items-center mb-4 g-3">
+    <div class="col-md-6">
+        <h3 class="fw-bold text-dark m-0"><i class="fas fa-book-open text-danger me-2"></i>Recetas Guardadas</h3>
+        <small class="text-muted">Tus combinaciones y productos pre-configurados.</small>
+    </div>
+    <div class="col-md-6">
+        <div class="d-flex gap-2 justify-content-md-end">
+            <input type="text" id="buscador" class="form-control search-input w-50" placeholder="🔍 Buscar receta..."
+                onkeyup="filtrarTabla()">
+            <a href="{{ url_for('main.cotizador') }}" class="btn btn-primary shadow-sm">
+                <i class="fas fa-plus-circle me-1"></i> Nueva
             </a>
-
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#miMenu">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="miMenu">
-                <ul class="navbar-nav ms-auto gap-2 align-items-center mt-3 mt-lg-0">
-
-                    <li class="nav-item w-100">
-                        <a class="nav-link active fw-bold text-center border rounded-pill px-3 bg-light"
-                            href="{{ url_for('main.cotizador') }}">
-                            🧮 Cotizador
-                        </a>
-                    </li>
-
-                    <li class="nav-item w-100">
-                        <a class="nav-link text-center rounded-pill px-3" href="{{ url_for('main.historial') }}">
-                            📜 Historial
-                        </a>
-                    </li>
-
-                    <li class="nav-item dropdown w-100 text-center">
-                        <a class="nav-link dropdown-toggle rounded-pill px-3" href="#" role="button"
-                            data-bs-toggle="dropdown">
-                            📦 Inventario
-                        </a>
-                        <ul class="dropdown-menu border-0 shadow text-center text-lg-start">
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('inventory.materiales') }}">
-                                    Materiales
-                                </a>
-                            </li>
-
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('inventory.equipos') }}">
-                                    Equipos
-                                </a>
-                            </li>
-
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('inventory.recetas') }}">
-                                    Recetas Guardadas
-                                </a>
-                            </li>
-
-                    </li>
-                </ul>
-                </li>
-
-                <li class="nav-item w-100">
-                    <a class="nav-link text-center rounded-pill px-3" href="{{ url_for('main.configuracion') }}">
-                        ⚙️ Config
-                    </a>
-                </li>
-
-                {% if session.get('role') == 2 %}
-                <li class="nav-item w-100 mt-2 mt-lg-0">
-                    <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm"
-                        href="{{ url_for('admin.dashboard') }}">
-                        👑 Panel Master
-                    </a>
-                </li>
-                {% endif %}
-
-                <li class="nav-item w-100 mt-2 mt-lg-0">
-                    <a class="btn btn-outline-danger rounded-pill w-100 btn-sm" href="{{ url_for('auth.logout') }}">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </a>
-                </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container pb-5">
-
-        <div class="row align-items-center mb-4 g-3">
-            <div class="col-md-6">
-                <h3 class="fw-bold text-dark m-0"><i class="fas fa-book-open text-danger me-2"></i>Recetas Guardadas
-                </h3>
-                <small class="text-muted">Tus combinaciones y productos pre-configurados.</small>
-            </div>
-            <div class="col-md-6">
-                <div class="d-flex gap-2 justify-content-md-end">
-                    <input type="text" id="buscador" class="form-control search-input w-50"
-                        placeholder="🔍 Buscar receta..." onkeyup="filtrarTabla()">
-                    <a href="{{ url_for('main.cotizador') }}" class="btn btn-primary shadow-sm">
-                        <i class="fas fa-plus-circle me-1"></i> Nueva
-                    </a>
-                </div>
-            </div>
-        </div>
-
-        <div class="card card-custom overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0" id="tablaRecetas">
-                    <thead class="bg-light text-uppercase small text-muted">
-                        <tr>
-                            <th class="ps-4 py-3 border-0">Nombre de la Receta</th>
-                            <th class="border-0">Composición</th>
-                            <th class="text-end pe-4 border-0">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="border-top-0">
-                        {% for receta in recetas %}
-                        <tr>
-                            <td class="ps-4">
-                                <div class="d-flex align-items-center">
-                                    <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-danger me-3"
-                                        style="width: 40px; height: 40px;">
-                                        <i class="fas fa-flask"></i>
-                                    </div>
-                                    <div>
-                                        <h6 class="fw-bold text-dark mb-0">{{ receta['nombre'] }}</h6>
-                                        <small class="text-muted" style="font-size: 0.75rem;">ID: #{{ receta['id']
-                                            }}</small>
-                                    </div>
-                                </div>
-                            </td>
-                            <td>
-                                <span class="badge badge-sian rounded-pill px-3 py-2 shadow-sm">
-                                    <i class="fas fa-layer-group me-1"></i> {{ receta['num_materiales'] }} Ingredientes
-                                </span>
-                            </td>
-                            <td class="text-end pe-4">
-                                <a href="{{ url_for('main.cotizador', cargar_receta=receta['id']) }}"
-                                    class="btn btn-sm btn-outline-success border-0 rounded-pill me-1 fw-bold"
-                                    title="Usar en Cotizador">
-                                    <i class="fas fa-play"></i> Usar
-                                </a>
-
-                                <button class="btn btn-sm btn-light text-primary rounded-circle shadow-sm me-1"
-                                    onclick='editarReceta({{ receta|tojson }})' title="Renombrar">
-                                    <i class="fas fa-pen"></i>
-                                </button>
-
-                                <a href="{{ url_for('inventory.eliminar_receta', id=receta['id']) }}"
-                                    class="btn btn-sm btn-light text-danger rounded-circle shadow-sm"
-                                    onclick="return confirm('¿Borrar esta receta permanentemente? No podrás deshacerlo.')"
-                                    title="Eliminar">
-                                    <i class="fas fa-trash-alt"></i>
-                                </a>
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="3" class="text-center py-5">
-                                <div class="opacity-50">
-                                    <i class="fas fa-clipboard-list fa-4x mb-3 text-secondary"></i>
-                                    <h5 class="fw-bold text-muted">No hay recetas guardadas</h5>
-                                    <p class="small text-muted">Ve al Cotizador y guarda tu primera combinación.</p>
-                                    <a href="{{ url_for('main.cotizador') }}"
-                                        class="btn btn-outline-primary rounded-pill btn-sm mt-2">Ir al Cotizador</a>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
         </div>
     </div>
+</div>
 
-    <div class="modal fade" id="modalReceta" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 rounded-4 shadow">
-                <div class="modal-header bg-primary text-white border-0">
-                    <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Renombrar Receta</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <form method="post">
-                    <div class="modal-body p-4">
-                        <input type="hidden" name="id_actualizar" id="inputId">
-
-                        <div class="form-floating mb-3">
-                            <input type="text" name="nombre" id="inputNombre" class="form-control rounded-3"
-                                placeholder="Nombre" required>
-                            <label for="inputNombre">Nombre de la Receta</label>
-                        </div>
-
-                        <div class="alert alert-warning small border-0 d-flex align-items-center rounded-3">
-                            <i class="fas fa-info-circle fs-4 me-3"></i>
+<div class="card card-custom overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" id="tablaRecetas">
+            <thead class="bg-light text-uppercase small text-muted">
+                <tr>
+                    <th class="ps-4 py-3 border-0">Nombre de la Receta</th>
+                    <th class="border-0">Composición</th>
+                    <th class="text-end pe-4 border-0">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="border-top-0">
+                {% for receta in recetas %}
+                <tr>
+                    <td class="ps-4">
+                        <div class="d-flex align-items-center">
+                            <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-danger me-3"
+                                style="width: 40px; height: 40px;">
+                                <i class="fas fa-flask"></i>
+                            </div>
                             <div>
-                                <strong>Nota:</strong> Solo puedes cambiar el nombre aquí. Para modificar ingredientes,
-                                carga la receta en el Cotizador, edítala y guárdala de nuevo.
+                                <h6 class="fw-bold text-dark mb-0">{{ receta['nombre'] }}</h6>
+                                <small class="text-muted" style="font-size: 0.75rem;">ID: #{{ receta['id'] }}</small>
                             </div>
                         </div>
-                    </div>
-                    <div class="modal-footer border-0 bg-light rounded-bottom-4">
-                        <button type="button" class="btn btn-light rounded-pill fw-bold text-muted"
-                            data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Guardar Cambios</button>
-                    </div>
-                </form>
+                    </td>
+                    <td>
+                        <span class="badge badge-sian rounded-pill px-3 py-2 shadow-sm">
+                            <i class="fas fa-layer-group me-1"></i> {{ receta['num_materiales'] }} Ingredientes
+                        </span>
+                    </td>
+                    <td class="text-end pe-4">
+                        <a href="{{ url_for('main.cotizador', cargar_receta=receta['id']) }}"
+                            class="btn btn-sm btn-outline-success border-0 rounded-pill me-1 fw-bold"
+                            title="Usar en Cotizador">
+                            <i class="fas fa-play"></i> Usar
+                        </a>
+
+                        <button class="btn btn-sm btn-light text-primary rounded-circle shadow-sm me-1"
+                            onclick='editarReceta({{ receta|tojson }})' title="Renombrar">
+                            <i class="fas fa-pen"></i>
+                        </button>
+
+                        <a href="{{ url_for('inventory.eliminar_receta', id=receta['id']) }}"
+                            class="btn btn-sm btn-light text-danger rounded-circle shadow-sm"
+                            onclick="return confirm('¿Borrar esta receta permanentemente? No podrás deshacerlo.')"
+                            title="Eliminar">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="3" class="text-center py-5">
+                        <div class="opacity-50">
+                            <i class="fas fa-clipboard-list fa-4x mb-3 text-secondary"></i>
+                            <h5 class="fw-bold text-muted">No hay recetas guardadas</h5>
+                            <p class="small text-muted">Ve al Cotizador y guarda tu primera combinación.</p>
+                            <a href="{{ url_for('main.cotizador') }}"
+                                class="btn btn-outline-primary rounded-pill btn-sm mt-2">Ir al Cotizador</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalReceta" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-primary text-white border-0">
+                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Renombrar Receta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
+            <form method="post">
+                <div class="modal-body p-4">
+                    <input type="hidden" name="id_actualizar" id="inputId">
+
+                    <div class="form-floating mb-3">
+                        <input type="text" name="nombre" id="inputNombre" class="form-control rounded-3"
+                            placeholder="Nombre" required>
+                        <label for="inputNombre">Nombre de la Receta</label>
+                    </div>
+
+                    <div class="alert alert-warning small border-0 d-flex align-items-center rounded-3">
+                        <i class="fas fa-info-circle fs-4 me-3"></i>
+                        <div>
+                            <strong>Nota:</strong> Solo puedes cambiar el nombre aquí. Para modificar ingredientes,
+                            carga la receta en el Cotizador, edítala y guárdala de nuevo.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 bg-light rounded-bottom-4">
+                    <button type="button" class="btn btn-light rounded-pill fw-bold text-muted"
+                        data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Guardar Cambios</button>
+                </div>
+            </form>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function editarReceta(r) {
-            document.getElementById('inputId').value = r.id;
-            document.getElementById('inputNombre').value = r.nombre;
-            new bootstrap.Modal(document.getElementById('modalReceta')).show();
-        }
+{% block scripts %}
+<script>
+    function editarReceta(r) {
+        document.getElementById('inputId').value = r.id;
+        document.getElementById('inputNombre').value = r.nombre;
+        new bootstrap.Modal(document.getElementById('modalReceta')).show();
+    }
 
-        function filtrarTabla() {
-            const filter = document.getElementById('buscador').value.toUpperCase();
-            const rows = document.getElementById('tablaRecetas').getElementsByTagName('tr');
-            // Comenzamos en 1 para saltar el encabezado si no usas <thead> separado, 
-            // pero como usas <tbody> separado, iteramos las filas del body.
-            // Ajuste para tu estructura:
-            const tbody = document.querySelector("#tablaRecetas tbody");
-            const tr = tbody.getElementsByTagName("tr");
+    function filtrarTabla() {
+        const filter = document.getElementById('buscador').value.toUpperCase();
+        // Ajuste para buscar solo en el cuerpo de la tabla
+        const tbody = document.querySelector("#tablaRecetas tbody");
+        const tr = tbody.getElementsByTagName("tr");
 
-            for (let i = 0; i < tr.length; i++) {
-                // Verificar si es la fila de "No hay datos"
-                if (tr[i].cells.length === 1) continue;
+        for (let i = 0; i < tr.length; i++) {
+            // Ignorar fila si es la de "No hay datos" (que tiene colspan)
+            if (tr[i].cells.length === 1) continue;
 
-                const tdName = tr[i].getElementsByTagName("td")[0]; // Columna Nombre
-                if (tdName) {
-                    const txtValue = tdName.textContent || tdName.innerText;
-                    tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
-                }
+            const tdName = tr[i].getElementsByTagName("td")[0]; // Columna Nombre
+            if (tdName) {
+                const txtValue = tdName.textContent || tdName.innerText;
+                tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
             }
         }
-    </script>
-</body>
-
-</html>
+    }
+</script>
+{% endblock %}

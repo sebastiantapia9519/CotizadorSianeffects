@@ -1,502 +1,376 @@
-<!doctype html>
-<html lang="es">
+{% extends "layout.html" %}
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Historial | SianEffects</title>
+{% block title %}Historial | SianEffects{% endblock %}
 
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% block extra_css %}
+<style>
+    /* Variables locales para esta vista */
+    :root {
+        --sian-pink-hover: #ff4757;
+        --text-dark: #2f3542;
+    }
 
-    <style>
-        :root {
-            --sian-pink: #ff6b81;
-            --sian-pink-hover: #ff4757;
-            --sian-pink-light: #fff0f3;
-            --sian-teal: #2ec4b6;
-            --bg-cream: #fffdf9;
-            --text-dark: #2f3542;
-        }
+    /* UI Elements específicos del Historial */
+    .card-custom {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
+        background: white;
+    }
 
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: var(--bg-cream);
-            padding-top: 80px;
-            color: #555;
-        }
+    .search-input {
+        border-radius: 50px;
+        padding-left: 20px;
+        border: 2px solid #eee;
+        background-color: white;
+        transition: all 0.3s;
+    }
 
-        /* --- Navbar Sian --- */
-        .navbar-sian {
-            background-color: #ffffff;
-            border-bottom: 3px solid var(--sian-pink-light);
-        }
+    .search-input:focus {
+        border-color: var(--sian-pink);
+        box-shadow: 0 0 0 4px var(--sian-pink-light);
+    }
 
-        .navbar-brand {
-            font-weight: 800;
-            color: var(--text-dark) !important;
-            letter-spacing: -0.5px;
-        }
+    /* Override del botón primario para esta vista */
+    .btn-primary {
+        background-color: var(--sian-pink);
+        border-color: var(--sian-pink);
+        border-radius: 50px;
+        padding: 8px 24px;
+        font-weight: 700;
+    }
 
-        .nav-link {
-            font-weight: 700;
-            color: #777;
-            transition: all 0.2s;
-        }
+    .btn-primary:hover {
+        background-color: var(--sian-pink-hover);
+        border-color: var(--sian-pink-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 107, 129, 0.3);
+    }
 
-        .nav-link:hover,
-        .nav-link.active {
-            color: var(--sian-pink) !important;
-            background-color: var(--sian-pink-light);
-        }
+    /* Badges & Status */
+    .badge-status {
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        padding: 6px 12px;
+        border-radius: 30px;
+    }
 
-        /* --- UI Elements --- */
-        .card-custom {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
-            background: white;
-        }
+    .row-cancelada {
+        background-color: #f8f9fa;
+        opacity: 0.7;
+    }
 
-        .search-input {
-            border-radius: 50px;
-            padding-left: 20px;
-            border: 2px solid #eee;
-            background-color: white;
-            transition: all 0.3s;
-        }
+    .row-cancelada td {
+        text-decoration: line-through;
+        color: #999;
+    }
 
-        .search-input:focus {
-            border-color: var(--sian-pink);
-            box-shadow: 0 0 0 4px var(--sian-pink-light);
-        }
+    .row-cancelada .badge,
+    .row-cancelada .btn {
+        text-decoration: none !important;
+        opacity: 1 !important;
+    }
+</style>
+{% endblock %}
 
-        .btn-primary {
-            background-color: var(--sian-pink);
-            border-color: var(--sian-pink);
-            border-radius: 50px;
-            padding: 8px 24px;
-            font-weight: 700;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--sian-pink-hover);
-            border-color: var(--sian-pink-hover);
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 107, 129, 0.3);
-        }
-
-        /* --- Badges & Status --- */
-        .badge-status {
-            font-weight: 700;
-            letter-spacing: 0.5px;
-            padding: 6px 12px;
-            border-radius: 30px;
-        }
-
-        .row-cancelada {
-            background-color: #f8f9fa;
-            opacity: 0.7;
-        }
-
-        .row-cancelada td {
-            text-decoration: line-through;
-            color: #999;
-        }
-
-        .row-cancelada .badge,
-        .row-cancelada .btn {
-            text-decoration: none !important;
-            opacity: 1 !important;
-        }
-    </style>
-</head>
-
-<body>
-
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4 fixed-top navbar-sian">
-        <div class="container">
-            <a class="navbar-brand fw-bold text-primary" href="{{ url_for('main.cotizador') }}">
-                <span style="color: var(--sian-pink);">🎨 {{ config['nombre_empresa'] }}</span>
-            </a>
-
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#miMenu">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="miMenu">
-                <ul class="navbar-nav ms-auto gap-2 align-items-center mt-3 mt-lg-0">
-
-                    <li class="nav-item w-100">
-                        <a class="nav-link active fw-bold text-center border rounded-pill px-3 bg-light"
-                            href="{{ url_for('main.cotizador') }}">
-                            🧮 Cotizador
-                        </a>
-                    </li>
-
-                    <li class="nav-item w-100">
-                        <a class="nav-link text-center rounded-pill px-3" href="{{ url_for('main.historial') }}">
-                            📜 Historial
-                        </a>
-                    </li>
-
-                    <li class="nav-item dropdown w-100 text-center">
-                        <a class="nav-link dropdown-toggle rounded-pill px-3" href="#" role="button"
-                            data-bs-toggle="dropdown">
-                            📦 Inventario
-                        </a>
-                        <ul class="dropdown-menu border-0 shadow text-center text-lg-start">
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('inventory.materiales') }}">
-                                    Materiales
-                                </a>
-                            </li>
-
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('inventory.equipos') }}">
-                                    Equipos
-                                </a>
-                            </li>
-
-                            <li>
-                                <a class="dropdown-item" href="{{ url_for('inventory.recetas') }}">
-                                    Recetas Guardadas
-                                </a>
-                            </li>
-
-                    </li>
-                </ul>
-                </li>
-
-                <li class="nav-item w-100">
-                    <a class="nav-link text-center rounded-pill px-3" href="{{ url_for('main.configuracion') }}">
-                        ⚙️ Config
-                    </a>
-                </li>
-
-                {% if session.get('role') == 2 %}
-                <li class="nav-item w-100 mt-2 mt-lg-0">
-                    <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm"
-                        href="{{ url_for('admin.dashboard') }}">
-                        👑 Panel Master
-                    </a>
-                </li>
-                {% endif %}
-
-                <li class="nav-item w-100 mt-2 mt-lg-0">
-                    <a class="btn btn-outline-danger rounded-pill w-100 btn-sm" href="{{ url_for('auth.logout') }}">
-                        <i class="fas fa-sign-out-alt"></i>
-                    </a>
-                </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <div class="container pb-5">
-
-        <div class="row g-3 align-items-center mb-4">
-            <div class="col-md-6">
-                <h3 class="fw-bold m-0 text-dark"><i class="fas fa-history text-secondary me-2"></i>Bitácora de Ventas
-                </h3>
-                <small class="text-muted">Consulta pedidos, pagos y cotizaciones pasadas.</small>
-            </div>
-            <div class="col-md-6 text-md-end">
-                <a href="{{ url_for('main.descargar_excel') }}"
-                    class="btn btn-success rounded-pill shadow-sm fw-bold px-4">
-                    <i class="fas fa-file-excel me-2"></i> Exportar a Excel
-                </a>
-            </div>
-        </div>
-
-        <div class="card card-custom mb-4 p-1">
-            <div class="card-body">
-                <form action="{{ url_for('main.historial') }}" method="GET" class="d-flex gap-2">
-                    <input type="text" name="q" class="form-control search-input border-0 bg-light"
-                        placeholder="🔍 Buscar por Folio (ej. 1) o Nombre del Cliente..."
-                        value="{{ request.args.get('q', '') }}">
-                    <button type="submit" class="btn btn-primary px-4">Buscar</button>
-                </form>
-            </div>
-        </div>
-
-        <div class="card card-custom overflow-hidden">
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0">
-                    <thead class="bg-light text-secondary small text-uppercase">
-                        <tr>
-                            <th class="ps-4 py-3 border-0">Folio</th>
-                            <th class="border-0">Cliente</th>
-                            <th class="border-0">Estado</th>
-                            <th class="border-0">Monto</th>
-                            <th class="text-end pe-4 border-0">Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody class="border-top-0">
-                        {% for v in ventas %}
-                        <tr class="{{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}">
-                            <td class="ps-4">
-                                <span class="fw-bold fs-5 text-dark">#{{ v['id'] }}</span><br>
-                                <small class="text-muted" style="font-size: 0.75rem">{{ v['fecha'][:10] }}</small>
-                            </td>
-
-                            <td>
-                                <div class="fw-bold text-dark">{{ v['cliente'] }}</div>
-                                {% if v['estado'] != 'cancelada' %}
-                                <small class="text-muted"><i class="fas fa-box-open me-1"></i> Ver detalles...</small>
-                                {% else %}
-                                <small class="text-danger fw-bold">Cancelada</small>
-                                {% endif %}
-                            </td>
-
-                            <td>
-                                {% if v['estado']=='pagado' %}
-                                <span class="badge badge-status bg-success"><i class="fas fa-check me-1"></i>
-                                    PAGADO</span>
-                                {% elif v['estado']=='anticipo' %}
-                                <span class="badge badge-status bg-warning text-dark"><i class="fas fa-clock me-1"></i>
-                                    ANTICIPO</span>
-                                {% elif v['estado']=='cotizacion' %}
-                                <span class="badge badge-status bg-secondary"><i class="fas fa-file-alt me-1"></i>
-                                    COTIZACIÓN</span>
-                                {% if v['fecha_vencimiento'] %}
-                                <div class="small text-danger fw-bold mt-1" style="font-size:0.65rem;">
-                                    Expira: {{ v['fecha_vencimiento'][:10] }}
-                                </div>
-                                {% endif %}
-                                {% elif v['estado']=='cancelada' %}
-                                <span class="badge badge-status bg-dark">ANULADA</span>
-                                {% else %}
-                                <span class="badge badge-status bg-light text-dark border">{{ v['estado'] }}</span>
-                                {% endif %}
-                            </td>
-
-                            <td>
-                                <div class="fw-bold text-dark fs-6">${{ "%.2f"|format(v['total']) }}</div>
-                                {% if v['saldo_pendiente'] > 0.5 and v['estado'] != 'cancelada' %}
-                                <span
-                                    class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-2 mt-1">
-                                    Resta: ${{ "%.2f"|format(v['saldo_pendiente']) }}
-                                </span>
-                                {% endif %}
-                            </td>
-
-                            <td class="text-end pe-4">
-                                <button class="btn btn-sm btn-light text-primary rounded-circle shadow-sm me-1 border"
-                                    onclick="verDetalles({{ v['id'] }})" title="Ver Detalles">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-
-                                {% if v['estado'] != 'cancelada' %}
-                                <a href="{{ url_for('main.ver_ticket', id=v['id']) }}" target="_blank"
-                                    class="btn btn-sm btn-light text-dark rounded-circle shadow-sm me-1 border"
-                                    title="Imprimir Ticket">
-                                    <i class="fas fa-print"></i>
-                                </a>
-
-                                {% if v['saldo_pendiente'] > 0.5 or v['estado']=='cotizacion' %}
-                                <button class="btn btn-sm btn-success rounded-circle shadow-sm me-1"
-                                    onclick="abonar({{v['id']}}, {{v['saldo_pendiente']}}, '{{v['estado']}}')"
-                                    title="Cobrar / Abonar">
-                                    <i class="fas fa-dollar-sign"></i>
-                                </button>
-                                {% endif %}
-
-                                <button class="btn btn-sm btn-outline-danger rounded-circle border-0"
-                                    onclick="cancelarVenta({{v['id']}})" title="Cancelar Venta">
-                                    <i class="fas fa-trash-alt"></i>
-                                </button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr>
-                            <td colspan="5" class="text-center py-5">
-                                <div class="opacity-50">
-                                    <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i>
-                                    <h5 class="fw-bold text-muted">No hay registros</h5>
-                                    <p class="small text-muted">Aún no has realizado ninguna venta o cotización.</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
+{% block content %}
+<div class="row g-3 align-items-center mb-4">
+    <div class="col-md-6">
+        <h3 class="fw-bold m-0 text-dark"><i class="fas fa-history text-secondary me-2"></i>Bitácora de Ventas</h3>
+        <small class="text-muted">Consulta pedidos, pagos y cotizaciones pasadas.</small>
     </div>
+    <div class="col-md-6 text-md-end">
+        <a href="{{ url_for('main.descargar_excel') }}" class="btn btn-success rounded-pill shadow-sm fw-bold px-4">
+            <i class="fas fa-file-excel me-2"></i> Exportar a Excel
+        </a>
+    </div>
+</div>
 
-    <div class="modal fade" id="modalDetalle" tabindex="-1">
-        <div class="modal-dialog modal-lg modal-dialog-centered">
-            <div class="modal-content border-0 rounded-4 shadow-lg">
-                <div class="modal-header bg-white border-0 pb-0 pt-4 px-4">
-                    <h5 class="modal-title fw-bold text-dark">
-                        <span class="badge bg-primary rounded-pill me-2">Folio #<span id="modalFolio"></span></span>
-                        Detalle de Transacción
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<div class="card card-custom mb-4 p-1">
+    <div class="card-body">
+        <form action="{{ url_for('main.historial') }}" method="GET" class="d-flex gap-2">
+            <input type="text" name="q" class="form-control search-input border-0 bg-light"
+                placeholder="🔍 Buscar por Folio (ej. 1) o Nombre del Cliente..."
+                value="{{ request.args.get('q', '') }}">
+            <button type="submit" class="btn btn-primary px-4">Buscar</button>
+        </form>
+    </div>
+</div>
+
+<div class="card card-custom overflow-hidden">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-secondary small text-uppercase">
+                <tr>
+                    <th class="ps-4 py-3 border-0">Folio</th>
+                    <th class="border-0">Cliente</th>
+                    <th class="border-0">Estado</th>
+                    <th class="border-0">Monto</th>
+                    <th class="text-end pe-4 border-0">Acciones</th>
+                </tr>
+            </thead>
+            <tbody class="border-top-0">
+                {% for v in ventas %}
+                <tr class="{{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}">
+                    <td class="ps-4">
+                        <span class="fw-bold fs-5 text-dark">#{{ v['id'] }}</span><br>
+                        <small class="text-muted" style="font-size: 0.75rem">{{ v['fecha'][:10] }}</small>
+                    </td>
+
+                    <td>
+                        <div class="fw-bold text-dark">{{ v['cliente'] }}</div>
+                        {% if v['estado'] != 'cancelada' %}
+                        <small class="text-muted"><i class="fas fa-box-open me-1"></i> Ver detalles...</small>
+                        {% else %}
+                        <small class="text-danger fw-bold">Cancelada</small>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        {% if v['estado']=='pagado' %}
+                        <span class="badge badge-status bg-success"><i class="fas fa-check me-1"></i>
+                            PAGADO</span>
+                        {% elif v['estado']=='anticipo' %}
+                        <span class="badge badge-status bg-warning text-dark"><i class="fas fa-clock me-1"></i>
+                            ANTICIPO</span>
+                        {% elif v['estado']=='cotizacion' %}
+                        <span class="badge badge-status bg-secondary"><i class="fas fa-file-alt me-1"></i>
+                            COTIZACIÓN</span>
+                        {% if v['fecha_vencimiento'] %}
+                        <div class="small text-danger fw-bold mt-1" style="font-size:0.65rem;">
+                            Expira: {{ v['fecha_vencimiento'][:10] }}
+                        </div>
+                        {% endif %}
+                        {% elif v['estado']=='cancelada' %}
+                        <span class="badge badge-status bg-dark">ANULADA</span>
+                        {% else %}
+                        <span class="badge badge-status bg-light text-dark border">{{ v['estado'] }}</span>
+                        {% endif %}
+                    </td>
+
+                    <td>
+                        <div class="fw-bold text-dark fs-6">${{ "%.2f"|format(v['total']) }}</div>
+                        {% if v['saldo_pendiente'] > 0.5 and v['estado'] != 'cancelada' %}
+                        <span
+                            class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-2 mt-1">
+                            Resta: ${{ "%.2f"|format(v['saldo_pendiente']) }}
+                        </span>
+                        {% endif %}
+                    </td>
+
+                    <td class="text-end pe-4">
+                        <button class="btn btn-sm btn-light text-primary rounded-circle shadow-sm me-1 border"
+                            onclick="verDetalles({{ v['id'] }})" title="Ver Detalles">
+                            <i class="fas fa-eye"></i>
+                        </button>
+
+                        {% if v['estado'] != 'cancelada' %}
+                        <a href="{{ url_for('main.ver_ticket', id=v['id']) }}" target="_blank"
+                            class="btn btn-sm btn-light text-dark rounded-circle shadow-sm me-1 border"
+                            title="Imprimir Ticket">
+                            <i class="fas fa-print"></i>
+                        </a>
+
+                        {% if v['saldo_pendiente'] > 0.5 or v['estado']=='cotizacion' %}
+                        <button class="btn btn-sm btn-success rounded-circle shadow-sm me-1"
+                            onclick="abonar({{v['id']}}, {{v['saldo_pendiente']}}, '{{v['estado']}}')"
+                            title="Cobrar / Abonar">
+                            <i class="fas fa-dollar-sign"></i>
+                        </button>
+                        {% endif %}
+
+                        <button class="btn btn-sm btn-outline-danger rounded-circle border-0"
+                            onclick="cancelarVenta({{v['id']}})" title="Cancelar Venta">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-5">
+                        <div class="opacity-50">
+                            <i class="fas fa-folder-open fa-3x mb-3 text-secondary"></i>
+                            <h5 class="fw-bold text-muted">No hay registros</h5>
+                            <p class="small text-muted">Aún no has realizado ninguna venta o cotización.</p>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDetalle" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header bg-white border-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-dark">
+                    <span class="badge bg-primary rounded-pill me-2">Folio #<span id="modalFolio"></span></span>
+                    Detalle de Transacción
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+
+            <div class="modal-body p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded-3">
+                    <div>
+                        <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Cliente</small>
+                        <h4 class="fw-bold m-0 text-dark" id="modalCliente"></h4>
+                    </div>
+                    <div id="modalEstadoDiv"></div>
                 </div>
 
-                <div class="modal-body p-4">
-                    <div class="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded-3">
-                        <div>
-                            <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem;">Cliente</small>
-                            <h4 class="fw-bold m-0 text-dark" id="modalCliente"></h4>
-                        </div>
-                        <div id="modalEstadoDiv"></div>
-                    </div>
+                <div class="table-responsive rounded-3 border mb-4" style="max-height: 300px;">
+                    <table class="table table-striped mb-0 align-middle">
+                        <thead class="sticky-top bg-white small text-secondary">
+                            <tr>
+                                <th class="ps-3 py-2">Producto / Servicio</th>
+                                <th class="text-center py-2">Cant.</th>
+                                <th class="text-end py-2">$ Precio</th>
+                                <th class="text-end py-2 text-muted">$ Costo</th>
+                                <th class="text-end pe-3 py-2 fw-bold">Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody id="modalTablaCuerpo" class="small"></tbody>
+                    </table>
+                </div>
 
-                    <div class="table-responsive rounded-3 border mb-4" style="max-height: 300px;">
-                        <table class="table table-striped mb-0 align-middle">
-                            <thead class="sticky-top bg-white small text-secondary">
-                                <tr>
-                                    <th class="ps-3 py-2">Producto / Servicio</th>
-                                    <th class="text-center py-2">Cant.</th>
-                                    <th class="text-end py-2">$ Precio</th>
-                                    <th class="text-end py-2 text-muted">$ Costo</th>
-                                    <th class="text-end pe-3 py-2 fw-bold">Subtotal</th>
-                                </tr>
-                            </thead>
-                            <tbody id="modalTablaCuerpo" class="small"></tbody>
-                        </table>
-                    </div>
-
-                    <div class="card bg-light border-0 rounded-4">
-                        <div class="card-body">
-                            <div class="row text-center g-2" id="panelFinanciero">
-                                <div class="col-4 border-end">
-                                    <small class="text-muted fw-bold d-block text-uppercase"
-                                        style="font-size: 0.7rem;">Venta Total</small>
-                                    <span class="h4 fw-bold text-dark" id="modalTotal">$0.00</span>
-                                </div>
-                                <div class="col-4 border-end">
-                                    <small class="text-muted fw-bold d-block text-uppercase"
-                                        style="font-size: 0.7rem;">Costo Prod.</small>
-                                    <span class="h5 fw-bold text-secondary" id="modalCosto">-$0.00</span>
-                                </div>
-                                <div class="col-4">
-                                    <small class="text-success fw-bold d-block text-uppercase"
-                                        style="font-size: 0.7rem;">Tu Ganancia</small>
-                                    <span class="h4 fw-bold text-success" id="modalGanancia">$0.00</span>
-                                </div>
+                <div class="card bg-light border-0 rounded-4">
+                    <div class="card-body">
+                        <div class="row text-center g-2" id="panelFinanciero">
+                            <div class="col-4 border-end">
+                                <small class="text-muted fw-bold d-block text-uppercase"
+                                    style="font-size: 0.7rem;">Venta Total</small>
+                                <span class="h4 fw-bold text-dark" id="modalTotal">$0.00</span>
+                            </div>
+                            <div class="col-4 border-end">
+                                <small class="text-muted fw-bold d-block text-uppercase"
+                                    style="font-size: 0.7rem;">Costo Prod.</small>
+                                <span class="h5 fw-bold text-secondary" id="modalCosto">-$0.00</span>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.7rem;">Tu
+                                    Ganancia</small>
+                                <span class="h4 fw-bold text-success" id="modalGanancia">$0.00</span>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div id="avisoCotizacion" class="alert alert-warning border-0 rounded-3 mt-3 mb-0 d-none">
-                        <div class="d-flex align-items-center small fw-bold">
-                            <i class="fas fa-info-circle fs-5 me-2"></i>
-                            <div>Esto es una cotización. Los datos financieros son proyecciones estimadas.</div>
-                        </div>
+                <div id="avisoCotizacion" class="alert alert-warning border-0 rounded-3 mt-3 mb-0 d-none">
+                    <div class="d-flex align-items-center small fw-bold">
+                        <i class="fas fa-info-circle fs-5 me-2"></i>
+                        <div>Esto es una cotización. Los datos financieros son proyecciones estimadas.</div>
                     </div>
                 </div>
+            </div>
 
-                <div class="modal-footer border-0 px-4 pb-4">
-                    <button type="button" class="btn btn-light rounded-pill px-4 fw-bold text-muted w-100"
-                        data-bs-dismiss="modal">Cerrar Detalle</button>
-                </div>
+            <div class="modal-footer border-0 px-4 pb-4">
+                <button type="button" class="btn btn-light rounded-pill px-4 fw-bold text-muted w-100"
+                    data-bs-dismiss="modal">Cerrar Detalle</button>
             </div>
         </div>
     </div>
+</div>
+{% endblock %}
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        function verDetalles(id) {
-            const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
-            document.getElementById('modalFolio').innerText = id;
-            document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Cargando datos...</td></tr>';
-            modal.show();
+{% block scripts %}
+<script>
+    function verDetalles(id) {
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
+        document.getElementById('modalFolio').innerText = id;
+        document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Cargando datos...</td></tr>';
+        modal.show();
 
-            fetch('/api/obtener_detalles/' + id)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        document.getElementById('modalFolio').innerText = data.folio;
-                        document.getElementById('modalCliente').innerText = data.cliente;
+        fetch('/api/obtener_detalles/' + id)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('modalFolio').innerText = data.folio;
+                    document.getElementById('modalCliente').innerText = data.cliente;
 
-                        // Estado Badge
-                        const estadoDiv = document.getElementById('modalEstadoDiv');
-                        let badgeClass = '';
-                        let icon = '';
+                    // Estado Badge
+                    const estadoDiv = document.getElementById('modalEstadoDiv');
+                    let badgeClass = '';
+                    let icon = '';
 
-                        if (data.estado === 'pagado') { badgeClass = 'bg-success'; icon = 'check'; }
-                        else if (data.estado === 'cancelada') { badgeClass = 'bg-dark'; icon = 'ban'; }
-                        else if (data.estado === 'anticipo') { badgeClass = 'bg-warning text-dark'; icon = 'clock'; }
-                        else { badgeClass = 'bg-secondary'; icon = 'file-alt'; }
+                    if (data.estado === 'pagado') { badgeClass = 'bg-success'; icon = 'check'; }
+                    else if (data.estado === 'cancelada') { badgeClass = 'bg-dark'; icon = 'ban'; }
+                    else if (data.estado === 'anticipo') { badgeClass = 'bg-warning text-dark'; icon = 'clock'; }
+                    else { badgeClass = 'bg-secondary'; icon = 'file-alt'; }
 
-                        estadoDiv.innerHTML = `<span class="badge ${badgeClass} fs-6 px-3 py-2 rounded-pill text-uppercase shadow-sm"><i class="fas fa-${icon} me-1"></i> ${data.estado}</span>`;
+                    estadoDiv.innerHTML = `<span class="badge ${badgeClass} fs-6 px-3 py-2 rounded-pill text-uppercase shadow-sm"><i class="fas fa-${icon} me-1"></i> ${data.estado}</span>`;
 
-                        const tbody = document.getElementById('modalTablaCuerpo');
-                        tbody.innerHTML = '';
-                        data.items.forEach(item => {
-                            let cant = item.cantidad % 1 === 0 ? Math.round(item.cantidad) : item.cantidad;
-                            tbody.innerHTML += `
-                                <tr>
-                                    <td class="ps-3 fw-bold">${item.concepto}</td>
-                                    <td class="text-center">${cant}</td>
-                                    <td class="text-end text-dark">$${item.precio_unitario.toFixed(2)}</td>
-                                    <td class="text-end text-muted">$${item.costo_unitario.toFixed(2)}</td>
-                                    <td class="text-end pe-3 fw-bold text-dark">$${item.subtotal.toFixed(2)}</td>
-                                </tr>
-                            `;
-                        });
+                    const tbody = document.getElementById('modalTablaCuerpo');
+                    tbody.innerHTML = '';
+                    data.items.forEach(item => {
+                        let cant = item.cantidad % 1 === 0 ? Math.round(item.cantidad) : item.cantidad;
+                        tbody.innerHTML += `
+                            <tr>
+                                <td class="ps-3 fw-bold">${item.concepto}</td>
+                                <td class="text-center">${cant}</td>
+                                <td class="text-end text-dark">$${item.precio_unitario.toFixed(2)}</td>
+                                <td class="text-end text-muted">$${item.costo_unitario.toFixed(2)}</td>
+                                <td class="text-end pe-3 fw-bold text-dark">$${item.subtotal.toFixed(2)}</td>
+                            </tr>
+                        `;
+                    });
 
-                        document.getElementById('modalTotal').innerText = '$' + data.total.toFixed(2);
+                    document.getElementById('modalTotal').innerText = '$' + data.total.toFixed(2);
 
-                        if (data.estado === 'cancelada') {
-                            document.getElementById('modalCosto').innerText = '-';
-                            document.getElementById('modalGanancia').innerText = '-';
-                            document.getElementById('avisoCotizacion').classList.add('d-none');
-                        } else {
-                            const costo = data.costo_total || 0;
-                            const ganancia = data.total - costo;
-                            document.getElementById('modalCosto').innerText = '-$' + costo.toFixed(2);
-                            document.getElementById('modalGanancia').innerText = '$' + ganancia.toFixed(2);
-
-                            if (data.estado === 'cotizacion') {
-                                document.getElementById('avisoCotizacion').classList.remove('d-none');
-                            } else {
-                                document.getElementById('avisoCotizacion').classList.add('d-none');
-                            }
-                        }
+                    if (data.estado === 'cancelada') {
+                        document.getElementById('modalCosto').innerText = '-';
+                        document.getElementById('modalGanancia').innerText = '-';
+                        document.getElementById('avisoCotizacion').classList.add('d-none');
                     } else {
-                        alert("Error al cargar detalles.");
-                        modal.hide();
+                        const costo = data.costo_total || 0;
+                        const ganancia = data.total - costo;
+                        document.getElementById('modalCosto').innerText = '-$' + costo.toFixed(2);
+                        document.getElementById('modalGanancia').innerText = '$' + ganancia.toFixed(2);
+
+                        if (data.estado === 'cotizacion') {
+                            document.getElementById('avisoCotizacion').classList.remove('d-none');
+                        } else {
+                            document.getElementById('avisoCotizacion').classList.add('d-none');
+                        }
                     }
-                });
+                } else {
+                    alert("Error al cargar detalles.");
+                    modal.hide();
+                }
+            });
+    }
+
+    function abonar(id, saldo, estado) {
+        let msg = "💰 El cliente debe $" + saldo.toFixed(2) + ".\nIngrese el monto a abonar:";
+        if (estado === 'cotizacion') msg = "📄 Cotización por $" + saldo.toFixed(2) + ".\n¿Con cuánto anticipo confirma el pedido?";
+
+        const abono = prompt(msg);
+        if (abono && parseFloat(abono) > 0) {
+            fetch('/api/actualizar_venta', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id, abono: abono })
+            }).then(r => r.json()).then(d => {
+                if (d.success) location.reload();
+                else alert("Error al registrar el pago.");
+            });
         }
+    }
 
-        function abonar(id, saldo, estado) {
-            let msg = "💰 El cliente debe $" + saldo.toFixed(2) + ".\nIngrese el monto a abonar:";
-            if (estado === 'cotizacion') msg = "📄 Cotización por $" + saldo.toFixed(2) + ".\n¿Con cuánto anticipo confirma el pedido?";
-
-            const abono = prompt(msg);
-            if (abono && parseFloat(abono) > 0) {
-                fetch('/api/actualizar_venta', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id, abono: abono })
-                }).then(r => r.json()).then(d => {
-                    if (d.success) location.reload();
-                    else alert("Error al registrar el pago.");
-                });
-            }
+    function cancelarVenta(id) {
+        if (confirm("🛑 ¿Estás SEGURO de cancelar esta venta? \n\nEl stock será devuelto y los montos se anularán. Esta acción no se puede deshacer.")) {
+            fetch('/api/cancelar_venta', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id })
+            }).then(r => r.json()).then(d => {
+                if (d.success) location.reload();
+                else alert("Error: " + d.message);
+            });
         }
-
-        function cancelarVenta(id) {
-            if (confirm("🛑 ¿Estás SEGURO de cancelar esta venta? \n\nEl stock será devuelto y los montos se anularán. Esta acción no se puede deshacer.")) {
-                fetch('/api/cancelar_venta', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id })
-                }).then(r => r.json()).then(d => {
-                    if (d.success) location.reload();
-                    else alert("Error: " + d.message);
-                });
-            }
-        }
-    </script>
-</body>
-
-</html>
+    }
+</script>
+{% endblock %}
