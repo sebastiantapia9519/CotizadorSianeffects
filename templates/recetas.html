@@ -105,41 +105,80 @@
 
 <body>
 
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top navbar-sian">
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4 fixed-top navbar-sian">
         <div class="container">
-            <a class="navbar-brand" href="{{ url_for('main.cotizador') }}">
-                <span style="color: var(--sian-pink);">🎨 SianEffects</span> <span
-                    class="text-muted small">Recetas</span>
+            <a class="navbar-brand fw-bold text-primary" href="{{ url_for('main.cotizador') }}">
+                <span style="color: var(--sian-pink);">🎨 {{ config['nombre_empresa'] }}</span>
             </a>
+
             <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#miMenu">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
             <div class="collapse navbar-collapse" id="miMenu">
                 <ul class="navbar-nav ms-auto gap-2 align-items-center mt-3 mt-lg-0">
-                    <li class="nav-item"><a class="nav-link rounded-pill px-3" href="{{ url_for('main.cotizador') }}">🧮
-                            Cotizador</a></li>
-                    <li class="nav-item"><a class="nav-link rounded-pill px-3" href="{{ url_for('main.historial') }}">📜
-                            Historial</a></li>
-                    <li class="nav-item dropdown text-center">
-                        <a class="nav-link dropdown-toggle active fw-bold rounded-pill px-3" href="#" role="button"
-                            data-bs-toggle="dropdown">📦 Inventario</a>
-                        <ul class="dropdown-menu border-0 shadow-lg rounded-4 p-2">
-                            <li><a class="dropdown-item rounded-3"
-                                    href="{{ url_for('inventory.materiales') }}">Materiales</a></li>
-                            <li><a class="dropdown-item rounded-3" href="{{ url_for('inventory.equipos') }}">Equipos</a>
-                            </li>
-                            <li>
-                                <hr class="dropdown-divider">
-                            </li>
-                            <li><a class="dropdown-item fw-bold text-danger rounded-3 bg-light"
-                                    href="{{ url_for('inventory.recetas') }}">Recetas Guardadas</a></li>
-                        </ul>
+
+                    <li class="nav-item w-100">
+                        <a class="nav-link active fw-bold text-center border rounded-pill px-3 bg-light"
+                            href="{{ url_for('main.cotizador') }}">
+                            🧮 Cotizador
+                        </a>
                     </li>
-                    <li class="nav-item"><a class="nav-link rounded-pill px-3"
-                            href="{{ url_for('main.configuracion') }}">⚙️ Config</a></li>
-                    <li class="nav-item"><a class="btn btn-outline-danger rounded-pill btn-sm ms-2"
-                            href="{{ url_for('auth.logout') }}"><i class="fas fa-sign-out-alt"></i></a></li>
+
+                    <li class="nav-item w-100">
+                        <a class="nav-link text-center rounded-pill px-3" href="{{ url_for('main.historial') }}">
+                            📜 Historial
+                        </a>
+                    </li>
+
+                    <li class="nav-item dropdown w-100 text-center">
+                        <a class="nav-link dropdown-toggle rounded-pill px-3" href="#" role="button"
+                            data-bs-toggle="dropdown">
+                            📦 Inventario
+                        </a>
+                        <ul class="dropdown-menu border-0 shadow text-center text-lg-start">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('inventory.materiales') }}">
+                                    Materiales
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('inventory.equipos') }}">
+                                    Equipos
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('inventory.recetas') }}">
+                                    Recetas Guardadas
+                                </a>
+                            </li>
+
+                    </li>
+                </ul>
+                </li>
+
+                <li class="nav-item w-100">
+                    <a class="nav-link text-center rounded-pill px-3" href="{{ url_for('main.configuracion') }}">
+                        ⚙️ Config
+                    </a>
+                </li>
+
+                {% if session.get('role') == 2 %}
+                <li class="nav-item w-100 mt-2 mt-lg-0">
+                    <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm"
+                        href="{{ url_for('admin.dashboard') }}">
+                        👑 Panel Master
+                    </a>
+                </li>
+                {% endif %}
+
+                <li class="nav-item w-100 mt-2 mt-lg-0">
+                    <a class="btn btn-outline-danger rounded-pill w-100 btn-sm" href="{{ url_for('auth.logout') }}">
+                        <i class="fas fa-sign-out-alt"></i>
+                    </a>
+                </li>
                 </ul>
             </div>
         </div>
