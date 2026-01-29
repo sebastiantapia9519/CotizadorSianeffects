@@ -58,13 +58,63 @@ def guardar_receta():
 # VISTAS (PÁGINAS)
 # =========================
 
-@inventory_bp.route('/materiales')
+# =========================
+# MATERIALES (VER, CREAR, EDITAR)
+# =========================
+@inventory_bp.route('/materiales', methods=['GET', 'POST'])
 @login_required
 def materiales():
     conn = get_db()
+
+    # Si el usuario mandó el formulario (GUARDAR o EDITAR)
+    if request.method == 'POST':
+        id_actualizar = request.form.get('id_actualizar')
+        nombre = request.form.get('nombre')
+        tipo = request.form.get('tipo_entrada') # 'unidad' o 'paquete'
+        precio_compra = float(request.form.get('precio_compra') or 0)
+        
+        # Lógica para paquetes
+        es_paquete = 1 if tipo == 'paquete' else 0
+        cantidad_paquete = float(request.form.get('cantidad_paquete') or 1)
+        
+        # Calculamos el precio unitario automáticamente para el cotizador
+        # Si es paquete de 100 hojas a $100, la unidad cuesta $1
+        precio_unitario = precio_compra / cantidad_paquete if cantidad_paquete > 0 else 0
+
+        if id_actualizar:
+            # ACTUALIZAR EXISTENTE
+            conn.execute("""
+                UPDATE materiales 
+                SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?
+                WHERE id=? AND user_id=?
+            """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, id_actualizar, session['user_id']))
+        else:
+            # INSERTAR NUEVO
+            conn.execute("""
+                INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (session['user_id'], nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario))
+        
+        conn.commit()
+        conn.close()
+        # Recargamos la página para ver los cambios
+        return redirect(url_for('inventory.materiales'))
+
+    # Si solo está viendo la página (GET)
     materiales = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (session['user_id'],)).fetchall()
     conn.close()
     return render_template('materiales.html', materiales=materiales)
+
+
+# Esta es la función que te faltaba y hubiera causado error
+@inventory_bp.route('/materiales/eliminar/<int:id>')
+@login_required
+def eliminar_material(id):
+    conn = get_db()
+    conn.execute("DELETE FROM materiales WHERE id=? AND user_id=?", (id, session['user_id']))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('inventory.materiales'))
 
 @inventory_bp.route('/equipos')
 @login_required
