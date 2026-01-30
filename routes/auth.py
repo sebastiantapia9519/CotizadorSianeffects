@@ -31,7 +31,7 @@ def login():
             
             # RECUERDA: Cambia 'index' por el nombre real de tu función principal
             # si se llama diferente (ej: 'dashboard', 'home', etc.)
-            return redirect(url_for('index')) 
+            return redirect(url_for('main.index')) 
             
         else:
             flash('Usuario/Correo o contraseña incorrectos.', 'error')
