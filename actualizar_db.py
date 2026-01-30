@@ -3,13 +3,13 @@ import sqlite3
 def agregar_columna_suscripcion():
     try:
         # Asegúrate de que el nombre de tu archivo DB sea el correcto (ej. database.db)
-        conn = sqlite3.connect('database.db') 
+        conn = sqlite3.connect('papeleria.db') 
         cursor = conn.cursor()
         
         print("🛠️ Agregando columna 'subscription_end' a la tabla 'usuarios'...")
         
         # Agregamos la columna. Si ya existe, dará error y no pasa nada.
-        cursor.execute("ALTER TABLE usuarios ADD COLUMN subscription_end TEXT")
+        cursor.execute("ALTER TABLE usuarios ADD COLUMN last_login DATETIME")
         
         conn.commit()
         print("✅ ¡Listo! Columna agregada. Ahora ya puedes registrar usuarios.")
