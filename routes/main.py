@@ -13,7 +13,7 @@ def index():
     return redirect(url_for('main.cotizador'))
 
 @main_bp.route('/cotizador')
-@login_required
+@subscription_required
 def cotizador():
     conn = get_db()
     uid = session['user_id']
@@ -250,6 +250,12 @@ def configuracion():
 @main_bp.route('/terminos')
 def terminos():
     return render_template('terminos.html')
+
+@main_bp.route('/plan_vencido')
+def plan_vencido():
+    # Renderizamos una plantilla simple que diga "Paga aquí"
+    return render_template('plan_vencido.html')
+
 
 @main_bp.route('/descargar_excel')
 @login_required
