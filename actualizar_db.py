@@ -22,5 +22,7 @@ def agregar_columna_suscripcion():
         if conn:
             conn.close()
 
+
+
 if __name__ == "__main__":
     agregar_columna_suscripcion()
