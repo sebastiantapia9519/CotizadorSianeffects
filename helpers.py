@@ -13,7 +13,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-# --- ESTA ES LA QUE FALTABA ---
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
