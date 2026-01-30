@@ -100,7 +100,7 @@ def obtener_detalles_venta(id):
     } for d in detalles]
     
     return jsonify({
-        'success': True,
+        'success': 'PRUEBA_SEBASTIAN_123',  # <--- Cambia esto
         'folio': venta['id'],
         'cliente': venta['cliente'],
         'estado': venta['estado'],
