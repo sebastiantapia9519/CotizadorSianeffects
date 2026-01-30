@@ -29,8 +29,11 @@ def login():
             session['username'] = user['username']
             session['role'] = user['role']
             
-            # RECUERDA: Cambia 'index' por el nombre real de tu función principal
-            # si se llama diferente (ej: 'dashboard', 'home', etc.)
+            conn = get_db()
+            conn.execute('UPDATE usuarios SET last_login = ? WHERE id = ?', (datetime.now(), user['id']))
+            conn.commit()
+            conn.close()
+            
             return redirect(url_for('main.index')) 
             
         else:
@@ -48,16 +51,16 @@ def registro():
         hashed_pw = generate_password_hash(password)
         
         # --- 2. CALCULAMOS LOS 7 DÍAS DE PRUEBA ---
-        fecha_prueba = datetime.now() + timedelta(days=7)
-        
+        fecha_fin_prueba = datetime.now() + timedelta(days=7)
+        fecha_creacion = datetime.now() # Para saber cuándo se registró
+
         conn = get_db()
         try:
-            # --- 3. AGREGAMOS 'subscription_end' AL INSERT ---
-            # Nota: Agregué subscription_end en los campos y el valor fecha_prueba al final
+            # 2. Asegúrate que el INSERT tenga estos campos:
             conn.execute('''
-                INSERT INTO usuarios (username, email, password, role, subscription_end) 
-                VALUES (?, ?, ?, 1, ?)
-            ''', (nombre, email, hashed_pw, fecha_prueba))
+                INSERT INTO usuarios (username, email, password, role, subscription_end, created_at) 
+                VALUES (?, ?, ?, 1, ?, ?)
+            ''', (nombre, email, hashed_pw, fecha_fin_prueba, fecha_creacion))
             
             conn.commit()
             flash('Cuenta creada con éxito. ¡Tienes 7 días de prueba!', 'success')
