@@ -5,6 +5,7 @@ import pandas as pd
 import io
 from db import get_db_connection as get_db
 from helpers import login_required
+from helpers import subscription_required
 
 main_bp = Blueprint('main', __name__)
 
