@@ -201,6 +201,25 @@ def historial():
     return render_template('historial.html', ventas=ventas)
 
 
+@main_bp.route('/ticket/<int:id>')
+def ver_ticket(id):
+    conn = get_db()
+    # Permitimos ver ticket sin login (para compartir link), pero buscamos la config del dueño del ticket
+    venta = conn.execute('SELECT * FROM ventas WHERE id = ?', (id,)).fetchone()
+    
+    if venta is None:
+        conn.close()
+        return "Ticket no encontrado", 404
+
+    detalles = conn.execute('SELECT * FROM venta_detalles WHERE venta_id = ?', (id,)).fetchall()
+    config = conn.execute('SELECT * FROM configuracion WHERE user_id = ?', (venta['user_id'],)).fetchone()
+
+    if config is None:
+        config = {'nombre_empresa': 'Mi Negocio', 'slogan': 'Gracias por su compra', 'website': ''}
+
+    conn.close()
+    return render_template('ticket.html', venta=venta, detalles=detalles, config=config)
+
 # --- CONFIGURACIÓN Y EXPORTACIÓN ---
 
 @main_bp.route('/configuracion', methods=('GET', 'POST'))
