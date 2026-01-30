@@ -11,9 +11,8 @@ admin_bp = Blueprint('admin', __name__)
 def dashboard():
     conn = get_db_connection(); users = conn.execute('SELECT * FROM usuarios ORDER BY created_at DESC').fetchall(); conn.close()
     stats = {'total': len(users), 'activos': 0, 'vencidos': 0, 'admins': 0}
-# ... (código anterior) ...
     
-    # 2. Calcular estadísticas (CORREGIDO)
+    # 2. Calcular estadísticas
     for u in users:
         # Verificamos si tiene fecha. Si es None, lo contamos como vencido o ignoramos
         if u['subscription_end']:
