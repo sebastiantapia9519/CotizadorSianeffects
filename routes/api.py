@@ -79,51 +79,37 @@ def obtener_detalles_venta(id):
         return jsonify({'error': 'No autorizado'}), 401
 
     conn = get_db()
-
-    venta = conn.execute("""
-        SELECT 
-            v.id,
-            v.cliente,
-            v.estado,
-            v.total,
-            v.monto_pagado,
-            (v.total - v.monto_pagado) AS saldo_pendiente,
-            SUM(d.costo_unitario * d.cantidad) AS costo_total
-        FROM ventas v
-        LEFT JOIN venta_detalles d ON v.id = d.venta_id
-        WHERE v.id = ? AND v.user_id = ?
-        GROUP BY v.id
-    """, (id, session['user_id'])).fetchone()
-
+    # Verificar que la venta pertenezca al usuario
+    venta = conn.execute('SELECT * FROM ventas WHERE id = ? AND user_id = ?', 
+                         (id, session['user_id'])).fetchone()
+    
     if not venta:
         conn.close()
-        return jsonify({'success': False}), 404
-
-    detalles = conn.execute("""
-        SELECT 
-            concepto,
-            cantidad,
-            precio_unitario,
-            costo_unitario,
-            subtotal
-        FROM venta_detalles
-        WHERE venta_id = ?
-    """, (id,)).fetchall()
-
+        return jsonify({'success': False, 'message': 'No encontrado'}), 404
+        
+    detalles = conn.execute('SELECT * FROM venta_detalles WHERE venta_id = ?', (id,)).fetchall()
     conn.close()
-
+    
+    # Formatear items para JSON
+    items = [{
+        'concepto': d['concepto'], 
+        'cantidad': d['cantidad'], 
+        'precio_unitario': d['precio_unitario'], 
+        'costo_unitario': d['costo_unitario'], 
+        'subtotal': d['subtotal']
+    } for d in detalles]
+    
     return jsonify({
         'success': True,
         'folio': venta['id'],
         'cliente': venta['cliente'],
         'estado': venta['estado'],
         'total': venta['total'],
-        'monto_pagado': venta['monto_pagado'] or 0,
-        'saldo_pendiente': venta['saldo_pendiente'] or 0,
-        'costo_total': venta['costo_total'] or 0,
-        'items': [dict(d) for d in detalles]
+        'costo_total': venta['costo_total'],
+        'monto_pagado': venta['monto_pagado'],
+        'saldo_pendiente': venta['saldo_pendiente'],
+        'items': items
     })
-
 
 # D. ACTUALIZAR VENTA (Registrar Abono)
 @api_bp.route('/actualizar_venta', methods=['POST'])
