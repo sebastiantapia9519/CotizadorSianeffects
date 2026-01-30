@@ -200,51 +200,6 @@ def historial():
     conn.close()
     return render_template('historial.html', ventas=ventas)
 
-@main_bp.route('/api/obtener_detalles/<int:id>')
-@login_required
-def api_detalles(id):
-    conn = get_db()
-    # Verificar que la venta sea del usuario actual por seguridad
-    venta = conn.execute('SELECT * FROM ventas WHERE id = ? AND user_id = ?', (id, session['user_id'])).fetchone()
-    
-    if not venta:
-        conn.close()
-        return jsonify({'success': False, 'message': 'No encontrado'}), 404
-        
-    detalles = conn.execute('SELECT * FROM venta_detalles WHERE venta_id = ?', (id,)).fetchall()
-    conn.close()
-    
-    # Convertir a dict para JSON
-    items = [{'concepto': d['concepto'], 'cantidad': d['cantidad'], 'precio_unitario': d['precio_unitario'], 'costo_unitario': d['costo_unitario'], 'subtotal': d['subtotal']} for d in detalles]
-    
-    return jsonify({
-        'success': True,
-        'folio': venta['id'],
-        'cliente': venta['cliente'],
-        'estado': venta['estado'],
-        'total': venta['total'],
-        'costo_total': venta['costo_total'],
-        'items': items
-    })
-
-@main_bp.route('/ticket/<int:id>')
-def ver_ticket(id):
-    conn = get_db()
-    # Permitimos ver ticket sin login (para compartir link), pero buscamos la config del dueño del ticket
-    venta = conn.execute('SELECT * FROM ventas WHERE id = ?', (id,)).fetchone()
-    
-    if venta is None:
-        conn.close()
-        return "Ticket no encontrado", 404
-
-    detalles = conn.execute('SELECT * FROM venta_detalles WHERE venta_id = ?', (id,)).fetchall()
-    config = conn.execute('SELECT * FROM configuracion WHERE user_id = ?', (venta['user_id'],)).fetchone()
-
-    if config is None:
-        config = {'nombre_empresa': 'Mi Negocio', 'slogan': 'Gracias por su compra', 'website': ''}
-
-    conn.close()
-    return render_template('ticket.html', venta=venta, detalles=detalles, config=config)
 
 # --- CONFIGURACIÓN Y EXPORTACIÓN ---
 
