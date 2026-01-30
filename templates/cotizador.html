@@ -246,54 +246,83 @@
                 <div class="p-4 bg-light border-top">
                     <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
                         <label class="fw-bold small text-muted d-block mb-2">Descuento (%)</label>
+
                         <div class="d-flex align-items-center gap-2">
                             <input type="range" class="form-range flex-grow-1" min="0" max="100" step="5"
                                 id="sliderDescuento" value="0" oninput="actualizarDescuento(this.value)">
-                            <div class="input-group" style="width: 100px;">
+
+                            <div class="input-group flex-shrink-0 shadow-sm rounded-pill overflow-hidden"
+                                style="width: 85px;">
                                 <input type="number" id="inputDescuento"
-                                    class="form-control text-center fw-bold border-0 bg-light" value="0" min="0"
-                                    max="100" oninput="actualizarDescuento(this.value)">
-                                <span class="input-group-text border-0 bg-light">%</span>
+                                    class="form-control text-center fw-bold border-0 bg-light no-arrow" value="0"
+                                    min="0" max="100" oninput="actualizarDescuento(this.value)"> <span
+                                    class="input-group-text border-0 bg-light px-1 text-muted small">%</span>
                             </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small text-muted">Subtotal:</span>
-                        <span id="labelSubtotal" class="fw-bold">$0.00</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-3 text-success">
-                        <span class="small fw-bold">Descuento:</span>
-                        <span id="labelDescuento">- $0.00</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top">
-                        <span class="h5 fw-bold text-dark mb-0">Total:</span>
-                        <span id="totalTicket" class="total-ticket">$0.00</span>
-                    </div>
+                <style>
+                    .no-arrow {
+                        -moz-appearance: textfield;
+                        /* Para Firefox */
+                        appearance: textfield;
+                        /* Estándar moderno */
+                    }
 
-                    <div class="mb-3">
-                        <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
-                            placeholder="Nombre del Cliente">
-                    </div>
+                    /* Quitar flechas en Chrome, Safari, Edge, Opera */
+                    .no-arrow::-webkit-outer-spin-button,
+                    .no-arrow::-webkit-inner-spin-button {
+                        -webkit-appearance: none;
+                        margin: 0;
+                    }
 
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <button class="btn btn-outline-dark w-100 py-3 fw-bold rounded-3"
-                                onclick="finalizarCompra('cotizacion')">
-                                <i class="fas fa-file-invoice me-1"></i> Solo Cotizar
-                            </button>
-                        </div>
-                        <div class="col-6">
-                            <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow" data-bs-toggle="modal"
-                                data-bs-target="#modalCobro">
-                                <i class="fas fa-dollar-sign me-1"></i> Cobrar
-                            </button>
-                        </div>
+                    /* El input group se verá más limpio y redondeado */
+                    .input-group.rounded-pill input {
+                        border-radius: 50px 0 0 50px;
+                    }
+
+                    .input-group.rounded-pill span {
+                        border-radius: 0 50px 50px 0;
+                    }
+                </style>
+
+                <div class="d-flex justify-content-between align-items-center mb-1">
+                    <span class="small text-muted">Subtotal:</span>
+                    <span id="labelSubtotal" class="fw-bold">$0.00</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 text-success">
+                    <span class="small fw-bold">Descuento:</span>
+                    <span id="labelDescuento">- $0.00</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top">
+                    <span class="h5 fw-bold text-dark mb-0">Total:</span>
+                    <span id="totalTicket" class="total-ticket">$0.00</span>
+                </div>
+
+                <div class="mb-3">
+                    <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
+                        placeholder="Nombre del Cliente">
+                </div>
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <button class="btn btn-outline-dark w-100 py-3 fw-bold rounded-3"
+                            onclick="finalizarCompra('cotizacion')">
+                            <i class="fas fa-file-invoice me-1"></i> Solo Cotizar
+                        </button>
+                    </div>
+                    <div class="col-6">
+                        <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow" data-bs-toggle="modal"
+                            data-bs-target="#modalCobro">
+                            <i class="fas fa-dollar-sign me-1"></i> Cobrar
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 </div>
 
 <div class="modal fade" id="modalCobro" tabindex="-1">
