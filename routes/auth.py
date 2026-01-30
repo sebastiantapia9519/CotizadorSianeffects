@@ -5,35 +5,39 @@ from datetime import datetime, timedelta  # <--- 1. AGREGAMOS timedelta AQUÍ
 
 auth_bp = Blueprint('auth', __name__)
 
-# --- ESTO ES LO QUE TE FALTA ---
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        email = request.form['email']
+        # 1. Usamos el nombre EXACTO que tienes en tu HTML
+        login_input = request.form['email_or_user']
         password = request.form['password']
         
         conn = get_db()
-        # Buscamos al usuario por email
-        user = conn.execute('SELECT * FROM usuarios WHERE email = ?', (email,)).fetchone()
+        
+        # 2. Buscamos si ese texto coincide con el email O con el username
+        # Pasamos la variable 'login_input' dos veces para llenar los dos '?'
+        user = conn.execute('''
+            SELECT * FROM usuarios 
+            WHERE email = ? OR username = ?
+        ''', (login_input, login_input)).fetchone()
+        
         conn.close()
         
-        # Verificamos si el usuario existe y si la contraseña coincide
+        # 3. Verificamos contraseña
         if user and check_password_hash(user['password'], password):
-            # Guardamos datos en la sesión
             session['user_id'] = user['id']
             session['username'] = user['username']
             session['role'] = user['role']
             
-            # --- IMPORTANTE ---
-            # Aquí debes redirigir a donde quieres que vaya el usuario al entrar.
-            # Por ejemplo: 'dashboard' o 'index'. Cámbialo según tu ruta principal.
-            return redirect(url_for('dashboard')) 
+            # RECUERDA: Cambia 'index' por el nombre real de tu función principal
+            # si se llama diferente (ej: 'dashboard', 'home', etc.)
+            return redirect(url_for('index')) 
             
         else:
-            flash('Correo o contraseña incorrectos.', 'error')
+            flash('Usuario/Correo o contraseña incorrectos.', 'error')
             
     return render_template('login.html')
-# -------------------------------
+
 
 @auth_bp.route('/registro', methods=['GET', 'POST'])
 def registro():
