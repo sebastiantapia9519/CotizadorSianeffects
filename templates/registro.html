@@ -1,93 +1,107 @@
-{% extends "layout.html" %}
+<!doctype html>
+<html lang="es">
 
-{% block title %}Crear Cuenta | SianEffects{% endblock %}
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Registro - SianEffects</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            background-color: #e0f7fa;
+            font-family: 'Nunito', sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
 
-{% block content %}
-<div class="container d-flex justify-content-center align-items-center py-5" style="min-height: 90vh;">
-    <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="max-width: 500px; width: 100%;">
+        .card-login {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(46, 196, 182, 0.2);
+            width: 100%;
+            max-width: 500px;
+        }
 
+        .brand {
+            color: #2ec4b6;
+            font-weight: 900;
+            font-size: 2rem;
+        }
+
+        .form-control {
+            border-radius: 10px;
+            padding: 12px;
+            border: 2px solid #eee;
+        }
+
+        .form-control:focus {
+            border-color: #2ec4b6;
+            box-shadow: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="card card-login">
         <div class="card-body p-5">
-            <div class="text-center mb-4">
-                <h2 class="fw-bold text-dark mb-1">Crear Cuenta</h2>
-                <span class="badge bg-success bg-opacity-10 text-success rounded-pill px-3">
-                    🚀 Prueba gratis por 7 días
-                </span>
+            <div class="text-center">
+                <h1 class="brand mb-2">Crear Cuenta</h1>
+                <p class="text-muted mb-4">Prueba gratis por 7 días</p>
             </div>
 
-            <form action="{{ url_for('auth.registro') }}" method="POST" class="needs-validation">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }} small">{{
+                message }}</div>{% endfor %}{% endif %}
+            {% endwith %}
 
-                <div class="row g-3 mb-3">
-                    <div class="col-6">
-                        <div class="form-floating">
-                            <input type="text" name="username" class="form-control rounded-3" id="userInput"
-                                placeholder="Usuario" required>
-                            <label for="userInput">Usuario</label>
-                        </div>
+            <form method="post">
+                <div class="row">
+                    <div class="col-6 mb-3">
+                        <input type="text" name="username" class="form-control" placeholder="Usuario" required>
                     </div>
-                    <div class="col-6">
-                        <div class="form-floating">
-                            <input type="text" name="company_name" class="form-control rounded-3" id="brandInput"
-                                placeholder="Tu Marca" required>
-                            <label for="brandInput">Nombre de tu Marca</label>
-                        </div>
+                    <div class="col-6 mb-3">
+                        <input type="text" name="company_name" class="form-control" placeholder="Nombre de tu Marca"
+                            required>
                     </div>
                 </div>
 
-                <div class="form-floating mb-3">
-                    <input type="email" name="email" class="form-control rounded-3" id="emailInput"
-                        placeholder="nombre@ejemplo.com" required>
-                    <label for="emailInput">Correo Electrónico</label>
+                <div class="mb-3">
+                    <input type="email" name="email" class="form-control"
+                        placeholder="Correo Electrónico (Para recuperar cuenta)" required>
                 </div>
 
-                <div class="form-floating mb-3">
-                    <input type="tel" name="phone" class="form-control rounded-3" id="phoneInput" placeholder="Teléfono"
-                        pattern="[0-9]{10,15}" title="Solo números (mínimo 10 dígitos)">
-                    <label for="phoneInput">Teléfono / WhatsApp (Opcional)</label>
-                    <div class="form-text small ms-1">Solo dígitos, sin guiones.</div>
+                <div class="mb-3">
+                    <input type="tel" name="phone" class="form-control" placeholder="Teléfono / WhatsApp (Opcional)">
                 </div>
 
-                <div class="form-floating mb-4">
-                    <input type="password" name="password" class="form-control rounded-3" id="passInput"
-                        placeholder="Contraseña" minlength="6" required>
-                    <label for="passInput">Contraseña Segura</label>
-                    <div class="form-text small ms-1">Mínimo 6 caracteres.</div>
+                <div class="mb-3">
+                    <input type="password" name="password" class="form-control" placeholder="Contraseña Segura"
+                        required>
                 </div>
 
                 <div class="form-check mb-4">
-                    <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                    <input class="form-check-input" type="checkbox" name="terms" id="termsCheck" required>
                     <label class="form-check-label small text-muted" for="termsCheck">
-                        Acepto los <a href="{{ url_for('main.terminos') }}"
-                            class="text-primary text-decoration-none">Términos y Condiciones</a> y el uso de mis datos.
+                        Acepto los <a href="{{ url_for('main.terminos') }}" target="_blank" class="fw-bold"
+                            style="color:#2ec4b6">Términos y Condiciones</a> y el uso de mis datos para el servicio.
                     </label>
                 </div>
 
-                <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm hover-scale">
-                    COMENZAR PRUEBA GRATIS 🚀
-                </button>
-
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-success fw-bold py-3"
+                        style="background-color: #2ec4b6; border:none; border-radius: 50px;">
+                        COMENZAR PRUEBA GRATIS 🚀
+                    </button>
+                    <a href="{{ url_for('auth.login') }}" class="btn btn-light text-muted btn-sm mt-2 rounded-pill">¿Ya
+                        tienes cuenta? Entrar</a>
+                </div>
             </form>
-
-            <div class="text-center mt-4">
-                <a href="{{ url_for('auth.login') }}" class="text-muted text-decoration-none small">
-                    ¿Ya tienes cuenta? <span class="text-primary fw-bold">Entrar</span>
-                </a>
-            </div>
         </div>
     </div>
-</div>
+</body>
 
-<style>
-    .form-control:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.1);
-    }
-
-    .hover-scale {
-        transition: transform 0.2s;
-    }
-
-    .hover-scale:hover {
-        transform: scale(1.02);
-    }
-</style>
-{% endblock %}
+</html>
