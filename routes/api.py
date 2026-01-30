@@ -112,18 +112,17 @@ def obtener_detalles_venta(id):
 
     conn.close()
 
-return jsonify({
-    'success': True,
-    'folio': venta['id'],
-    'cliente': venta['cliente'],
-    'estado': venta['estado'],
-    'total': venta['total'],
-    'monto_pagado': venta['monto_pagado'],
-    'saldo_pendiente': venta['saldo_pendiente'],
-    'costo_total': venta['costo_total'],
-    'items': [dict(d) for d in detalles]
-})
-
+    return jsonify({
+        'success': True,
+        'folio': venta['id'],
+        'cliente': venta['cliente'],
+        'estado': venta['estado'],
+        'total': venta['total'],
+        'monto_pagado': venta['monto_pagado'] or 0,
+        'saldo_pendiente': venta['saldo_pendiente'] or 0,
+        'costo_total': venta['costo_total'] or 0,
+        'items': [dict(d) for d in detalles]
+    })
 
 
 # D. ACTUALIZAR VENTA (Registrar Abono)
