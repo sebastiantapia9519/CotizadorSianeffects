@@ -5,7 +5,35 @@ from datetime import datetime, timedelta  # <--- 1. AGREGAMOS timedelta AQUÍ
 
 auth_bp = Blueprint('auth', __name__)
 
-# ... (La función de login déjala igual) ...
+# --- ESTO ES LO QUE TE FALTA ---
+@auth_bp.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        conn = get_db()
+        # Buscamos al usuario por email
+        user = conn.execute('SELECT * FROM usuarios WHERE email = ?', (email,)).fetchone()
+        conn.close()
+        
+        # Verificamos si el usuario existe y si la contraseña coincide
+        if user and check_password_hash(user['password'], password):
+            # Guardamos datos en la sesión
+            session['user_id'] = user['id']
+            session['username'] = user['username']
+            session['role'] = user['role']
+            
+            # --- IMPORTANTE ---
+            # Aquí debes redirigir a donde quieres que vaya el usuario al entrar.
+            # Por ejemplo: 'dashboard' o 'index'. Cámbialo según tu ruta principal.
+            return redirect(url_for('dashboard')) 
+            
+        else:
+            flash('Correo o contraseña incorrectos.', 'error')
+            
+    return render_template('login.html')
+# -------------------------------
 
 @auth_bp.route('/registro', methods=['GET', 'POST'])
 def registro():
