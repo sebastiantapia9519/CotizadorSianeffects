@@ -4,7 +4,6 @@
 
 {% block extra_css %}
 <style>
-    /* Estilos específicos del Admin Panel */
     body {
         background-color: #f8f9fa;
     }
@@ -48,17 +47,80 @@
         border: none;
         border-radius: 20px;
         box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
-        /* ELIMINAMOS overflow: hidden PARA QUE NO CORTE EL MENU */
-        /* overflow: hidden;  <-- ESTO CAUSABA EL CORTE */
     }
 
-    /* Ajuste para que la tabla responda bien pero deje ver el menú */
     .table-responsive {
         min-height: 300px;
-        /* Dar altura mínima ayuda al menú a abrirse hacia abajo */
         overflow-x: auto;
         overflow-y: visible;
-        /* Importante para dropdowns */
+        /* Clave para que el dropdown no se corte */
+    }
+
+    /* --- NUEVO: ESTILOS PARA LOS TRES PUNTITOS --- */
+
+    /* 1. El Botón Redondito */
+    .action-btn {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background-color: transparent;
+        border: 1px solid transparent;
+        color: #adb5bd;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .action-btn:hover,
+    .action-btn[aria-expanded="true"] {
+        background-color: #f1f3f5;
+        color: #343a40;
+        border-color: #dee2e6;
+        transform: scale(1.05);
+    }
+
+    /* 2. El Menú Flotante (Más bonito) */
+    .custom-dropdown-menu {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        padding: 8px;
+        min-width: 220px;
+        margin-top: 5px;
+        /* Un poco de aire */
+    }
+
+    /* 3. Los Elementos del menú */
+    .dropdown-item {
+        border-radius: 10px;
+        padding: 8px 12px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 2px;
+        transition: background 0.1s;
+    }
+
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+        transform: translateX(3px);
+        /* Pequeña animación al pasar el mouse */
+    }
+
+    .dropdown-header {
+        font-size: 0.7rem;
+        font-weight: 700;
+        letter-spacing: 1px;
+        color: #ced4da;
+        margin-bottom: 4px;
+        padding-left: 12px;
+    }
+
+    /* Iconos dentro del menú */
+    .dropdown-item i {
+        width: 20px;
+        text-align: center;
+        margin-right: 8px;
     }
 </style>
 {% endblock %}
@@ -208,49 +270,77 @@
 
                         <td class="text-end pe-4">
                             <div class="dropdown">
-                                <button class="btn btn-sm btn-light border rounded-pill px-3" type="button"
-                                    data-bs-toggle="dropdown" data-bs-display="static">
-                                    <i class="fas fa-ellipsis-h text-muted"></i>
+                                <button class="btn action-btn" type="button" data-bs-toggle="dropdown"
+                                    data-bs-display="static">
+                                    <i class="fas fa-ellipsis-v"></i>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
-                                    <li>
-                                        <h6 class="dropdown-header small text-uppercase">Suscripción</h6>
-                                    </li>
-                                    <li><a class="dropdown-item text-success"
-                                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=1) }}"><i
-                                                class="fas fa-plus-circle me-2"></i>+1 Mes</a></li>
-                                    <li><a class="dropdown-item text-success"
-                                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=12) }}"><i
-                                                class="fas fa-calendar-check me-2"></i>+1 Año</a></li>
+
+                                <ul
+                                    class="dropdown-menu dropdown-menu-end custom-dropdown-menu animate__animated animate__fadeIn faster">
 
                                     <li>
-                                        <hr class="dropdown-divider">
+                                        <h6 class="dropdown-header">MEMBRESÍA</h6>
+                                    </li>
+
+                                    <li>
+                                        <a class="dropdown-item text-dark"
+                                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=1) }}">
+                                            <i
+                                                class="fas fa-calendar-plus text-success bg-success bg-opacity-10 rounded p-1"></i>
+                                            Sumar 1 Mes
+                                        </a>
                                     </li>
                                     <li>
-                                        <h6 class="dropdown-header small text-uppercase">Seguridad</h6>
+                                        <a class="dropdown-item text-dark"
+                                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=12) }}">
+                                            <i
+                                                class="fas fa-calendar-check text-primary bg-primary bg-opacity-10 rounded p-1"></i>
+                                            Sumar 1 Año
+                                        </a>
                                     </li>
+
                                     <li>
-                                        <button class="dropdown-item text-warning"
+                                        <hr class="dropdown-divider my-2">
+                                    </li>
+
+                                    <li>
+                                        <h6 class="dropdown-header">SEGURIDAD</h6>
+                                    </li>
+
+                                    <li>
+                                        <button class="dropdown-item text-dark"
                                             onclick="abrirReset({{u['id']}}, '{{u['username']}}')">
-                                            <i class="fas fa-key me-2"></i> Resetear Password
+                                            <i class="fas fa-key text-warning bg-warning bg-opacity-10 rounded p-1"></i>
+                                            Resetear Clave
                                         </button>
                                     </li>
 
                                     {% if session['role'] == 2 and u['id'] != session['user_id'] %}
                                     <li>
-                                        <hr class="dropdown-divider">
+                                        <hr class="dropdown-divider my-2">
                                     </li>
                                     <li>
-                                        <h6 class="dropdown-header small text-uppercase">Permisos</h6>
+                                        <h6 class="dropdown-header">STAFF</h6>
                                     </li>
+
                                     {% if u['role'] == 0 %}
-                                    <li><a class="dropdown-item text-info"
-                                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=1) }}">Hacer
-                                            Admin</a></li>
+                                    <li>
+                                        <a class="dropdown-item text-dark"
+                                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=1) }}">
+                                            <i
+                                                class="fas fa-user-shield text-info bg-info bg-opacity-10 rounded p-1"></i>
+                                            Hacer Admin
+                                        </a>
+                                    </li>
                                     {% else %}
-                                    <li><a class="dropdown-item text-muted"
-                                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=0) }}">Quitar
-                                            Admin</a></li>
+                                    <li>
+                                        <a class="dropdown-item text-danger"
+                                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=0) }}">
+                                            <i
+                                                class="fas fa-user-times text-danger bg-danger bg-opacity-10 rounded p-1"></i>
+                                            Quitar Admin
+                                        </a>
+                                    </li>
                                     {% endif %}
                                     {% endif %}
                                 </ul>
