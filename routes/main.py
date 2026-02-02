@@ -228,25 +228,99 @@ def ver_ticket(id):
 def configuracion():
     conn = get_db()
     uid = session['user_id']
+
     if request.method == 'POST':
+
+        # ==========================================
+        # CAMBIO DE USUARIO / PASSWORD
+        # ==========================================
         if 'new_username' in request.form:
             try:
-                conn.execute('UPDATE usuarios SET username=?, password=? WHERE id=?', 
-                             (request.form['new_username'], generate_password_hash(request.form['new_password']), uid))
+                conn.execute(
+                    'UPDATE usuarios SET username=?, password=? WHERE id=?',
+                    (
+                        request.form['new_username'],
+                        generate_password_hash(request.form['new_password']),
+                        uid
+                    )
+                )
                 session['username'] = request.form['new_username']
                 flash('Credenciales actualizadas.', 'success')
-            except: 
+            except:
                 flash('Usuario ocupado.', 'danger')
+
+        # ==========================================
+        # CONFIGURACIÓN GENERAL
+        # ==========================================
         else:
-            conn.execute('UPDATE configuracion SET margen_ganancia=?, nombre_empresa=?, slogan=?, website=? WHERE user_id=?', 
-                         (request.form['margen'], request.form['nombre_empresa'], request.form['slogan'], request.form['website'], uid))
-            flash('Datos guardados.', 'success')
-        conn.commit(); conn.close(); return redirect(url_for('main.configuracion'))
-    
-    config = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone()
-    user = conn.execute('SELECT * FROM usuarios WHERE id=?', (uid,)).fetchone()
+            # 1. Verificar si ya existe configuración
+            config_existente = conn.execute(
+                'SELECT id FROM configuracion WHERE user_id=?',
+                (uid,)
+            ).fetchone()
+
+            if config_existente:
+                # 2A. UPDATE si ya existe
+                conn.execute('''
+                    UPDATE configuracion
+                    SET margen_ganancia=?,
+                        nombre_empresa=?,
+                        slogan=?,
+                        website=?
+                    WHERE user_id=?
+                ''', (
+                    request.form['margen'],
+                    request.form['nombre_empresa'],
+                    request.form['slogan'],
+                    request.form['website'],
+                    uid
+                ))
+            else:
+                # 2B. INSERT si NO existe (fallback de seguridad)
+                conn.execute('''
+                    INSERT INTO configuracion (
+                        user_id,
+                        margen_ganancia,
+                        nombre_empresa,
+                        slogan,
+                        website
+                    )
+                    VALUES (?, ?, ?, ?, ?)
+                ''', (
+                    uid,
+                    request.form['margen'],
+                    request.form['nombre_empresa'],
+                    request.form['slogan'],
+                    request.form['website']
+                ))
+
+            flash('Datos guardados correctamente.', 'success')
+
+        conn.commit()
+        conn.close()
+        return redirect(url_for('main.configuracion'))
+
+    # ==========================================
+    # GET
+    # ==========================================
+    config = conn.execute(
+        'SELECT * FROM configuracion WHERE user_id=?',
+        (uid,)
+    ).fetchone()
+
+    user = conn.execute(
+        'SELECT * FROM usuarios WHERE id=?',
+        (uid,)
+    ).fetchone()
+
     conn.close()
-    return render_template('configuracion.html', config=config, usuario=user)
+
+    return render_template(
+        'configuracion.html',
+        config=config,
+        usuario=user
+    )
+
 
 @main_bp.route('/terminos')
 def terminos():
