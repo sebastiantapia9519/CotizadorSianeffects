@@ -1,249 +1,222 @@
-<!doctype html>
-<html lang="es">
+{% extends 'base.html' %}
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Configuración | SianEffects</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
 
-    <style>
-        :root {
-            --sian-pink: #ff6b81;
-            --sian-pink-light: #fff0f3;
-            --sian-teal: #2ec4b6;
-            --bg-cream: #fffdf9;
-        }
+        <div class="col-md-3 mb-4">
+            <div class="list-group shadow-sm" id="list-tab" role="tablist">
+                <h5 class="px-3 py-2 text-muted">Configuración</h5>
 
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: var(--bg-cream);
-            padding-top: 80px;
-            /* Espacio para navbar fijo */
-            color: #555;
-        }
+                <a class="list-group-item list-group-item-action active d-flex justify-content-between align-items-center"
+                    id="list-negocio-list" data-bs-toggle="list" href="#list-negocio" role="tab">
+                    <span>🏢 Mi Negocio</span>
+                </a>
 
-        /* Navbar Sian */
-        .navbar-sian {
-            background-color: #ffffff;
-            border-bottom: 3px solid var(--sian-pink-light);
-        }
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                    id="list-perfil-list" data-bs-toggle="list" href="#list-perfil" role="tab">
+                    <span>👤 Mi Perfil</span>
+                </a>
 
-        .navbar-brand {
-            font-weight: 800;
-            color: #333 !important;
-        }
-
-        /* Tarjetas */
-        .card-config {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-            transition: transform 0.2s;
-        }
-
-        .card-config:hover {
-            transform: translateY(-3px);
-        }
-
-        .card-header-config {
-            background: white;
-            border-bottom: 2px solid var(--sian-pink-light);
-            padding: 20px;
-            border-radius: 20px 20px 0 0;
-        }
-
-        /* Inputs */
-        .form-control {
-            border-radius: 12px;
-            border: 2px solid #eee;
-            padding: 10px;
-            font-weight: 600;
-        }
-
-        .form-control:focus {
-            border-color: var(--sian-pink);
-            box-shadow: none;
-        }
-    </style>
-</head>
-
-<body>
-
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top navbar-sian">
-        <div class="container">
-            <a class="navbar-brand" href="{{ url_for('main.cotizador') }}">
-                <span style="color: var(--sian-pink);">🎨 SianEffects</span> <span
-                    class="text-muted small">Config</span>
-            </a>
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#miMenu">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-
-            <div class="collapse navbar-collapse" id="miMenu">
-                <ul class="navbar-nav ms-auto gap-2 align-items-center mt-3 mt-lg-0">
-                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
-                            href="{{ url_for('main.cotizador') }}">🧮 Cotizador</a></li>
-                    <li class="nav-item w-100"><a class="nav-link text-center rounded-pill px-3"
-                            href="{{ url_for('main.historial') }}">📜 Historial</a></li>
-
-                    <li class="nav-item dropdown w-100 text-center">
-                        <a class="nav-link dropdown-toggle rounded-pill px-3" href="#" role="button"
-                            data-bs-toggle="dropdown">📦 Inventario</a>
-                        <ul class="dropdown-menu border-0 shadow text-center text-lg-start">
-                            <li><a class="dropdown-item" href="{{ url_for('inventory.materiales') }}">Materiales</a>
-                            </li>
-                            <li><a class="dropdown-item" href="{{ url_for('inventory.equipos') }}">Equipos</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('inventory.recetas') }}">Recetas</a></li>
-                        </ul>
-                    </li>
-
-                    <li class="nav-item w-100"><a
-                            class="nav-link active fw-bold text-center border rounded-pill px-3 bg-light" href="#">⚙️
-                            Config</a></li>
-
-                    {% if session.get('role') == 2 %}
-                    <li class="nav-item w-100 mt-2 mt-lg-0">
-                        <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm"
-                            href="{{ url_for('admin.dashboard') }}">👑 Panel Master</a>
-                    </li>
-                    {% endif %}
-
-                    <li class="nav-item w-100 mt-2 mt-lg-0">
-                        <a class="btn btn-outline-danger rounded-pill w-100 btn-sm" href="{{ url_for('auth.logout') }}">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </a>
-                    </li>
-                </ul>
+                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
+                    id="list-seguridad-list" data-bs-toggle="list" href="#list-seguridad" role="tab">
+                    <span>🔒 Seguridad</span>
+                </a>
             </div>
         </div>
-    </nav>
 
-    <div class="container pb-5">
+        <div class="col-md-9">
 
-        {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }} shadow-sm rounded-4 border-0 mb-4 d-flex align-items-center">
-            <i class="fas fa-info-circle me-2"></i> {{ message }}
-        </div>
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
 
-        <div class="row g-4">
+            <div class="tab-content" id="nav-tabContent">
 
-            <div class="col-lg-7">
-                <div class="card card-config h-100">
-                    <div class="card-header-config">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="bg-primary bg-opacity-10 p-3 rounded-circle text-primary">
-                                <i class="fas fa-store fa-lg"></i>
-                            </div>
-                            <div>
-                                <h5 class="fw-bold m-0 text-dark">Identidad del Negocio</h5>
-                                <small class="text-muted">Esta información aparecerá en tus Tickets PDF.</small>
-                            </div>
+                <div class="tab-pane fade show active" id="list-negocio" role="tabpanel">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white border-bottom py-3">
+                            <h5 class="mb-0 text-primary">Identidad del Negocio</h5>
                         </div>
-                    </div>
-                    <div class="card-body p-4">
-                        <form method="post">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small text-muted">Nombre de tu Empresa</label>
-                                <input type="text" class="form-control" name="nombre_empresa"
-                                    value="{{ config['nombre_empresa'] }}" required placeholder="Ej. Creaciones Sian">
-                            </div>
+                        <div class="card-body p-4">
+                            <form method="POST" action="{{ url_for('main.configuracion') }}">
+                                <input type="hidden" name="action" value="update_business">
 
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small text-muted">Slogan o Giro</label>
-                                <input type="text" class="form-control" name="slogan" value="{{ config['slogan'] }}"
-                                    placeholder="Ej. Diseño & Personalización">
-                            </div>
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Nombre de la Empresa</label>
+                                        <input type="text" name="nombre_empresa" class="form-control"
+                                            value="{{ config['nombre_empresa'] }}" required
+                                            placeholder="Ej. Sian Effects">
+                                    </div>
 
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold small text-muted">Sitio Web / Red Social</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light border-end-0 text-muted"><i
-                                                class="fab fa-instagram"></i></span>
-                                        <input type="text" class="form-control border-start-0" name="website"
-                                            value="{{ config['website'] }}" placeholder="@mi_negocio">
+                                    <div class="col-md-6">
+                                        <label class="form-label fw-bold">Slogan / Giro</label>
+                                        <input type="text" name="slogan" class="form-control"
+                                            value="{{ config['slogan'] }}" placeholder="Ej. Soluciones creativas">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-bold">Sitio Web / Red Social</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">🌐</span>
+                                            <input type="text" name="website" class="form-control"
+                                                value="{{ config['website'] }}" placeholder="www.tuempresa.com">
+                                        </div>
+                                    </div>
+
+                                    <hr class="my-4">
+
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-bold text-success">Margen de Ganancia (%)</label>
+                                        <div class="input-group">
+                                            <input type="number" name="margen"
+                                                class="form-control form-control-lg border-success"
+                                                value="{{ config['margen_ganancia'] }}" required min="0" step="1">
+                                            <span class="input-group-text bg-success text-white">%</span>
+                                        </div>
+                                        <small class="text-muted">Este porcentaje se aplica automáticamente a tus
+                                            costos.</small>
                                     </div>
                                 </div>
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label fw-bold small text-success">Margen Ganancia (%)</label>
-                                    <div class="input-group">
-                                        <input type="number" class="form-control border-success text-success fw-bold"
-                                            name="margen" value="{{ config['margen_ganancia'] }}">
-                                        <span class="input-group-text bg-success text-white fw-bold">%</span>
-                                    </div>
-                                    <div class="form-text small">Esto multiplica tus costos automáticamente.</div>
+
+                                <div class="mt-4 text-end">
+                                    <button type="submit" class="btn btn-primary px-4">Guardar Cambios del
+                                        Negocio</button>
                                 </div>
-                            </div>
-
-                            <button type="submit"
-                                class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm mt-2">
-                                <i class="fas fa-save me-2"></i> Guardar Cambios del Negocio
-                            </button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-5">
-                <div class="card card-config h-100">
-                    <div class="card-header-config bg-danger bg-opacity-10 border-danger border-opacity-25">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="bg-white p-3 rounded-circle text-danger shadow-sm">
-                                <i class="fas fa-user-shield fa-lg"></i>
-                            </div>
-                            <div>
-                                <h5 class="fw-bold m-0 text-danger">Seguridad de Cuenta</h5>
-                                <small class="text-dark">Actualiza tus credenciales de acceso.</small>
-                            </div>
+                            </form>
                         </div>
                     </div>
-                    <div class="card-body p-4">
-                        <form method="post">
-                            <div class="mb-3">
-                                <label class="form-label fw-bold small text-muted">Usuario (Login)</label>
-                                <input type="text" class="form-control bg-light" name="new_username"
-                                    value="{{ usuario['username'] }}" required>
-                            </div>
+                </div>
 
-                            <div class="mb-4">
-                                <label class="form-label fw-bold small text-muted">Nueva Contraseña</label>
-                                <div class="input-group">
-                                    <span class="input-group-text bg-white border-end-0 text-muted"><i
-                                            class="fas fa-lock"></i></span>
-                                    <input type="password" class="form-control border-start-0" name="new_password"
-                                        placeholder="Dejar vacío si no cambiarás" required>
+                <div class="tab-pane fade" id="list-perfil" role="tabpanel">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white border-bottom py-3">
+                            <h5 class="mb-0 text-primary">Información Personal</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <form method="POST" action="{{ url_for('main.configuracion') }}">
+                                <input type="hidden" name="action" value="update_profile">
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nombre de Usuario</label>
+                                        <input type="text" name="username" class="form-control"
+                                            value="{{ usuario['username'] }}" required>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label">Correo Electrónico</label>
+                                        <input type="email" name="email" class="form-control"
+                                            value="{{ usuario['email'] }}" required>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <label class="form-label">Código País</label>
+                                        <select name="country_code" class="form-select">
+                                            <option value="MX" {% if usuario['country_code']=='MX' %}selected{% endif
+                                                %}>🇲🇽 México (+52)</option>
+                                            <option value="US" {% if usuario['country_code']=='US' %}selected{% endif
+                                                %}>🇺🇸 USA (+1)</option>
+                                            <option value="CO" {% if usuario['country_code']=='CO' %}selected{% endif
+                                                %}>🇨🇴 Colombia (+57)</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <label class="form-label">Teléfono / WhatsApp</label>
+                                        <input type="tel" name="telefono" class="form-control"
+                                            value="{{ usuario['telefono'] }}" placeholder="Solo números">
+                                    </div>
+
+                                    <div class="col-12 mt-3">
+                                        <div class="alert alert-light border d-flex align-items-center" role="alert">
+                                            <small class="text-muted">
+                                                📅 Miembro desde: <strong>{{ usuario['created_at'] }}</strong> <br>
+                                                🆔 ID de Usuario: <strong>{{ usuario['id'] }}</strong>
+                                            </small>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-outline-danger py-3 rounded-pill fw-bold border-2">
-                                    <i class="fas fa-key me-2"></i> Actualizar Credenciales
-                                </button>
-                            </div>
-
-                            <div class="mt-3 text-center">
-                                <small class="text-muted fst-italic">
-                                    <i class="fas fa-info-circle"></i> Si cambias esto, tendrás que volver a iniciar
-                                    sesión.
-                                </small>
-                            </div>
-                        </form>
+                                <div class="mt-4 text-end">
+                                    <button type="submit" class="btn btn-primary px-4">Actualizar Perfil</button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
                 </div>
-            </div>
 
+                <div class="tab-pane fade" id="list-seguridad" role="tabpanel">
+                    <div class="card shadow-sm border-0">
+                        <div class="card-header bg-white border-bottom py-3">
+                            <h5 class="mb-0 text-danger">Seguridad de la Cuenta</h5>
+                        </div>
+                        <div class="card-body p-4">
+                            <form method="POST" action="{{ url_for('main.configuracion') }}"
+                                onsubmit="return validarPassword()">
+                                <input type="hidden" name="action" value="update_password">
+
+                                <div class="row g-3">
+                                    <div class="col-12">
+                                        <div class="alert alert-warning">
+                                            <i class="bi bi-exclamation-triangle"></i>
+                                            Usa una contraseña segura. Al cambiarla, tendrás que volver a iniciar
+                                            sesión.
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nueva Contraseña</label>
+                                        <input type="password" id="pass1" name="password" class="form-control" required
+                                            minlength="6">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="form-label">Confirmar Contraseña</label>
+                                        <input type="password" id="pass2" class="form-control" required minlength="6">
+                                        <div id="passError" class="form-text text-danger d-none">
+                                            Las contraseñas no coinciden.
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 text-end">
+                                    <button type="submit" class="btn btn-danger px-4">Cambiar Contraseña</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
         </div>
     </div>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
+<script>
+    function validarPassword() {
+        var p1 = document.getElementById("pass1").value;
+        var p2 = document.getElementById("pass2").value;
+        var errorDiv = document.getElementById("passError");
+        var input2 = document.getElementById("pass2");
 
-</html>
+        if (p1 !== p2) {
+            errorDiv.classList.remove("d-none");
+            input2.classList.add("is-invalid");
+            return false; // Detiene el envío del formulario
+        } else {
+            errorDiv.classList.add("d-none");
+            input2.classList.remove("is-invalid");
+            return true; // Permite el envío
+        }
+    }
+</script>
+
+{% endblock %}

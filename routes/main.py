@@ -268,22 +268,78 @@ def configuracion():
     uid = session['user_id']
 
     if request.method == 'POST':
-        if 'new_username' in request.form:
-            try:
-                conn.execute(
-                    'UPDATE usuarios SET username=?, password=? WHERE id=?',
-                    (
-                        request.form['new_username'],
-                        generate_password_hash(request.form['new_password']),
-                        uid
-                    )
-                )
-                session['username'] = request.form['new_username']
-                flash('Credenciales actualizadas.', 'success')
-            except:
-                flash('Usuario ocupado.', 'danger')
+        # Obtenemos la "acción" para saber qué formulario envió el usuario
+        # En tu HTML debes tener <input type="hidden" name="action" value="update_profile"> 
+        # o value="update_business" según el form.
+        action = request.form.get('action')
 
-        else:
+        # =========================================================
+        # SECCIÓN 1: ACTUALIZAR PERFIL DE USUARIO
+        # (Username, Email, Teléfono, País y Password Opcional)
+        # =========================================================
+        if action == 'update_profile':
+            new_username = request.form['username']
+            new_email = request.form['email']
+            new_phone = request.form['telefono']
+            new_country = request.form.get('country_code', 'MX') # Default MX si no viene
+            new_password = request.form.get('password') # Puede venir vacío
+
+            try:
+                # CASO A: El usuario escribió una nueva contraseña
+                if new_password and new_password.strip() != "":
+                    hashed_pw = generate_password_hash(new_password)
+                    conn.execute('''
+                        UPDATE usuarios 
+                        SET username=?, email=?, telefono=?, country_code=?, password=? 
+                        WHERE id=?
+                    ''', (new_username, new_email, new_phone, new_country, hashed_pw, uid))
+                    
+                    flash('Perfil y contraseña actualizados.', 'success')
+
+                # CASO B: Solo actualizamos datos, mantenemos la contraseña vieja
+                else:
+                    conn.execute('''
+                        UPDATE usuarios 
+                        SET username=?, email=?, telefono=?, country_code=? 
+                        WHERE id=?
+                    ''', (new_username, new_email, new_phone, new_country, uid))
+                    
+                    flash('Perfil actualizado correctamente.', 'success')
+
+                # Actualizamos la sesión por si cambió el username
+                session['username'] = new_username
+
+            except Exception as e:
+                # Capturamos error si el username o email ya existen en otro usuario
+                print(f"Error update profile: {e}")
+                flash('Error: El nombre de usuario o correo ya está en uso.', 'danger')
+
+        # =========================================================
+        # SECCIÓN SEGURIDAD (SOLO PASSWORD)
+        # =========================================================
+        elif action == 'update_password':
+            new_password = request.form['password']
+            
+            if new_password and len(new_password) >= 6:
+                hashed_pw = generate_password_hash(new_password)
+                conn.execute('UPDATE usuarios SET password=? WHERE id=?', (hashed_pw, uid))
+                flash('Contraseña actualizada. Por favor inicia sesión de nuevo.', 'success')
+                # Opcional: Cerrar sesión para obligarlo a entrar con la nueva
+                # session.clear()
+                # return redirect(url_for('auth.login'))
+            else:
+                flash('La contraseña es muy corta.', 'danger')
+        # =========================================================
+        # SECCIÓN 2: ACTUALIZAR CONFIGURACIÓN DEL NEGOCIO
+        # (Nombre empresa, Slogan, Website, Margen)
+        # =========================================================
+        elif action == 'update_business':
+            margen = request.form['margen']
+            empresa = request.form['nombre_empresa']
+            slogan = request.form['slogan']
+            website = request.form['website']
+
+            # Verificamos si ya existe una configuración para hacer UPDATE o INSERT
             config_existente = conn.execute('SELECT id FROM configuracion WHERE user_id=?', (uid,)).fetchone()
 
             if config_existente:
@@ -291,26 +347,38 @@ def configuracion():
                     UPDATE configuracion
                     SET margen_ganancia=?, nombre_empresa=?, slogan=?, website=?
                     WHERE user_id=?
-                ''', (request.form['margen'], request.form['nombre_empresa'], request.form['slogan'], request.form['website'], uid))
+                ''', (margen, empresa, slogan, website, uid))
             else:
                 conn.execute('''
                     INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa, slogan, website)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (uid, request.form['margen'], request.form['nombre_empresa'], request.form['slogan'], request.form['website']))
+                ''', (uid, margen, empresa, slogan, website))
 
-            flash('Datos guardados correctamente.', 'success')
+            flash('Datos del negocio guardados correctamente.', 'success')
 
+        # Guardamos cambios y cerramos conexión de escritura
         conn.commit()
         conn.close()
         return redirect(url_for('main.configuracion'))
 
-    config = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone()
-    user = conn.execute('SELECT * FROM usuarios WHERE id=?', (uid,)).fetchone()
+    # =========================================================
+    # SECCIÓN 3: CARGA DE DATOS (GET)
+    # (Para mostrar los valores actuales en los inputs)
+    # =========================================================
     
-    # Procesar fechas del usuario (por si muestras suscripción o created_at)
-    user_display = procesar_fila_fechas(user)
+    # 1. Traemos la config del negocio
+    config = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone()
+    
+    # 2. Traemos los datos del usuario
+    user_raw = conn.execute('SELECT * FROM usuarios WHERE id=?', (uid,)).fetchone()
+    
+    # 3. Procesamos fechas (UTC -> Local) usando tu helper 'procesar_fila_fechas'
+    # Esto asegura que si muestras "Miembro desde: X", la fecha salga correcta en hora local
+    user_display = procesar_fila_fechas(user_raw)
 
     conn.close()
+    
+    # Enviamos todo al template
     return render_template('configuracion.html', config=config, usuario=user_display)
 
 

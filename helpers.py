@@ -16,8 +16,9 @@ def login_required(f):
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Verifica si es admin (rol 2)
-        if 'user_id' not in session or session.get('role', 0) < 2:
+        # CAMBIO: Ahora permitimos acceso si es rol 1 (Admin) o 2 (Dueño)
+        # para que puedan VER el dashboard.
+        if 'user_id' not in session or session.get('role', 0) < 1:
             flash('Acceso denegado.', 'danger')
             return redirect(url_for('main.cotizador'))
         return f(*args, **kwargs)

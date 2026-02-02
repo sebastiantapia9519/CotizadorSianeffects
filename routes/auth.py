@@ -107,27 +107,15 @@ def registro():
             # -----------------------------
             cursor = conn.execute('''
                 INSERT INTO usuarios (
-                    username,
-                    email,
-                    password,
-                    telefono,
-                    company_name,
-                    role,
-                    subscription_end,
-                    created_at,
-                    last_login
+                    username, email, password, telefono, company_name,
+                    role, subscription_end, created_at, last_login, terms_accepted
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                username,
-                email,
-                hashed_pw,
-                telefono,
-                company_name,
-                0,  # role = usuario normal
-                subscription_end,
-                created_at,
-                last_login
+                username, email, hashed_pw, telefono, company_name,
+                0,  # SIEMPRE 0 (Usuario Normal)
+                subscription_end, created_at, last_login,
+                1   # SIEMPRE 1 (Aceptó términos)
             ))
 
             # ID del usuario recién creado
