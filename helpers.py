@@ -1,7 +1,7 @@
 from functools import wraps
 from flask import session, redirect, url_for, flash
 from db import get_db_connection
-from datetime import datetime
+from datetime import datetime, timezone
 
 # Función para usuarios normales
 def login_required(f):
@@ -49,9 +49,9 @@ def subscription_required(f):
             flash('Tu periodo de prueba ha terminado. Por favor suscríbete.', 'warning')
             return redirect(url_for('main.plan_vencido')) # <--- Redirigimos a una pagina de aviso
             
-        fecha_fin = datetime.strptime(str(user['subscription_end'])[:19], '%Y-%m-%d %H:%M:%S')
+        fecha_fin = datetime.strptime(str(user['subscription_end'])[:19],'%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)        
         
-        if datetime.now() > fecha_fin:
+        if datetime.now(timezone.utc) > fecha_fin:
             flash('Tu suscripción ha vencido. Renueva para continuar.', 'error')
             return redirect(url_for('main.plan_vencido')) # <--- Redirigimos a una pagina de aviso
 

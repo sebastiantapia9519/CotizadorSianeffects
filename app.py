@@ -1,41 +1,64 @@
 from flask import Flask
 from flask_apscheduler import APScheduler
-from datetime import timedelta, datetime
+from datetime import timedelta
+
+# Utilidad centralizada para fechas (UTC)
+from utils.datetime_utils import now_utc
+
 from db import init_db, get_db_connection
 
 app = Flask(__name__)
 app.secret_key = 'sianeffects_master_key_final'
+
+# =========================
+# SESIÓN
+# =========================
+# Duración de sesión (no depende de timezone)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 
 # =========================
 # TAREA AUTOMÁTICA
 # =========================
 def tarea_limpieza():
+    """
+    Limpia cotizaciones vencidas.
+    IMPORTANTE:
+    - now_utc() asegura que el criterio sea consistente
+    - la BD debe guardar fechas en UTC
+    """
     with app.app_context():
         try:
             conn = get_db_connection()
+
             conn.execute(
-                "DELETE FROM ventas WHERE estado='cotizacion' AND fecha_vencimiento < ?",
-                (datetime.now(),)
+                """
+                DELETE FROM ventas
+                WHERE estado = 'cotizacion'
+                AND fecha_vencimiento < ?
+                """,
+                (now_utc(),)  #UTC, no hora del servidor
             )
+
             conn.commit()
             conn.close()
+
         except Exception as e:
-            print("Error en tarea_limpieza:", e)
+            print("❌ Error en tarea_limpieza:", e)
 
 # =========================
 # BASE DE DATOS
 # =========================
+# Se ejecuta una sola vez al arrancar la app
 init_db()
 
 # =========================
-# SCHEDULER (UNA SOLA VEZ)
+# SCHEDULER
 # =========================
 scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
 
-# Evitar duplicar el job (CRÍTICO)
+# Evitar duplicar el job (CRÍTICO cuando Flask recarga)
 if not scheduler.get_job('Limpieza'):
     scheduler.add_job(
         id='Limpieza',
@@ -65,6 +88,10 @@ app.register_blueprint(api_bp, url_prefix='/api')
 # =========================
 @app.after_request
 def add_header(response):
+    """
+    Evita cacheo agresivo del navegador
+    (útil en sistemas con sesiones y roles)
+    """
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
 

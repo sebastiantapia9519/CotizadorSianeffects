@@ -1,13 +1,49 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify
 from werkzeug.security import generate_password_hash
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import pandas as pd
 import io
+
 from db import get_db_connection as get_db
 from helpers import login_required
 from helpers import subscription_required
 
+# IMPORTAMOS TUS UTILIDADES DE TIEMPO
+from utils.datetime_utils import now_utc, utc_to_local
+
 main_bp = Blueprint('main', __name__)
+
+# --- HELPER INTERNO PARA FORMATEAR FECHAS A LOCAL ---
+def procesar_fila_fechas(fila_db):
+    """
+    Convierte una fila de SQLite (inmutable) a dict
+    y transforma las fechas UTC a hora local para mostrar.
+    """
+    if not fila_db:
+        return None
+    
+    # Convertimos a diccionario para poder editar
+    item = dict(fila_db)
+    
+    # Lista de campos que sabemos que son fechas
+    campos_fecha = ['fecha', 'fecha_vencimiento', 'created_at']
+    
+    for campo in campos_fecha:
+        if item.get(campo):
+            try:
+                # 1. Parsear string de BD a objeto datetime (asumiendo que viene en UTC)
+                # Ojo: SQLite guarda 'YYYY-MM-DD HH:MM:SS'. Lo leemos y le ponemos tzinfo=utc
+                dt_utc = datetime.strptime(str(item[campo])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                
+                # 2. Convertir a local
+                dt_local = utc_to_local(dt_utc)
+                
+                # 3. Guardar como string bonito para el HTML
+                item[campo] = dt_local.strftime('%d/%m/%Y %I:%M %p')
+            except ValueError:
+                pass # Si falla, dejamos el string original
+                
+    return item
 
 @main_bp.route('/')
 def index():
@@ -43,14 +79,16 @@ def guardar_venta():
     try:
         uid = session['user_id']
         cliente = data.get('cliente', 'Cliente General')
-        fecha = datetime.now()
+        
+        # CAMBIO: Usamos now_utc() para guardar
+        fecha = now_utc()
         
         # Datos económicos
         subtotal = float(data.get('subtotal', 0))
         descuento_porcentaje = int(data.get('descuento_porcentaje', 0))
         descuento_monto = float(data.get('descuento_monto', 0))
         total = float(data.get('total', 0))
-        costo_total = float(data.get('costo_total', 0)) # Costo de producción
+        costo_total = float(data.get('costo_total', 0)) 
         
         # Lógica de Estados
         estado_solicitado = data.get('estado', 'pagado')
@@ -65,14 +103,14 @@ def guardar_venta():
             estado_db = 'cotizacion'
             monto_pagado = 0.0
             saldo_pendiente = total
-            # Vence en 48 horas
+            # Vence en 48 horas (calculado sobre UTC)
             fecha_vencimiento = (fecha + timedelta(hours=48)).strftime('%Y-%m-%d %H:%M:%S')
 
         elif estado_solicitado == 'anticipo':
             estado_db = 'anticipo'
             monto_pagado = pago_inicial
             saldo_pendiente = total - monto_pagado
-            fecha_vencimiento = None # Ya entró dinero, no vence
+            fecha_vencimiento = None 
 
         elif estado_solicitado == 'venta_completa':
             estado_db = 'pagado'
@@ -80,7 +118,6 @@ def guardar_venta():
             saldo_pendiente = 0.0
             fecha_vencimiento = None
 
-        # Generar resumen simple de items (Ej: "Termo, Taza...")
         items = data.get('items', [])
         lista_nombres = [i['concepto'] for i in items]
         resumen_items = ", ".join(lista_nombres)[:200]
@@ -126,7 +163,7 @@ def guardar_venta():
     finally:
         conn.close()
 
-# --- NUEVA RUTA: ABONAR A CUENTA (Desde Historial) ---
+# --- ACTUALIZAR VENTA ---
 @main_bp.route('/api/actualizar_venta', methods=['POST'])
 @login_required
 def actualizar_venta():
@@ -138,7 +175,6 @@ def actualizar_venta():
     cursor = conn.cursor()
     
     try:
-        # Obtener venta
         venta = cursor.execute("SELECT total, monto_pagado, saldo_pendiente FROM ventas WHERE id = ? AND user_id = ?", (venta_id, session['user_id'])).fetchone()
         
         if not venta:
@@ -147,18 +183,15 @@ def actualizar_venta():
         total = venta['total']
         pagado_anterior = venta['monto_pagado']
         
-        # Calcular nuevos valores
         nuevo_pagado = pagado_anterior + abono
         nuevo_saldo = total - nuevo_pagado
         
-        # Determinar estado
         nuevo_estado = 'anticipo'
-        if nuevo_saldo <= 0.5: # Margen de error por decimales
+        if nuevo_saldo <= 0.5: 
             nuevo_saldo = 0
             nuevo_pagado = total
             nuevo_estado = 'pagado'
         
-        # Actualizar DB (Quitamos fecha vencimiento al recibir dinero)
         cursor.execute('''
             UPDATE ventas 
             SET monto_pagado = ?, saldo_pendiente = ?, estado = ?, fecha_vencimiento = NULL 
@@ -183,7 +216,6 @@ def historial():
     uid = session['user_id']
     q = request.args.get('q')
     
-    # Query ajustada para traer los campos nuevos
     sql = '''
         SELECT id, cliente, fecha, total, estado, saldo_pendiente, fecha_vencimiento 
         FROM ventas 
@@ -197,23 +229,29 @@ def historial():
         
     sql += " ORDER BY id DESC"
     
-    ventas = conn.execute(sql, params).fetchall()
+    ventas_db = conn.execute(sql, params).fetchall()
     conn.close()
-    return render_template('historial.html', ventas=ventas)
+    
+    # PROCESAR FECHAS: De UTC a Local
+    ventas_display = [procesar_fila_fechas(v) for v in ventas_db]
+    
+    return render_template('historial.html', ventas=ventas_display)
 
 
 @main_bp.route('/ticket/<int:id>')
 def ver_ticket(id):
     conn = get_db()
-    # Permitimos ver ticket sin login (para compartir link), pero buscamos la config del dueño del ticket
-    venta = conn.execute('SELECT * FROM ventas WHERE id = ?', (id,)).fetchone()
+    venta_db = conn.execute('SELECT * FROM ventas WHERE id = ?', (id,)).fetchone()
     
-    if venta is None:
+    if venta_db is None:
         conn.close()
         return "Ticket no encontrado", 404
 
+    # Procesar fecha del ticket individual
+    venta = procesar_fila_fechas(venta_db)
+
     detalles = conn.execute('SELECT * FROM venta_detalles WHERE venta_id = ?', (id,)).fetchall()
-    config = conn.execute('SELECT * FROM configuracion WHERE user_id = ?', (venta['user_id'],)).fetchone()
+    config = conn.execute('SELECT * FROM configuracion WHERE user_id = ?', (venta_db['user_id'],)).fetchone()
 
     if config is None:
         config = {'nombre_empresa': 'Mi Negocio', 'slogan': 'Gracias por su compra', 'website': ''}
@@ -230,10 +268,6 @@ def configuracion():
     uid = session['user_id']
 
     if request.method == 'POST':
-
-        # ==========================================
-        # CAMBIO DE USUARIO / PASSWORD
-        # ==========================================
         if 'new_username' in request.form:
             try:
                 conn.execute(
@@ -249,50 +283,20 @@ def configuracion():
             except:
                 flash('Usuario ocupado.', 'danger')
 
-        # ==========================================
-        # CONFIGURACIÓN GENERAL
-        # ==========================================
         else:
-            # 1. Verificar si ya existe configuración
-            config_existente = conn.execute(
-                'SELECT id FROM configuracion WHERE user_id=?',
-                (uid,)
-            ).fetchone()
+            config_existente = conn.execute('SELECT id FROM configuracion WHERE user_id=?', (uid,)).fetchone()
 
             if config_existente:
-                # 2A. UPDATE si ya existe
                 conn.execute('''
                     UPDATE configuracion
-                    SET margen_ganancia=?,
-                        nombre_empresa=?,
-                        slogan=?,
-                        website=?
+                    SET margen_ganancia=?, nombre_empresa=?, slogan=?, website=?
                     WHERE user_id=?
-                ''', (
-                    request.form['margen'],
-                    request.form['nombre_empresa'],
-                    request.form['slogan'],
-                    request.form['website'],
-                    uid
-                ))
+                ''', (request.form['margen'], request.form['nombre_empresa'], request.form['slogan'], request.form['website'], uid))
             else:
-                # 2B. INSERT si NO existe (fallback de seguridad)
                 conn.execute('''
-                    INSERT INTO configuracion (
-                        user_id,
-                        margen_ganancia,
-                        nombre_empresa,
-                        slogan,
-                        website
-                    )
+                    INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa, slogan, website)
                     VALUES (?, ?, ?, ?, ?)
-                ''', (
-                    uid,
-                    request.form['margen'],
-                    request.form['nombre_empresa'],
-                    request.form['slogan'],
-                    request.form['website']
-                ))
+                ''', (uid, request.form['margen'], request.form['nombre_empresa'], request.form['slogan'], request.form['website']))
 
             flash('Datos guardados correctamente.', 'success')
 
@@ -300,26 +304,14 @@ def configuracion():
         conn.close()
         return redirect(url_for('main.configuracion'))
 
-    # ==========================================
-    # GET
-    # ==========================================
-    config = conn.execute(
-        'SELECT * FROM configuracion WHERE user_id=?',
-        (uid,)
-    ).fetchone()
-
-    user = conn.execute(
-        'SELECT * FROM usuarios WHERE id=?',
-        (uid,)
-    ).fetchone()
+    config = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone()
+    user = conn.execute('SELECT * FROM usuarios WHERE id=?', (uid,)).fetchone()
+    
+    # Procesar fechas del usuario (por si muestras suscripción o created_at)
+    user_display = procesar_fila_fechas(user)
 
     conn.close()
-
-    return render_template(
-        'configuracion.html',
-        config=config,
-        usuario=user
-    )
+    return render_template('configuracion.html', config=config, usuario=user_display)
 
 
 @main_bp.route('/terminos')
@@ -328,7 +320,6 @@ def terminos():
 
 @main_bp.route('/plan_vencido')
 def plan_vencido():
-    # Renderizamos una plantilla simple que diga "Paga aquí"
     return render_template('plan_vencido.html')
 
 
@@ -337,7 +328,6 @@ def plan_vencido():
 def descargar_excel():
     conn = get_db()
     uid = session['user_id']
-    # Query actualizada para incluir los campos financieros nuevos
     query = '''
         SELECT 
             v.id as Folio, v.fecha, v.cliente, v.estado, 
@@ -351,9 +341,23 @@ def descargar_excel():
         WHERE v.user_id = ? 
         ORDER BY v.fecha DESC
     '''
+    
+    # Pandas lee las fechas como strings o objetos
     df = pd.read_sql_query(query, conn, params=(uid,))
     conn.close()
     
+    if not df.empty:
+        # Convertir columna fecha a datetime
+        df['fecha'] = pd.to_datetime(df['fecha'])
+        
+        # Asumimos que lo que viene de BD es UTC (aunque pandas a veces no lo sabe)
+        # 1. Localizamos en UTC
+        # 2. Convertimos a Mexico_City
+        df['fecha'] = df['fecha'].dt.tz_localize('UTC').dt.tz_convert('America/Mexico_City')
+        
+        # Quitamos la info de zona horaria para que Excel no se queje
+        df['fecha'] = df['fecha'].dt.strftime('%Y-%m-%d %H:%M:%S')
+
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='openpyxl') as writer: 
         df.to_excel(writer, index=False, sheet_name='Detalle Financiero')

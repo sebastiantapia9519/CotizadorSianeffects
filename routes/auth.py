@@ -1,8 +1,11 @@
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
 from werkzeug.security import generate_password_hash, check_password_hash
 from db import get_db_connection as get_db
-from datetime import datetime, timedelta  
+from datetime import timedelta  
 import re
+
+# IMPORTAMOS LA UTILIDAD CENTRALIZADA
+from utils.datetime_utils import now_utc
 
 auth_bp = Blueprint('auth', __name__)
 
@@ -33,11 +36,11 @@ def login():
             session['username'] = user['username']
             session['role'] = user['role']
 
-            # Actualizar último login
+            # Actualizar último login con UTC
             conn = get_db()
             conn.execute(
                 'UPDATE usuarios SET last_login = ? WHERE id = ?',
-                (datetime.now(), user['id'])
+                (now_utc(), user['id'])  # <--- CAMBIO AQUÍ
             )
             conn.commit()
             conn.close()
@@ -88,12 +91,14 @@ def registro():
             telefono = telefono_limpio
 
         # -----------------------------
-        # 3. PREPARAR DATOS
+        # 3. PREPARAR DATOS (TODO EN UTC)
         # -----------------------------
         hashed_pw = generate_password_hash(password)
-        created_at = datetime.now()
-        last_login = datetime.now()
-        subscription_end = created_at + timedelta(days=7)
+        
+        # Usamos now_utc() para garantizar consistencia
+        created_at = now_utc()       # <--- CAMBIO AQUÍ
+        last_login = now_utc()       # <--- CAMBIO AQUÍ
+        subscription_end = created_at + timedelta(days=7) # <--- Calcula sobre UTC
 
         conn = get_db()
         try:
