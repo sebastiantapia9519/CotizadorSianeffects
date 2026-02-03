@@ -140,6 +140,7 @@ def init_db():
     )
     """)
 
+    # CORRECCIÓN AQUÍ: Faltaba la coma después de composicion TEXT
     conn.execute("""
     CREATE TABLE IF NOT EXISTS venta_detalles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -149,7 +150,7 @@ def init_db():
         precio_unitario REAL,
         costo_unitario REAL,
         subtotal REAL,
-        composicion TEXT
+        composicion TEXT,
         FOREIGN KEY(venta_id) REFERENCES ventas(id)
     )
     """)
