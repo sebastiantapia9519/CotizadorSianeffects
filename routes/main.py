@@ -142,8 +142,11 @@ def guardar_venta():
         # 2. Insertar Detalles
         for item in items:
             cursor.execute('''
-                INSERT INTO venta_detalles (venta_id, concepto, cantidad, precio_unitario, costo_unitario, subtotal)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO venta_detalles (
+                    venta_id, concepto, cantidad, precio_unitario, 
+                    costo_unitario, subtotal, composicion  -- <--- 1. AGREGAR ESTA PALABRA
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)              -- <--- 2. AGREGAR EL 7mo SIGNO DE INTERROGACIÓN
             ''', (
                 venta_id,
                 item['concepto'],
