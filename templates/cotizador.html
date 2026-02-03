@@ -107,6 +107,7 @@
 
 {% block content %}
 <input type="hidden" id="datoMargen" value="{{ config['margen_ganancia'] }}">
+<input type="hidden" id="ventaIdEdicion" value="">
 
 <select id="masterSelect" class="d-none">
     <option value="0" data-precio="0">-- Seleccionar --</option>
@@ -661,8 +662,8 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
+                id: document.getElementById('ventaIdEdicion').value || null, // <--- AQUÍ ENVIAMOS EL ID (o null si es nueva)
                 cliente: cli,
-                // Mapeo correcto para el backend
                 items: carrito.map(i => ({
                     concepto: i.concepto,
                     cantidad: i.cantidad,
@@ -777,65 +778,55 @@
     // 8. LÓGICA DE RECARGA (EL "ATRAPADOR")
     // ==========================================
     document.addEventListener("DOMContentLoaded", function () {
-        // 1. Preguntamos a la memoria: "¿Hay algo pendiente?"
         const datosPendientes = sessionStorage.getItem('recarga_cotizacion');
         const clientePendiente = sessionStorage.getItem('recarga_cliente');
+        const idPendiente = sessionStorage.getItem('recarga_id'); // <--- LEER ID
 
         if (datosPendientes) {
-            console.log("♻️ Detectada recarga de cotización...");
-
             try {
-                // 2. Convertimos el texto guardado a objetos reales
+                // ... (código de llenado de items que ya tenías) ...
                 const items = JSON.parse(datosPendientes);
 
-                // 3. Rellenamos el carrito
+                // ... (tu ciclo forEach para llenar carrito) ...
                 items.forEach(item => {
-                    // Importante: Intentamos recuperar la "receta" (composición)
-                    // para que la nueva venta también tenga sus ingredientes guardados
+                    // ... (tu lógica existente) ...
                     let recetaOriginal = [];
-                    if (item.composicion) {
-                        try {
-                            recetaOriginal = JSON.parse(item.composicion);
-                        } catch (e) { console.error("Error parseando composición interna", e); }
-                    }
+                    if (item.composicion) { try { recetaOriginal = JSON.parse(item.composicion); } catch (e) { } }
 
-                    // Empujamos al carrito global
                     carrito.push({
                         concepto: item.concepto,
                         precio_unitario: parseFloat(item.precio_unitario),
                         costo_unitario: parseFloat(item.costo_unitario),
                         cantidad: parseFloat(item.cantidad),
                         subtotal: parseFloat(item.subtotal),
-                        composicion: recetaOriginal // <--- ¡Aquí pasamos la estafeta de la receta!
+                        composicion: recetaOriginal
                     });
                 });
 
-                // 4. Rellenamos el nombre del cliente
-                if (clientePendiente && clientePendiente !== "Cliente General") {
-                    document.getElementById('nombreCliente').value = clientePendiente;
-                }
+                if (clientePendiente) document.getElementById('nombreCliente').value = clientePendiente;
 
-                // 5. Actualizamos la visualización
                 renderizarCarrito();
 
-                // 6. Feedback visual
-                // Creamos una alerta temporal
-                const alerta = document.createElement('div');
-                alerta.className = 'alert alert-info position-fixed top-0 start-50 translate-middle-x mt-4 shadow fw-bold';
-                alerta.style.zIndex = '9999';
-                alerta.innerHTML = '<i class="fas fa-sync-alt fa-spin me-2"></i> Datos de cotización anterior cargados.';
-                document.body.appendChild(alerta);
+                // ESTABLECER MODO EDICIÓN
+                if (idPendiente) {
+                    document.getElementById('ventaIdEdicion').value = idPendiente;
 
-                setTimeout(() => alerta.remove(), 3000);
+                    // Aviso visual más claro
+                    const alerta = document.createElement('div');
+                    alerta.className = 'alert alert-warning position-fixed top-0 start-50 translate-middle-x mt-4 shadow fw-bold';
+                    alerta.style.zIndex = '9999';
+                    alerta.innerHTML = `<i class="fas fa-edit me-2"></i> Editando Cotización #${idPendiente}`;
+                    document.body.appendChild(alerta);
+                    setTimeout(() => alerta.remove(), 4000);
+                }
+                // --------------------------------------
 
             } catch (e) {
-                console.error("Error al recargar cotización:", e);
-                alert("Hubo un problema al intentar cargar los datos anteriores.");
+                console.error(e);
             } finally {
-                // 7. AUTODESTRUCCIÓN DEL MENSAJE (Crucial)
-                // Borramos los datos para que si da F5, empiece limpio.
                 sessionStorage.removeItem('recarga_cotizacion');
                 sessionStorage.removeItem('recarga_cliente');
+                sessionStorage.removeItem('recarga_id');
             }
         }
     });

@@ -433,18 +433,24 @@
 
     // --- RECARGAR EN COTIZADOR ---
     function recargarCotizacion(id) {
-        if (!confirm("¿Quieres cargar esta cotización en el editor?\n\nSe borrará lo que tengas en pantalla actualmente.")) return;
+        if (!confirm("¿Quieres cargar esta cotización en el editor para modificarla?\n\nSe borrará lo que tengas en pantalla actualmente.")) return;
+
         fetch('/api/obtener_detalles/' + id)
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
                     sessionStorage.setItem('recarga_cotizacion', JSON.stringify(data.items));
                     sessionStorage.setItem('recarga_cliente', data.cliente);
+
+                    // --- NUEVO: GUARDAMOS EL ID ---
+                    sessionStorage.setItem('recarga_id', id);
+
                     window.location.href = "{{ url_for('main.cotizador') }}";
                 } else {
                     alert("No se pudo obtener la información.");
                 }
-            });
+            })
+            .catch(e => alert("Error de conexión"));
     }
 
     // --- ABONAR ---

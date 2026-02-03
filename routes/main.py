@@ -70,76 +70,71 @@ def cotizador():
 @login_required
 def guardar_venta():
     data = request.get_json()
-    if not data:
-        return jsonify({'error': 'No hay datos'}), 400
-
-    conn = get_db()
+    conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        uid = session['user_id']
+        # Recuperar datos básicos
+        venta_id = data.get('id') # Puede venir vacío (null) o con un número
         cliente = data.get('cliente', 'Cliente General')
-        
-        # CAMBIO: Usamos now_utc() para guardar
-        fecha = now_utc()
-        
-        # Datos económicos
-        subtotal = float(data.get('subtotal', 0))
-        descuento_porcentaje = int(data.get('descuento_porcentaje', 0))
-        descuento_monto = float(data.get('descuento_monto', 0))
-        total = float(data.get('total', 0))
-        costo_total = float(data.get('costo_total', 0)) 
-        
-        # Lógica de Estados
-        estado_solicitado = data.get('estado', 'pagado')
-        pago_inicial = float(data.get('pago_inicial', 0))
-
-        estado_db = 'pagado'
-        monto_pagado = 0.0
-        saldo_pendiente = 0.0
-        fecha_vencimiento = None
-
-        if estado_solicitado == 'cotizacion':
-            estado_db = 'cotizacion'
-            monto_pagado = 0.0
-            saldo_pendiente = total
-            # Vence en 48 horas (calculado sobre UTC)
-            fecha_vencimiento = (fecha + timedelta(hours=48)).strftime('%Y-%m-%d %H:%M:%S')
-
-        elif estado_solicitado == 'anticipo':
-            estado_db = 'anticipo'
-            monto_pagado = pago_inicial
-            saldo_pendiente = total - monto_pagado
-            fecha_vencimiento = None 
-
-        elif estado_solicitado == 'venta_completa':
-            estado_db = 'pagado'
-            monto_pagado = total
-            saldo_pendiente = 0.0
-            fecha_vencimiento = None
-
         items = data.get('items', [])
-        lista_nombres = [i['concepto'] for i in items]
-        resumen_items = ", ".join(lista_nombres)[:200]
-
-        # 1. Insertar Venta
-        cursor.execute('''
-            INSERT INTO ventas (
-                user_id, cliente, fecha, 
-                subtotal, descuento_porcentaje, descuento_monto, total,
-                estado, monto_pagado, saldo_pendiente, 
-                fecha_vencimiento, resumen_items, costo_total
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            uid, cliente, fecha,
-            subtotal, descuento_porcentaje, descuento_monto, total,
-            estado_db, monto_pagado, saldo_pendiente,
-            fecha_vencimiento, resumen_items, costo_total
-        ))
         
-        venta_id = cursor.lastrowid
+        # Totales calculados en JS (confiamos en ellos, o podrías recalcular aquí)
+        subtotal = data.get('subtotal', 0)
+        descuento_pct = data.get('descuento_porcentaje', 0)
+        descuento_monto = data.get('descuento_monto', 0)
+        total = data.get('total', 0)
+        costo_total = data.get('costo_total', 0)
+        estado = data.get('estado', 'pagado')
+        monto_pagado = data.get('pago_inicial', total)
+        
+        # Calculamos saldo pendiente
+        saldo_pendiente = total - monto_pagado
+        if saldo_pendiente < 0: saldo_pendiente = 0
 
-        # 2. Insertar Detalles
+        # Lógica de Vencimiento (7 días)
+        fecha_vencimiento = (now_utc() + timedelta(days=7)).isoformat()
+
+        if venta_id:
+            # =================================================
+            # MODO ACTUALIZACIÓN (UPDATE)
+            # =================================================
+            # 1. Actualizamos la cabecera de la venta
+            cursor.execute('''
+                UPDATE ventas 
+                SET cliente=?, subtotal=?, descuento_porcentaje=?, descuento_monto=?,
+                    total=?, costo_total=?, estado=?, monto_pagado=?, saldo_pendiente=?
+                WHERE id=? AND user_id=?
+            ''', (
+                cliente, subtotal, descuento_pct, descuento_monto,
+                total, costo_total, estado, monto_pagado, saldo_pendiente,
+                venta_id, session['user_id']
+            ))
+            
+            # 2. Borramos los detalles viejos (para reescribirlos limpios)
+            cursor.execute('DELETE FROM venta_detalles WHERE venta_id=?', (venta_id,))
+            
+        else:
+            # =================================================
+            # MODO CREACIÓN (INSERT)
+            # =================================================
+            cursor.execute('''
+                INSERT INTO ventas (
+                    user_id, cliente, subtotal, descuento_porcentaje, 
+                    descuento_monto, total, costo_total, estado, 
+                    monto_pagado, saldo_pendiente, fecha_vencimiento
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                session['user_id'], cliente, subtotal, descuento_pct, 
+                descuento_monto, total, costo_total, estado, 
+                monto_pagado, saldo_pendiente, fecha_vencimiento
+            ))
+            venta_id = cursor.lastrowid
+
+        # =================================================
+        # INSERTAR DETALLES (COMÚN PARA AMBOS)
+        # =================================================
         for item in items:
             cursor.execute('''
                 INSERT INTO venta_detalles (
@@ -159,11 +154,11 @@ def guardar_venta():
 
         conn.commit()
         return jsonify({'success': True, 'ticket_id': venta_id})
-        
+
     except Exception as e:
         conn.rollback()
         print(f"Error guardando venta: {e}")
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         conn.close()
 
