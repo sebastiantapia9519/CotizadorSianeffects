@@ -69,6 +69,42 @@ if not scheduler.get_job('Limpieza'):
     )
 
 # =========================
+# CONTEXT PROCESSOR (GLOBAL)
+# =========================
+@app.context_processor
+def inject_user_config():
+    """
+    Inyecta la configuración del negocio en TODAS las plantillas (HTML)
+    automáticamente. Así el nombre de la empresa sale en Recetas, Inventario, etc.
+    """
+    # Valores por defecto (para el Login o si algo falla)
+    default_config = {
+        'nombre_empresa': 'Cotizador Sianeffects', # O el nombre genérico que quieras
+        'slogan': '',
+        'website': '',
+        'margen_ganancia': 100
+    }
+
+    # Solo buscamos si el usuario ya inició sesión
+    if 'user_id' in session:
+        try:
+            conn = get_db_connection()
+            # Buscamos la config del usuario actual
+            user_config = conn.execute('SELECT * FROM configuracion WHERE user_id = ?', (session['user_id'],)).fetchone()
+            conn.close()
+
+            if user_config:
+                # ¡ÉXITO! Devolvemos la config real de la base de datos
+                # Convertimos a dict por si acaso
+                return {'config': dict(user_config)}
+        except Exception as e:
+            print(f"Error inyectando config: {e}")
+    
+    # Si no hay usuario logueado, devolvemos los defaults para que no truene
+    return {'config': default_config}
+
+
+# =========================
 # REGISTRO DE RUTAS
 # =========================
 from routes.auth import auth_bp
@@ -94,6 +130,8 @@ def add_header(response):
     """
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return response
+
+
 
 # =========================
 # MAIN
