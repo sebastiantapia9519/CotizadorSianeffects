@@ -150,7 +150,8 @@ def guardar_venta():
                 float(item['cantidad']),
                 float(item['precio']),
                 float(item.get('costo', 0)),
-                float(item['subtotal'])
+                float(item['subtotal']),
+                item.get('composicion', '[]')
             ))
 
         conn.commit()

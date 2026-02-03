@@ -1,7 +1,12 @@
+import os
 from flask import Flask
 from flask import Flask, session
 from flask_apscheduler import APScheduler
 from datetime import timedelta
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde el archivo .env
+load_dotenv()
 
 # Utilidad centralizada para fechas (UTC)
 from utils.datetime_utils import now_utc
@@ -9,7 +14,13 @@ from utils.datetime_utils import now_utc
 from db import init_db, get_db_connection
 
 app = Flask(__name__)
-app.secret_key = 'sianeffects_master_key_final'
+
+# Leemos la llave del archivo .env. Si no existe, usa la cadena 'dev_key...' como respaldo
+app.secret_key = os.getenv('SECRET_KEY', 'dev_key_fallback_insegura')
+
+# Configuración de Debug (Opcional, si quieres controlarlo desde .env)
+# Si en .env FLASK_DEBUG es 1, será True. Si no, False.
+app.config['DEBUG'] = os.getenv('FLASK_DEBUG') == '1'
 
 # =========================
 # SESIÓN

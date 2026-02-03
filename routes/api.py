@@ -100,7 +100,8 @@ def obtener_detalles_venta(id):
         'cantidad': d['cantidad'],
         'precio_unitario': d['precio_unitario'],
         'costo_unitario': d['costo_unitario'],
-        'subtotal': d['subtotal']
+        'subtotal': d['subtotal'],
+        'composicion': d['composicion']
     } for d in detalles]
 
     return jsonify({

@@ -1,8 +1,13 @@
+import os
 import sqlite3
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timezone
+from dotenv import load_dotenv
 
-DB_NAME = 'papeleria.db'
+# Cargamos dotenv aquí también por si ejecutamos db.py por separado (scripts)
+load_dotenv()
+
+DB_NAME = os.getenv('DB_NAME', 'papeleria.db')
 
 # ======================================================
 # CONEXIÓN
@@ -144,6 +149,7 @@ def init_db():
         precio_unitario REAL,
         costo_unitario REAL,
         subtotal REAL,
+        composicion TEXT
         FOREIGN KEY(venta_id) REFERENCES ventas(id)
     )
     """)

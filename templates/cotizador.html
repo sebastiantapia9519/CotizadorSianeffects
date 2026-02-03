@@ -474,12 +474,41 @@
         const nom = document.getElementById('nombreProductoActual').value || "Producto Personalizado";
         const cant = parseFloat(document.getElementById('cantidadParaCarrito').value) || 1;
 
+        // Capturar la "Receta" actual de la pantalla
+        let composicionActual = [];
+
+        // 1. Capturar Materiales de la tabla
+        document.querySelectorAll('.item-row').forEach(row => {
+            const sel = row.querySelector('select');
+            const inputCant = row.querySelector('.input-cantidad');
+            if (sel && sel.value > 0) {
+                composicionActual.push({
+                    tipo: 'material',
+                    nombre: sel.options[sel.selectedIndex].text,
+                    id: sel.value,
+                    cantidad: parseFloat(inputCant.value)
+                });
+            }
+        });
+
+        // 2. Capturar Maquinaria seleccionada
+        document.querySelectorAll('.check-maquinaria-input:checked').forEach(chk => {
+            const label = chk.closest('label').innerText.split('\n')[0]; // Truco para obtener solo el nombre
+            composicionActual.push({
+                tipo: 'maquinaria',
+                nombre: label,
+                id: chk.getAttribute('data-id'),
+                costo: parseFloat(chk.value)
+            });
+        });
+
         carrito.push({
             concepto: nom,
             precio_unitario: precioVentaCalculado,
             costo_unitario: costoProduccionCalculado,
             cantidad: cant,
-            subtotal: precioVentaCalculado * cant
+            subtotal: precioVentaCalculado * cant,
+            composicion: composicionActual
         });
         renderizarCarrito();
     }
@@ -583,7 +612,8 @@
                     cantidad: i.cantidad,
                     precio: i.precio_unitario,
                     costo: i.costo_unitario,
-                    subtotal: i.subtotal
+                    subtotal: i.subtotal,
+                    composicion: JSON.stringify(i.composicion)
                 })),
                 subtotal: subtotal,
                 descuento_porcentaje: desc_porcentaje,
@@ -686,6 +716,74 @@
             setTimeout(calcularTotal, 200);
         });
     }
+
+    // ==========================================
+    // 8. LÓGICA DE RECARGA (EL "ATRAPADOR")
+    // ==========================================
+    document.addEventListener("DOMContentLoaded", function () {
+        // 1. Preguntamos a la memoria: "¿Hay algo pendiente?"
+        const datosPendientes = sessionStorage.getItem('recarga_cotizacion');
+        const clientePendiente = sessionStorage.getItem('recarga_cliente');
+
+        if (datosPendientes) {
+            console.log("♻️ Detectada recarga de cotización...");
+
+            try {
+                // 2. Convertimos el texto guardado a objetos reales
+                const items = JSON.parse(datosPendientes);
+
+                // 3. Rellenamos el carrito
+                items.forEach(item => {
+                    // Importante: Intentamos recuperar la "receta" (composición)
+                    // para que la nueva venta también tenga sus ingredientes guardados
+                    let recetaOriginal = [];
+                    if (item.composicion) {
+                        try {
+                            recetaOriginal = JSON.parse(item.composicion);
+                        } catch (e) { console.error("Error parseando composición interna", e); }
+                    }
+
+                    // Empujamos al carrito global
+                    carrito.push({
+                        concepto: item.concepto,
+                        precio_unitario: parseFloat(item.precio_unitario),
+                        costo_unitario: parseFloat(item.costo_unitario),
+                        cantidad: parseFloat(item.cantidad),
+                        subtotal: parseFloat(item.subtotal),
+                        composicion: recetaOriginal // <--- ¡Aquí pasamos la estafeta de la receta!
+                    });
+                });
+
+                // 4. Rellenamos el nombre del cliente
+                if (clientePendiente && clientePendiente !== "Cliente General") {
+                    document.getElementById('nombreCliente').value = clientePendiente;
+                }
+
+                // 5. Actualizamos la visualización
+                renderizarCarrito();
+
+                // 6. Feedback visual
+                // Creamos una alerta temporal
+                const alerta = document.createElement('div');
+                alerta.className = 'alert alert-info position-fixed top-0 start-50 translate-middle-x mt-4 shadow fw-bold';
+                alerta.style.zIndex = '9999';
+                alerta.innerHTML = '<i class="fas fa-sync-alt fa-spin me-2"></i> Datos de cotización anterior cargados.';
+                document.body.appendChild(alerta);
+
+                setTimeout(() => alerta.remove(), 3000);
+
+            } catch (e) {
+                console.error("Error al recargar cotización:", e);
+                alert("Hubo un problema al intentar cargar los datos anteriores.");
+            } finally {
+                // 7. AUTODESTRUCCIÓN DEL MENSAJE (Crucial)
+                // Borramos los datos para que si da F5, empiece limpio.
+                sessionStorage.removeItem('recarga_cotizacion');
+                sessionStorage.removeItem('recarga_cliente');
+            }
+        }
+    });
+
 
     // Event Listeners
     const modalCobro = document.getElementById('modalCobro');

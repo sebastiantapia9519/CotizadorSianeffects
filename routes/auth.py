@@ -2,6 +2,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from werkzeug.security import generate_password_hash, check_password_hash
 from db import get_db_connection as get_db
 from datetime import timedelta  
+from utils.email_validators import is_disposable_email
 import re
 
 # IMPORTAMOS LA UTILIDAD CENTRALIZADA
@@ -72,6 +73,12 @@ def registro():
         # 2. VALIDACIONES
         # -----------------------------
 
+
+        if request.cookies.get('has_free_trial'):
+            flash('Tu dispositivo ya ha utilizado una prueba gratuita anteriormente.', 'warning')
+            return redirect(url_for('main.plan_vencido'))
+
+
         # Contraseña mínima
         if len(password) < 6:
             flash('La contraseña debe tener al menos 6 caracteres.', 'error')
@@ -80,6 +87,11 @@ def registro():
         # Email válido
         if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
             flash('Correo electrónico no válido.', 'error')
+            return render_template('registro.html')
+
+        # BLOQUEO DE CORREOS TEMPORALES
+        if is_disposable_email(email):
+            flash('Por seguridad, no aceptamos correos temporales. Usa un correo real (Gmail, Outlook, Empresa).', 'error')
             return render_template('registro.html')
 
         # Teléfono opcional, solo números
@@ -135,10 +147,18 @@ def registro():
                 100  # Margen inicial garantizado
             ))
 
-            conn.commit()
-
+            # --- CORRECCIÓN AQUÍ ---
+            # 1. Primero definimos el mensaje
             flash('Cuenta creada con éxito. ¡Tienes 7 días de prueba!', 'success')
-            return redirect(url_for('auth.login'))
+            
+            # 2. Creamos la respuesta (el redirect) y la guardamos en la variable 'resp'
+            resp = redirect(url_for('auth.login'))
+            
+            # 3. AHORA SÍ podemos pegarle la cookie a 'resp'
+            resp.set_cookie('has_free_trial', 'true', max_age=31536000)
+
+            # 4. Retornamos la respuesta modificada
+            return resp
 
         except Exception as e:
             conn.rollback()
