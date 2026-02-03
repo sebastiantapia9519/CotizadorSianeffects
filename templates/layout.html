@@ -54,13 +54,78 @@
             border-color: var(--sian-pink);
             box-shadow: none;
         }
+
+        /* ==========================================
+           TRUCO PARA EL MENÚ HÍBRIDO (OFFCANVAS)
+           ========================================== */
+        /* En pantallas grandes (Desktop), reseteamos el offcanvas para que sea navbar normal */
+        @media (min-width: 992px) {
+            .offcanvas {
+                position: static !important;
+                z-index: auto !important;
+                flex-grow: 1 !important;
+                width: auto !important;
+                height: auto !important;
+                visibility: visible !important;
+                background-color: transparent !important;
+                border: 0 !important;
+                transform: none !important;
+                transition: none !important;
+                box-shadow: none !important;
+            }
+
+            .offcanvas-header {
+                display: none !important;
+                /* Ocultar la X y título en desktop */
+            }
+
+            .offcanvas-body {
+                padding: 0 !important;
+                overflow: visible !important;
+                display: flex !important;
+                flex-direction: row !important;
+                justify-content: flex-end !important;
+                /* Alinear a la derecha en desktop */
+            }
+
+            /* Quitamos el margen superior de los items en desktop */
+            .navbar-nav {
+                margin-top: 0 !important;
+            }
+
+            /* Quitamos el ancho 100% en desktop para que se ajusten al contenido */
+            .nav-item {
+                width: auto !important;
+            }
+        }
+
+        /* Ajustes visuales para Móvil */
+        @media (max-width: 991.98px) {
+            .offcanvas {
+                max-width: 75%;
+                /* Que no ocupe toda la pantalla */
+            }
+
+            .nav-link {
+                text-align: left !important;
+                /* En móvil se ve mejor alineado a la izquierda */
+                padding-left: 1rem !important;
+            }
+
+            .dropdown-menu {
+                text-align: center;
+                /* Opcional: centrar dropdowns en móvil */
+                background-color: #f8f9fa;
+                /* Un fondo grisaseo para distinguir */
+                border: none;
+            }
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 
 <body>
 
-    {# --- INICIO DEL CAMBIO: Envolvemos el menu en un bloque --- #}
     {% block navbar %}
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top navbar-sian">
         <div class="container">
@@ -68,51 +133,68 @@
                 <span style="color: var(--sian-pink);">🎨 {{ config['nombre_empresa'] }}</span>
             </a>
 
-            <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#miMenu">
+            <button class="navbar-toggler border-0" type="button" data-bs-toggle="offcanvas"
+                data-bs-target="#miMenuMobile" aria-controls="miMenuMobile">
                 <span class="navbar-toggler-icon"></span>
             </button>
 
-            <div class="collapse navbar-collapse" id="miMenu">
-                <ul class="navbar-nav ms-auto gap-2 align-items-center mt-3 mt-lg-0">
-                    <li class="nav-item w-100">
-                        <a class="nav-link {% if request.endpoint == 'main.cotizador' %}active fw-bold bg-light{% endif %} text-center rounded-pill px-3"
-                            href="{{ url_for('main.cotizador') }}">🧮 Cotizador</a>
-                    </li>
-                    <li class="nav-item w-100">
-                        <a class="nav-link {% if request.endpoint == 'main.historial' %}active fw-bold bg-light{% endif %} text-center rounded-pill px-3"
-                            href="{{ url_for('main.historial') }}">📜 Historial</a>
-                    </li>
-                    <li class="nav-item dropdown w-100 text-center">
-                        <a class="nav-link dropdown-toggle {% if 'inventory' in request.endpoint %}active fw-bold bg-light{% endif %} rounded-pill px-3"
-                            href="#" role="button" data-bs-toggle="dropdown">📦 Inventario</a>
-                        <ul class="dropdown-menu border-0 shadow text-center text-lg-start">
-                            <li><a class="dropdown-item" href="{{ url_for('inventory.materiales') }}">Materiales</a>
-                            </li>
-                            <li><a class="dropdown-item" href="{{ url_for('inventory.equipos') }}">Equipos</a></li>
-                            <li><a class="dropdown-item" href="{{ url_for('inventory.recetas') }}">Recetas</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item w-100">
-                        <a class="nav-link {% if request.endpoint == 'main.configuracion' %}active fw-bold bg-light{% endif %} text-center rounded-pill px-3"
-                            href="{{ url_for('main.configuracion') }}">⚙️ Config</a>
-                    </li>
-                    {% if session.get('role') >= 1 %}
-                    <li class="nav-item w-100 mt-2 mt-lg-0">
-                        <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm"
-                            href="{{ url_for('admin.dashboard') }}">👑 Panel Master</a>
-                    </li>
-                    {% endif %}
-                    <li class="nav-item w-100 mt-2 mt-lg-0">
-                        <a class="btn btn-outline-danger rounded-pill w-100 btn-sm" href="{{ url_for('auth.logout') }}">
-                            <i class="fas fa-sign-out-alt"></i>
-                        </a>
-                    </li>
-                </ul>
+            <div class="offcanvas offcanvas-start" tabindex="-1" id="miMenuMobile" aria-labelledby="miMenuLabel">
+
+                <div class="offcanvas-header border-bottom">
+                    <h5 class="offcanvas-title fw-bold" id="miMenuLabel" style="color: var(--sian-pink);">Menú</h5>
+                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
+                        aria-label="Close"></button>
+                </div>
+
+                <div class="offcanvas-body">
+                    <ul class="navbar-nav ms-auto gap-2 align-items-lg-center mt-3 mt-lg-0 w-100 justify-content-end">
+
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'main.cotizador' %}active fw-bold bg-light{% endif %} rounded-pill px-3"
+                                href="{{ url_for('main.cotizador') }}">🧮 Cotizador</a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'main.historial' %}active fw-bold bg-light{% endif %} rounded-pill px-3"
+                                href="{{ url_for('main.historial') }}">📜 Historial</a>
+                        </li>
+
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if 'inventory' in request.endpoint %}active fw-bold bg-light{% endif %} rounded-pill px-3"
+                                href="#" role="button" data-bs-toggle="dropdown">📦 Inventario</a>
+                            <ul class="dropdown-menu border-0 shadow-sm text-center text-lg-start">
+                                <li><a class="dropdown-item" href="{{ url_for('inventory.materiales') }}">Materiales</a>
+                                </li>
+                                <li><a class="dropdown-item" href="{{ url_for('inventory.equipos') }}">Equipos</a></li>
+                                <li><a class="dropdown-item" href="{{ url_for('inventory.recetas') }}">Recetas</a></li>
+                            </ul>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'main.configuracion' %}active fw-bold bg-light{% endif %} rounded-pill px-3"
+                                href="{{ url_for('main.configuracion') }}">⚙️ Config</a>
+                        </li>
+
+                        {% if session.get('role') >= 1 %}
+                        <li class="nav-item mt-2 mt-lg-0">
+                            <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm px-3"
+                                href="{{ url_for('admin.dashboard') }}">👑 Panel Master</a>
+                        </li>
+                        {% endif %}
+
+                        <li class="nav-item mt-2 mt-lg-0">
+                            <a class="btn btn-outline-danger rounded-pill w-100 btn-sm px-3"
+                                href="{{ url_for('auth.logout') }}">
+                                <i class="fas fa-sign-out-alt"></i> Salir
+                            </a>
+                        </li>
+
+                    </ul>
+                </div>
             </div>
         </div>
     </nav>
     {% endblock %}
-    {# --- FIN DEL CAMBIO --- #}
 
     <div class="container pb-5">
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -131,6 +213,26 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            var navLinks = document.querySelectorAll('.offcanvas .nav-link:not(.dropdown-toggle)');
+            var menuToggle = document.getElementById('miMenuMobile');
+            var bsOffcanvas = new bootstrap.Offcanvas(menuToggle);
+
+            navLinks.forEach(function (l) {
+                l.addEventListener('click', function () {
+                    // Solo cerramos si estamos en móvil (si el offcanvas es visible como cajón)
+                    if (window.getComputedStyle(menuToggle).position === 'fixed') {
+                        // bootstrap.Offcanvas.getInstance(menuToggle).hide();
+                        // Nota: A veces la instancia se pierde, usamos el elemento nativo
+                        var closeBtn = menuToggle.querySelector('.btn-close');
+                        if (closeBtn) closeBtn.click();
+                    }
+                });
+            });
+        });
+    </script>
     {% block scripts %}{% endblock %}
 </body>
 
