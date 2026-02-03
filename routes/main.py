@@ -70,7 +70,7 @@ def cotizador():
 @login_required
 def guardar_venta():
     data = request.get_json()
-    conn = get_db_connection()
+    conn = get_db() 
     cursor = conn.cursor()
     
     try:
