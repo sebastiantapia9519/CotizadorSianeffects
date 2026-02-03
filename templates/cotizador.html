@@ -528,11 +528,16 @@
                 s += i.subtotal;
                 tb.innerHTML += `
                 <tr>
-                    <td class="ps-3"><small class="fw-bold">${i.concepto}</small></td>
+                    <td class="ps-3">
+                        <small class="fw-bold">${i.concepto}</small>
+                        ${i.composicion && i.composicion.length > 0 ? '<br><span class="badge bg-light text-secondary border" style="font-size:0.6rem">Con Receta</span>' : ''}
+                    </td>
                     <td class="text-center small">${i.cantidad}</td>
                     <td class="text-end small fw-bold">$${i.subtotal.toFixed(2)}</td>
                     <td class="text-end pe-3">
-                        <i class="fas fa-trash-alt text-danger" onclick="eliminarDelCarrito(${x})" style="cursor:pointer"></i>
+                        <i class="fas fa-pen text-primary me-3" onclick="editarItemCarrito(${x})" style="cursor:pointer" title="Editar / Ver Materiales"></i>
+                        
+                        <i class="fas fa-trash-alt text-danger" onclick="eliminarDelCarrito(${x})" style="cursor:pointer" title="Eliminar"></i>
                     </td>
                 </tr>`;
             });
@@ -559,6 +564,57 @@
     function eliminarDelCarrito(x) {
         carrito.splice(x, 1);
         renderizarCarrito();
+    }
+
+    function editarItemCarrito(index) {
+        // 1. Obtener el item
+        const item = carrito[index];
+
+        // Validar si tiene receta
+        if (!item.composicion || item.composicion.length === 0) {
+            return alert("Este producto no tiene una receta guardada para editar.");
+        }
+
+        if (!confirm(`¿Quieres editar "${item.concepto}"?\n\nSe moverá a la izquierda para que hagas cambios.`)) return;
+
+        // 2. Limpiar la mesa de trabajo (izquierda)
+        limpiarCalculadora();
+
+        // 3. Rellenar datos básicos
+        document.getElementById('nombreProductoActual').value = item.concepto;
+        document.getElementById('cantidadParaCarrito').value = item.cantidad;
+
+        // 4. "Explotar" la receta (Composición)
+        // La composición guardada tiene la forma: [{tipo:'material', id:1, cantidad:2}, {tipo:'maquinaria', id:3...}]
+
+        // Primero asegurarnos de borrar la fila vacía que deja limpiarCalculadora
+        document.getElementById('listaMateriales').innerHTML = '';
+
+        item.composicion.forEach(comp => {
+            if (comp.tipo === 'material') {
+                // Volvemos a crear la fila del material
+                agregarFila(comp.id, comp.cantidad);
+            }
+            else if (comp.tipo === 'maquinaria') {
+                // Buscamos el checkbox por su data-id y lo marcamos
+                const checkbox = document.querySelector(`.check-maquinaria-input[data-id="${comp.id}"]`);
+                if (checkbox) {
+                    checkbox.checked = true;
+                }
+            }
+        });
+
+        // 5. Sacarlo del carrito (para que no se duplique al guardar)
+        carrito.splice(index, 1);
+        renderizarCarrito();
+
+        // 6. Recalcular los costos en pantalla
+        // Ponemos un pequeño timeout para dar tiempo a que se creen los selectores de materiales
+        setTimeout(() => {
+            calcularTotal();
+            // Scroll suave hacia arriba para que el usuario vea que ya cargó
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }, 300);
     }
 
     // --- 5. CHECKOUT (VENTA CON ESTADOS) ---
