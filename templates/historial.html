@@ -71,7 +71,7 @@
         opacity: 1 !important;
     }
 
-    /* NUEVO: Lista de ingredientes en el modal */
+    /* Lista de ingredientes en el modal */
     .lista-ingredientes {
         font-size: 0.75rem;
         color: #6c757d;
@@ -247,10 +247,11 @@
                     <table class="table table-striped mb-0 align-middle">
                         <thead class="sticky-top bg-white small text-secondary">
                             <tr>
-                                <th class="ps-3 py-2">Producto / Servicio</th>
+                                <th class="ps-3 py-2">Producto</th>
                                 <th class="text-center py-2">Cant.</th>
-                                <th class="text-end py-2">$ Precio</th>
+                                <th class="text-end py-2">$ Venta</th>
                                 <th class="text-end py-2 text-muted">$ Costo</th>
+                                <th class="text-end py-2 text-success fw-bold">$ Ganancia</th>
                                 <th class="text-end pe-3 py-2 fw-bold">Subtotal</th>
                             </tr>
                         </thead>
@@ -284,15 +285,12 @@
 
 {% block scripts %}
 <script>
-    console.log("SESSION USER_ID:", {{ session.get('user_id') }})
-
-    // --- LÓGICA DE DETALLES CON "RAYOS X" ---
     function verDetalles(id) {
         const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
         document.getElementById('modalFolio').innerText = id;
 
-        // Loader y reset
-        document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="5" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Cargando datos...</td></tr>';
+        // Loader
+        document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="6" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Cargando datos...</td></tr>';
         document.getElementById('panelFinanciero').innerHTML = '';
 
         modal.show();
@@ -301,60 +299,71 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // 1. Datos básicos
+                    // Datos básicos
                     document.getElementById('modalFolio').innerText = data.folio;
                     document.getElementById('modalCliente').innerText = data.cliente;
 
-                    // 2. Badge de Estado
+                    // Estado
                     const estadoDiv = document.getElementById('modalEstadoDiv');
                     let badgeClass = '', icon = '', label = data.estado.toUpperCase();
-
                     if (data.estado === 'pagado') { badgeClass = 'bg-success'; icon = 'check-circle'; }
                     else if (data.estado === 'cancelada') { badgeClass = 'bg-dark'; icon = 'ban'; }
                     else if (data.estado === 'anticipo') { badgeClass = 'bg-warning text-dark'; icon = 'hourglass-half'; }
                     else { badgeClass = 'bg-secondary'; icon = 'file-alt'; label = 'COTIZACIÓN'; }
-
                     estadoDiv.innerHTML = `<span class="badge ${badgeClass} fs-6 px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-${icon} me-1"></i> ${label}</span>`;
 
-                    // 3. Tabla de Productos (CON COMPOSICIÓN)
+                    // Tabla y Cálculos Reales
                     const tbody = document.getElementById('modalTablaCuerpo');
                     tbody.innerHTML = '';
+
+                    let sumaCostos = 0;
+                    let sumaGanancias = 0;
 
                     data.items.forEach(item => {
                         let cant = item.cantidad % 1 === 0 ? Math.round(item.cantidad) : item.cantidad;
 
-                        // NUEVO: PROCESAR EL JSON DE COMPOSICIÓN
+                        // Cálculos por ITEM
+                        let costoTotalItem = item.costo_unitario * item.cantidad;
+                        let gananciaItem = item.subtotal - costoTotalItem;
+
+                        sumaCostos += costoTotalItem;
+                        sumaGanancias += gananciaItem;
+
+                        // Composición (Ingredientes)
                         let htmlIngredientes = '';
                         if (item.composicion) {
                             try {
                                 const comp = JSON.parse(item.composicion);
-                                // Validamos que sea un array y tenga cosas
                                 if (Array.isArray(comp) && comp.length > 0) {
                                     const listaItems = comp.map(c => `<li>${c.cantidad || 1} x ${c.nombre}</li>`).join('');
                                     htmlIngredientes = `<ul class="lista-ingredientes mb-0 mt-1">${listaItems}</ul>`;
                                 }
-                            } catch (e) { console.error("Error parseando composición", e); }
+                            } catch (e) { }
                         }
 
                         tbody.innerHTML += `
                             <tr>
                                 <td class="ps-3">
                                     <div class="fw-bold">${item.concepto}</div>
-                                    ${htmlIngredientes} </td>
+                                    ${htmlIngredientes}
+                                </td>
                                 <td class="text-center">${cant}</td>
                                 <td class="text-end text-dark">$${item.precio_unitario.toFixed(2)}</td>
                                 <td class="text-end text-muted">$${item.costo_unitario.toFixed(2)}</td>
+                                <td class="text-end text-success fw-bold bg-success bg-opacity-10">$${gananciaItem.toFixed(2)}</td>
                                 <td class="text-end pe-3 fw-bold text-dark">$${item.subtotal.toFixed(2)}</td>
                             </tr>
                         `;
                     });
 
-                    // 4. CÁLCULOS FINANCIEROS
-                    const total = parseFloat(data.total || 0);
+                    // Totales del Panel Inferior (Usamos las sumas calculadas para precisión)
+                    const totalVenta = parseFloat(data.total || 0);
                     const pagado = parseFloat(data.monto_pagado || 0);
                     const pendiente = parseFloat(data.saldo_pendiente || 0);
-                    const costo = parseFloat(data.costo_total || 0);
-                    const ganancia = total - costo;
+
+                    // Nota: Usamos 'sumaCostos' y 'sumaGanancias' calculados arriba para asegurar consistencia con la tabla
+                    const costoProduccion = sumaCostos;
+                    const gananciaReal = sumaGanancias;
 
                     let colorResta = pendiente > 0.1 ? "text-danger" : "text-success";
                     let textoResta = pendiente > 0.1 ? `$${pendiente.toFixed(2)}` : "$0.00";
@@ -364,7 +373,7 @@
                             <div class="row">
                                 <div class="col-4 border-end">
                                     <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Total Venta</small>
-                                    <span class="h5 fw-bold text-dark">$${total.toFixed(2)}</span>
+                                    <span class="h5 fw-bold text-dark">$${totalVenta.toFixed(2)}</span>
                                 </div>
                                 <div class="col-4 border-end">
                                     <small class="text-primary fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Abonado</small>
@@ -381,11 +390,11 @@
                             <div class="row justify-content-center">
                                 <div class="col-5 border-end">
                                     <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Costo Producción</small>
-                                    <span class="h6 fw-bold text-secondary">-$${costo.toFixed(2)}</span>
+                                    <span class="h6 fw-bold text-secondary">$${costoProduccion.toFixed(2)}</span>
                                 </div>
                                 <div class="col-5">
                                     <small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Tu Ganancia Real</small>
-                                    <span class="h4 fw-bold text-success">$${ganancia.toFixed(2)}</span>
+                                    <span class="h4 fw-bold text-success">$${gananciaReal.toFixed(2)}</span>
                                 </div>
                             </div>
                         </div>
@@ -398,66 +407,51 @@
                     else aviso.classList.add('d-none');
 
                 } else {
-                    alert("Error al cargar detalles: " + data.message);
+                    alert("Error al cargar detalles.");
                     modal.hide();
                 }
             })
             .catch(err => {
                 console.error(err);
-                alert("Error de conexión al cargar detalles.");
+                alert("Error de conexión.");
             });
     }
 
-    // --- NUEVO: FUNCIÓN PARA RECARGAR EN COTIZADOR ---
+    // --- RECARGAR EN COTIZADOR ---
     function recargarCotizacion(id) {
         if (!confirm("¿Quieres cargar esta cotización en el editor?\n\nSe borrará lo que tengas en pantalla actualmente.")) return;
-
-        // 1. Obtener los detalles de la venta
         fetch('/api/obtener_detalles/' + id)
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    // 2. Guardar en memoria del navegador
                     sessionStorage.setItem('recarga_cotizacion', JSON.stringify(data.items));
                     sessionStorage.setItem('recarga_cliente', data.cliente);
-
-                    // 3. Redirigir al cotizador
                     window.location.href = "{{ url_for('main.cotizador') }}";
                 } else {
                     alert("No se pudo obtener la información.");
                 }
-            })
-            .catch(e => alert("Error de conexión"));
+            });
     }
 
+    // --- ABONAR ---
     function abonar(id, saldo, estado) {
-        let msg = "";
-        if (estado === 'cotizacion') {
-            msg = `📄 COTIZACIÓN\nTotal a Pagar: $${saldo.toFixed(2)}\n\n¿Cuánto dinero recibes de anticipo?`;
-        } else {
-            msg = `💰 ABONO A CUENTA\nSaldo Pendiente: $${saldo.toFixed(2)}\n\n¿Cuánto dinero recibes?`;
-        }
-
+        let msg = estado === 'cotizacion' ? `📄 COTIZACIÓN\nTotal a Pagar: $${saldo.toFixed(2)}\n\n¿Cuánto recibes de anticipo?` : `💰 ABONO\nSaldo Pendiente: $${saldo.toFixed(2)}\n\n¿Cuánto recibes?`;
         const abono = prompt(msg);
-
         if (abono && parseFloat(abono) > 0) {
             fetch('/api/actualizar_venta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ id: id, abono: abono })
             }).then(r => r.json()).then(d => {
-                if (d.success) {
-                    alert("✅ Pago registrado correctamente.");
-                    location.reload();
-                } else {
-                    alert("❌ Error: " + d.message);
-                }
+                if (d.success) { alert("✅ Pago registrado."); location.reload(); }
+                else alert("❌ Error: " + d.message);
             });
         }
     }
 
+    // --- CANCELAR ---
     function cancelarVenta(id) {
-        if (confirm("🛑 ¿ANULAR VENTA?\n\nEsta acción no se puede deshacer. El registro quedará como 'Cancelado'.")) {
+        if (confirm("🛑 ¿ANULAR VENTA?\n\nEsta acción no se puede deshacer.")) {
             fetch('/api/cancelar_venta', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
