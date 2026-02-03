@@ -249,10 +249,10 @@
                             <tr>
                                 <th class="ps-3 py-2">Producto</th>
                                 <th class="text-center py-2">Cant.</th>
-                                <th class="text-end py-2">$ Venta</th>
-                                <th class="text-end py-2 text-muted">$ Costo</th>
-                                <th class="text-end py-2 text-success fw-bold">$ Ganancia</th>
-                                <th class="text-end pe-3 py-2 fw-bold">Subtotal</th>
+                                <th class="text-end py-2">$ P. Unit.</th>
+                                <th class="text-end py-2 text-dark fw-bold">Importe</th>
+                                <th class="text-end py-2 text-muted">$ Costo Tot.</th>
+                                <th class="text-end pe-3 py-2 text-success fw-bold">$ Ganancia</th>
                             </tr>
                         </thead>
                         <tbody id="modalTablaCuerpo" class="small"></tbody>
@@ -322,12 +322,13 @@
                     data.items.forEach(item => {
                         let cant = item.cantidad % 1 === 0 ? Math.round(item.cantidad) : item.cantidad;
 
-                        // Cálculos por ITEM
-                        let costoTotalItem = item.costo_unitario * item.cantidad;
-                        let gananciaItem = item.subtotal - costoTotalItem;
+                        // CÁLCULOS CLAROS (Todo a Totales)
+                        let ventaTotalItem = item.subtotal; // Lo que pagó el cliente por los 5
+                        let costoTotalItem = item.costo_unitario * item.cantidad; // Lo que te costaron los 5
+                        let gananciaTotalItem = ventaTotalItem - costoTotalItem; // Lo que ganaste de los 5
 
                         sumaCostos += costoTotalItem;
-                        sumaGanancias += gananciaItem;
+                        sumaGanancias += gananciaTotalItem;
 
                         // Composición (Ingredientes)
                         let htmlIngredientes = '';
@@ -341,17 +342,30 @@
                             } catch (e) { }
                         }
 
+                        // RENDERIZADO CORREGIDO
                         tbody.innerHTML += `
                             <tr>
                                 <td class="ps-3">
-                                    <div class="fw-bold">${item.concepto}</div>
+                                    <div class="fw-bold text-dark">${item.concepto}</div>
                                     ${htmlIngredientes}
                                 </td>
-                                <td class="text-center">${cant}</td>
-                                <td class="text-end text-dark">$${item.precio_unitario.toFixed(2)}</td>
-                                <td class="text-end text-muted">$${item.costo_unitario.toFixed(2)}</td>
-                                <td class="text-end text-success fw-bold bg-success bg-opacity-10">$${gananciaItem.toFixed(2)}</td>
-                                <td class="text-end pe-3 fw-bold text-dark">$${item.subtotal.toFixed(2)}</td>
+                                <td class="text-center align-middle">${cant}</td>
+                                
+                                <td class="text-end text-muted align-middle small">
+                                    $${item.precio_unitario.toFixed(2)} unit.
+                                </td>
+
+                                <td class="text-end text-dark fw-bold align-middle">
+                                    $${ventaTotalItem.toFixed(2)}
+                                </td>
+
+                                <td class="text-end text-danger text-opacity-75 align-middle small">
+                                    - $${costoTotalItem.toFixed(2)}
+                                </td>
+
+                                <td class="text-end pe-3 fw-bold text-success bg-success bg-opacity-10 align-middle">
+                                    $${gananciaTotalItem.toFixed(2)}
+                                </td>
                             </tr>
                         `;
                     });
