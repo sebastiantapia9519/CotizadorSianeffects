@@ -1,25 +1,42 @@
-<div class="product-card">
-    <div class="media-container">
-        {% if prod['media_type'] == 'image' %}
-        <img src="{{ prod['media_url'] }}" loading="lazy" alt="{{ prod['titulo'] }}"
-            onclick="window.open(this.src, '_blank')" style="cursor: zoom-in;">
-        {% elif prod['media_type'] == 'video' %}
-        <video src="{{ prod['media_url'] }}" controls></video>
-        {% elif prod['media_type'] == 'audio' %}
-        <div class="text-center p-3 w-100">
-            <i class="fas fa-compact-disc fa-spin fa-3x text-secondary mb-3" style="animation-duration: 3s;"></i><br>
-            <audio src="{{ prod['media_url'] }}" controls class="w-100 mt-2" style="height: 30px;"></audio>
+<div class="product-card h-100">
+    <div class="media-container" style="position: relative; padding-top: 100%; overflow: hidden; background: #f8f9fa;">
+        <div
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
+
+            {% if prod['media_type'] == 'image' %}
+            <a href="{{ prod['media_url'] }}" class="glightbox" data-gallery="galeria-general"
+                data-title="{{ prod['titulo'] }}" data-description="SKU: {{ prod['sku'] }} - {{ prod['descripcion'] }}">
+                <img src="{{ prod['media_url'] }}" loading="lazy" alt="{{ prod['titulo'] }}"
+                    style="width: 100%; height: 100%; object-fit: cover; transition: 0.3s;">
+            </a>
+
+            {% elif prod['media_type'] == 'video' %}
+            <a href="{{ prod['media_url'] }}" class="glightbox" data-gallery="galeria-general"
+                data-title="{{ prod['titulo'] }}">
+                <video src="{{ prod['media_url'] }}" style="width: 100%; height: 100%; object-fit: cover;"></video>
+                <div
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.8;">
+                    <i class="fas fa-play-circle fa-3x"></i>
+                </div>
+            </a>
+
+            {% elif prod['media_type'] == 'audio' %}
+            <div class="text-center p-3 w-100">
+                <i class="fas fa-music fa-3x text-primary mb-3"></i><br>
+                <audio src="{{ prod['media_url'] }}" controls class="w-100"></audio>
+            </div>
+            {% endif %}
         </div>
-        {% endif %}
     </div>
-    <div class="p-3">
+
+    <div class="p-3 bg-white border-top">
         <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="sku-badge">{{ prod['sku'] }}</span>
+            <span class="badge bg-secondary">{{ prod['sku'] }}</span>
             {% if prod['precio'] > 0 %}
             <span class="fw-bold text-dark">${{ "%.0f"|format(prod['precio']) }}</span>
             {% endif %}
         </div>
         <h6 class="fw-bold text-dark mb-1">{{ prod['titulo'] }}</h6>
-        <p class="text-muted small mb-0">{{ prod['descripcion'] }}</p>
+        <p class="text-muted small mb-0 text-truncate">{{ prod['descripcion'] }}</p>
     </div>
 </div>
