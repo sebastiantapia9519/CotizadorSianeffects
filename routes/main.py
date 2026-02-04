@@ -63,7 +63,7 @@ def cotizador():
         data = {
             'config': conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone(),
             'materiales': conn.execute('SELECT * FROM materiales WHERE user_id=?', (uid,)).fetchall(),
-            'productos': conn.execute('SELECT * FROM productos WHERE user_id=?', (uid,)).fetchall(),
+            'productos': conn.execute('SELECT id, sku, titulo as nombre, precio, descripcion, media_url FROM productos WHERE activo=1').fetchall(),
             'equipos': conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (uid,)).fetchall()
         }
     finally:
