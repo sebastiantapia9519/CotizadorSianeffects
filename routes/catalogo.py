@@ -1,3 +1,5 @@
+import random
+import string
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from db import get_db_connection as get_db
 from helpers import login_required
@@ -39,7 +41,19 @@ def admin_productos(cat_id):
 
     # --- AGREGAR PRODUCTO NUEVO ---
     if request.method == 'POST':
-        sku = request.form['sku'].upper().strip() # SKU en mayúsculas
+        # 1. Generar SKU Automático y Único
+        prefix = ''.join(filter(str.isalpha, categoria['nombre']))[:3].upper() # Solo letras, mayúsculas
+        if len(prefix) < 2: prefix = "PROD" # Fallback por si la categoría es rara
+        
+        while True:
+            random_digits = ''.join(random.choices(string.digits, k=5)) # 5 números al azar
+            sku_generado = f"{prefix}-{random_digits}"
+            
+            # Verificar si ya existe
+            existe = conn.execute('SELECT id FROM productos WHERE sku = ?', (sku_generado,)).fetchone()
+            if not existe:
+                break # ¡Es único! Salimos del ciclo
+
         titulo = request.form['titulo']
         descripcion = request.form['descripcion']
         precio = request.form.get('precio', 0)
