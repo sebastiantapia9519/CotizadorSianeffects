@@ -125,13 +125,13 @@ def guardar_venta():
             # =================================================
             cursor.execute('''
                 INSERT INTO ventas (
-                    user_id, cliente, subtotal, descuento_porcentaje, 
+                    user_id, fecha, cliente, subtotal, descuento_porcentaje, 
                     descuento_monto, total, costo_total, estado, 
                     monto_pagado, saldo_pendiente, fecha_vencimiento
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                session['user_id'], cliente, subtotal, descuento_pct, 
+                session['user_id'], fecha_actual, cliente, subtotal, descuento_pct, 
                 descuento_monto, total, costo_total, estado, 
                 monto_pagado, saldo_pendiente, fecha_vencimiento
             ))
