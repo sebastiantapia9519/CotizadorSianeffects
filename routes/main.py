@@ -27,7 +27,7 @@ def procesar_fila_fechas(fila_db):
         valor_original = item.get(campo)
         if valor_original:
             try:
-                # 1. LIMPIEZA DE FORMATO
+                # 1. LIMPIEZA DE FORMATO aqui
                 # Convertimos a string, quitamos la 'T' si es ISO, y cortamos milisegundos
                 # Ej: "2026-02-11T01:38:11.068..." -> "2026-02-11 01:38:11"
                 str_fecha = str(valor_original).replace('T', ' ')[:19]
