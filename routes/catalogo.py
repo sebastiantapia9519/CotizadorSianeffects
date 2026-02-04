@@ -230,8 +230,6 @@ def ver_catalogo():
         ''', (cat['id'],)).fetchall()
         
         if productos:
-            # 🔴 CAMBIO CLAVE:
-            # Convertimos sqlite3.Row a dict para que Jinja pueda usar |tojson sin error
             catalogo_data.append({
                 'info': dict(cat),
                 'productos': [dict(prod) for prod in productos]

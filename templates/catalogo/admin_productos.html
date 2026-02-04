@@ -13,8 +13,8 @@
     </div>
     <div class="ms-auto">
         <button class="btn btn-success rounded-pill shadow fw-bold px-4" data-bs-toggle="modal"
-            data-bs-target="#modalNuevoProd">
-            <i class="fas fa-cloud-upload-alt me-2"></i> Subir Producto
+            data-bs-target="#modalNuevoProd" onclick="resetearFormulario()"> <i
+                class="fas fa-cloud-upload-alt me-2"></i> Subir Producto
         </button>
     </div>
 </div>
@@ -56,6 +56,11 @@
                 {% endif %}
             </div>
             <div class="card-footer bg-white border-0 pt-0 text-end">
+                <button class="btn btn-sm btn-outline-primary border-0 rounded-pill me-2"
+                    onclick='cargarDatosEdicion({{ prod | tojson }})'>
+                    <i class="fas fa-edit me-1"></i> Editar
+                </button>
+
                 <a href="{{ url_for('catalogo.delete_item', tipo='producto', id_obj=prod['id']) }}"
                     class="btn btn-sm btn-outline-danger border-0 rounded-pill"
                     onclick="return confirm('¿Eliminar este producto?');">
@@ -201,6 +206,63 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ tipo: tipo, id: id, activo: estado })
         });
+    }
+
+    // FUNCIÓN PARA CARGAR DATOS EN EL MODAL (EDITAR)
+    function cargarDatosEdicion(prod) {
+        // Llenar ID (esto le dice al backend que es UPDATE)
+        document.getElementById('producto_id').value = prod.id;
+
+        // Llenar campos de texto
+        document.querySelector('input[name="titulo"]').value = prod.titulo;
+        document.querySelector('textarea[name="descripcion"]').value = prod.descripcion;
+        document.querySelector('input[name="precio"]').value = prod.precio;
+
+        // Llenar campos ocultos de media
+        document.getElementById('media_url').value = prod.media_url;
+        document.getElementById('media_type').value = prod.media_type;
+
+        // Mostrar Preview Visual
+        const container = document.getElementById('previewContainer');
+        const mediaBox = document.getElementById('previewMedia');
+        container.classList.remove('d-none');
+
+        if (prod.media_type === 'image') {
+            mediaBox.innerHTML = `<img src="${prod.media_url}" class="img-fluid">`;
+        } else if (prod.media_type === 'video') {
+            mediaBox.innerHTML = `<video src="${prod.media_url}" class="img-fluid" controls></video>`;
+        } else {
+            mediaBox.innerHTML = `<div class="p-3 text-center bg-white"><i class="fas fa-music"></i> Audio cargado</div>`;
+        }
+
+        // Habilitar botón y cambiar texto
+        const btn = document.getElementById('btnGuardar');
+        btn.disabled = false;
+        btn.innerText = "Actualizar Producto";
+
+        // Abrir el modal manualmente
+        var myModal = new bootstrap.Modal(document.getElementById('modalNuevoProd'));
+        myModal.show();
+    }
+
+    // FUNCIÓN PARA LIMPIAR EL MODAL (CREAR NUEVO)
+    function resetearFormulario() {
+        // Limpiar formulario HTML
+        document.querySelector('form').reset();
+
+        // VACIAR EL ID (Importante: esto le dice al backend que es INSERT)
+        document.getElementById('producto_id').value = "";
+        document.getElementById('media_url').value = "";
+        document.getElementById('media_type').value = "";
+
+        // Ocultar preview
+        document.getElementById('previewContainer').classList.add('d-none');
+        document.getElementById('previewMedia').innerHTML = "";
+
+        // Resetear botón
+        const btn = document.getElementById('btnGuardar');
+        btn.innerText = "Guardar Producto";
+        btn.disabled = true; // Deshabilitado hasta que suban imagen
     }
 </script>
 {% endblock %}
