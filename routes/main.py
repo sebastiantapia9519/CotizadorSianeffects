@@ -63,7 +63,7 @@ def cotizador():
         data = {
             'config': conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone(),
             'materiales': conn.execute('SELECT * FROM materiales WHERE user_id=?', (uid,)).fetchall(),
-            'productos': conn.execute('SELECT id, sku, titulo as nombre, precio, descripcion, media_url FROM productos WHERE activo=1').fetchall(),
+            'productos': conn.execute('SELECT * FROM productos WHERE user_id=?', (uid,)).fetchall(),
             'equipos': conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (uid,)).fetchall()
         }
     finally:
@@ -128,10 +128,10 @@ def guardar_venta():
                     user_id, fecha, cliente, subtotal, descuento_porcentaje, 
                     descuento_monto, total, costo_total, estado, 
                     monto_pagado, saldo_pendiente, fecha_vencimiento
-                )
+                )@main_bp.route('/cotizador')
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                session['user_id'], now_utc(), cliente, subtotal, descuento_pct, 
+                session['user_id'], fecha_actual, cliente, subtotal, descuento_pct, 
                 descuento_monto, total, costo_total, estado, 
                 monto_pagado, saldo_pendiente, fecha_vencimiento
             ))

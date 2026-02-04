@@ -55,7 +55,7 @@ def admin_productos(cat_id):
             sku_generado = f"{prefix}-{random_digits}"
             
             # Verificar si ya existe
-            existe = conn.execute('SELECT id FROM productos WHERE sku = ?', (sku_generado,)).fetchone()
+            existe = conn.execute('SELECT id FROM catalogo_productos WHERE sku = ?', (sku_generado,)).fetchone()
             if not existe:
                 break # ¡Es único!
         
@@ -69,7 +69,7 @@ def admin_productos(cat_id):
         media_type = request.form['media_type']
         
         conn.execute('''
-            INSERT INTO productos (categoria_id, sku, titulo, descripcion, media_url, media_type, precio)
+            INSERT INTO catalogo_productos (categoria_id, sku, titulo, descripcion, media_url, media_type, precio)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (cat_id, sku_generado, titulo, descripcion, media_url, media_type, precio))
         conn.commit()
@@ -77,7 +77,7 @@ def admin_productos(cat_id):
         return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
 
     # --- OBTENER PRODUCTOS ---
-    productos = conn.execute('SELECT * FROM productos WHERE categoria_id = ? ORDER BY id DESC', (cat_id,)).fetchall()
+    productos = conn.execute('SELECT * FROM catalogo_productos WHERE categoria_id = ? ORDER BY id DESC', (cat_id,)).fetchall()
     conn.close()
 
     return render_template('catalogo/admin_productos.html', categoria=categoria, productos=productos)
@@ -138,17 +138,17 @@ def delete_item(tipo, id_obj):
     conn = get_db()
     
     if tipo == 'categoria':
-        conn.execute('DELETE FROM productos WHERE categoria_id = ?', (id_obj,))
+        conn.execute('DELETE FROM catalogo_productos WHERE categoria_id = ?', (id_obj,))
         conn.execute('DELETE FROM categorias WHERE id = ?', (id_obj,))
         flash('Categoría eliminada.', 'warning')
         dest = 'catalogo.admin_categorias'
         cat_arg = {}
     else:
         # Borrar producto
-        prod = conn.execute('SELECT categoria_id FROM productos WHERE id = ?', (id_obj,)).fetchone()
+        prod = conn.execute('SELECT categoria_id FROM catalogo_productos WHERE id = ?', (id_obj,)).fetchone()
         if prod:
             cat_id = prod['categoria_id']
-            conn.execute('DELETE FROM productos WHERE id = ?', (id_obj,))
+            conn.execute('DELETE FROM catalogo_productos WHERE id = ?', (id_obj,))
             flash('Producto eliminado.', 'success')
             dest = 'catalogo.admin_productos'
             cat_arg = {'cat_id': cat_id}
@@ -176,7 +176,7 @@ def ver_catalogo():
     # 2. Por cada categoría, traer sus productos ACTIVOS
     for cat in categorias:
         productos = conn.execute('''
-            SELECT * FROM productos 
+            SELECT * FROM catalogo_productos 
             WHERE categoria_id = ? AND activo = 1 
             ORDER BY orden ASC, id DESC
         ''', (cat['id'],)).fetchall()
