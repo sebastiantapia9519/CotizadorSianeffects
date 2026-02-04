@@ -238,6 +238,6 @@ def ver_catalogo():
     conn.close()
     
     return render_template(
-        'catalogo/galeria_sianeffects.html',
+        'catalogo/admin_productos.html',
         catalogo=catalogo_data
     )
