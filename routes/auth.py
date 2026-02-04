@@ -63,8 +63,8 @@ def registro():
         # -----------------------------
         # 1. DATOS DEL FORM
         # -----------------------------
-        username = request.form['username']
-        email = request.form['email']
+        username = request.form['username'].lower().strip()
+        email = request.form['email'].lower().strip()
         password = request.form['password']
         telefono = request.form.get('phone', '')
         company_name = request.form.get('company_name', 'Mi Negocio')
