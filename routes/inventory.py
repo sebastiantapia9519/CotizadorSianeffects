@@ -1,4 +1,5 @@
 from flask import Blueprint, request, session, jsonify, render_template, redirect, url_for
+import json
 from helpers import login_required
 from db import get_db_connection as get_db
 
@@ -250,6 +251,7 @@ def guardar_receta():
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
+        print(f"Error guardando receta: {e}") # Para ver en el log
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
