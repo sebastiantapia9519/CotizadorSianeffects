@@ -395,44 +395,95 @@ def plan_vencido():
     return render_template('plan_vencido.html')
 
 
+# routes/main.py
+
 @main_bp.route('/descargar_excel')
 @login_required
 def descargar_excel():
     conn = get_db()
     uid = session['user_id']
+    
+    # --- QUERY MEJORADA CON MÁS CAMPOS ---
     query = '''
         SELECT 
-            v.id as Folio, v.fecha, v.cliente, v.estado, 
-            v.monto_pagado, v.saldo_pendiente,
-            d.concepto as Producto, d.cantidad, 
-            d.precio_unitario as Precio_Venta, d.costo_unitario as Costo_Prod, 
-            (d.precio_unitario - d.costo_unitario) as Ganancia_Unit, 
-            d.subtotal, v.total as Ticket_Total
+            v.id as Folio, 
+            v.fecha as Fecha_Registro,
+            v.fecha_vencimiento as Fecha_Vencimiento,
+            v.cliente as Cliente, 
+            v.estado as Estado_Actual,
+            v.document_type as Tipo_Doc,
+            
+            -- Detalles del Producto
+            d.concepto as Producto, 
+            d.cantidad as Cantidad, 
+            d.precio_unitario as Precio_Unit_Venta, 
+            d.costo_unitario as Costo_Unit_Prod, 
+            (d.precio_unitario - d.costo_unitario) as Ganancia_Unitaria,
+            d.subtotal as Subtotal_Linea,
+            d.composicion as Receta_Materiales, -- Nuevo campo
+            
+            -- Totales del Ticket
+            v.subtotal as Subtotal_Venta,
+            v.descuento_monto as Descuento_Aplicado,
+            v.total as Total_Ticket,
+            v.monto_pagado as Pagado, 
+            v.saldo_pendiente as Resta_Por_Pagar
+            
         FROM ventas v 
         JOIN venta_detalles d ON v.id = d.venta_id 
         WHERE v.user_id = ? 
         ORDER BY v.fecha DESC
     '''
     
-    # Pandas lee las fechas como strings o objetos
-    df = pd.read_sql_query(query, conn, params=(uid,))
-    conn.close()
-    
-    if not df.empty:
-        # Convertir columna fecha a datetime
-        df['fecha'] = pd.to_datetime(df['fecha'])
+    try:
+        # Pandas lee la base de datos
+        df = pd.read_sql_query(query, conn, params=(uid,))
         
-        # Asumimos que lo que viene de BD es UTC (aunque pandas a veces no lo sabe)
-        # 1. Localizamos en UTC
-        # 2. Convertimos a Mexico_City
-        df['fecha'] = df['fecha'].dt.tz_localize('UTC').dt.tz_convert('America/Mexico_City')
-        
-        # Quitamos la info de zona horaria para que Excel no se queje
-        df['fecha'] = df['fecha'].dt.strftime('%Y-%m-%d %H:%M:%S')
+        if not df.empty:
+            # --- 1. CORRECCIÓN DE FECHAS (FORMATO MIXTO) ---
+            # Usamos errors='coerce' para que si una fecha está muy mal, no truene, solo la deje vacía.
+            # format='mixed' permite que Pandas entienda fechas con y sin milisegundos.
+            df['Fecha_Registro'] = pd.to_datetime(df['Fecha_Registro'], format='mixed', errors='coerce')
+            
+            # --- 2. CONVERSIÓN DE ZONA HORARIA (UTC -> MÉXICO) ---
+            # Si la fecha no tiene zona horaria (es "naive"), asumimos que es UTC y convertimos
+            if df['Fecha_Registro'].dt.tz is None:
+                df['Fecha_Registro'] = df['Fecha_Registro'].dt.tz_localize('UTC')
+            
+            # Convertimos a Hora México
+            df['Fecha_Registro'] = df['Fecha_Registro'].dt.tz_convert('America/Mexico_City')
+            
+            # --- 3. MAQUILLAJE FINAL PARA EXCEL ---
+            # Excel se marea con las zonas horarias, así que lo convertimos a texto limpio
+            df['Fecha_Registro'] = df['Fecha_Registro'].dt.strftime('%d/%m/%Y %I:%M %p')
+            
+            # Limpiamos la columna de Vencimiento también (solo fecha)
+            if 'Fecha_Vencimiento' in df.columns:
+                 # Convertimos solo si hay datos
+                df['Fecha_Vencimiento'] = pd.to_datetime(df['Fecha_Vencimiento'], format='mixed', errors='coerce')
+                df['Fecha_Vencimiento'] = df['Fecha_Vencimiento'].dt.strftime('%d/%m/%Y')
 
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer: 
-        df.to_excel(writer, index=False, sheet_name='Detalle Financiero')
-    output.seek(0)
-    
-    return send_file(output, download_name="reporte_financiero_sian.xlsx", as_attachment=True)
+        # Generar el Excel en memoria
+        output = io.BytesIO()
+        with pd.ExcelWriter(output, engine='openpyxl') as writer: 
+            df.to_excel(writer, index=False, sheet_name='Detalle de Ventas')
+            
+            # Ajuste automático de columnas (Cosmético)
+            worksheet = writer.sheets['Detalle de Ventas']
+            for column_cells in worksheet.columns:
+                length = max(len(str(cell.value)) for cell in column_cells)
+                worksheet.column_dimensions[column_cells[0].column_letter].width = length + 2
+
+        output.seek(0)
+        
+        # Nombre del archivo con fecha actual
+        filename = f"Reporte_SianEffects_{datetime.now().strftime('%Y%m%d')}.xlsx"
+        
+        return send_file(output, download_name=filename, as_attachment=True)
+
+    except Exception as e:
+        print(f"Error exportando Excel: {e}")
+        # En caso de error, devolvemos un mensaje simple para no romper la app
+        return f"Error al generar el Excel: {str(e)}", 500
+    finally:
+        conn.close()
