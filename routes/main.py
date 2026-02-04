@@ -131,7 +131,7 @@ def guardar_venta():
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                session['user_id'], fecha_actual, cliente, subtotal, descuento_pct, 
+                session['user_id'], now_utc(), cliente, subtotal, descuento_pct, 
                 descuento_monto, total, costo_total, estado, 
                 monto_pagado, saldo_pendiente, fecha_vencimiento
             ))
