@@ -38,49 +38,101 @@ def admin_categorias():
 def admin_productos(cat_id):
     conn = get_db()
 
-    # 👇 CORRECCIÓN: Buscamos la categoría PRIMERO, antes de cualquier IF
-    categoria = conn.execute('SELECT * FROM categorias WHERE id = ?', (cat_id,)).fetchone()
+    # Obtener la categoría actual
+    categoria = conn.execute(
+        'SELECT * FROM categorias WHERE id = ?', (cat_id,)
+    ).fetchone()
 
-    # --- AGREGAR PRODUCTO NUEVO ---
+    # ==============================
+    # CREAR o EDITAR PRODUCTO
+    # ==============================
     if request.method == 'POST':
-        # 1. Generar SKU Automático
-        # Tomamos las primeras 3 letras del nombre (solo letras)
-        nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
-        prefix = nombre_limpio[:3].upper() 
-        
-        if len(prefix) < 2: prefix = "PROD" # Por si el nombre es muy corto
-        
-        while True:
-            random_digits = ''.join(random.choices(string.digits, k=5))
-            sku_generado = f"{prefix}-{random_digits}"
-            
-            # Verificar si ya existe
-            existe = conn.execute('SELECT id FROM catalogo_productos WHERE sku = ?', (sku_generado,)).fetchone()
-            if not existe:
-                break # ¡Es único!
-        
-        # 2. Recibir resto de datos
+        # Si viene este campo, estamos EDITANDO
+        producto_id = request.form.get('producto_id')
+
+        # Datos comunes (crear y editar)
         titulo = request.form['titulo']
         descripcion = request.form['descripcion']
         precio = request.form.get('precio', 0)
-        
-        # Datos de Cloudinary
-        media_url = request.form['media_url']
-        media_type = request.form['media_type']
-        
-        conn.execute('''
-            INSERT INTO catalogo_productos (categoria_id, sku, titulo, descripcion, media_url, media_type, precio)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (cat_id, sku_generado, titulo, descripcion, media_url, media_type, precio))
-        conn.commit()
-        flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
+
+        media_url = request.form.get('media_url')
+        media_type = request.form.get('media_type')
+
+        # ----------------------------------
+        # EDITAR PRODUCTO EXISTENTE
+        # ----------------------------------
+        if producto_id:
+            conn.execute('''
+                UPDATE catalogo_productos
+                SET titulo = ?,
+                    descripcion = ?,
+                    precio = ?,
+                    media_url = ?,
+                    media_type = ?
+                WHERE id = ?
+            ''', (titulo, descripcion, precio, media_url, media_type, producto_id))
+
+            conn.commit()
+            flash('Producto actualizado correctamente.', 'success')
+
+        # ----------------------------------
+        # CREAR PRODUCTO NUEVO
+        # ----------------------------------
+        else:
+            # 1. Generar SKU automático basado en la categoría
+            nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
+            prefix = nombre_limpio[:3].upper()
+
+            if len(prefix) < 2:
+                prefix = "PROD"
+
+            while True:
+                random_digits = ''.join(random.choices(string.digits, k=5))
+                sku_generado = f"{prefix}-{random_digits}"
+
+                existe = conn.execute(
+                    'SELECT id FROM catalogo_productos WHERE sku = ?',
+                    (sku_generado,)
+                ).fetchone()
+
+                if not existe:
+                    break  # SKU único encontrado
+
+            # 2. Insertar producto
+            conn.execute('''
+                INSERT INTO catalogo_productos
+                (categoria_id, sku, titulo, descripcion, media_url, media_type, precio)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (
+                cat_id,
+                sku_generado,
+                titulo,
+                descripcion,
+                media_url,
+                media_type,
+                precio
+            ))
+
+            conn.commit()
+            flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
+
         return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
 
-    # --- OBTENER PRODUCTOS ---
-    productos = conn.execute('SELECT * FROM catalogo_productos WHERE categoria_id = ? ORDER BY id DESC', (cat_id,)).fetchall()
+    # ==============================
+    # OBTENER PRODUCTOS DE LA CATEGORÍA
+    # ==============================
+    productos = conn.execute(
+        'SELECT * FROM catalogo_productos WHERE categoria_id = ? ORDER BY id DESC',
+        (cat_id,)
+    ).fetchall()
+
     conn.close()
 
-    return render_template('catalogo/admin_productos.html', categoria=categoria, productos=productos)
+    return render_template(
+        'catalogo/admin_productos.html',
+        categoria=categoria,
+        productos=productos
+    )
 
 # =========================================================
 # 3. INTERRUPTOR RÁPIDO (ON/OFF)
