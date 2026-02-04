@@ -125,7 +125,9 @@
 
                     <td class="ps-4">
                         <span class="fw-bold fs-5 text-dark">#{{ v['id'] }}</span><br>
-                        <small class="text-muted" style="font-size: 0.75rem">{{ v['fecha'][:10] }}</small>
+                        <small class="text-muted" style="font-size: 0.75rem">
+                            {{ v['fecha'][:10] if v['fecha'] else '--/--/----' }}
+                        </small>
                     </td>
 
                     <td>
@@ -152,7 +154,7 @@
                         </span>
                         {% if v['fecha_vencimiento'] %}
                         <div class="small text-danger fw-bold mt-1" style="font-size:0.65rem;">
-                            Expira: {{ v['fecha_vencimiento'][:10] }}
+                            Expira: {{ v['fecha_vencimiento'][:10] if v['fecha_vencimiento'] else '' }}
                         </div>
                         {% endif %}
                         {% elif v['estado'] == 'cancelada' %}
@@ -433,8 +435,7 @@
 
     // --- RECARGAR EN COTIZADOR ---
     function recargarCotizacion(id) {
-        if (!confirm("¿Quieres cargar esta cotización en el editor para modificarla?\n\nSe borrará lo que tengas en pantalla actualmente.")) return;
-
+        if (!confirm("¿Quieres cargar esta cotización en el editor?\n\nSe borrará lo que tengas en pantalla actualmente.")) return;
         fetch('/api/obtener_detalles/' + id)
             .then(r => r.json())
             .then(data => {
@@ -449,8 +450,7 @@
                 } else {
                     alert("No se pudo obtener la información.");
                 }
-            })
-            .catch(e => alert("Error de conexión"));
+            });
     }
 
     // --- ABONAR ---
