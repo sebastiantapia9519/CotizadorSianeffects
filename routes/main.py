@@ -45,7 +45,7 @@ def procesar_fila_fechas(fila_db):
                 item[campo] = dt_local.strftime('%d/%m/%Y %H:%M')
                 
             except ValueError:
-                # Si falla algo raro, dejamos el dato original para no romper nada
+                # Si falla algo raro, dejamos el dato original para no romper nada lol
                 pass 
                 
     return item
