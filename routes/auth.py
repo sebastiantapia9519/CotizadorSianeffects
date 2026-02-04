@@ -147,6 +147,8 @@ def registro():
                 100  # Margen inicial garantizado
             ))
 
+            conn.commit()
+
             # 1. Primero definimos el mensaje
             flash('Cuenta creada con éxito. ¡Tienes 7 días de prueba!', 'success')
             
