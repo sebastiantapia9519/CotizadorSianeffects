@@ -47,10 +47,8 @@ def admin_productos(cat_id):
     # CREAR o EDITAR PRODUCTO
     # ==============================
     if request.method == 'POST':
-        # Si viene este campo, estamos EDITANDO
         producto_id = request.form.get('producto_id')
 
-        # Datos comunes (crear y editar)
         titulo = request.form['titulo']
         descripcion = request.form['descripcion']
         precio = request.form.get('precio', 0)
@@ -58,9 +56,7 @@ def admin_productos(cat_id):
         media_url = request.form.get('media_url')
         media_type = request.form.get('media_type')
 
-        # ----------------------------------
-        # EDITAR PRODUCTO EXISTENTE
-        # ----------------------------------
+        # EDITAR
         if producto_id:
             conn.execute('''
                 UPDATE catalogo_productos
@@ -75,16 +71,10 @@ def admin_productos(cat_id):
             conn.commit()
             flash('Producto actualizado correctamente.', 'success')
 
-        # ----------------------------------
-        # CREAR PRODUCTO NUEVO
-        # ----------------------------------
+        # CREAR
         else:
-            # 1. Generar SKU automático basado en la categoría
             nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
-            prefix = nombre_limpio[:3].upper()
-
-            if len(prefix) < 2:
-                prefix = "PROD"
+            prefix = nombre_limpio[:3].upper() if len(nombre_limpio) >= 2 else "PROD"
 
             while True:
                 random_digits = ''.join(random.choices(string.digits, k=5))
@@ -96,9 +86,8 @@ def admin_productos(cat_id):
                 ).fetchone()
 
                 if not existe:
-                    break  # SKU único encontrado
+                    break
 
-            # 2. Insertar producto
             conn.execute('''
                 INSERT INTO catalogo_productos
                 (categoria_id, sku, titulo, descripcion, media_url, media_type, precio)
@@ -119,7 +108,7 @@ def admin_productos(cat_id):
         return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
 
     # ==============================
-    # OBTENER PRODUCTOS DE LA CATEGORÍA
+    # OBTENER PRODUCTOS
     # ==============================
     productos = conn.execute(
         'SELECT * FROM catalogo_productos WHERE categoria_id = ? ORDER BY id DESC',
@@ -141,23 +130,20 @@ def admin_productos(cat_id):
 @login_required
 def toggle_status():
     data = request.get_json()
-    tipo = data.get('tipo') # 'categoria' o 'producto'
+    tipo = data.get('tipo')
     id_obj = data.get('id')
-    nuevo_estado = data.get('activo') # 1 o 0
+    nuevo_estado = data.get('activo')
     
     conn = get_db()
-    
-    # Antes decía 'productos', ahora debe decir 'catalogo_productos'
     tabla = 'categorias' if tipo == 'categoria' else 'catalogo_productos'
     
     try:
-        # Consulta dinámica segura
         query = f'UPDATE {tabla} SET activo = ? WHERE id = ?'
         conn.execute(query, (nuevo_estado, id_obj))
         conn.commit()
         return jsonify({'success': True})
     except Exception as e:
-        print(f"Error toggle: {e}") # Para ver en el log si falla
+        print(f"Error toggle: {e}")
         return jsonify({'success': False, 'error': str(e)})
     finally:
         conn.close()
@@ -174,8 +160,10 @@ def editar_categoria():
     orden = request.form.get('orden', 0)
     
     try:
-        conn.execute('UPDATE categorias SET nombre = ?, orden = ? WHERE id = ?', 
-                     (nombre, orden, cat_id))
+        conn.execute(
+            'UPDATE categorias SET nombre = ?, orden = ? WHERE id = ?',
+            (nombre, orden, cat_id)
+        )
         conn.commit()
         flash('Categoría actualizada correctamente.', 'success')
     except Exception as e:
@@ -200,8 +188,11 @@ def delete_item(tipo, id_obj):
         dest = 'catalogo.admin_categorias'
         cat_arg = {}
     else:
-        # Borrar producto
-        prod = conn.execute('SELECT categoria_id FROM catalogo_productos WHERE id = ?', (id_obj,)).fetchone()
+        prod = conn.execute(
+            'SELECT categoria_id FROM catalogo_productos WHERE id = ?',
+            (id_obj,)
+        ).fetchone()
+
         if prod:
             cat_id = prod['categoria_id']
             conn.execute('DELETE FROM catalogo_productos WHERE id = ?', (id_obj,))
@@ -217,34 +208,38 @@ def delete_item(tipo, id_obj):
     conn.close()
     return redirect(url_for(dest, **cat_arg))
 
-    # =========================================================
+# =========================================================
 # 6. VISTA PÚBLICA (CLIENTES)
 # =========================================================
 @catalogo_bp.route('/catalogo')
 def ver_catalogo():
     conn = get_db()
     
-    # 1. Traer solo categorías ACTIVAS y ordenadas
-    categorias = conn.execute('SELECT * FROM categorias WHERE activo = 1 ORDER BY orden ASC').fetchall()
+    # 1. Categorías activas
+    categorias = conn.execute(
+        'SELECT * FROM categorias WHERE activo = 1 ORDER BY orden ASC'
+    ).fetchall()
     
     catalogo_data = []
     
-    # 2. Por cada categoría, traer sus productos ACTIVOS
     for cat in categorias:
         productos = conn.execute('''
-            SELECT * FROM catalogo_productos 
-            WHERE categoria_id = ? AND activo = 1 
+            SELECT * FROM catalogo_productos
+            WHERE categoria_id = ? AND activo = 1
             ORDER BY orden ASC, id DESC
         ''', (cat['id'],)).fetchall()
         
-        # Solo agregamos la categoría si tiene productos (para no mostrar secciones vacías)
         if productos:
+            # 🔴 CAMBIO CLAVE:
+            # Convertimos sqlite3.Row a dict para que Jinja pueda usar |tojson sin error
             catalogo_data.append({
-                'info': cat,
-                'productos': productos
+                'info': dict(cat),
+                'productos': [dict(prod) for prod in productos]
             })
             
     conn.close()
     
-    # Usamos un template diferente, sin el menú de administración
-    return render_template('catalogo/galeria_sianeffects.html', catalogo=catalogo_data)
+    return render_template(
+        'catalogo/galeria_sianeffects.html',
+        catalogo=catalogo_data
+    )
