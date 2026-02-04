@@ -1,0 +1,25 @@
+<div class="product-card">
+    <div class="media-container">
+        {% if prod['media_type'] == 'image' %}
+        <img src="{{ prod['media_url'] }}" loading="lazy" alt="{{ prod['titulo'] }}"
+            onclick="window.open(this.src, '_blank')" style="cursor: zoom-in;">
+        {% elif prod['media_type'] == 'video' %}
+        <video src="{{ prod['media_url'] }}" controls></video>
+        {% elif prod['media_type'] == 'audio' %}
+        <div class="text-center p-3 w-100">
+            <i class="fas fa-compact-disc fa-spin fa-3x text-secondary mb-3" style="animation-duration: 3s;"></i><br>
+            <audio src="{{ prod['media_url'] }}" controls class="w-100 mt-2" style="height: 30px;"></audio>
+        </div>
+        {% endif %}
+    </div>
+    <div class="p-3">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="sku-badge">{{ prod['sku'] }}</span>
+            {% if prod['precio'] > 0 %}
+            <span class="fw-bold text-dark">${{ "%.0f"|format(prod['precio']) }}</span>
+            {% endif %}
+        </div>
+        <h6 class="fw-bold text-dark mb-1">{{ prod['titulo'] }}</h6>
+        <p class="text-muted small mb-0">{{ prod['descripcion'] }}</p>
+    </div>
+</div>

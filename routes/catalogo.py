@@ -191,4 +191,4 @@ def ver_catalogo():
     conn.close()
     
     # Usamos un template diferente, sin el menú de administración
-    return render_template('catalogo/publico.html', catalogo=catalogo_data)
+    return render_template('catalogo/galeria_sianeffects.html', catalogo=catalogo_data)
