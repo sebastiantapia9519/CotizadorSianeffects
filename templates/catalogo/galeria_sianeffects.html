@@ -551,7 +551,33 @@
             chips.forEach(c => c.classList.remove('active'));
             if (activeChip) activeChip.classList.add('active');
         }
+        function toggleAudio(sku) {
+            const audio = document.getElementById('audio-' + sku);
+            const icon = document.getElementById('icon-' + sku);
 
+            // Pausar cualquier otro audio que esté sonando (opcional)
+            document.querySelectorAll('audio').forEach(a => {
+                if (a !== audio) {
+                    a.pause();
+                    // Resetear iconos de otros audios
+                    const otherIcon = document.getElementById('icon-' + a.id.replace('audio-', ''));
+                    if (otherIcon) otherIcon.className = 'fas fa-play fa-lg';
+                }
+            });
+
+            if (audio.paused) {
+                audio.play();
+                icon.className = 'fas fa-pause fa-lg';
+            } else {
+                audio.pause();
+                icon.className = 'fas fa-play fa-lg';
+            }
+
+            // Cuando termine la canción, regresar el icono a Play
+            audio.onended = () => {
+                icon.className = 'fas fa-play fa-lg';
+            };
+        }
     </script>
 </body>
 
