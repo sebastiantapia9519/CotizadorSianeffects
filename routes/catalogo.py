@@ -94,7 +94,7 @@ def toggle_status():
     nuevo_estado = data.get('activo') # 1 o 0
     
     conn = get_db()
-    tabla = 'categorias' if tipo == 'categoria' else 'productos'
+    tabla = 'categorias' if tipo == 'categoria' else 'catalogo_productos'
     
     try:
         query = f'UPDATE {tabla} SET activo = ? WHERE id = ?'
@@ -102,6 +102,7 @@ def toggle_status():
         conn.commit()
         return jsonify({'success': True})
     except Exception as e:
+        print(f"Error toggle: {e}") # Para ver en el log si falla
         return jsonify({'success': False, 'error': str(e)})
     finally:
         conn.close()
