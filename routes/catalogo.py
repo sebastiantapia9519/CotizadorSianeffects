@@ -95,6 +95,7 @@ def toggle_status():
     
     conn = get_db()
     
+    # Antes decía 'productos', ahora debe decir 'catalogo_productos'
     tabla = 'categorias' if tipo == 'categoria' else 'catalogo_productos'
     
     try:

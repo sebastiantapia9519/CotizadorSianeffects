@@ -217,7 +217,7 @@ def init_db():
         nombre TEXT NOT NULL,
         descripcion TEXT,
         orden INTEGER DEFAULT 0,      
-        activa BOOLEAN DEFAULT 1,    
+        activo BOOLEAN DEFAULT 1,    
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
