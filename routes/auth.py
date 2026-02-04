@@ -66,6 +66,7 @@ def registro():
         username = request.form['username'].lower().strip()
         email = request.form['email'].lower().strip()
         password = request.form['password']
+        confirm_password = request.form['confirm_password']
         telefono = request.form.get('phone', '')
         company_name = request.form.get('company_name', 'Mi Negocio')
 
@@ -82,6 +83,11 @@ def registro():
         # Contraseña mínima
         if len(password) < 6:
             flash('La contraseña debe tener al menos 6 caracteres.', 'error')
+            return render_template('registro.html')
+
+        # VALIDACIÓN DE COINCIDENCIA DE CONTRASEÑAS
+        if password != confirm_password:
+            flash('Las contraseñas no coinciden.', 'error')
             return render_template('registro.html')
 
         # Email válido
