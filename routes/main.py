@@ -8,40 +8,43 @@ from db import get_db_connection as get_db
 from helpers import login_required
 from helpers import subscription_required
 
-# IMPORTAMOS TUS UTILIDADES DE TIEMPO
-from utils.datetime_utils import now_utc, utc_to_local
-
-main_bp = Blueprint('main', __name__)
-
 # --- HELPER INTERNO PARA FORMATEAR FECHAS A LOCAL ---
 def procesar_fila_fechas(fila_db):
     """
-    Convierte una fila de SQLite (inmutable) a dict
-    y transforma las fechas UTC a hora local para mostrar.
+    Convierte una fila de SQLite a dict y transforma las fechas UTC 
+    a hora local con formato bonito (DD/MM/YYYY HH:MM).
     """
     if not fila_db:
         return None
     
-    # Convertimos a diccionario para poder editar
+    # Convertimos a diccionario
     item = dict(fila_db)
     
-    # Lista de campos que sabemos que son fechas
+    # Campos a procesar
     campos_fecha = ['fecha', 'fecha_vencimiento', 'created_at']
     
     for campo in campos_fecha:
-        if item.get(campo):
+        valor_original = item.get(campo)
+        if valor_original:
             try:
-                # 1. Parsear string de BD a objeto datetime (asumiendo que viene en UTC)
-                # Ojo: SQLite guarda 'YYYY-MM-DD HH:MM:SS'. Lo leemos y le ponemos tzinfo=utc
-                dt_utc = datetime.strptime(str(item[campo])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                # 1. LIMPIEZA DE FORMATO
+                # Convertimos a string, quitamos la 'T' si es ISO, y cortamos milisegundos
+                # Ej: "2026-02-11T01:38:11.068..." -> "2026-02-11 01:38:11"
+                str_fecha = str(valor_original).replace('T', ' ')[:19]
                 
-                # 2. Convertir a local
+                # 2. Parsear (Leer la fecha como UTC)
+                dt_utc = datetime.strptime(str_fecha, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                
+                # 3. Convertir a hora local (Tu zona horaria)
                 dt_local = utc_to_local(dt_utc)
                 
-                # 3. Guardar como string bonito para el HTML
-                item[campo] = dt_local.strftime('%d/%m/%Y %I:%M %p')
+                # 4. FORMATEAR: Día/Mes/Año Hora:Minuto (24h)
+                # Ej: 11/02/2026 13:30
+                item[campo] = dt_local.strftime('%d/%m/%Y %H:%M')
+                
             except ValueError:
-                pass # Si falla, dejamos el string original
+                # Si falla algo raro, dejamos el dato original para no romper nada
+                pass 
                 
     return item
 
