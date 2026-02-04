@@ -173,7 +173,7 @@ def ver_catalogo():
     conn = get_db()
     
     # 1. Traer solo categorías ACTIVAS y ordenadas
-    categorias = conn.execute('SELECT * FROM categorias WHERE activa = 1 ORDER BY orden ASC').fetchall()
+    categorias = conn.execute('SELECT * FROM categorias WHERE activo = 1 ORDER BY orden ASC').fetchall()
     
     catalogo_data = []
     
