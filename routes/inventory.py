@@ -223,8 +223,22 @@ def guardar_receta():
     conn = get_db()
     try:
         conn.execute('BEGIN')
-        cur = conn.execute("INSERT INTO productos (user_id, nombre) VALUES (?, ?)", (session['user_id'], data['nombre']))
+        # 1. Convertimos la lista de materiales a Texto JSON (Para la nueva tabla)
+        lista_materiales = data.get('materiales', [])
+        items_json = json.dumps(lista_materiales)
+        
+        # 2. Guardamos en la tabla 'productos' INCLUYENDO 'items'
+        # (Antes aquí fallaba porque no le pasábamos 'items')
+        cur = conn.execute("""
+            INSERT INTO productos (user_id, nombre, items) 
+            VALUES (?, ?, ?)
+        """, (session['user_id'], data['nombre'], items_json))
+        
         pid = cur.lastrowid
+
+        # 3. (Opcional) Si quieres mantener la tabla 'producto_detalles' por seguridad o reportes futuros:
+        # Puedes dejar este bloque, o quitarlo si ya solo usarás el JSON.
+        # Por ahora lo dejamos para que no te falte nada.
 
         for m in data.get('materiales', []):
             conn.execute("INSERT INTO producto_detalles (producto_id, material_id, cantidad) VALUES (?, ?, ?)", (pid, m['id'], m['cantidad']))
