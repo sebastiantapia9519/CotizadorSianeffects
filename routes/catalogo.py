@@ -110,17 +110,20 @@ def admin_productos(cat_id):
     # ==============================
     # OBTENER PRODUCTOS
     # ==============================
-    productos = conn.execute(
+    productos_db = conn.execute(
         'SELECT * FROM catalogo_productos WHERE categoria_id = ? ORDER BY id DESC',
         (cat_id,)
     ).fetchall()
-
+    
     conn.close()
+
+    # --- CORRECCIÓN: Convertir las filas a diccionarios para que funcione el JSON ---
+    productos = [dict(row) for row in productos_db] 
 
     return render_template(
         'catalogo/admin_productos.html',
-        categoria=categoria,
-        productos=productos
+        categoria=categoria, # La categoría funciona bien como Row normal
+        productos=productos  # Los productos ahora son diccionarios y tojson funcionará
     )
 
 # =========================================================
@@ -238,6 +241,6 @@ def ver_catalogo():
     conn.close()
     
     return render_template(
-        'catalogo/admin_productos.html',
+        'catalogo/galeria_sianeffects.html',
         catalogo=catalogo_data
     )
