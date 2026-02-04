@@ -17,7 +17,7 @@ auth_bp = Blueprint('auth', __name__)
 def login():
     if request.method == 'POST':
         # Puede ser email o username
-        login_input = request.form['email_or_user']
+        login_input = request.form['email_or_user'].strip()
         password = request.form['password']
         
         conn = get_db()
@@ -25,7 +25,7 @@ def login():
         # Buscar usuario por email o username
         user = conn.execute('''
             SELECT * FROM usuarios
-            WHERE email = ? OR username = ?
+            WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)
         ''', (login_input, login_input)).fetchone()
 
         conn.close()
@@ -147,7 +147,6 @@ def registro():
                 100  # Margen inicial garantizado
             ))
 
-            # --- CORRECCIÓN AQUÍ ---
             # 1. Primero definimos el mensaje
             flash('Cuenta creada con éxito. ¡Tienes 7 días de prueba!', 'success')
             
