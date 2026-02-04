@@ -97,6 +97,9 @@ def guardar_venta():
         saldo_pendiente = total - monto_pagado
         if saldo_pendiente < 0: saldo_pendiente = 0
 
+        fecha_actual = now_utc()
+
+
         # Lógica de Vencimiento (7 días)
         fecha_vencimiento = (now_utc() + timedelta(days=7)).isoformat()
 
