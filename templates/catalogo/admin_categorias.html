@@ -160,9 +160,22 @@
             .then(r => r.json())
             .then(data => {
                 if (!data.success) {
-                    alert('Error al cambiar estado');
+                    // 👇 AQUÍ ESTÁ LA MAGIA:
+                    // Le pedimos que nos diga EXACTAMENTE qué falló (ej. "no such column: activa")
+                    alert('Error del Servidor: ' + data.error);
+
+                    // Regresamos el switch a su posición original porque falló
                     checkbox.checked = !checkbox.checked;
+
+                    // También lo imprimimos en la consola (F12) por si acaso
+                    console.error('Detalle del error:', data.error);
+                } else {
+                    console.log('Cambio guardado con éxito');
                 }
+            })
+            .catch(err => {
+                alert('Error de conexión o red: ' + err);
+                checkbox.checked = !checkbox.checked;
             });
     }
 </script>
