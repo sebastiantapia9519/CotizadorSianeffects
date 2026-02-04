@@ -151,21 +151,10 @@
             border-radius: var(--card-radius) var(--card-radius) 0 0;
             height: 200px !important;
             position: relative;
-        }
-
-        /* ESTILO CRITICO PARA EL AUDIO */
-        .audio-wrapper {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            background: #f8f9fa;
-            z-index: 10;
+            overflow: hidden;
         }
 
         .cta-float {
@@ -213,19 +202,6 @@
                 height: 160px !important;
             }
         }
-
-        /* Esto asegura que los botones del reproductor respondan al clic */
-        audio {
-            position: relative;
-            z-index: 10;
-        }
-
-        /* Evita que el contenedor oculte el reproductor si se desfasa */
-        .media-container {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
     </style>
 </head>
 
@@ -236,13 +212,17 @@
                 <a href="#" class="brand-logo" onclick="switchView('home')">Sian Effects <span
                         style="font-size:0.5em; color:var(--secondary);">CATÁLOGO</span></a>
             </div>
-            <div class="search-container mb-3 position-relative"><i class="fas fa-search search-icon"></i><input
-                    type="text" id="globalSearch" class="search-input" placeholder="¿Qué estás buscando?"></div>
+            <div class="search-container mb-3 position-relative">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="globalSearch" class="search-input" placeholder="¿Qué estás buscando?">
+            </div>
             <div class="filters-wrapper" id="categoryFilters">
                 <div class="filter-chip active" onclick="switchView('home', this)">🔥 Descubrir</div>
                 <div class="filter-chip" onclick="switchView('all', this)">✨ Ver Todo</div>
-                {% for item in catalogo %}<div class="filter-chip"
-                    onclick="filterBySection('cat-{{ item.info.id }}', this)">{{ item.info.nombre }}</div>{% endfor %}
+                {% for item in catalogo %}
+                <div class="filter-chip" onclick="filterBySection('cat-{{ item.info.id }}', this)">{{ item.info.nombre
+                    }}</div>
+                {% endfor %}
             </div>
         </div>
     </header>
@@ -255,11 +235,14 @@
                     <div class="category-hero" onclick="filterBySection('cat-{{ item.info.id }}')">
                         {% if item.productos|length > 0 %}
                         {% set cover = item.productos[0] %}
-                        {% if cover.media_type == 'image' %}<img src="{{ cover.media_url }}" loading="lazy">
-                        {% elif cover.media_type == 'video' %}<video src="{{ cover.media_url }}" muted loop autoplay
-                            playsinline></video>
-                        {% else %}<div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center"><i
-                                class="fas fa-music fa-2x text-primary"></i></div>
+                        {% if cover.media_type == 'image' %}
+                        <img src="{{ cover.media_url }}" loading="lazy">
+                        {% elif cover.media_type == 'video' %}
+                        <video src="{{ cover.media_url }}" muted loop autoplay playsinline></video>
+                        {% else %}
+                        <div class="w-100 h-100 bg-light d-flex align-items-center justify-content-center">
+                            <i class="fas fa-music fa-2x text-primary"></i>
+                        </div>
                         {% endif %}
                         {% endif %}
                         <div class="category-overlay">
@@ -269,56 +252,71 @@
                 </div>
                 {% endfor %}
             </div>
-            {% for item in catalogo %}{% if item.productos|length > 0 %}
+
+            {% for item in catalogo %}
+            {% if item.productos|length > 0 %}
             <div class="mb-5 section-block" id="block-cat-{{ item.info.id }}">
-                <div class="section-title"><span>{{ item.info.nombre }}</span><a href="javascript:void(0)"
-                        class="btn-see-all" onclick="filterBySection('cat-{{ item.info.id }}')">Ver más</a></div>
-                <div class="horizontal-scroll">{% for prod in item.productos[:5] %}<div class="horizontal-item">{%
-                        include 'catalogo/card_producto.html' %}</div>{% endfor %}</div>
+                <div class="section-title">
+                    <span>{{ item.info.nombre }}</span>
+                    <a href="javascript:void(0)" class="btn-see-all"
+                        onclick="filterBySection('cat-{{ item.info.id }}')">Ver más</a>
+                </div>
+                <div class="horizontal-scroll">
+                    {% for prod in item.productos[:5] %}
+                    <div class="horizontal-item">
+                        {% include 'catalogo/card_producto.html' %}
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            {% endif %}{% endfor %}
+            {% endif %}
+            {% endfor %}
         </div>
 
         <div id="view-all" class="view-section">
             <h4 class="fw-bold mb-3" id="gridTitle">Todos los Productos</h4>
             <div class="row g-3" id="productsGrid">
-                {% for item in catalogo %}{% for prod in item.productos %}
+                {% for item in catalogo %}
+                {% for prod in item.productos %}
                 <div class="col-6 col-md-4 col-lg-3 grid-item" data-category="cat-{{ item.info.id }}"
                     data-search="{{ prod.titulo|lower }}">
                     {% include 'catalogo/card_producto.html' %}
                 </div>
-                {% endfor %}{% endfor %}
+                {% endfor %}
+                {% endfor %}
             </div>
         </div>
     </div>
 
-    <a href="https://wa.me/?text=Hola..." class="cta-float" target="_blank"><i class="fab fa-whatsapp fa-lg"></i>
-        <span>Cotizar</span></a>
+    <a href="https://wa.me/?text=Hola..." class="cta-float" target="_blank">
+        <i class="fab fa-whatsapp fa-lg"></i> <span>Cotizar</span>
+    </a>
 
     <script src="https://cdn.jsdelivr.net/gh/mcstudios/glightbox/dist/js/glightbox.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        const lightbox = GLightbox({ touchNavigation: true, loop: true });
+        // CONFIGURACIÓN ESTRICTA DE LIGHTBOX PARA EVITAR EL "BOTÓN FANTASMA"
+        const lightbox = GLightbox({
+            touchNavigation: true,
+            loop: true,
+            selector: '.glightbox' // SOLO actúa sobre lo que tiene esta clase
+        });
+
         function switchView(viewName, chipElement = null) {
             document.getElementById('view-home').classList.toggle('active', viewName === 'home');
             document.getElementById('view-all').classList.toggle('active', viewName === 'all');
-            if (chipElement) { document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active')); chipElement.classList.add('active'); }
-        }
-        function filterBySection(catId, chipElement = null) {
-            switchView('all', chipElement);
-            document.querySelectorAll('.grid-item').forEach(item => { item.classList.toggle('d-none', item.dataset.category !== catId); });
+            if (chipElement) {
+                document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+                chipElement.classList.add('active');
+            }
         }
 
-        // FUNCION DE AUDIO MEJORADA
-        function toggleAudio(sku) {
-            const audio = document.getElementById('audio-' + sku);
-            const icon = document.getElementById('icon-' + sku);
-            if (!audio) return;
-            document.querySelectorAll('audio').forEach(a => { if (a !== audio) { a.pause(); const otherIcon = document.getElementById('icon-' + a.id.replace('audio-', '')); if (otherIcon) otherIcon.className = 'fas fa-play fa-lg'; } });
-            if (audio.paused) { audio.play(); icon.className = 'fas fa-pause fa-lg'; }
-            else { audio.pause(); icon.className = 'fas fa-play fa-lg'; }
-            audio.onended = () => { icon.className = 'fas fa-play fa-lg'; };
+        function filterBySection(catId, chipElement = null) {
+            switchView('all', chipElement);
+            document.querySelectorAll('.grid-item').forEach(item => {
+                item.classList.toggle('d-none', item.dataset.category !== catId);
+            });
         }
     </script>
 </body>
