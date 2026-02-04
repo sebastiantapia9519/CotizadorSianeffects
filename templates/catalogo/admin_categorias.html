@@ -1,0 +1,118 @@
+{% extends "layout.html" %}
+
+{% block title %}Gestionar Categorías | SianEffects{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h2 class="fw-bold text-dark"><i class="fas fa-layer-group text-primary me-2"></i>Categorías del Catálogo</h2>
+        <p class="text-muted">Crea secciones para organizar tus productos (ej. Navidad, Playeras, Audios).</p>
+    </div>
+    <div class="col-md-4 text-end">
+        <button class="btn btn-primary rounded-pill shadow-sm" data-bs-toggle="modal" data-bs-target="#modalNuevaCat">
+            <i class="fas fa-plus-circle me-2"></i> Nueva Categoría
+        </button>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-0 overflow-hidden">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="bg-light text-secondary small text-uppercase">
+                <tr>
+                    <th class="ps-4">Orden</th>
+                    <th>Nombre</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-end pe-4">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cat in categorias %}
+                <tr>
+                    <td class="ps-4 fw-bold text-muted">#{{ cat['orden'] }}</td>
+                    <td>
+                        <div class="fw-bold text-dark fs-5">{{ cat['nombre'] }}</div>
+                        <small class="text-muted">ID: {{ cat['id'] }}</small>
+                    </td>
+                    <td class="text-center">
+                        <div class="form-check form-switch d-flex justify-content-center">
+                            <input class="form-check-input" type="checkbox"
+                                onchange="toggleEstado('categoria', {{ cat['id'] }}, this)" {% if cat['activa']
+                                %}checked{% endif %}>
+                        </div>
+                    </td>
+                    <td class="text-end pe-4">
+                        <a href="{{ url_for('catalogo.admin_productos', cat_id=cat['id']) }}"
+                            class="btn btn-sm btn-outline-primary rounded-pill px-3 me-2">
+                            <i class="fas fa-box-open me-1"></i> Ver Productos
+                        </a>
+                        <a href="{{ url_for('catalogo.delete_item', tipo='categoria', id_obj=cat['id']) }}"
+                            class="btn btn-sm btn-light text-danger rounded-circle"
+                            onclick="return confirm('¿Borrar esta categoría Y TODOS sus productos?');">
+                            <i class="fas fa-trash-alt"></i>
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-5 text-muted">
+                        <i class="fas fa-folder-open fa-3x mb-3 opacity-50"></i><br>
+                        No hay categorías creadas. ¡Empieza creando una!
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="modal fade" id="modalNuevaCat" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">Nueva Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Nombre</label>
+                        <input type="text" name="nombre" class="form-control rounded-3"
+                            placeholder="Ej. San Valentín 2026" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Orden de Aparición</label>
+                        <input type="number" name="orden" class="form-control rounded-3" value="1"
+                            placeholder="1 sale primero">
+                        <div class="form-text">Números más bajos salen primero en el catálogo.</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Crear Categoría</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function toggleEstado(tipo, id, checkbox) {
+        const estado = checkbox.checked ? 1 : 0;
+        fetch('/api/catalogo/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tipo: tipo, id: id, activo: estado })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) {
+                    alert('Error al cambiar estado');
+                    checkbox.checked = !checkbox.checked; // Revertir
+                }
+            });
+    }
+</script>
+{% endblock %}
