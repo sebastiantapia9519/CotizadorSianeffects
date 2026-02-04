@@ -160,3 +160,35 @@ def delete_item(tipo, id_obj):
     conn.commit()
     conn.close()
     return redirect(url_for(dest, **cat_arg))
+
+    # =========================================================
+# 6. VISTA PÚBLICA (CLIENTES)
+# =========================================================
+@catalogo_bp.route('/catalogo')
+def ver_catalogo():
+    conn = get_db()
+    
+    # 1. Traer solo categorías ACTIVAS y ordenadas
+    categorias = conn.execute('SELECT * FROM categorias WHERE activa = 1 ORDER BY orden ASC').fetchall()
+    
+    catalogo_data = []
+    
+    # 2. Por cada categoría, traer sus productos ACTIVOS
+    for cat in categorias:
+        productos = conn.execute('''
+            SELECT * FROM productos 
+            WHERE categoria_id = ? AND activo = 1 
+            ORDER BY orden ASC, id DESC
+        ''', (cat['id'],)).fetchall()
+        
+        # Solo agregamos la categoría si tiene productos (para no mostrar secciones vacías)
+        if productos:
+            catalogo_data.append({
+                'info': cat,
+                'productos': productos
+            })
+            
+    conn.close()
+    
+    # Usamos un template diferente, sin el menú de administración
+    return render_template('catalogo/publico.html', catalogo=catalogo_data)
