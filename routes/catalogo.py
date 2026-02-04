@@ -42,10 +42,10 @@ def admin_productos(cat_id):
     # --- AGREGAR PRODUCTO NUEVO ---
     if request.method == 'POST':
         # 1. Generar SKU Automático y Único
-        prefix = ''.join(filter(str.isalpha, categoria['nombre']))[:3].upper() # Solo letras, mayúsculas
-        if len(prefix) < 2: prefix = "PROD" # Fallback por si la categoría es rara
+       prefix = ''.join(filter(str.isalpha, categoria['nombre']))[:3].upper() 
+       if len(prefix) < 2: prefix = "PROD"
         
-        while True:
+       while True:
             random_digits = ''.join(random.choices(string.digits, k=5)) # 5 números al azar
             sku_generado = f"{prefix}-{random_digits}"
             
@@ -54,21 +54,21 @@ def admin_productos(cat_id):
             if not existe:
                 break # ¡Es único! Salimos del ciclo
 
-        titulo = request.form['titulo']
-        descripcion = request.form['descripcion']
-        precio = request.form.get('precio', 0)
+       titulo = request.form['titulo']
+       descripcion = request.form['descripcion']
+       precio = request.form.get('precio', 0)
         
-        # DATOS QUE VIENEN DE CLOUDINARY
-        media_url = request.form['media_url']   # El link de la foto/video
-        media_type = request.form['media_type'] # 'image', 'video' o 'audio'
+       # DATOS QUE VIENEN DE CLOUDINARY
+       media_url = request.form['media_url']   # El link de la foto/video
+       media_type = request.form['media_type'] # 'image', 'video' o 'audio'
         
-        conn.execute('''
+       conn.execute('''
             INSERT INTO productos (categoria_id, sku, titulo, descripcion, media_url, media_type, precio)
             VALUES (?, ?, ?, ?, ?, ?, ?)
         ''', (cat_id, sku, titulo, descripcion, media_url, media_type, precio))
-        conn.commit()
-        flash('Producto agregado al catálogo.', 'success')
-        return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
+       conn.commit()
+       flash('Producto agregado al catálogo.', 'success')
+       return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
 
     # --- OBTENER DATOS ---
     categoria = conn.execute('SELECT * FROM categorias WHERE id = ?', (cat_id,)).fetchone()
