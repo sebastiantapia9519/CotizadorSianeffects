@@ -94,9 +94,12 @@ def toggle_status():
     nuevo_estado = data.get('activo') # 1 o 0
     
     conn = get_db()
+    
+    # Antes decía 'productos', ahora debe decir 'catalogo_productos'
     tabla = 'categorias' if tipo == 'categoria' else 'catalogo_productos'
     
     try:
+        # Consulta dinámica segura
         query = f'UPDATE {tabla} SET activo = ? WHERE id = ?'
         conn.execute(query, (nuevo_estado, id_obj))
         conn.commit()
