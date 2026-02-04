@@ -268,6 +268,15 @@
                 height: 160px !important;
             }
         }
+
+        .audio-btn-container {
+            z-index: 20 !important;
+            position: relative;
+        }
+
+        .audio-btn-container button {
+            pointer-events: auto !important;
+        }
     </style>
 </head>
 
@@ -547,27 +556,40 @@
             const audio = document.getElementById('audio-' + sku);
             const icon = document.getElementById('icon-' + sku);
 
-            // Pausar cualquier otro audio que esté sonando (opcional)
+            if (!audio) return;
+
+            // Pausar cualquier otro audio que esté sonando
             document.querySelectorAll('audio').forEach(a => {
                 if (a !== audio) {
                     a.pause();
-                    // Resetear iconos de otros audios
-                    const otherIcon = document.getElementById('icon-' + a.id.replace('audio-', ''));
-                    if (otherIcon) otherIcon.className = 'fas fa-play fa-lg';
+                    const otherSku = a.id.replace('audio-', '');
+                    const otherIcon = document.getElementById('icon-' + otherSku);
+                    if (otherIcon) {
+                        otherIcon.classList.remove('fa-pause');
+                        otherIcon.classList.add('fa-play');
+                    }
                 }
             });
 
             if (audio.paused) {
-                audio.play();
-                icon.className = 'fas fa-pause fa-lg';
+                // Intentar reproducir y manejar promesas (importante para navegadores modernos)
+                audio.play().then(() => {
+                    icon.classList.remove('fa-play');
+                    icon.classList.add('fa-pause');
+                }).catch(error => {
+                    console.error("Error al reproducir audio:", error);
+                    alert("No se pudo reproducir el audio. Intenta de nuevo.");
+                });
             } else {
                 audio.pause();
-                icon.className = 'fas fa-play fa-lg';
+                icon.classList.remove('fa-pause');
+                icon.classList.add('fa-play');
             }
 
-            // Cuando termine la canción, regresar el icono a Play
+            // Resetear icono cuando termine
             audio.onended = () => {
-                icon.className = 'fas fa-play fa-lg';
+                icon.classList.remove('fa-pause');
+                icon.classList.add('fa-play');
             };
         }
     </script>
