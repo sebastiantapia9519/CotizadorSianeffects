@@ -43,12 +43,20 @@
                     </td>
                     <td class="text-end pe-4">
                         <a href="{{ url_for('catalogo.admin_productos', cat_id=cat['id']) }}"
-                            class="btn btn-sm btn-outline-primary rounded-pill px-3 me-2">
-                            <i class="fas fa-box-open me-1"></i> Ver Productos
+                            class="btn btn-sm btn-outline-primary rounded-pill px-3 me-1" title="Ver Productos">
+                            <i class="fas fa-box-open me-1"></i> Productos
                         </a>
+
+                        <button class="btn btn-sm btn-light text-primary rounded-circle border me-1"
+                            onclick="prepararEdicion('{{ cat.id }}', '{{ cat.nombre }}', '{{ cat.orden }}')"
+                            title="Editar nombre u orden">
+                            <i class="fas fa-pencil-alt"></i>
+                        </button>
+
                         <a href="{{ url_for('catalogo.delete_item', tipo='categoria', id_obj=cat['id']) }}"
-                            class="btn btn-sm btn-light text-danger rounded-circle"
-                            onclick="return confirm('¿Borrar esta categoría Y TODOS sus productos?');">
+                            class="btn btn-sm btn-light text-danger rounded-circle border"
+                            onclick="return confirm('⚠️ ¿Borrar esta categoría Y TODOS sus productos?');"
+                            title="Borrar categoría">
                             <i class="fas fa-trash-alt"></i>
                         </a>
                     </td>
@@ -81,15 +89,44 @@
                             placeholder="Ej. San Valentín 2026" required>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-uppercase text-muted">Orden de Aparición</label>
+                        <label class="form-label small fw-bold text-uppercase text-muted">Orden</label>
                         <input type="number" name="orden" class="form-control rounded-3" value="1"
                             placeholder="1 sale primero">
-                        <div class="form-text">Números más bajos salen primero en el catálogo.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-0">
                     <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Crear Categoría</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Crear</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEditarCat" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0">
+            <div class="modal-header border-0 bg-light">
+                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit me-2"></i>Editar Categoría</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('catalogo.editar_categoria') }}" method="POST">
+                <input type="hidden" name="cat_id" id="edit_id">
+
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Nombre</label>
+                        <input type="text" name="nombre" id="edit_nombre" class="form-control rounded-3" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-uppercase text-muted">Orden</label>
+                        <input type="number" name="orden" id="edit_orden" class="form-control rounded-3">
+                        <div class="form-text small">Cambia el número para reordenar en la lista.</div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-light rounded-pill" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Guardar Cambios</button>
                 </div>
             </form>
         </div>
@@ -99,6 +136,16 @@
 
 {% block scripts %}
 <script>
+    // Función para abrir el modal de edición con los datos cargados
+    function prepararEdicion(id, nombre, orden) {
+        document.getElementById('edit_id').value = id;
+        document.getElementById('edit_nombre').value = nombre;
+        document.getElementById('edit_orden').value = orden;
+
+        var modal = new bootstrap.Modal(document.getElementById('modalEditarCat'));
+        modal.show();
+    }
+
     function toggleEstado(tipo, id, checkbox) {
         const estado = checkbox.checked ? 1 : 0;
         fetch('/api/catalogo/toggle', {
@@ -110,7 +157,7 @@
             .then(data => {
                 if (!data.success) {
                     alert('Error al cambiar estado');
-                    checkbox.checked = !checkbox.checked; // Revertir
+                    checkbox.checked = !checkbox.checked;
                 }
             });
     }

@@ -226,15 +226,15 @@ def init_db():
     conn.execute("""
     CREATE TABLE IF NOT EXISTS productos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        categoria_id INTEGER,         -- Relación con la categoría
-        sku TEXT NOT NULL,            -- El código único (ej. TAZ-001)
+        categoria_id INTEGER,     
+        sku TEXT NOT NULL,
         titulo TEXT NOT NULL,
         descripcion TEXT,
-        media_url TEXT NOT NULL,      -- Link de Cloudinary
-        media_type TEXT DEFAULT 'image', -- 'image', 'video', 'audio'
-        precio REAL DEFAULT 0,        -- Opcional, por si quiere poner precio referencia
-        orden INTEGER DEFAULT 0,      -- Orden dentro de la categoría
-        activo BOOLEAN DEFAULT 1,     -- Interruptor ON/OFF individual
+        media_url TEXT NOT NULL,
+        media_type TEXT DEFAULT 'image',
+        precio REAL DEFAULT 0,
+        orden INTEGER DEFAULT 0,
+        activo BOOLEAN DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (categoria_id) REFERENCES categorias (id)
     )
