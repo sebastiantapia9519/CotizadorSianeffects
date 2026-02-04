@@ -215,11 +215,14 @@
 
         <div class="info">
             <strong>Folio #{{ '%04d' % venta['id'] }}</strong><br>
-            {{ venta['fecha'][:16] }}<br>
+
+            {{ venta['fecha'] if venta['fecha'] else 'Fecha no disponible' }}<br>
+
             Cliente: <strong>{{ venta['cliente'] }}</strong>
 
             {% if venta['estado'] == 'cotizacion' and venta['fecha_vencimiento'] %}
-            <br><span style="color: #dc3545; font-weight: bold;">Vence: {{ venta['fecha_vencimiento'][:10] }}</span>
+            <br><span style="color: #dc3545; font-weight: bold;">Vence: {{ venta['fecha_vencimiento'] if
+                venta['fecha_vencimiento'] else '' }}</span>
             {% endif %}
         </div>
 
