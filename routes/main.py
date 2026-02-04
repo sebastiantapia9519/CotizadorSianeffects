@@ -99,7 +99,6 @@ def guardar_venta():
 
         fecha_actual = now_utc()
 
-
         # Lógica de Vencimiento (7 días)
         fecha_vencimiento = (now_utc() + timedelta(days=7)).isoformat()
 
@@ -131,7 +130,7 @@ def guardar_venta():
                     user_id, fecha, cliente, subtotal, descuento_porcentaje, 
                     descuento_monto, total, costo_total, estado, 
                     monto_pagado, saldo_pendiente, fecha_vencimiento
-                )@main_bp.route('/cotizador')
+                )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
                 session['user_id'], fecha_actual, cliente, subtotal, descuento_pct, 
