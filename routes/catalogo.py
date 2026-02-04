@@ -88,6 +88,31 @@ def toggle_status():
     finally:
         conn.close()
 
+
+# =========================================================
+# EDITAR CATEGORÍA
+# =========================================================
+@catalogo_bp.route('/admin/catalogo/editar_categoria', methods=['POST'])
+@login_required
+def editar_categoria():
+    conn = get_db()
+    cat_id = request.form['cat_id']
+    nombre = request.form['nombre']
+    orden = request.form.get('orden', 0)
+    
+    try:
+        conn.execute('UPDATE categorias SET nombre = ?, orden = ? WHERE id = ?', 
+                     (nombre, orden, cat_id))
+        conn.commit()
+        flash('Categoría actualizada correctamente.', 'success')
+    except Exception as e:
+        flash(f'Error al editar: {e}', 'error')
+    finally:
+        conn.close()
+        
+    return redirect(url_for('catalogo.admin_categorias'))
+
+
 # =========================================================
 # 4. ELIMINAR (Limpieza)
 # =========================================================

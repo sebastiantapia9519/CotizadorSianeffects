@@ -216,8 +216,8 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre TEXT NOT NULL,
         descripcion TEXT,
-        orden INTEGER DEFAULT 0,      -- Para que ella decida qué va primero
-        activa BOOLEAN DEFAULT 1,     -- Interruptor ON/OFF general
+        orden INTEGER DEFAULT 0,      
+        activa BOOLEAN DEFAULT 1,    
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
