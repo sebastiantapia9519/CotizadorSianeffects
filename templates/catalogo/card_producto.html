@@ -1,43 +1,49 @@
-<div class="product-card h-100 shadow-sm border-0">
+<div class="product-card h-100">
     <div class="media-container" style="position: relative; padding-top: 100%; overflow: hidden; background: #f8f9fa;">
 
-        <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+        <button type="button" class="btn btn-sm btn-light shadow-sm"
+            style="position:absolute; top:10px; right:10px; z-index:20;" onclick='editarProducto({{ prod | tojson }})'
+            title="Editar producto">
+            <i class="fas fa-edit"></i>
+        </button>
+
+        <div
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;">
 
             {% if prod['media_type'] == 'image' %}
-            <a href="{{ prod['media_url'] }}" class="glightbox" data-gallery="galeria-general">
+            <a href="{{ prod['media_url'] }}" class="glightbox w-100 h-100" data-gallery="galeria-general">
                 <img src="{{ prod['media_url'] }}" loading="lazy" style="width: 100%; height: 100%; object-fit: cover;">
             </a>
 
             {% elif prod['media_type'] == 'video' %}
-            <a href="{{ prod['media_url'] }}" class="glightbox" data-gallery="galeria-general">
+            <a href="{{ prod['media_url'] }}" class="glightbox w-100 h-100" data-gallery="galeria-general">
                 <video src="{{ prod['media_url'] }}" style="width: 100%; height: 100%; object-fit: cover;"></video>
-                <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white;">
-                    <i class="fas fa-play-circle fa-3x opacity-75"></i>
+                <div
+                    style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: white; opacity: 0.8;">
+                    <i class="fas fa-play-circle fa-3x"></i>
                 </div>
             </a>
+
             {% elif prod['media_type'] == 'audio' %}
-            <div class="d-flex align-items-center justify-content-center w-100 h-100 bg-light">
-                <div class="text-center w-100 px-3">
+            <div class="d-flex align-items-center justify-content-center w-100 h-100 bg-light p-3">
+                <div class="text-center w-100">
                     <i class="fas fa-music fa-3x text-primary mb-3"></i>
                     <audio src="{{ prod['media_url'] }}" controls class="w-100 shadow-sm"
-                        style="border-radius: 20px;"></audio>
+                        style="border-radius: 20px; position: relative; z-index: 30;"></audio>
                 </div>
-
             </div>
-
             {% endif %}
-
         </div>
     </div>
 
     <div class="p-3 bg-white border-top">
-        <div class="d-flex justify-content-between align-items-center mb-1">
-            <span class="badge bg-secondary" style="font-size: 0.7rem;">{{ prod['sku'] }}</span>
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="badge bg-secondary">{{ prod['sku'] }}</span>
             {% if prod['precio'] > 0 %}
             <span class="fw-bold text-dark">${{ "%.0f"|format(prod['precio']) }}</span>
             {% endif %}
         </div>
-        <h6 class="fw-bold text-dark mb-0 text-truncate">{{ prod['titulo'] }}</h6>
+        <h6 class="fw-bold text-dark mb-1">{{ prod['titulo'] }}</h6>
         <p class="text-muted small mb-0 text-truncate">{{ prod['descripcion'] }}</p>
     </div>
 </div>
