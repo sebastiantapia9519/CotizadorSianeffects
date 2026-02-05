@@ -1,45 +1,39 @@
 <div class="product-card h-100 shadow-sm border-0">
 
-    {% if prod['media_type'] != 'audio' %}
-    <!-- MEDIA VISUAL -->
+    {% if prod['media_type'] == 'image' %}
+    <!-- IMAGE -->
     <div class="media-container">
         <div class="media-inner">
-
-            {% if prod['media_type'] == 'image' %}
             <a href="{{ prod['media_url'] }}" class="glightbox">
-                <img src="{{ prod['media_url'] }}">
+                <img src="{{ prod['media_url'] }}" loading="lazy">
             </a>
+        </div>
+    </div>
 
-            {% elif prod['media_type'] == 'video' %}
+    {% elif prod['media_type'] == 'video' %}
+    <!-- VIDEO -->
+    <div class="media-container">
+        <div class="media-inner">
             <a href="{{ prod['media_url'] }}" class="glightbox">
-                <video src="{{ prod['media_url'] }}"></video>
+                <video src="{{ prod['media_url'] }}" muted></video>
                 <i class="fas fa-play-circle play-icon"></i>
             </a>
-            {% endif %}
-
         </div>
     </div>
-    {% endif %}
 
     {% elif prod['media_type'] == 'audio' %}
-    <div class="d-flex align-items-center justify-content-center w-100 h-100 bg-light">
-        <div class="text-center w-100 px-3">
+    <!-- AUDIO (SIN GLIGHTBOX) -->
+    <div class="p-3 bg-light text-center">
+        <i class="fas fa-music fa-2x text-primary mb-2"></i>
 
-            <i class="fas fa-music fa-3x text-primary mb-3"></i>
-
-            <a href="{{ prod['media_url'] }}" data-glightbox="false" onclick="event.stopPropagation();">
-
-                <audio controls class="w-100">
-                    <source src="{{ prod['media_url'] }}" type="audio/mpeg">
-                </audio>
-
-            </a>
-
-        </div>
+        <audio controls preload="none" class="w-100">
+            <source src="{{ prod['media_url'] }}" type="audio/mpeg">
+            Tu navegador no soporta audio.
+        </audio>
     </div>
     {% endif %}
 
-
+    <!-- INFO -->
     <div class="p-3 bg-white border-top">
         <div class="d-flex justify-content-between mb-1">
             <span class="badge bg-secondary">{{ prod['sku'] }}</span>
@@ -47,7 +41,9 @@
             <span class="fw-bold">${{ "%.0f"|format(prod['precio']) }}</span>
             {% endif %}
         </div>
-        <h6 class="fw-bold mb-0">{{ prod['titulo'] }}</h6>
-        <p class="text-muted small mb-0">{{ prod['descripcion'] }}</p>
+
+        <h6 class="fw-bold mb-0 text-truncate">{{ prod['titulo'] }}</h6>
+        <p class="text-muted small mb-0 text-truncate">{{ prod['descripcion'] }}</p>
     </div>
+
 </div>
