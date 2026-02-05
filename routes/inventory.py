@@ -42,39 +42,38 @@ def reparar_materiales():
         conn.close()
 
 # =========================
-# MATERIALES (VER, CREAR, EDITAR)
+# MATERIALES
 # =========================
 @inventory_bp.route('/materiales', methods=['GET', 'POST'])
 @login_required
 def materiales():
     conn = get_db()
 
-    # --- GUARDAR O EDITAR ---
     if request.method == 'POST':
         try:
             id_actualizar = request.form.get('id_actualizar')
-            nombre = request.form.get('nombre', '').strip() # Quitamos espacios extra
-            tipo = request.form.get('tipo_entrada')
+            nombre = request.form.get('nombre', '').strip()
             
-            # --- VALIDACIÓN DE NOMBRE DUPLICADO ---
+            # --- BLINDAJE TOTAL (LOWER) ---
             if id_actualizar:
-                # Si editamos: Buscar si existe OTRO material con ese nombre para este usuario
+                # Al editar: Buscamos si existe otro material con el MISMO nombre (ignorando mayúsculas)
                 duplicado = conn.execute(
-                    "SELECT id FROM materiales WHERE nombre = ? AND user_id = ? AND id != ?", 
+                    "SELECT id FROM materiales WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", 
                     (nombre, session['user_id'], id_actualizar)
                 ).fetchone()
             else:
-                # Si creamos: Buscar si existe ALGÚN material con ese nombre para este usuario
+                # Al crear: Buscamos si existe alguno igual (ignorando mayúsculas)
                 duplicado = conn.execute(
-                    "SELECT id FROM materiales WHERE nombre = ? AND user_id = ?", 
+                    "SELECT id FROM materiales WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", 
                     (nombre, session['user_id'])
                 ).fetchone()
 
             if duplicado:
                 conn.close()
+                # Mostramos el nombre tal cual lo escribió el usuario en la alerta
                 return f"""
                     <script>
-                        alert('Error: Ya tienes un material llamado "{nombre}". Por favor usa otro nombre.');
+                        alert('Error: Ya tienes un material llamado "{nombre}" (o similar).');
                         window.history.back();
                     </script>
                 """
@@ -142,14 +141,13 @@ def eliminar_material(id):
 def equipos():
     conn = get_db()
 
-    # --- GUARDAR O EDITAR (POST) ---
     if request.method == 'POST':
         try:
             nombre = request.form.get('nombre', '').strip()
             
-            # --- VALIDACIÓN DUPLICADO ---
+            # --- BLINDAJE TOTAL (LOWER) ---
             duplicado = conn.execute(
-                "SELECT id FROM maquinaria WHERE nombre = ? AND user_id = ?", 
+                "SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", 
                 (nombre, session['user_id'])
             ).fetchone()
 
@@ -203,13 +201,23 @@ def eliminar_equipo(id):
 def recetas():
     conn = get_db()
 
-    # --- LÓGICA PARA RENOMBRAR RECETA (EDITAR) ---
     if request.method == 'POST':
         try:
             id_actualizar = request.form.get('id_actualizar')
-            nombre = request.form.get('nombre')
+            nombre = request.form.get('nombre', '').strip()
             
             if id_actualizar and nombre:
+                # --- BLINDAJE TOTAL (LOWER) ---
+                duplicado = conn.execute(
+                    "SELECT id FROM productos WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", 
+                    (nombre, session['user_id'], id_actualizar)
+                ).fetchone()
+
+                if duplicado:
+                    conn.close()
+                    return f"Error: Ya existe una receta similar a '{nombre}'"
+                
+
                 conn.execute("UPDATE productos SET nombre=? WHERE id=? AND user_id=?", 
                              (nombre, id_actualizar, session['user_id']))
                 conn.commit()
@@ -244,22 +252,23 @@ def recetas():
 @login_required
 def guardar_receta():
     data = request.get_json(silent=True)
-    nombre_receta = data.get('nombre', '').strip() # Limpiamos espacios
+    nombre_receta = data.get('nombre', '').strip()
 
     if not data or not nombre_receta:
-        return jsonify({'error': 'Datos incompletos o nombre vacío'}), 400
+        return jsonify({'error': 'Datos incompletos'}), 400
 
     conn = get_db()
     try:
-        # --- VALIDACIÓN DUPLICADO (NUEVO) ---
+        # --- BLINDAJE TOTAL (LOWER) ---
+        # Comparamos minúsculas con minúsculas
         duplicado = conn.execute(
-            "SELECT id FROM productos WHERE nombre = ? AND user_id = ?",
+            "SELECT id FROM productos WHERE LOWER(nombre) = LOWER(?) AND user_id = ?",
             (nombre_receta, session['user_id'])
         ).fetchone()
 
         if duplicado:
-            return jsonify({'error': f'Ya existe una receta llamada "{nombre_receta}". Por favor elige otro nombre.'}), 400
-        # ------------------------------------
+            return jsonify({'error': f'Ya existe una receta llamada "{nombre_receta}".'}), 400
+        # ------------------------------
 
         conn.execute('BEGIN')
         # 1. Convertimos la lista de materiales a Texto JSON

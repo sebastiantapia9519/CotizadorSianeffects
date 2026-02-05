@@ -167,6 +167,11 @@
                     <td>
                         <div class="fw-bold text-dark fs-6">${{ "%.2f"|format(v['total']) }}</div>
 
+                        {% if v['impuestos'] and v['impuestos'] > 0 %}
+                        <small class="text-muted d-block" style="font-size: 0.65rem;">(Incluye {{ v['tax_engine']
+                            }})</small>
+                        {% endif %}
+
                         {% if v['saldo_pendiente'] > 0.5 and v['estado'] != 'cancelada' %}
                         <span
                             class="badge bg-danger bg-opacity-10 text-danger border border-danger rounded-pill px-2 mt-1">
@@ -372,17 +377,35 @@
                         `;
                     });
 
-                    // Totales del Panel Inferior (Usamos las sumas calculadas para precisión)
+                    // --- PANEL FINANCIERO (CON IMPUESTOS) ---
                     const totalVenta = parseFloat(data.total || 0);
+                    const subtotal = parseFloat(data.subtotal || 0); // Asumiendo que el API devuelve subtotal
+                    const impuestos = parseFloat(data.impuestos || 0); // Nuevo campo
+                    const descuento = parseFloat(data.descuento_monto || 0);
+
                     const pagado = parseFloat(data.monto_pagado || 0);
                     const pendiente = parseFloat(data.saldo_pendiente || 0);
 
-                    // Nota: Usamos 'sumaCostos' y 'sumaGanancias' calculados arriba para asegurar consistencia con la tabla
                     const costoProduccion = sumaCostos;
-                    const gananciaReal = sumaGanancias;
+
+                    // La ganancia real no debe incluir impuestos, ya que eso se le paga al SAT
+                    // Ganancia = (Total sin IVA) - Costos. Ojo con esto.
+                    // Simplificado: Ganancia = (Subtotal - Descuento) - Costos
+                    const gananciaReal = (subtotal - descuento) - costoProduccion;
 
                     let colorResta = pendiente > 0.1 ? "text-danger" : "text-success";
                     let textoResta = pendiente > 0.1 ? `$${pendiente.toFixed(2)}` : "$0.00";
+
+                    // Construcción del HTML del panel
+                    let infoImpuestosHTML = '';
+                    if (impuestos > 0) {
+                        infoImpuestosHTML = `
+                            <div class="col-4 border-end">
+                                <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Impuestos</small>
+                                <span class="h6 text-muted">+ $${impuestos.toFixed(2)}</span>
+                            </div>
+                        `;
+                    }
 
                     const panelHTML = `
                         <div class="col-12 border-bottom pb-2 mb-2">
@@ -402,6 +425,22 @@
                             </div>
                         </div>
 
+                        ${impuestos > 0 || descuento > 0 ? `
+                        <div class="col-12 border-bottom pb-2 mb-2 bg-white rounded-3 py-2">
+                            <div class="row justify-content-center">
+                                <div class="col-4 border-end">
+                                    <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Subtotal</small>
+                                    <span class="h6 text-muted">$${subtotal.toFixed(2)}</span>
+                                </div>
+                                ${descuento > 0 ? `
+                                <div class="col-4 border-end">
+                                    <small class="text-danger fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Descuento</small>
+                                    <span class="h6 text-danger">- $${descuento.toFixed(2)}</span>
+                                </div>` : ''}
+                                ${infoImpuestosHTML}
+                            </div>
+                        </div>` : ''}
+
                         <div class="col-12">
                             <div class="row justify-content-center">
                                 <div class="col-5 border-end">
@@ -409,7 +448,7 @@
                                     <span class="h6 fw-bold text-secondary">$${costoProduccion.toFixed(2)}</span>
                                 </div>
                                 <div class="col-5">
-                                    <small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Tu Ganancia Real</small>
+                                    <small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Tu Ganancia Neta</small>
                                     <span class="h4 fw-bold text-success">$${gananciaReal.toFixed(2)}</span>
                                 </div>
                             </div>
@@ -445,6 +484,16 @@
 
                     // --- NUEVO: GUARDAMOS EL ID ---
                     sessionStorage.setItem('recarga_id', id);
+
+                    // --- NUEVO: GUARDAMOS IMPUESTOS SI EXISTEN ---
+                    if (data.impuestos > 0) {
+                        // Intentamos deducir el porcentaje aprox para prellenar el input
+                        // (Impuestos / SubtotalDescontado) * 100
+                        let subDescontado = data.subtotal - data.descuento_monto;
+                        let pct = Math.round((data.impuestos / subDescontado) * 100);
+                        sessionStorage.setItem('recarga_tax_percent', pct);
+                        sessionStorage.setItem('recarga_tax_active', 'true');
+                    }
 
                     window.location.href = "{{ url_for('main.cotizador') }}";
                 } else {

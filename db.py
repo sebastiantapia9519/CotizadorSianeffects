@@ -136,7 +136,8 @@ def init_db():
         resumen_items TEXT,
         costo_total REAL DEFAULT 0,
         document_type TEXT DEFAULT 'receipt',
-        tax_engine TEXT DEFAULT 'none'
+        tax_engine TEXT DEFAULT 'none',
+        impuestos REAL DEFAULT 0
     )
     """)
 

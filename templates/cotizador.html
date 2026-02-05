@@ -266,6 +266,27 @@
                     </div>
                 </div>
 
+
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="taxSwitch" onchange="calcularTotal()">
+                        <label class="form-check-label small fw-bold text-muted" for="taxSwitch">
+                            Más Impuestos (IVA)
+                        </label>
+                    </div>
+
+                    <div class="input-group input-group-sm w-25" id="taxInputContainer" style="display: none;">
+                        <input type="number" class="form-control text-end" id="taxPercent" value="16"
+                            oninput="calcularTotal()">
+                        <span class="input-group-text">%</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between mb-2 text-muted" id="taxRow" style="display: none;">
+                    <span class="small">Impuestos:</span>
+                    <span class="fw-bold" id="taxAmountDisplay">$0.00</span>
+                </div>
+
                 <style>
                     .no-arrow {
                         -moz-appearance: textfield;
@@ -441,25 +462,55 @@
 
     // --- 3. CÁLCULO DE TOTALES ---
     function calcularTotal() {
-        let totalMat = 0;
-        document.querySelectorAll('.item-row').forEach(row => {
-            const txt = row.querySelector('.subtotal').innerText.replace('$', '').trim();
-            totalMat += parseFloat(txt) || 0;
-        });
+        // 1. Obtener Subtotal (Suma de productos)
+        let subtotal = 0;
+        // ... (Aquí tu lógica actual que recorre el carrito y suma precios) ...
+        // Asumo que ya tienes una variable 'subtotal' calculada con la suma de items.
 
-        let totalMaq = 0;
-        document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
-            totalMaq += parseFloat(c.value) || 0;
-        });
+        // Si no tienes la variable a mano, asegúrate de sumarla antes de este bloque
+        // Ejemplo rápido: carrito.forEach(item => subtotal += item.precio * item.cantidad);
 
-        const extra = parseFloat(document.getElementById('costosExtra').value) || 0;
-        const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
+        // 2. Calcular Descuento
+        const descuentoPct = parseFloat(document.getElementById('descuentoRange').value) || 0;
+        const descuentoMonto = subtotal * (descuentoPct / 100);
+        const subtotalConDescuento = subtotal - descuentoMonto;
 
-        costoProduccionCalculado = totalMat + totalMaq + extra;
-        precioVentaCalculado = costoProduccionCalculado * (1 + (margen / 100));
+        // 3. LOGICA NUEVA DE IMPUESTOS
+        let impuestosMonto = 0;
+        const taxSwitch = document.getElementById('taxSwitch');
+        const taxInputContainer = document.getElementById('taxInputContainer');
+        const taxRow = document.getElementById('taxRow');
+        const taxPercentInput = document.getElementById('taxPercent');
 
-        document.getElementById('resultadoCosto').innerText = '$' + costoProduccionCalculado.toFixed(2);
-        document.getElementById('resultadoPrecio').innerText = '$' + precioVentaCalculado.toFixed(2);
+        if (taxSwitch.checked) {
+            // Mostrar controles
+            taxInputContainer.style.display = 'flex';
+            taxRow.style.display = 'flex';
+
+            // Calcular IVA sobre el subtotal YA descontado
+            const taxRate = parseFloat(taxPercentInput.value) || 0;
+            impuestosMonto = subtotalConDescuento * (taxRate / 100);
+        } else {
+            // Ocultar controles
+            taxInputContainer.style.display = 'none';
+            taxRow.style.display = 'none';
+        }
+
+        // 4. Total Final
+        const totalFinal = subtotalConDescuento + impuestosMonto + (parseFloat(document.getElementById('costosExtra').value) || 0);
+
+        // 5. Actualizar DOM
+        document.getElementById('subtotalDisplay').innerText = formatMoney(subtotal);
+        document.getElementById('descuentoDisplay').innerText = `-$${formatMoney(descuentoMonto)}`;
+
+        // campos de IVA en el DOM
+        document.getElementById('taxAmountDisplay').innerText = `+$${formatMoney(impuestosMonto)}`;
+
+        document.getElementById('totalDisplay').innerText = formatMoney(totalFinal);
+    }
+
+    function formatMoney(amount) {
+        return amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
 
     function limpiarCalculadora() {

@@ -19,33 +19,27 @@ def procesar_fila_fechas(fila_db):
     if not fila_db:
         return None
     
-    # Convertimos a diccionario
     item = dict(fila_db)
     
-    # Campos a procesar
     campos_fecha = ['fecha', 'fecha_vencimiento', 'created_at']
     
     for campo in campos_fecha:
         valor_original = item.get(campo)
         if valor_original:
             try:
-                # 1. LIMPIEZA DE FORMATO aqui
-                # Convertimos a string, quitamos la 'T' si es ISO, y cortamos milisegundos
-                # Ej: "2026-02-11T01:38:11.068..." -> "2026-02-11 01:38:11"
+                # 1. Limpieza de formato ISO
                 str_fecha = str(valor_original).replace('T', ' ')[:19]
                 
-                # 2. Parsear (Leer la fecha como UTC)
+                # 2. Parsear (Leer como UTC)
                 dt_utc = datetime.strptime(str_fecha, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
                 
-                # 3. Convertir a hora local (Tu zona horaria)
+                # 3. Convertir a hora local
                 dt_local = utc_to_local(dt_utc)
                 
-                # 4. FORMATEAR: Día/Mes/Año Hora:Minuto (24h)
-                # Ej: 11/02/2026 13:30
+                # 4. Formatear
                 item[campo] = dt_local.strftime('%d/%m/%Y %H:%M')
                 
             except ValueError:
-                # Si falla algo raro, dejamos el dato original para no romper nada lol
                 pass 
                 
     return item
@@ -70,7 +64,7 @@ def cotizador():
         conn.close()
     return render_template('cotizador.html', **data)
 
-# --- GUARDAR VENTA (Lógica de Estados y Saldos) ---
+# --- GUARDAR VENTA (Lógica de Estados, Saldos e Impuestos) ---
 @main_bp.route('/guardar_venta', methods=['POST'])
 @login_required
 def guardar_venta():
@@ -80,45 +74,55 @@ def guardar_venta():
     
     try:
         # Recuperar datos básicos
-        venta_id = data.get('id') # Puede venir vacío (null) o con un número
+        venta_id = data.get('id')
         cliente = data.get('cliente', 'Cliente General')
         items = data.get('items', [])
         
-        # Totales calculados en JS (confiamos en ellos, o podrías recalcular aquí)
+        # Totales calculados en JS
         subtotal = data.get('subtotal', 0)
         descuento_pct = data.get('descuento_porcentaje', 0)
         descuento_monto = data.get('descuento_monto', 0)
+        
+        # --- NUEVOS CAMPOS DE IMPUESTOS ---
+        # Recibimos el monto exacto y el porcentaje para construir el texto
+        tax_amount = float(data.get('tax_amount', 0))
+        tax_percent = float(data.get('tax_percent', 0))
+        
+        # Construimos el string descriptivo (ej: "IVA 16%" o "none")
+        if tax_amount > 0:
+            tax_engine = f"IVA {int(tax_percent)}%" if tax_percent.is_integer() else f"IVA {tax_percent}%"
+        else:
+            tax_engine = "none"
+        # ----------------------------------
+
         total = data.get('total', 0)
         costo_total = data.get('costo_total', 0)
         estado = data.get('estado', 'pagado')
         monto_pagado = data.get('pago_inicial', total)
         
-        # Calculamos saldo pendiente
         saldo_pendiente = total - monto_pagado
         if saldo_pendiente < 0: saldo_pendiente = 0
 
         fecha_actual = now_utc()
-
-        # Lógica de Vencimiento (7 días)
         fecha_vencimiento = (now_utc() + timedelta(days=7)).isoformat()
 
         if venta_id:
             # =================================================
             # MODO ACTUALIZACIÓN (UPDATE)
             # =================================================
-            # 1. Actualizamos la cabecera de la venta
             cursor.execute('''
                 UPDATE ventas 
                 SET cliente=?, subtotal=?, descuento_porcentaje=?, descuento_monto=?,
+                    impuestos=?, tax_engine=?,  -- <--- ACTUALIZAMOS IMPUESTOS
                     total=?, costo_total=?, estado=?, monto_pagado=?, saldo_pendiente=?
                 WHERE id=? AND user_id=?
             ''', (
                 cliente, subtotal, descuento_pct, descuento_monto,
+                tax_amount, tax_engine,
                 total, costo_total, estado, monto_pagado, saldo_pendiente,
                 venta_id, session['user_id']
             ))
             
-            # 2. Borramos los detalles viejos (para reescribirlos limpios)
             cursor.execute('DELETE FROM venta_detalles WHERE venta_id=?', (venta_id,))
             
         else:
@@ -127,20 +131,24 @@ def guardar_venta():
             # =================================================
             cursor.execute('''
                 INSERT INTO ventas (
-                    user_id, fecha, cliente, subtotal, descuento_porcentaje, 
-                    descuento_monto, total, costo_total, estado, 
+                    user_id, fecha, cliente, subtotal, 
+                    descuento_porcentaje, descuento_monto, 
+                    impuestos, tax_engine,  -- <--- INSERTAMOS IMPUESTOS
+                    total, costo_total, estado, 
                     monto_pagado, saldo_pendiente, fecha_vencimiento
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                session['user_id'], fecha_actual, cliente, subtotal, descuento_pct, 
-                descuento_monto, total, costo_total, estado, 
+                session['user_id'], fecha_actual, cliente, subtotal, 
+                descuento_pct, descuento_monto, 
+                tax_amount, tax_engine,
+                total, costo_total, estado, 
                 monto_pagado, saldo_pendiente, fecha_vencimiento
             ))
             venta_id = cursor.lastrowid
 
         # =================================================
-        # INSERTAR DETALLES (COMÚN PARA AMBOS)
+        # INSERTAR DETALLES
         # =================================================
         for item in items:
             cursor.execute('''
@@ -169,7 +177,7 @@ def guardar_venta():
     finally:
         conn.close()
 
-# --- ACTUALIZAR VENTA ---
+# --- ACTUALIZAR VENTA (ABONOS) ---
 @main_bp.route('/api/actualizar_venta', methods=['POST'])
 @login_required
 def actualizar_venta():
@@ -222,8 +230,9 @@ def historial():
     uid = session['user_id']
     q = request.args.get('q')
     
+    # Agregamos impuestos y tax_engine a la consulta para mostrarlos si se quiere
     sql = '''
-        SELECT id, cliente, fecha, total, estado, saldo_pendiente, fecha_vencimiento 
+        SELECT id, cliente, fecha, total, estado, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine
         FROM ventas 
         WHERE user_id=? 
     '''
@@ -238,7 +247,6 @@ def historial():
     ventas_db = conn.execute(sql, params).fetchall()
     conn.close()
     
-    # PROCESAR FECHAS: De UTC a Local
     ventas_display = [procesar_fila_fechas(v) for v in ventas_db]
     
     return render_template('historial.html', ventas=ventas_display)
@@ -253,7 +261,6 @@ def ver_ticket(id):
         conn.close()
         return "Ticket no encontrado", 404
 
-    # Procesar fecha del ticket individual
     venta = procesar_fila_fechas(venta_db)
 
     detalles = conn.execute('SELECT * FROM venta_detalles WHERE venta_id = ?', (id,)).fetchall()
@@ -274,24 +281,16 @@ def configuracion():
     uid = session['user_id']
 
     if request.method == 'POST':
-        # Obtenemos la "acción" para saber qué formulario envió el usuario
-        # En tu HTML debes tener <input type="hidden" name="action" value="update_profile"> 
-        # o value="update_business" según el form.
         action = request.form.get('action')
 
-        # =========================================================
-        # SECCIÓN 1: ACTUALIZAR PERFIL DE USUARIO
-        # (Username, Email, Teléfono, País y Password Opcional)
-        # =========================================================
         if action == 'update_profile':
             new_username = request.form['username']
             new_email = request.form['email']
             new_phone = request.form['telefono']
-            new_country = request.form.get('country_code', 'MX') # Default MX si no viene
-            new_password = request.form.get('password') # Puede venir vacío
+            new_country = request.form.get('country_code', 'MX')
+            new_password = request.form.get('password')
 
             try:
-                # CASO A: El usuario escribió una nueva contraseña
                 if new_password and new_password.strip() != "":
                     hashed_pw = generate_password_hash(new_password)
                     conn.execute('''
@@ -299,53 +298,36 @@ def configuracion():
                         SET username=?, email=?, telefono=?, country_code=?, password=? 
                         WHERE id=?
                     ''', (new_username, new_email, new_phone, new_country, hashed_pw, uid))
-                    
                     flash('Perfil y contraseña actualizados.', 'success')
-
-                # CASO B: Solo actualizamos datos, mantenemos la contraseña vieja
                 else:
                     conn.execute('''
                         UPDATE usuarios 
                         SET username=?, email=?, telefono=?, country_code=? 
                         WHERE id=?
                     ''', (new_username, new_email, new_phone, new_country, uid))
-                    
                     flash('Perfil actualizado correctamente.', 'success')
 
-                # Actualizamos la sesión por si cambió el username
                 session['username'] = new_username
 
             except Exception as e:
-                # Capturamos error si el username o email ya existen en otro usuario
                 print(f"Error update profile: {e}")
                 flash('Error: El nombre de usuario o correo ya está en uso.', 'danger')
 
-        # =========================================================
-        # SECCIÓN SEGURIDAD (SOLO PASSWORD)
-        # =========================================================
         elif action == 'update_password':
             new_password = request.form['password']
-            
             if new_password and len(new_password) >= 6:
                 hashed_pw = generate_password_hash(new_password)
                 conn.execute('UPDATE usuarios SET password=? WHERE id=?', (hashed_pw, uid))
                 flash('Contraseña actualizada. Por favor inicia sesión de nuevo.', 'success')
-                # Opcional: Cerrar sesión para obligarlo a entrar con la nueva
-                # session.clear()
-                # return redirect(url_for('auth.login'))
             else:
                 flash('La contraseña es muy corta.', 'danger')
-        # =========================================================
-        # SECCIÓN 2: ACTUALIZAR CONFIGURACIÓN DEL NEGOCIO
-        # (Nombre empresa, Slogan, Website, Margen)
-        # =========================================================
+
         elif action == 'update_business':
             margen = request.form['margen']
             empresa = request.form['nombre_empresa']
             slogan = request.form['slogan']
             website = request.form['website']
 
-            # Verificamos si ya existe una configuración para hacer UPDATE o INSERT
             config_existente = conn.execute('SELECT id FROM configuracion WHERE user_id=?', (uid,)).fetchone()
 
             if config_existente:
@@ -362,29 +344,15 @@ def configuracion():
 
             flash('Datos del negocio guardados correctamente.', 'success')
 
-        # Guardamos cambios y cerramos conexión de escritura
         conn.commit()
         conn.close()
         return redirect(url_for('main.configuracion'))
 
-    # =========================================================
-    # SECCIÓN 3: CARGA DE DATOS (GET)
-    # (Para mostrar los valores actuales en los inputs)
-    # =========================================================
-    
-    # 1. Traemos la config del negocio
     config = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone()
-    
-    # 2. Traemos los datos del usuario
     user_raw = conn.execute('SELECT * FROM usuarios WHERE id=?', (uid,)).fetchone()
-    
-    # 3. Procesamos fechas (UTC -> Local) usando tu helper 'procesar_fila_fechas'
-    # Esto asegura que si muestras "Miembro desde: X", la fecha salga correcta en hora local
     user_display = procesar_fila_fechas(user_raw)
 
     conn.close()
-    
-    # Enviamos todo al template
     return render_template('configuracion.html', config=config, usuario=user_display)
 
 
@@ -402,7 +370,6 @@ def descargar_excel():
     conn = get_db()
     uid = session['user_id']
     
-    # --- QUERY COMPLETA ---
     query = '''
         SELECT 
             v.id as Folio, 
@@ -424,6 +391,8 @@ def descargar_excel():
             -- Totales
             v.subtotal as Subtotal_Venta,
             v.descuento_monto as Descuento_Aplicado,
+            v.impuestos as Impuestos_Monto,   -- <--- NUEVO EN EXCEL
+            v.tax_engine as Impuestos_Info,   -- <--- NUEVO EN EXCEL
             v.total as Total_Ticket,
             v.monto_pagado as Pagado, 
             v.saldo_pendiente as Resta_Por_Pagar
@@ -436,40 +405,25 @@ def descargar_excel():
     
     try:
         df = pd.read_sql_query(query, conn, params=(uid,))
-        conn.close() # Cerramos conexión aquí por seguridad
+        conn.close()
         
         if not df.empty:
-            # ========================================================
-            # 1. ARREGLO DE FECHAS (ESTRATEGIA UTC=TRUE)
-            # ========================================================
-            # Al usar utc=True, forzamos a que TODAS las fechas sean compatibles.
-            # Esto evita el error "Can only use .dt accessor".
-            
-            # --- Fecha Registro ---
             df['Fecha_Registro'] = pd.to_datetime(df['Fecha_Registro'], utc=True, errors='coerce')
-            # Convertimos de UTC a Hora México
             df['Fecha_Registro'] = df['Fecha_Registro'].dt.tz_convert('America/Mexico_City')
-            # Formateamos a texto bonito (rellenando vacíos con 'Pendiente')
             df['Fecha_Registro'] = df['Fecha_Registro'].dt.strftime('%d/%m/%Y %I:%M %p').fillna('Pendiente')
             
-            # --- Fecha Vencimiento ---
             if 'Fecha_Vencimiento' in df.columns:
                 df['Fecha_Vencimiento'] = pd.to_datetime(df['Fecha_Vencimiento'], utc=True, errors='coerce')
-                # Solo convertimos las que no sean NaT (Not a Time)
                 df['Fecha_Vencimiento'] = df['Fecha_Vencimiento'].dt.strftime('%d/%m/%Y').fillna('')
 
-        # Generar Excel
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer: 
             df.to_excel(writer, index=False, sheet_name='Detalle de Ventas')
             
-            # Auto-ajuste de columnas
             worksheet = writer.sheets['Detalle de Ventas']
             for column_cells in worksheet.columns:
                 try:
-                    # Calculamos el ancho máximo basado en el contenido
                     max_len = max(len(str(cell.value)) for cell in column_cells)
-                    # Limitamos el ancho para que no se vea gigante si hay mucho texto (ej. Receta)
                     adjusted_width = min(max_len + 2, 50) 
                     worksheet.column_dimensions[column_cells[0].column_letter].width = adjusted_width
                 except:

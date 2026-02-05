@@ -23,7 +23,6 @@
             min-height: 100vh;
             margin: 0;
             padding-bottom: 100px;
-            /* Espacio para que el botón no tape el final */
         }
 
         .ticket {
@@ -35,7 +34,6 @@
             box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
             position: relative;
             overflow: hidden;
-            /* Para la marca de agua */
         }
 
         .brand {
@@ -176,7 +174,6 @@
             border-radius: 50%;
         }
 
-        /* NUEVO ESTILO PARA EL BOTÓN CERRAR */
         .btn-close {
             background: #dc3545;
             padding: 15px;
@@ -254,9 +251,17 @@
 
         <div class="total-section">
             <span style="font-size: 0.85rem; color:#777">Subtotal: ${{ "%.2f"|format(venta['subtotal']) }}</span><br>
+
             {% if venta['descuento_porcentaje'] > 0 %}
             <span style="font-size: 0.85rem; color:#ff6b81; font-weight: bold;">
                 Desc ({{ venta['descuento_porcentaje'] }}%): -${{ "%.2f"|format(venta['descuento_monto']) }}
+            </span><br>
+            {% endif %}
+
+            {% if venta['impuestos'] and venta['impuestos'] > 0 %}
+            <span style="font-size: 0.85rem; color:#6c757d;">
+                {{ venta['tax_engine'] if venta['tax_engine'] else 'Impuestos' }}: +${{
+                "%.2f"|format(venta['impuestos']) }}
             </span><br>
             {% endif %}
 
@@ -310,6 +315,7 @@
             const btn = document.getElementById("btnShare");
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
 
+            // Usamos html2canvas para crear la imagen
             const canvas = await html2canvas(document.getElementById("ticketVisual"), {
                 scale: 2,
                 backgroundColor: "#ffffff"
@@ -325,6 +331,7 @@
         async function compartirTicket() {
             if (!ticketFile) return;
 
+            // Intentamos usar la API nativa de compartir (celulares)
             if (navigator.share && navigator.canShare({ files: [ticketFile] })) {
                 try {
                     await navigator.share({
@@ -333,6 +340,7 @@
                     });
                 } catch (_) { }
             } else {
+                // Si no, forzamos descarga (PC)
                 const a = document.createElement("a");
                 a.href = URL.createObjectURL(ticketFile);
                 a.download = "ticket.png";
