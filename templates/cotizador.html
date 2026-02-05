@@ -462,20 +462,43 @@
 
     // --- 3. CÁLCULO DE TOTALES ---
     function calcularTotal() {
-        // 1. Obtener Subtotal (Suma de productos)
-        let subtotal = 0;
-        // ... (Aquí tu lógica actual que recorre el carrito y suma precios) ...
-        // Asumo que ya tienes una variable 'subtotal' calculada con la suma de items.
+        // --- 1. LADO IZQUIERDO (CALCULADORA DE COSTOS) ---
+        let totalCostosMat = 0;
+        document.querySelectorAll('.item-row').forEach(row => {
+            const sub = parseFloat(row.querySelector('.subtotal').innerText.replace('$', '')) || 0;
+            totalCostosMat += sub;
+        });
 
-        // Si no tienes la variable a mano, asegúrate de sumarla antes de este bloque
-        // Ejemplo rápido: carrito.forEach(item => subtotal += item.precio * item.cantidad);
+        let totalMaquinaria = 0;
+        document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
+            totalMaquinaria += parseFloat(c.value) || 0;
+        });
 
-        // 2. Calcular Descuento
-        const descuentoPct = parseFloat(document.getElementById('descuentoRange').value) || 0;
-        const descuentoMonto = subtotal * (descuentoPct / 100);
-        const subtotalConDescuento = subtotal - descuentoMonto;
+        let extra = parseFloat(document.getElementById('costosExtra').value) || 0;
 
-        // 3. LOGICA NUEVA DE IMPUESTOS
+        const costoTotal = totalCostosMat + totalMaquinaria + extra;
+        const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
+        const precioSugerido = costoTotal * (1 + (margen / 100));
+
+        // Actualizar UI Izquierda
+        document.getElementById('resultadoCosto').innerText = '$' + costoTotal.toFixed(2);
+        document.getElementById('resultadoPrecio').innerText = '$' + precioSugerido.toFixed(2);
+
+        costoProduccionCalculado = costoTotal;
+        precioVentaCalculado = precioSugerido;
+
+        // --- 2. LADO DERECHO (CARRITO DE VENTA) ---
+        let subtotalCarrito = 0;
+        carrito.forEach(item => {
+            subtotalCarrito += item.subtotal;
+        });
+
+        // Aplicar Descuento
+        const descuentoPct = parseFloat(document.getElementById('inputDescuento').value) || 0;
+        const descuentoMonto = subtotalCarrito * (descuentoPct / 100);
+        const subtotalConDescuento = subtotalCarrito - descuentoMonto;
+
+        // --- IMPUESTOS (NUEVA LÓGICA) ---
         let impuestosMonto = 0;
         const taxSwitch = document.getElementById('taxSwitch');
         const taxInputContainer = document.getElementById('taxInputContainer');
@@ -483,34 +506,27 @@
         const taxPercentInput = document.getElementById('taxPercent');
 
         if (taxSwitch.checked) {
-            // Mostrar controles
             taxInputContainer.style.display = 'flex';
             taxRow.style.display = 'flex';
 
-            // Calcular IVA sobre el subtotal YA descontado
             const taxRate = parseFloat(taxPercentInput.value) || 0;
             impuestosMonto = subtotalConDescuento * (taxRate / 100);
         } else {
-            // Ocultar controles
             taxInputContainer.style.display = 'none';
             taxRow.style.display = 'none';
         }
 
-        // 4. Total Final
-        const totalFinal = subtotalConDescuento + impuestosMonto + (parseFloat(document.getElementById('costosExtra').value) || 0);
+        const totalFinal = subtotalConDescuento + impuestosMonto;
 
-        // 5. Actualizar DOM
-        document.getElementById('subtotalDisplay').innerText = formatMoney(subtotal);
-        document.getElementById('descuentoDisplay').innerText = `-$${formatMoney(descuentoMonto)}`;
-
-        // campos de IVA en el DOM
+        // Actualizar UI Derecha
+        document.getElementById('labelSubtotal').innerText = formatMoney(subtotalCarrito);
+        document.getElementById('labelDescuento').innerText = `-$${formatMoney(descuentoMonto)}`;
         document.getElementById('taxAmountDisplay').innerText = `+$${formatMoney(impuestosMonto)}`;
-
-        document.getElementById('totalDisplay').innerText = formatMoney(totalFinal);
+        document.getElementById('totalTicket').innerText = formatMoney(totalFinal);
     }
 
     function formatMoney(amount) {
-        return amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
+        return '$' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
 
     function limpiarCalculadora() {
@@ -575,12 +591,9 @@
 
         if (carrito.length === 0) {
             vac.classList.remove('d-none');
-            actualizarTotales(0);
         } else {
             vac.classList.add('d-none');
-            let s = 0;
             carrito.forEach((i, x) => {
-                s += i.subtotal;
                 tb.innerHTML += `
                 <tr>
                     <td class="ps-3">
@@ -596,24 +609,14 @@
                     </td>
                 </tr>`;
             });
-            actualizarTotales(s);
         }
-    }
-
-    function actualizarTotales(sub) {
-        const d = parseInt(document.getElementById('inputDescuento').value) || 0;
-        const mont = sub * (d / 100);
-        document.getElementById('labelSubtotal').innerText = '$' + sub.toFixed(2);
-        document.getElementById('labelDescuento').innerText = '-$' + mont.toFixed(2);
-        document.getElementById('totalTicket').innerText = '$' + (sub - mont).toFixed(2);
+        calcularTotal(); // Recalcula totales globales
     }
 
     function actualizarDescuento(v) {
         document.getElementById('sliderDescuento').value = v;
         document.getElementById('inputDescuento').value = v;
-        let s = 0;
-        carrito.forEach(i => s += i.subtotal);
-        actualizarTotales(s);
+        calcularTotal();
     }
 
     function eliminarDelCarrito(x) {
@@ -686,9 +689,15 @@
             costo_total += (i.costo_unitario * i.cantidad);
         });
 
+        // Recuperar datos de impuestos y descuento desde la pantalla
         const desc_porcentaje = parseInt(document.getElementById('inputDescuento').value) || 0;
         const desc_monto = subtotal * (desc_porcentaje / 100);
-        const total = subtotal - desc_monto;
+
+        const taxAmountText = document.getElementById('taxAmountDisplay').innerText.replace('+$', '').replace(',', '');
+        const tax_amount = parseFloat(taxAmountText) || 0;
+        const tax_percent = document.getElementById('taxSwitch').checked ? parseFloat(document.getElementById('taxPercent').value) : 0;
+
+        const total = (subtotal - desc_monto) + tax_amount;
 
         let estado = 'pagado';
         let pago_inicial = total;
@@ -716,7 +725,7 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                id: document.getElementById('ventaIdEdicion').value || null, // <--- AQUÍ ENVIAMOS EL ID (o null si es nueva)
+                id: document.getElementById('ventaIdEdicion').value || null,
                 cliente: cli,
                 items: carrito.map(i => ({
                     concepto: i.concepto,
@@ -729,6 +738,8 @@
                 subtotal: subtotal,
                 descuento_porcentaje: desc_porcentaje,
                 descuento_monto: desc_monto,
+                tax_amount: tax_amount,    // <--- ENVIAMOS IVA
+                tax_percent: tax_percent,  // <--- ENVIAMOS %
                 total: total,
                 costo_total: costo_total,
                 estado: estado,
@@ -834,16 +845,17 @@
     document.addEventListener("DOMContentLoaded", function () {
         const datosPendientes = sessionStorage.getItem('recarga_cotizacion');
         const clientePendiente = sessionStorage.getItem('recarga_cliente');
-        const idPendiente = sessionStorage.getItem('recarga_id'); // <--- LEER ID
+        const idPendiente = sessionStorage.getItem('recarga_id');
+
+        // --- RECUPERAR IMPUESTOS ---
+        const taxActive = sessionStorage.getItem('recarga_tax_active');
+        const taxPercent = sessionStorage.getItem('recarga_tax_percent');
 
         if (datosPendientes) {
             try {
-                // ... (código de llenado de items que ya tenías) ...
                 const items = JSON.parse(datosPendientes);
 
-                // ... (tu ciclo forEach para llenar carrito) ...
                 items.forEach(item => {
-                    // ... (tu lógica existente) ...
                     let recetaOriginal = [];
                     if (item.composicion) { try { recetaOriginal = JSON.parse(item.composicion); } catch (e) { } }
 
@@ -859,7 +871,13 @@
 
                 if (clientePendiente) document.getElementById('nombreCliente').value = clientePendiente;
 
-                renderizarCarrito();
+                // --- ACTIVAR IMPUESTOS SI VENÍAN GUARDADOS ---
+                if (taxActive === 'true') {
+                    document.getElementById('taxSwitch').checked = true;
+                    if (taxPercent) document.getElementById('taxPercent').value = taxPercent;
+                }
+
+                renderizarCarrito(); // Esto llama a calcularTotal(), que actualizará el UI con los impuestos
 
                 // ESTABLECER MODO EDICIÓN
                 if (idPendiente) {
@@ -873,7 +891,6 @@
                     document.body.appendChild(alerta);
                     setTimeout(() => alerta.remove(), 4000);
                 }
-                // --------------------------------------
 
             } catch (e) {
                 console.error(e);
@@ -881,6 +898,8 @@
                 sessionStorage.removeItem('recarga_cotizacion');
                 sessionStorage.removeItem('recarga_cliente');
                 sessionStorage.removeItem('recarga_id');
+                sessionStorage.removeItem('recarga_tax_active');
+                sessionStorage.removeItem('recarga_tax_percent');
             }
         }
     });
