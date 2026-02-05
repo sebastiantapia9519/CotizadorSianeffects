@@ -1,0 +1,37 @@
+<!-- MODAL -->
+<div class="modal fade" id="mediaModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down">
+        <div class="modal-content bg-black">
+            <div class="modal-body p-0 text-center" id="mediaContainer"></div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openMedia(el) {
+        const tipo = el.dataset.tipo;
+        const src = el.dataset.src;
+        const container = document.getElementById('mediaContainer');
+        container.innerHTML = '';
+
+        if (tipo === 'imagen') {
+            container.innerHTML = `<img src="${src}" class="img-fluid">`;
+        }
+
+        if (tipo === 'video') {
+            container.innerHTML = `
+      <video controls autoplay class="w-100">
+        <source src="${src}">
+      </video>`;
+        }
+
+        if (tipo === 'audio') {
+            container.innerHTML = `
+      <audio controls autoplay class="w-100 mt-5">
+        <source src="${src}">
+      </audio>`;
+        }
+
+        new bootstrap.Modal(document.getElementById('mediaModal')).show();
+    }
+</script>

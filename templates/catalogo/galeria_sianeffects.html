@@ -1,321 +1,85 @@
-<!doctype html>
-<html lang="es">
+{% extends "layout.html" %}
+{% block title %}Galería | SianEffects{% endblock %}
 
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>SianEffects | Catálogo</title>
+{% block content %}
 
-    <!-- LIBS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/glightbox/dist/css/glightbox.min.css" />
+<!-- ========================= -->
+<!-- BUSCADOR + FILTROS -->
+<!-- ========================= -->
+<div class="container py-3">
+    <input type="text" class="form-control mb-3" placeholder="Buscar por producto, ocasión o palabra clave…">
 
-    <style>
-        :root {
-            --primary: #ff6b81;
-            --secondary: #2ec4b6;
-            --dark: #2d3436;
-            --light-bg: #f8f9fa;
-            --card-radius: 16px;
-        }
+    <div class="d-flex flex-wrap gap-2 mb-4">
+        <span class="badge rounded-pill bg-light text-dark">Papelería</span>
+        <span class="badge rounded-pill bg-light text-dark">Playeras</span>
+        <span class="badge rounded-pill bg-light text-dark">Tazas / Termos</span>
+        <span class="badge rounded-pill bg-light text-dark">Audios</span>
+        <span class="badge rounded-pill bg-light text-dark">Foil / Vinil</span>
+    </div>
+</div>
 
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: var(--light-bg);
-            padding-bottom: 80px;
-        }
+<!-- ========================= -->
+<!-- EXPLORA POR OCASIÓN -->
+<!-- ========================= -->
+<div class="container mb-5">
+    <h5 class="fw-bold mb-3">Explora por ocasión</h5>
 
-        /* HEADER */
-        .app-header {
-            position: sticky;
-            top: 0;
-            z-index: 1000;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
-            padding: 15px 0 10px;
-        }
-
-        .brand-logo {
-            font-weight: 900;
-            color: var(--primary);
-            font-size: 1.5rem;
-            text-decoration: none;
-        }
-
-        /* SEARCH */
-        .search-input {
-            border-radius: 50px;
-            background: #f1f2f6;
-            border: none;
-            padding: 12px 20px 12px 45px;
-            width: 100%;
-            font-weight: 600;
-        }
-
-        .search-icon {
-            position: absolute;
-            left: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #a4b0be;
-        }
-
-        /* FILTERS */
-        .filters-wrapper {
-            display: flex;
-            overflow-x: auto;
-            gap: 10px;
-            padding: 10px 0;
-            scrollbar-width: none;
-        }
-
-        .filters-wrapper::-webkit-scrollbar {
-            display: none;
-        }
-
-        .filter-chip {
-            padding: 8px 16px;
-            border-radius: 50px;
-            background: white;
-            border: 1px solid #dfe6e9;
-            font-weight: 700;
-            cursor: pointer;
-            white-space: nowrap;
-        }
-
-        .filter-chip.active {
-            background: var(--dark);
-            color: white;
-        }
-
-        /* SECTIONS */
-        .section-title {
-            font-weight: 800;
-            color: var(--dark);
-            margin-bottom: 15px;
-        }
-
-        .horizontal-scroll {
-            display: flex;
-            overflow-x: auto;
-            gap: 15px;
-            padding-bottom: 20px;
-        }
-
-        .horizontal-item {
-            min-width: 260px;
-            max-width: 260px;
-        }
-
-        /* CARDS */
-        .product-card {
-            border-radius: var(--card-radius);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-            overflow: hidden;
-            background: white;
-        }
-
-        /* MEDIA (CLAVE) */
-        .product-card .media-container {
-            position: relative;
-            height: 200px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .media-inner {
-            position: absolute;
-            inset: 0;
-        }
-
-        .media-inner img,
-        .media-inner video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            /* 🔑 NO RECORTE */
-            background: #fff;
-        }
-
-        .play-icon {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 3rem;
-            color: white;
-            opacity: 0.8;
-            pointer-events: none;
-        }
-
-        /* CTA */
-        .cta-float {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: var(--dark);
-            color: white;
-            padding: 12px 30px;
-            border-radius: 50px;
-            font-weight: 800;
-            text-decoration: none;
-            z-index: 1050;
-        }
-
-        /* VIEWS */
-        .view-section {
-            display: none;
-        }
-
-        .view-section.active {
-            display: block;
-        }
-
-        @media (max-width: 576px) {
-            .horizontal-item {
-                min-width: 180px;
-                max-width: 180px;
-            }
-
-            .product-card .media-container {
-                position: relative;
-                overflow: hidden;
-            }
-        }
-    </style>
-</head>
-
-<body>
-
-    <header class="app-header">
-        <div class="container">
-            <a href="#" class="brand-logo" onclick="switchView('home')">
-                Sian Effects <small style="color:var(--secondary)">CATÁLOGO</small>
-            </a>
-
-            <div class="position-relative mt-3">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="globalSearch" class="search-input" placeholder="¿Qué estás buscando?">
-            </div>
-
-            <div class="filters-wrapper mt-3" id="categoryFilters">
-                <div class="filter-chip active" onclick="switchView('home', this)">🔥 Descubrir</div>
-                <div class="filter-chip" onclick="switchView('all', this)">✨ Ver Todo</div>
-                {% for item in catalogo %}
-                <div class="filter-chip" onclick="filterBySection('cat-{{ item.info.id }}', this)">
-                    {{ item.info.nombre }}
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-    </header>
-
-    <div class="container pt-3">
-
-        <div id="view-home" class="view-section active">
-            {% for item in catalogo %}
-            {% if item.productos|length > 0 %}
-            <div class="mb-5">
-                <div class="section-title">{{ item.info.nombre }}</div>
-                <div class="horizontal-scroll">
-                    {% for prod in item.productos[:5] %}
-                    <div class="horizontal-item">
-                        {% include 'catalogo/card_producto.html' %}
+    <div class="row g-3">
+        {% for ocasion in ocasiones %}
+        <div class="col-12 col-md-6">
+            <a href="{{ url_for('catalogo.seccion', id=ocasion.id) }}" class="text-decoration-none text-dark">
+                <div class="card border-0 shadow-sm h-100">
+                    <img src="{{ ocasion.imagen }}" class="card-img-top" loading="lazy">
+                    <div class="card-body">
+                        <h6 class="fw-bold">{{ ocasion.nombre }}</h6>
+                        <div class="d-flex gap-2 mt-2">
+                            {% for p in ocasion.previews %}
+                            <img src="{{ p.imagen }}" class="rounded" style="width:50px;height:50px;object-fit:cover;">
+                            {% endfor %}
+                        </div>
                     </div>
-                    {% endfor %}
                 </div>
-            </div>
-            {% endif %}
-            {% endfor %}
+            </a>
         </div>
+        {% endfor %}
+    </div>
+</div>
 
-        <div id="view-all" class="view-section">
-            <h4 class="fw-bold mb-3" id="gridTitle">Todos los Productos</h4>
-            <div class="row g-3" id="productsGrid">
-                {% for item in catalogo %}
-                {% for prod in item.productos %}
-                <div class="col-6 col-md-4 col-lg-3 grid-item" data-category="cat-{{ item.info.id }}"
-                    data-search="{{ prod.titulo|lower }}">
-                    {% include 'catalogo/card_producto.html' %}
-                </div>
-                {% endfor %}
-                {% endfor %}
-            </div>
-        </div>
-
+<!-- ========================= -->
+<!-- SECCIONES DINÁMICAS -->
+<!-- ========================= -->
+{% for seccion in secciones %}
+<div class="container mb-5">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="fw-bold">{{ seccion.nombre }}</h5>
+        <a href="{{ url_for('catalogo.seccion', id=seccion.id) }}" class="small">Ver más</a>
     </div>
 
-    <a href="https://wa.me/?text=Hola..." class="cta-float" target="_blank">
-        <i class="fab fa-whatsapp"></i> Cotizar
-    </a>
+    <div class="row g-3">
+        {% for producto in seccion.productos %}
+        <div class="col-6 col-md-3">
+            {% include "card_producto.html" %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endfor %}
 
-    <!-- SCRIPTS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/glightbox/dist/js/glightbox.min.js"></script>
+<!-- ========================= -->
+<!-- VER TODO -->
+<!-- ========================= -->
+<div class="container mb-5">
+    <h5 class="fw-bold mb-3">Todos los productos</h5>
 
-    <script>
-        const lightbox = GLightbox({
-            selector: '.glightbox',
-            touchNavigation: true,
-            loop: false,
-            width: '90vw',
-            height: 'auto',
-            videosWidth: '90vw'
-        });
+    <div class="row g-3">
+        {% for producto in todos %}
+        <div class="col-6 col-md-3">
+            {% include "card_producto.html" %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
 
-        const viewHome = document.getElementById('view-home');
-        const viewAll = document.getElementById('view-all');
-        const gridTitle = document.getElementById('gridTitle');
-        const searchInput = document.getElementById('globalSearch');
-        const allGridItems = document.querySelectorAll('.grid-item');
-        const chips = document.querySelectorAll('.filter-chip');
+{% include "media_modal.html" %}
 
-        function switchView(view, chip = null) {
-            window.scrollTo(0, 0);
-            chips.forEach(c => c.classList.remove('active'));
-            if (chip) chip.classList.add('active');
-
-            if (view === 'home') {
-                viewHome.classList.add('active');
-                viewAll.classList.remove('active');
-            } else {
-                viewHome.classList.remove('active');
-                viewAll.classList.add('active');
-                showAllItems();
-            }
-        }
-
-        function filterBySection(catId, chip) {
-            switchView('all', chip);
-            gridTitle.innerText = chip.innerText;
-
-            allGridItems.forEach(item => {
-                item.classList.toggle('d-none', item.dataset.category !== catId);
-            });
-        }
-
-        function showAllItems() {
-            gridTitle.innerText = 'Todos los Productos';
-            allGridItems.forEach(i => i.classList.remove('d-none'));
-        }
-
-        searchInput.addEventListener('input', e => {
-            const term = e.target.value.toLowerCase();
-            switchView('all');
-            gridTitle.innerText = `Resultados para "${term}"`;
-
-            allGridItems.forEach(item => {
-                item.classList.toggle('d-none', !item.dataset.search.includes(term));
-            });
-        });
-    </script>
-
-</body>
-
-</html>
+{% endblock %}

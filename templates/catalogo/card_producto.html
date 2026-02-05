@@ -1,48 +1,19 @@
-<div class="product-card h-100 border-0">
+<div class="card border-0 shadow-sm h-100 producto-card" data-tipo="{{ producto.tipo }}"
+    data-src="{{ producto.archivo }}" onclick="openMedia(this)">
 
-    {% if prod['media_type'] == 'image' %}
-    <!-- IMAGEN -->
-    <div class="media-container">
-        <div class="media-inner">
-            <a href="{{ prod['media_url'] }}" class="glightbox d-block w-100 h-100">
-                <img src="{{ prod['media_url'] }}" alt="{{ prod['titulo'] }}">
-            </a>
-        </div>
-    </div>
-
-    {% elif prod['media_type'] == 'video' %}
-    <!-- VIDEO -->
-    <div class="media-container">
-        <div class="media-inner">
-            <a href="{{ prod['media_url'] }}" class="glightbox d-block w-100 h-100">
-                <video src="{{ prod['media_url'] }}" muted></video>
-                <i class="fas fa-play-circle play-icon"></i>
-            </a>
-        </div>
-    </div>
-
-    {% elif prod['media_type'] == 'audio' %}
-    <!-- AUDIO (AISLADO, SIN MEDIA-INNER, SIN A) -->
-    <div class="media-container bg-light d-flex align-items-center justify-content-center">
-        <div class="text-center w-100 px-3">
-            <i class="fas fa-music fa-2x text-primary mb-2"></i>
-            <audio controls class="w-100">
-                <source src="{{ prod['media_url'] }}" type="audio/mpeg">
-                Tu navegador no soporta audio.
-            </audio>
-        </div>
+    {% if producto.tipo == 'imagen' %}
+    <img src="{{ producto.archivo }}" class="card-img-top" loading="lazy">
+    {% elif producto.tipo == 'video' %}
+    <video class="w-100" muted preload="metadata">
+        <source src="{{ producto.archivo }}">
+    </video>
+    {% elif producto.tipo == 'audio' %}
+    <div class="p-4 text-center">
+        🎧 Audio personalizado
     </div>
     {% endif %}
 
-    <!-- INFO -->
-    <div class="p-3 bg-white border-top">
-        <div class="d-flex justify-content-between mb-1">
-            <span class="badge bg-secondary">{{ prod['sku'] }}</span>
-            {% if prod['precio'] > 0 %}
-            <span class="fw-bold">${{ "%.0f"|format(prod['precio']) }}</span>
-            {% endif %}
-        </div>
-        <h6 class="fw-bold mb-0">{{ prod['titulo'] }}</h6>
-        <p class="text-muted small mb-0">{{ prod['descripcion'] }}</p>
+    <div class="card-body">
+        <p class="mb-0 small fw-semibold">{{ producto.nombre }}</p>
     </div>
 </div>
