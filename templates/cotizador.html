@@ -102,6 +102,26 @@
     .item-row:hover {
         background-color: #fafafa;
     }
+
+    /* Estilos para inputs numéricos limpios */
+    .no-arrow {
+        -moz-appearance: textfield;
+        appearance: textfield;
+    }
+
+    .no-arrow::-webkit-outer-spin-button,
+    .no-arrow::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+
+    .input-group.rounded-pill input {
+        border-radius: 50px 0 0 50px;
+    }
+
+    .input-group.rounded-pill span {
+        border-radius: 0 50px 50px 0;
+    }
 </style>
 {% endblock %}
 
@@ -264,90 +284,65 @@
                             </div>
                         </div>
                     </div>
-                </div>
 
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="taxSwitch" onchange="calcularTotal()">
+                            <label class="form-check-label small fw-bold text-muted" for="taxSwitch">
+                                Más Impuestos (IVA)
+                            </label>
+                        </div>
 
-                <div class="d-flex align-items-center justify-content-between mb-2">
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="taxSwitch" onchange="calcularTotal()">
-                        <label class="form-check-label small fw-bold text-muted" for="taxSwitch">
-                            Más Impuestos (IVA)
-                        </label>
+                        <div class="input-group input-group-sm w-25" id="taxInputContainer" style="display: none;">
+                            <input type="number" class="form-control text-end" id="taxPercent" value="16"
+                                oninput="calcularTotal()">
+                            <span class="input-group-text">%</span>
+                        </div>
                     </div>
 
-                    <div class="input-group input-group-sm w-25" id="taxInputContainer" style="display: none;">
-                        <input type="number" class="form-control text-end" id="taxPercent" value="16"
-                            oninput="calcularTotal()">
-                        <span class="input-group-text">%</span>
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="small text-muted">Subtotal:</span>
+                        <span id="labelSubtotal" class="fw-bold">$0.00</span>
                     </div>
-                </div>
 
-                <div class="d-flex justify-content-between mb-2 text-muted" id="taxRow" style="display: none;">
-                    <span class="small">Impuestos:</span>
-                    <span class="fw-bold" id="taxAmountDisplay">0.00</span>
-                </div>
-
-                <style>
-                    .no-arrow {
-                        -moz-appearance: textfield;
-                        /* Para Firefox */
-                        appearance: textfield;
-                        /* Estándar moderno */
-                    }
-
-                    /* Quitar flechas en Chrome, Safari, Edge, Opera */
-                    .no-arrow::-webkit-outer-spin-button,
-                    .no-arrow::-webkit-inner-spin-button {
-                        -webkit-appearance: none;
-                        margin: 0;
-                    }
-
-                    /* El input group se verá más limpio y redondeado */
-                    .input-group.rounded-pill input {
-                        border-radius: 50px 0 0 50px;
-                    }
-
-                    .input-group.rounded-pill span {
-                        border-radius: 0 50px 50px 0;
-                    }
-                </style>
-
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                    <span class="small text-muted">Subtotal:</span>
-                    <span id="labelSubtotal" class="fw-bold">$0.00</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-3 text-success">
-                    <span class="small fw-bold">Descuento:</span>
-                    <span id="labelDescuento">- $0.00</span>
-                </div>
-                <div class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top">
-                    <span class="h5 fw-bold text-dark mb-0">Total:</span>
-                    <span id="totalTicket" class="total-ticket">$0.00</span>
-                </div>
-
-                <div class="mb-3">
-                    <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
-                        placeholder="Nombre del Cliente">
-                </div>
-
-                <div class="row g-2">
-                    <div class="col-6">
-                        <button class="btn btn-outline-dark w-100 py-3 fw-bold rounded-3"
-                            onclick="finalizarCompra('cotizacion')">
-                            <i class="fas fa-file-invoice me-1"></i> Solo Cotizar
-                        </button>
+                    <div class="d-flex justify-content-between align-items-center mb-1 text-success">
+                        <span class="small fw-bold">Descuento:</span>
+                        <span id="labelDescuento">- $0.00</span>
                     </div>
-                    <div class="col-6">
-                        <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow" data-bs-toggle="modal"
-                            data-bs-target="#modalCobro">
-                            <i class="fas fa-dollar-sign me-1"></i> Cobrar
-                        </button>
+
+                    <div class="d-flex justify-content-between mb-1 text-muted" id="taxRow" style="display: none;">
+                        <span class="small">Impuestos:</span>
+                        <span class="fw-bold" id="taxAmountDisplay">+$0.00</span>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top">
+                        <span class="h5 fw-bold text-dark mb-0">Total:</span>
+                        <span id="totalTicket" class="total-ticket">$0.00</span>
+                    </div>
+
+                    <div class="mb-3">
+                        <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
+                            placeholder="Nombre del Cliente">
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <button class="btn btn-outline-dark w-100 py-3 fw-bold rounded-3"
+                                onclick="finalizarCompra('cotizacion')">
+                                <i class="fas fa-file-invoice me-1"></i> Solo Cotizar
+                            </button>
+                        </div>
+                        <div class="col-6">
+                            <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow" data-bs-toggle="modal"
+                                data-bs-target="#modalCobro">
+                                <i class="fas fa-dollar-sign me-1"></i> Cobrar
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 </div>
 
 <div class="modal fade" id="modalCobro" tabindex="-1">
@@ -521,7 +516,10 @@
         // Actualizar UI Derecha
         document.getElementById('labelSubtotal').innerText = formatMoney(subtotalCarrito);
         document.getElementById('labelDescuento').innerText = `-$${formatMoney(descuentoMonto)}`;
-        document.getElementById('taxAmountDisplay').innerText = `+$${formatMoney(impuestosMonto)}`;
+
+        // CORRECCIÓN: Quitamos el $ extra porque formatMoney ya lo trae
+        document.getElementById('taxAmountDisplay').innerText = `+${formatMoney(impuestosMonto)}`;
+
         document.getElementById('totalTicket').innerText = formatMoney(totalFinal);
     }
 
@@ -643,18 +641,13 @@
         document.getElementById('cantidadParaCarrito').value = item.cantidad;
 
         // 4. "Explotar" la receta (Composición)
-        // La composición guardada tiene la forma: [{tipo:'material', id:1, cantidad:2}, {tipo:'maquinaria', id:3...}]
-
-        // Primero asegurarnos de borrar la fila vacía que deja limpiarCalculadora
         document.getElementById('listaMateriales').innerHTML = '';
 
         item.composicion.forEach(comp => {
             if (comp.tipo === 'material') {
-                // Volvemos a crear la fila del material
                 agregarFila(comp.id, comp.cantidad);
             }
             else if (comp.tipo === 'maquinaria') {
-                // Buscamos el checkbox por su data-id y lo marcamos
                 const checkbox = document.querySelector(`.check-maquinaria-input[data-id="${comp.id}"]`);
                 if (checkbox) {
                     checkbox.checked = true;
@@ -662,15 +655,13 @@
             }
         });
 
-        // 5. Sacarlo del carrito (para que no se duplique al guardar)
+        // 5. Sacarlo del carrito
         carrito.splice(index, 1);
         renderizarCarrito();
 
-        // 6. Recalcular los costos en pantalla
-        // Ponemos un pequeño timeout para dar tiempo a que se creen los selectores de materiales
+        // 6. Recalcular
         setTimeout(() => {
             calcularTotal();
-            // Scroll suave hacia arriba para que el usuario vea que ya cargó
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }, 300);
     }
@@ -693,7 +684,7 @@
         const desc_porcentaje = parseInt(document.getElementById('inputDescuento').value) || 0;
         const desc_monto = subtotal * (desc_porcentaje / 100);
 
-        const taxAmountText = document.getElementById('taxAmountDisplay').innerText.replace('+$', '').replace(',', '');
+        const taxAmountText = document.getElementById('taxAmountDisplay').innerText.replace('+$', '').replace('$', '').replace(',', '');
         const tax_amount = parseFloat(taxAmountText) || 0;
         const tax_percent = document.getElementById('taxSwitch').checked ? parseFloat(document.getElementById('taxPercent').value) : 0;
 
