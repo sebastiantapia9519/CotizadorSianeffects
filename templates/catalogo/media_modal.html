@@ -1,19 +1,18 @@
 <div class="modal fade" id="mediaModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content bg-dark text-white">
+        <div class="modal-content border-0 shadow-lg" style="background-color: #1a1a1a; color: white;">
 
-            <div class="modal-header border-0">
-                <h5 class="modal-title" id="modalTitulo"></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+            <div class="modal-header border-bottom border-secondary">
+                <h5 class="modal-title fw-bold" id="modalTitulo"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
 
-            <div class="modal-body p-0 text-center bg-black d-flex align-items-center justify-content-center"
-                style="min-height: 300px;" id="mediaContainer">
+            <div class="modal-body p-0 text-center d-flex align-items-center justify-content-center position-relative"
+                style="min-height: 400px; background-color: #000;" id="mediaContainer">
             </div>
 
-            <div class="modal-footer border-0">
-                <p id="modalDesc" class="small text-white-50 w-100 text-start m-0"></p>
+            <div class="modal-footer border-top border-secondary justify-content-start">
+                <p id="modalDesc" class="text-white-50 m-0 small"></p>
             </div>
 
         </div>
@@ -21,59 +20,60 @@
 </div>
 
 <script>
-    // Referencia al modal de Bootstrap
     let mediaModalObj;
 
     document.addEventListener('DOMContentLoaded', function () {
         const modalEl = document.getElementById('mediaModal');
         mediaModalObj = new bootstrap.Modal(modalEl);
 
-        // EVENTO: Al cerrar el modal, limpiar el contenido para detener videos/audios
+        // Detener reproducción al cerrar
         modalEl.addEventListener('hidden.bs.modal', function () {
             document.getElementById('mediaContainer').innerHTML = '';
         });
     });
 
     function openMedia(el) {
-        // 1. Obtener datos del elemento clickeado
+        // Obtenemos los datos limpios
         const tipo = el.dataset.tipo;
         const src = el.dataset.src;
         const titulo = el.dataset.titulo;
         const desc = el.dataset.desc;
 
-        // 2. Referencias al DOM del modal
         const container = document.getElementById('mediaContainer');
-        const titleEl = document.getElementById('modalTitulo');
-        const descEl = document.getElementById('modalDesc');
+        document.getElementById('modalTitulo').textContent = titulo || 'Detalle';
+        document.getElementById('modalDesc').textContent = desc || '';
 
-        // 3. Llenar textos
-        titleEl.textContent = titulo || 'Detalle';
-        descEl.textContent = desc || '';
-        container.innerHTML = ''; // Limpiar previo
+        container.innerHTML = '<div class="spinner-border text-light" role="status"></div>'; // Loading...
 
-        // 4. Inyectar contenido según tipo
-        if (tipo === 'imagen') {
-            container.innerHTML = `<img src="${src}" class="img-fluid" style="max-height: 80vh;">`;
-        }
-        else if (tipo === 'video') {
-            container.innerHTML = `
-                <video controls autoplay class="w-100" style="max-height: 80vh;">
-                    <source src="${src}">
-                    Tu navegador no soporta video.
-                </video>`;
-        }
-        else if (tipo === 'audio') {
-            container.innerHTML = `
-                <div class="p-5">
-                    <i class="bi bi-music-note-beamed display-1 mb-4 d-block"></i>
-                    <audio controls autoplay class="w-100">
+        // Esperamos un momento para renderizar (evita parpadeos)
+        setTimeout(() => {
+            if (tipo === 'imagen') {
+                container.innerHTML = `
+                    <img src="${src}" class="img-fluid" style="max-height: 80vh;" 
+                         onerror="this.parent.innerHTML='<p>Error al cargar imagen</p>'">`;
+            }
+            else if (tipo === 'video') {
+                container.innerHTML = `
+                    <video controls autoplay class="w-100" style="max-height: 80vh;">
                         <source src="${src}">
-                        Tu navegador no soporta audio.
-                    </audio>
-                </div>`;
-        }
-
-        // 5. Mostrar modal
-        mediaModalObj.show();
+                        Tu navegador no soporta video.
+                    </video>`;
+            }
+            else if (tipo === 'audio') {
+                container.innerHTML = `
+                    <div class="p-5 text-center">
+                        <div class="mb-4 rounded-circle bg-dark d-inline-block p-4 border border-secondary">
+                            <i class="fas fa-music fa-4x text-info"></i>
+                        </div>
+                        <h4 class="mb-4">Reproduciendo Audio</h4>
+                        <audio controls autoplay class="w-100">
+                            <source src="${src}">
+                        </audio>
+                    </div>`;
+            } else {
+                container.innerHTML = '<p class="text-danger">Formato no reconocido (' + tipo + ')</p>';
+            }
+            mediaModalObj.show();
+        }, 100);
     }
 </script>

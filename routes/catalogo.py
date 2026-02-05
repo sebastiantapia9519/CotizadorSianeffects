@@ -29,7 +29,6 @@ def admin_categorias():
     conn.close()
     
     return render_template('catalogo/admin_categorias.html', categorias=categorias)
-
 # =========================================================
 # 2. GESTIÓN DE PRODUCTOS (DENTRO DE UNA CATEGORÍA)
 # =========================================================
@@ -53,8 +52,23 @@ def admin_productos(cat_id):
         descripcion = request.form['descripcion']
         precio = request.form.get('precio', 0)
 
-        media_url = request.form.get('media_url')
+        media_url = request.form.get('media_url', '').strip()
+        # Tomamos el tipo que dice el formulario, pero...
         media_type = request.form.get('media_type')
+
+        # ... AQUI AGREGAMOS LA INTELIGENCIA:
+        # Si la URL tiene una extensión clara, forzamos el tipo correcto
+        # para evitar errores humanos.
+        if media_url:
+            ext = media_url.split('.')[-1].lower() # Obtiene lo que está después del último punto
+            
+            # Lista de extensiones comunes
+            if ext in ['mp3', 'wav', 'ogg', 'm4a']:
+                media_type = 'audio'
+            elif ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+                media_type = 'imagen' # Ojo: usa 'imagen' o 'image' según prefieras en tu BD. Tu código usaba 'imagen' en el HTML anterior.
+            elif ext in ['mp4', 'mov', 'avi', 'webm', 'mkv']:
+                media_type = 'video'
 
         # EDITAR
         if producto_id:
@@ -73,6 +87,7 @@ def admin_productos(cat_id):
 
         # CREAR
         else:
+            # (El resto de tu código de crear sigue igual...)
             nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
             prefix = nombre_limpio[:3].upper() if len(nombre_limpio) >= 2 else "PROD"
 
@@ -106,7 +121,7 @@ def admin_productos(cat_id):
             flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
 
         return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
-
+    
     # ==============================
     # OBTENER PRODUCTOS
     # ==============================
