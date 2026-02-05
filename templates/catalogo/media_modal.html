@@ -26,15 +26,14 @@
         const modalEl = document.getElementById('mediaModal');
         mediaModalObj = new bootstrap.Modal(modalEl);
 
-        // Detener reproducción al cerrar
         modalEl.addEventListener('hidden.bs.modal', function () {
             document.getElementById('mediaContainer').innerHTML = '';
         });
     });
 
     function openMedia(el) {
-        // Obtenemos los datos limpios
-        const tipo = el.dataset.tipo;
+        // Obtenemos los datos y limpiamos espacios o mayúsculas
+        let tipo = (el.dataset.tipo || '').toLowerCase().trim();
         const src = el.dataset.src;
         const titulo = el.dataset.titulo;
         const desc = el.dataset.desc;
@@ -43,11 +42,11 @@
         document.getElementById('modalTitulo').textContent = titulo || 'Detalle';
         document.getElementById('modalDesc').textContent = desc || '';
 
-        container.innerHTML = '<div class="spinner-border text-light" role="status"></div>'; // Loading...
+        container.innerHTML = '<div class="spinner-border text-light" role="status"></div>';
 
-        // Esperamos un momento para renderizar (evita parpadeos)
         setTimeout(() => {
-            if (tipo === 'imagen') {
+            // CORRECCIÓN AQUÍ: Aceptamos 'imagen' O 'image'
+            if (tipo === 'imagen' || tipo === 'image') {
                 container.innerHTML = `
                     <img src="${src}" class="img-fluid" style="max-height: 80vh;" 
                          onerror="this.parent.innerHTML='<p>Error al cargar imagen</p>'">`;
@@ -71,6 +70,7 @@
                         </audio>
                     </div>`;
             } else {
+                // Esto es lo que estabas viendo, ahora ya no debería salir
                 container.innerHTML = '<p class="text-danger">Formato no reconocido (' + tipo + ')</p>';
             }
             mediaModalObj.show();
