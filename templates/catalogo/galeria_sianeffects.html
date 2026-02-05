@@ -1,85 +1,102 @@
-{% extends "layout.html" %}
-{% block title %}Galería | SianEffects{% endblock %}
+<!DOCTYPE html>
+<html lang="es">
 
-{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Catálogo | Sian Effects</title>
 
-<!-- ========================= -->
-<!-- BUSCADOR + FILTROS -->
-<!-- ========================= -->
-<div class="container py-3">
-    <input type="text" class="form-control mb-3" placeholder="Buscar por producto, ocasión o palabra clave…">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
 
-    <div class="d-flex flex-wrap gap-2 mb-4">
-        <span class="badge rounded-pill bg-light text-dark">Papelería</span>
-        <span class="badge rounded-pill bg-light text-dark">Playeras</span>
-        <span class="badge rounded-pill bg-light text-dark">Tazas / Termos</span>
-        <span class="badge rounded-pill bg-light text-dark">Audios</span>
-        <span class="badge rounded-pill bg-light text-dark">Foil / Vinil</span>
-    </div>
-</div>
+    <style>
+        body {
+            background-color: #121212;
+            /* Fondo oscuro tipo portafolio */
+            color: #e0e0e0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
 
-<!-- ========================= -->
-<!-- EXPLORA POR OCASIÓN -->
-<!-- ========================= -->
-<div class="container mb-5">
-    <h5 class="fw-bold mb-3">Explora por ocasión</h5>
+        /* Estilo para los títulos de categorías */
+        .category-title {
+            border-left: 4px solid #0d6efd;
+            /* Borde azul a la izquierda */
+            padding-left: 15px;
+            margin-bottom: 20px;
+            color: #ffffff;
+            font-weight: 300;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
 
-    <div class="row g-3">
-        {% for ocasion in ocasiones %}
-        <div class="col-12 col-md-6">
-            <a href="{{ url_for('catalogo.seccion', id=ocasion.id) }}" class="text-decoration-none text-dark">
-                <div class="card border-0 shadow-sm h-100">
-                    <img src="{{ ocasion.imagen }}" class="card-img-top" loading="lazy">
-                    <div class="card-body">
-                        <h6 class="fw-bold">{{ ocasion.nombre }}</h6>
-                        <div class="d-flex gap-2 mt-2">
-                            {% for p in ocasion.previews %}
-                            <img src="{{ p.imagen }}" class="rounded" style="width:50px;height:50px;object-fit:cover;">
-                            {% endfor %}
-                        </div>
-                    </div>
-                </div>
+        /* Navbar simple */
+        .navbar-custom {
+            background-color: #1f1f1f;
+            border-bottom: 1px solid #333;
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-custom sticky-top mb-5">
+        <div class="container">
+            <a class="navbar-brand text-white fw-bold" href="#">
+                SIAN <span class="text-primary">EFFECTS</span>
             </a>
+
+            <div class="ms-auto">
+                {% if session.get('role', 0) >= 1 %}
+                <a href="{{ url_for('catalogo.admin_categorias') }}" class="btn btn-outline-warning btn-sm">
+                    <i class="bi bi-gear-fill"></i> Panel de Control
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container pb-5">
+
+        <div class="text-center mb-5">
+            <h1 class="display-5 fw-bold text-white">Nuestro Trabajo</h1>
+            <p class="text-secondary">Explora nuestra colección de diseños y multimedia</p>
+        </div>
+
+        {% for item in catalogo %}
+        <div class="category-section mb-5 animate-on-scroll">
+
+            <h3 class="category-title">
+                {{ item.info.nombre }}
+            </h3>
+
+            <div class="row row-cols-2 row-cols-md-3 row-cols-lg-4 g-4">
+                {% for producto in item.productos %}
+                <div class="col">
+                    {% include 'catalogo/card_product.html' %}
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if not item.productos %}
+            <div class="p-4 text-center text-muted border border-secondary border-dashed rounded">
+                <small>Próximamente contenido en {{ item.info.nombre }}</small>
+            </div>
+            {% endif %}
         </div>
         {% endfor %}
-    </div>
-</div>
 
-<!-- ========================= -->
-<!-- SECCIONES DINÁMICAS -->
-<!-- ========================= -->
-{% for seccion in secciones %}
-<div class="container mb-5">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h5 class="fw-bold">{{ seccion.nombre }}</h5>
-        <a href="{{ url_for('catalogo.seccion', id=seccion.id) }}" class="small">Ver más</a>
-    </div>
-
-    <div class="row g-3">
-        {% for producto in seccion.productos %}
-        <div class="col-6 col-md-3">
-            {% include "catalogo/card_producto.html" %}
+        {% if not catalogo %}
+        <div class="text-center py-5">
+            <h3 class="text-muted">No hay categorías activas para mostrar.</h3>
         </div>
-        {% endfor %}
+        {% endif %}
+
     </div>
-</div>
-{% endfor %}
 
-<!-- ========================= -->
-<!-- VER TODO -->
-<!-- ========================= -->
-<div class="container mb-5">
-    <h5 class="fw-bold mb-3">Todos los productos</h5>
+    {% include 'catalogo/media_modal.html' %}
 
-    <div class="row g-3">
-        {% for producto in todos %}
-        <div class="col-6 col-md-3">
-            {% include "catalogo/card_producto.html" %}
-        </div>
-        {% endfor %}
-    </div>
-</div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-{% include "catalogo/media_modal.html" %}
+</body>
 
-{% endblock %}
+</html>

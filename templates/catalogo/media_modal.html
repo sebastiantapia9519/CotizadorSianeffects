@@ -1,37 +1,79 @@
-<!-- MODAL -->
-<div class="modal fade" id="mediaModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-fullscreen-sm-down">
-        <div class="modal-content bg-black">
-            <div class="modal-body p-0 text-center" id="mediaContainer"></div>
+<div class="modal fade" id="mediaModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-dark text-white">
+
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="modalTitulo"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
+            </div>
+
+            <div class="modal-body p-0 text-center bg-black d-flex align-items-center justify-content-center"
+                style="min-height: 300px;" id="mediaContainer">
+            </div>
+
+            <div class="modal-footer border-0">
+                <p id="modalDesc" class="small text-white-50 w-100 text-start m-0"></p>
+            </div>
+
         </div>
     </div>
 </div>
 
 <script>
+    // Referencia al modal de Bootstrap
+    let mediaModalObj;
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const modalEl = document.getElementById('mediaModal');
+        mediaModalObj = new bootstrap.Modal(modalEl);
+
+        // EVENTO: Al cerrar el modal, limpiar el contenido para detener videos/audios
+        modalEl.addEventListener('hidden.bs.modal', function () {
+            document.getElementById('mediaContainer').innerHTML = '';
+        });
+    });
+
     function openMedia(el) {
+        // 1. Obtener datos del elemento clickeado
         const tipo = el.dataset.tipo;
         const src = el.dataset.src;
+        const titulo = el.dataset.titulo;
+        const desc = el.dataset.desc;
+
+        // 2. Referencias al DOM del modal
         const container = document.getElementById('mediaContainer');
-        container.innerHTML = '';
+        const titleEl = document.getElementById('modalTitulo');
+        const descEl = document.getElementById('modalDesc');
 
+        // 3. Llenar textos
+        titleEl.textContent = titulo || 'Detalle';
+        descEl.textContent = desc || '';
+        container.innerHTML = ''; // Limpiar previo
+
+        // 4. Inyectar contenido según tipo
         if (tipo === 'imagen') {
-            container.innerHTML = `<img src="${src}" class="img-fluid">`;
+            container.innerHTML = `<img src="${src}" class="img-fluid" style="max-height: 80vh;">`;
         }
-
-        if (tipo === 'video') {
+        else if (tipo === 'video') {
             container.innerHTML = `
-      <video controls autoplay class="w-100">
-        <source src="${src}">
-      </video>`;
+                <video controls autoplay class="w-100" style="max-height: 80vh;">
+                    <source src="${src}">
+                    Tu navegador no soporta video.
+                </video>`;
         }
-
-        if (tipo === 'audio') {
+        else if (tipo === 'audio') {
             container.innerHTML = `
-      <audio controls autoplay class="w-100 mt-5">
-        <source src="${src}">
-      </audio>`;
+                <div class="p-5">
+                    <i class="bi bi-music-note-beamed display-1 mb-4 d-block"></i>
+                    <audio controls autoplay class="w-100">
+                        <source src="${src}">
+                        Tu navegador no soporta audio.
+                    </audio>
+                </div>`;
         }
 
-        new bootstrap.Modal(document.getElementById('mediaModal')).show();
+        // 5. Mostrar modal
+        mediaModalObj.show();
     }
 </script>

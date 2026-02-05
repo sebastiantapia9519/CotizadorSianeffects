@@ -1,19 +1,34 @@
-<div class="card border-0 shadow-sm h-100 producto-card" data-tipo="{{ producto.tipo }}"
-    data-src="{{ producto.archivo }}" onclick="openMedia(this)">
+<div class="card h-100 border-0 shadow-sm producto-card hover-effect"
+    style="cursor: pointer; transition: transform 0.2s;" onclick="openMedia(this)" data-tipo="{{ producto.media_type }}"
+    data-src="{{ producto.media_url }}" data-titulo="{{ producto.titulo }}" data-desc="{{ producto.descripcion }}">
 
-    {% if producto.tipo == 'imagen' %}
-    <img src="{{ producto.archivo }}" class="card-img-top" loading="lazy">
-    {% elif producto.tipo == 'video' %}
-    <video class="w-100" muted preload="metadata">
-        <source src="{{ producto.archivo }}">
-    </video>
-    {% elif producto.tipo == 'audio' %}
-    <div class="p-4 text-center">
-        🎧 Audio personalizado
+    <div class="card-img-top position-relative overflow-hidden" style="height: 200px; background-color: #f8f9fa;">
+
+        {% if producto.media_type == 'imagen' %}
+        <img src="{{ producto.media_url }}" class="w-100 h-100 object-fit-cover" alt="{{ producto.titulo }}"
+            loading="lazy">
+
+        {% elif producto.media_type == 'video' %}
+        <video class="w-100 h-100 object-fit-cover" muted preload="metadata">
+            <source src="{{ producto.media_url }}">
+        </video>
+        <div class="position-absolute top-50 start-50 translate-middle text-white">
+            <i class="bi bi-play-circle-fill fs-1" style="text-shadow: 0 0 10px rgba(0,0,0,0.5);"></i>
+        </div>
+
+        {% elif producto.media_type == 'audio' %}
+        <div class="d-flex flex-column justify-content-center align-items-center h-100 text-secondary">
+            <i class="bi bi-music-note-beamed fs-1"></i>
+            <span class="small mt-2">Audio</span>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 
     <div class="card-body">
-        <p class="mb-0 small fw-semibold">{{ producto.nombre }}</p>
+        <h6 class="card-title fw-bold mb-1">{{ producto.titulo }}</h6>
+        <p class="card-text small text-muted text-truncate">{{ producto.descripcion }}</p>
+        {% if producto.precio > 0 %}
+        <p class="card-text fw-bold text-success">${{ producto.precio }}</p>
+        {% endif %}
     </div>
 </div>
