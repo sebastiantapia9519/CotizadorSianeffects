@@ -53,9 +53,33 @@ def materiales():
     if request.method == 'POST':
         try:
             id_actualizar = request.form.get('id_actualizar')
-            nombre = request.form.get('nombre')
-            tipo = request.form.get('tipo_entrada') # 'unidad' o 'paquete'
+            nombre = request.form.get('nombre', '').strip() # Quitamos espacios extra
+            tipo = request.form.get('tipo_entrada')
             
+            # --- VALIDACIÓN DE NOMBRE DUPLICADO ---
+            if id_actualizar:
+                # Si editamos: Buscar si existe OTRO material con ese nombre para este usuario
+                duplicado = conn.execute(
+                    "SELECT id FROM materiales WHERE nombre = ? AND user_id = ? AND id != ?", 
+                    (nombre, session['user_id'], id_actualizar)
+                ).fetchone()
+            else:
+                # Si creamos: Buscar si existe ALGÚN material con ese nombre para este usuario
+                duplicado = conn.execute(
+                    "SELECT id FROM materiales WHERE nombre = ? AND user_id = ?", 
+                    (nombre, session['user_id'])
+                ).fetchone()
+
+            if duplicado:
+                conn.close()
+                return f"""
+                    <script>
+                        alert('Error: Ya tienes un material llamado "{nombre}". Por favor usa otro nombre.');
+                        window.history.back();
+                    </script>
+                """
+            # --------------------------------------
+
             # Convertimos a números seguros
             try:
                 precio_compra = float(request.form.get('precio_compra') or 0)
@@ -95,12 +119,8 @@ def materiales():
             return f"Error al guardar: {e}"
 
     # --- VER LISTA (GET) ---
-    # Aquí es donde leía la base de datos
     rows = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (session['user_id'],)).fetchall()
     conn.close()
-
-    # TRUCO DE MAGIA: Convertimos las 'Rows' a 'Diccionarios' reales de Python
-    # Esto arregla el error "Object of type Row is not JSON serializable"
     materiales_lista = [dict(row) for row in rows]
     
     return render_template('materiales.html', materiales=materiales_lista)
@@ -115,10 +135,7 @@ def eliminar_material(id):
     return redirect(url_for('inventory.materiales'))
 
 # =========================
-# 3. EQUIPOS Y RECETAS (El resto de tu código)
-# =========================
-# =========================
-# EQUIPOS / MAQUINARIA
+# 3. EQUIPOS 
 # =========================
 @inventory_bp.route('/equipos', methods=['GET', 'POST'])
 @login_required
@@ -128,16 +145,29 @@ def equipos():
     # --- GUARDAR O EDITAR (POST) ---
     if request.method == 'POST':
         try:
-            # Recibimos los datos del formulario HTML
-            nombre = request.form.get('nombre')
+            nombre = request.form.get('nombre', '').strip()
             
-            # Convertimos costo a número (si falla o viene vacío, ponemos 0)
+            # --- VALIDACIÓN DUPLICADO ---
+            duplicado = conn.execute(
+                "SELECT id FROM maquinaria WHERE nombre = ? AND user_id = ?", 
+                (nombre, session['user_id'])
+            ).fetchone()
+
+            if duplicado:
+                conn.close()
+                return f"""
+                    <script>
+                        alert('Error: Ya tienes una maquinaria llamada "{nombre}".');
+                        window.history.back();
+                    </script>
+                """
+            # ----------------------------
+
             try:
                 costo_desgaste = float(request.form.get('costo_desgaste') or 0)
             except ValueError:
                 costo_desgaste = 0
 
-            # Guardamos en la base de datos
             conn.execute("""
                 INSERT INTO maquinaria (user_id, nombre, costo_desgaste)
                 VALUES (?, ?, ?)
@@ -145,7 +175,6 @@ def equipos():
             
             conn.commit()
             conn.close()
-            # Recargamos la página para ver el nuevo equipo
             return redirect(url_for('inventory.equipos'))
             
         except Exception as e:
@@ -153,11 +182,8 @@ def equipos():
             return f"Error al guardar equipo: {e}"
 
     # --- VER LISTA (GET) ---
-    # Leemos la tabla maquinaria
     rows = conn.execute("SELECT * FROM maquinaria WHERE user_id = ?", (session['user_id'],)).fetchall()
     conn.close()
-    
-    # Convertimos a diccionarios (TRUCO para que no falle el HTML si agregas botón editar después)
     equipos_lista = [dict(row) for row in rows]
 
     return render_template('equipos.html', equipos=equipos_lista)
@@ -218,29 +244,37 @@ def recetas():
 @login_required
 def guardar_receta():
     data = request.get_json(silent=True)
-    if not data or not data.get('nombre'):
-        return jsonify({'error': 'Datos incompletos'}), 400
+    nombre_receta = data.get('nombre', '').strip() # Limpiamos espacios
+
+    if not data or not nombre_receta:
+        return jsonify({'error': 'Datos incompletos o nombre vacío'}), 400
 
     conn = get_db()
     try:
+        # --- VALIDACIÓN DUPLICADO (NUEVO) ---
+        duplicado = conn.execute(
+            "SELECT id FROM productos WHERE nombre = ? AND user_id = ?",
+            (nombre_receta, session['user_id'])
+        ).fetchone()
+
+        if duplicado:
+            return jsonify({'error': f'Ya existe una receta llamada "{nombre_receta}". Por favor elige otro nombre.'}), 400
+        # ------------------------------------
+
         conn.execute('BEGIN')
-        # 1. Convertimos la lista de materiales a Texto JSON (Para la nueva tabla)
+        # 1. Convertimos la lista de materiales a Texto JSON
         lista_materiales = data.get('materiales', [])
         items_json = json.dumps(lista_materiales)
         
-        # 2. Guardamos en la tabla 'productos' INCLUYENDO 'items'
-        # (Antes aquí fallaba porque no le pasábamos 'items')
+        # 2. Guardamos en la tabla 'productos'
         cur = conn.execute("""
             INSERT INTO productos (user_id, nombre, items) 
             VALUES (?, ?, ?)
-        """, (session['user_id'], data['nombre'], items_json))
+        """, (session['user_id'], nombre_receta, items_json))
         
         pid = cur.lastrowid
 
-        # 3. (Opcional) Si quieres mantener la tabla 'producto_detalles' por seguridad o reportes futuros:
-        # Puedes dejar este bloque, o quitarlo si ya solo usarás el JSON.
-        # Por ahora lo dejamos para que no te falte nada.
-
+        # 3. Guardado en tablas relacionales (detalle y maquinaria)
         for m in data.get('materiales', []):
             conn.execute("INSERT INTO producto_detalles (producto_id, material_id, cantidad) VALUES (?, ?, ?)", (pid, m['id'], m['cantidad']))
             
@@ -251,7 +285,7 @@ def guardar_receta():
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
-        print(f"Error guardando receta: {e}") # Para ver en el log
+        print(f"Error guardando receta: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
