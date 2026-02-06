@@ -701,9 +701,9 @@
             const inputPago = document.getElementById('inputPagoInicial').value;
             pago_inicial = parseFloat(inputPago) || 0;
             if (!inputPago || pago_inicial <= 0) return alert("Ingresa un monto válido para el anticipo.");
-            if (pago_inicial >= total) estado = 'venta_completa';
+            if (pago_inicial >= total) estado = 'pagado'; // <-- CORRECCIÓN AQUÍ: Si paga todo, es 'pagado'
         } else if (tipo === 'venta_completa') {
-            estado = 'venta_completa';
+            estado = 'pagado'; // <-- CORRECCIÓN AQUÍ: Enviamos 'pagado' para que el Ticket lo entienda
             pago_inicial = total;
         }
 
@@ -729,11 +729,11 @@
                 subtotal: subtotal,
                 descuento_porcentaje: desc_porcentaje,
                 descuento_monto: desc_monto,
-                tax_amount: tax_amount,    // <--- ENVIAMOS IVA
-                tax_percent: tax_percent,  // <--- ENVIAMOS %
+                tax_amount: tax_amount,
+                tax_percent: tax_percent,
                 total: total,
                 costo_total: costo_total,
-                estado: estado,
+                estado: estado, // Ahora enviamos 'pagado' correctamente
                 pago_inicial: pago_inicial
             })
         }).then(res => res.json()).then(data => {
