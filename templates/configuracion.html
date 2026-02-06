@@ -1,5 +1,85 @@
 {% extends 'layout.html' %}
 
+{% block extra_css %}
+<style>
+    /* Estilos del Ticket (Copia exacta de ticket.html para fidelidad) */
+    .ticket-preview {
+        background: white;
+        padding: 20px;
+        border: 2px dashed #ff6b81;
+        border-radius: 10px;
+        margin: 0 auto;
+        max-width: 300px;
+        font-family: 'Nunito', sans-serif;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    }
+
+    .tp-brand h4 {
+        color: #ff6b81;
+        font-weight: 900;
+        text-transform: uppercase;
+        margin: 0;
+    }
+
+    .tp-brand p {
+        color: #2ec4b6;
+        font-weight: 700;
+        font-size: 0.85rem;
+        margin: 0;
+    }
+
+    .tp-type {
+        background: #2ec4b6;
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        margin: 10px 0;
+    }
+
+    .tp-info {
+        border-bottom: 2px dotted #eee;
+        font-size: 0.75rem;
+        text-align: center;
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+        color: #666;
+    }
+
+    .tp-table {
+        width: 100%;
+        font-size: 0.75rem;
+        margin-bottom: 10px;
+    }
+
+    .tp-table th {
+        text-align: left;
+        border-bottom: 1px solid #ff6b81;
+        color: #ff6b81;
+    }
+
+    .tp-total {
+        border-top: 1px dashed #ccc;
+        text-align: right;
+        padding-top: 5px;
+    }
+
+    .tp-total-amount {
+        font-size: 1.4rem;
+        font-weight: 900;
+        color: #333;
+    }
+
+    .tp-footer {
+        text-align: center;
+        font-size: 0.7rem;
+        color: #999;
+        margin-top: 15px;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container mt-4">
     <div class="row">
@@ -7,17 +87,14 @@
         <div class="col-md-3 mb-4">
             <div class="list-group shadow-sm" id="list-tab" role="tablist">
                 <h5 class="px-3 py-2 text-muted">Configuración</h5>
-
                 <a class="list-group-item list-group-item-action active d-flex justify-content-between align-items-center"
                     id="list-negocio-list" data-bs-toggle="list" href="#list-negocio" role="tab">
                     <span>🏢 Mi Negocio</span>
                 </a>
-
                 <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
                     id="list-perfil-list" data-bs-toggle="list" href="#list-perfil" role="tab">
                     <span>👤 Mi Perfil</span>
                 </a>
-
                 <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
                     id="list-seguridad-list" data-bs-toggle="list" href="#list-seguridad" role="tab">
                     <span>🔒 Seguridad</span>
@@ -26,7 +103,6 @@
         </div>
 
         <div class="col-md-9">
-
             {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
             {% for category, message in messages %}
@@ -42,8 +118,13 @@
 
                 <div class="tab-pane fade show active" id="list-negocio" role="tabpanel">
                     <div class="card shadow-sm border-0">
-                        <div class="card-header bg-white border-bottom py-3">
+                        <div
+                            class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
                             <h5 class="mb-0 text-primary">Identidad del Negocio</h5>
+                            <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3"
+                                onclick="actualizarVistaPrevia()">
+                                <i class="fas fa-eye me-1"></i> Ver Ticket
+                            </button>
                         </div>
                         <div class="card-body p-4">
                             <form method="POST" action="{{ url_for('main.configuracion') }}">
@@ -52,14 +133,14 @@
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Nombre de la Empresa</label>
-                                        <input type="text" name="nombre_empresa" class="form-control"
+                                        <input type="text" name="nombre_empresa" id="inputEmpresa" class="form-control"
                                             value="{{ config['nombre_empresa'] }}" required
                                             placeholder="Ej. Sian Effects">
                                     </div>
 
                                     <div class="col-md-6">
                                         <label class="form-label fw-bold">Slogan / Giro</label>
-                                        <input type="text" name="slogan" class="form-control"
+                                        <input type="text" name="slogan" id="inputSlogan" class="form-control"
                                             value="{{ config['slogan'] }}" placeholder="Ej. Soluciones creativas">
                                     </div>
 
@@ -67,7 +148,7 @@
                                         <label class="form-label fw-bold">Sitio Web / Red Social</label>
                                         <div class="input-group">
                                             <span class="input-group-text bg-light">🌐</span>
-                                            <input type="text" name="website" class="form-control"
+                                            <input type="text" name="website" id="inputWeb" class="form-control"
                                                 value="{{ config['website'] }}" placeholder="www.tuempresa.com">
                                         </div>
                                     </div>
@@ -218,7 +299,69 @@
     </div>
 </div>
 
+<div class="modal fade" id="modalPreview" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 bg-transparent shadow-none">
+            <div class="ticket-preview position-relative">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-2"
+                    data-bs-dismiss="modal"></button>
+
+                <div class="text-center mb-3 tp-brand">
+                    <h4 id="prevEmpresa">Nombre Empresa</h4>
+                    <p id="prevSlogan">Slogan Aquí</p>
+                </div>
+
+                <div class="tp-type">RECIBO DE PRUEBA</div>
+
+                <div class="tp-info">
+                    Folio #0000<br>
+                    {{ "now"|now_local_format }}<br>
+                    Cliente: <strong>Cliente Ejemplo</strong>
+                </div>
+
+                <table class="tp-table">
+                    <thead>
+                        <tr>
+                            <th>Cant.</th>
+                            <th>Concepto</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>1</td>
+                            <td>Producto Ejemplo</td>
+                            <td class="text-end">$150.00</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Otro Ítem</td>
+                            <td class="text-end">$50.00</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="tp-total">
+                    <span class="text-muted small">Subtotal: $200.00</span><br>
+                    <div class="tp-total-amount">$200.00</div>
+                </div>
+
+                <div class="tp-footer">
+                    <p>¡Gracias por tu compra!</p>
+                    <p class="fw-bold" style="color:#2ec4b6" id="prevWeb">www.sitio.com</p>
+                </div>
+            </div>
+
+            <div class="text-center mt-3">
+                <button class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cerrar Vista
+                    Previa</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+    // Validar contraseña (existente)
     function validarPassword() {
         var p1 = document.getElementById("pass1").value;
         var p2 = document.getElementById("pass2").value;
@@ -228,12 +371,29 @@
         if (p1 !== p2) {
             errorDiv.classList.remove("d-none");
             input2.classList.add("is-invalid");
-            return false; // Detiene el envío del formulario
+            return false;
         } else {
             errorDiv.classList.add("d-none");
             input2.classList.remove("is-invalid");
-            return true; // Permite el envío
+            return true;
         }
+    }
+
+    // Actualizar y Mostrar Ticket
+    function actualizarVistaPrevia() {
+        // 1. Obtener valores de los inputs (o usar defaults si están vacíos)
+        const empresa = document.getElementById('inputEmpresa').value || "Nombre de tu Empresa";
+        const slogan = document.getElementById('inputSlogan').value || "Tu Slogan va aquí";
+        const web = document.getElementById('inputWeb').value || "";
+
+        // 2. Inyectar en el ticket
+        document.getElementById('prevEmpresa').innerText = empresa;
+        document.getElementById('prevSlogan').innerText = slogan;
+        document.getElementById('prevWeb').innerText = web;
+
+        // 3. Mostrar Modal
+        const modal = new bootstrap.Modal(document.getElementById('modalPreview'));
+        modal.show();
     }
 </script>
 
