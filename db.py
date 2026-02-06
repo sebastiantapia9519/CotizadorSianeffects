@@ -44,7 +44,7 @@ def init_db():
     """)
 
     # =========================
-    # 2. CONFIGURACIÓN
+    # 2. CONFIGURACIÓN (CON CAMPO INVENTARIO)
     # =========================
     conn.execute("""
     CREATE TABLE IF NOT EXISTS configuracion (
@@ -53,7 +53,8 @@ def init_db():
         margen_ganancia INTEGER DEFAULT 200,
         nombre_empresa TEXT DEFAULT 'Mi Negocio',
         slogan TEXT DEFAULT 'Servicios Creativos',
-        website TEXT DEFAULT ''
+        website TEXT DEFAULT '',
+        inventario_activo BOOLEAN DEFAULT 0  -- <--- NUEVO CAMPO (Feature Flag)
     )
     """)
 
@@ -70,7 +71,7 @@ def init_db():
     """)
 
     # =========================
-    # 4. MATERIALES
+    # 4. MATERIALES (CON STOCK)
     # =========================
     conn.execute("""
     CREATE TABLE IF NOT EXISTS materiales (
@@ -80,7 +81,26 @@ def init_db():
         es_paquete BOOLEAN,
         precio_compra REAL,
         cantidad_paquete REAL,
-        precio_unitario REAL
+        precio_unitario REAL,
+        stock_actual REAL DEFAULT 0,   -- <--- NUEVO
+        stock_minimo REAL DEFAULT 5    -- <--- NUEVO (Alerta)
+    )
+    """)
+
+    # =========================
+    # 4.5 MOVIMIENTOS DE INVENTARIO (HISTORIAL) - NUEVA TABLA
+    # =========================
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS movimientos_inventario (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        material_id INTEGER,
+        tipo TEXT,          -- 'entrada' (compra) o 'salida' (venta/uso)
+        cantidad REAL,
+        motivo TEXT,        -- Ej: 'Venta #123', 'Compra Factura A', 'Ajuste Manual'
+        stock_resultante REAL, -- Cuánto quedó después del movimiento
+        fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(material_id) REFERENCES materiales(id)
     )
     """)
 
@@ -91,7 +111,8 @@ def init_db():
     CREATE TABLE IF NOT EXISTS productos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
-        nombre TEXT
+        nombre TEXT,
+        items TEXT
     )
     """)
 
@@ -141,7 +162,6 @@ def init_db():
     )
     """)
 
-    # CORRECCIÓN AQUÍ: Faltaba la coma después de composicion TEXT
     conn.execute("""
     CREATE TABLE IF NOT EXISTS venta_detalles (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -157,15 +177,14 @@ def init_db():
     """)
 
     # =========================
-    # 7. SUPER ADMIN (SI NO EXISTE)
+    # 7. SUPER ADMIN
     # =========================
     admin = conn.execute(
         "SELECT id FROM usuarios WHERE username = 'admin'"
     ).fetchone()
 
     if not admin:
-        now_utc = datetime.now(timezone.utc).isoformat()
-
+        now_utc_str = datetime.now(timezone.utc).isoformat()
         hashed_pw = generate_password_hash('admin123')
 
         conn.execute("""
@@ -176,16 +195,8 @@ def init_db():
         )
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            'admin',
-            'contacto@sianeffects.com',
-            hashed_pw,
-            'SianEffects HQ',
-            2,
-            '2099-12-31T23:59:59Z',
-            now_utc,
-            1,
-            'MX',
-            now_utc
+            'admin', 'contacto@sianeffects.com', hashed_pw, 'SianEffects HQ', 2,
+            '2099-12-31T23:59:59Z', now_utc_str, 1, 'MX', now_utc_str
         ))
 
         admin_id = conn.execute(
@@ -197,17 +208,11 @@ def init_db():
         VALUES (?, ?, ?)
         """, (admin_id, 200, 'SianEffects Admin'))
 
-        for nombre, costo in [
-            ('Corte Plotter', 5.0),
-            ('Impresión', 1.5),
-            ('Plancha Calor', 12.0)
-        ]:
+        for nombre, costo in [('Corte Plotter', 5.0), ('Impresión', 1.5), ('Plancha Calor', 12.0)]:
             conn.execute("""
             INSERT INTO maquinaria (user_id, nombre, costo_desgaste)
             VALUES (?, ?, ?)
             """, (admin_id, nombre, costo))
-
-
 
     # =========================
     # 8. CATALOGO
@@ -223,7 +228,6 @@ def init_db():
     )
     """)
 
-    # 2. Tabla de PRODUCTOS (Items individuales)
     conn.execute("""
     CREATE TABLE IF NOT EXISTS productos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,

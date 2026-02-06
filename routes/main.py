@@ -328,19 +328,21 @@ def configuracion():
             slogan = request.form['slogan']
             website = request.form['website']
 
+            inventario_activo = 1 if request.form.get('inventario_activo') else 0
+
             config_existente = conn.execute('SELECT id FROM configuracion WHERE user_id=?', (uid,)).fetchone()
 
             if config_existente:
                 conn.execute('''
                     UPDATE configuracion
-                    SET margen_ganancia=?, nombre_empresa=?, slogan=?, website=?
+                    SET margen_ganancia=?, nombre_empresa=?, slogan=?, website=?, inventario_activo=?
                     WHERE user_id=?
-                ''', (margen, empresa, slogan, website, uid))
+                ''', (margen, empresa, slogan, website, inventario_activo, uid))
             else:
                 conn.execute('''
-                    INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa, slogan, website)
-                    VALUES (?, ?, ?, ?, ?)
-                ''', (uid, margen, empresa, slogan, website))
+                    INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa, slogan, website, inventario_activo)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (uid, margen, empresa, slogan, website, inventario_activo))
 
             flash('Datos del negocio guardados correctamente.', 'success')
 
