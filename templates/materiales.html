@@ -56,6 +56,7 @@
                         <div class="h5 fw-bold text-success mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
                     </div>
 
+                    {% if config['inventario_activo'] %}
                     <div class="col-6 text-end border-start">
                         <small class="text-muted fw-bold" style="font-size: 0.7rem;">EN STOCK</small>
                         <div class="d-flex align-items-center justify-content-end gap-2">
@@ -73,6 +74,7 @@
                         </div>
                         <small class="text-muted" style="font-size: 0.65rem;">Unidades sueltas</small>
                     </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -231,12 +233,11 @@
         document.getElementById('stock_id').value = mat.id;
         document.getElementById('stock_nombre').innerText = mat.nombre;
 
-        // Etiqueta inteligente
         const label = mat.es_paquete ? `Paquetes (de ${parseInt(mat.cantidad_paquete)})` : "Unidades";
         document.getElementById('stock_unidad_label').innerText = label;
 
         document.getElementById('stock_cantidad').value = 1;
-        document.getElementById('stock_nuevo_precio').value = mat.precio_compra; // Sugerir el precio actual
+        document.getElementById('stock_nuevo_precio').value = mat.precio_compra;
 
         modalStockObj.show();
     }
