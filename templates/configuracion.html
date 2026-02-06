@@ -315,8 +315,7 @@
 
                 <div class="tp-info">
                     Folio #0000<br>
-                    {{ "now"|now_local_format }}<br>
-                    Cliente: <strong>Cliente Ejemplo</strong>
+                    <span id="prevFecha">--/--/----</span><br> Cliente: <strong>Cliente Ejemplo</strong>
                 </div>
 
                 <table class="tp-table">
@@ -379,9 +378,9 @@
         }
     }
 
-    // Actualizar y Mostrar Ticket
+    // Actualizar y Mostrar Ticket (NUEVO)
     function actualizarVistaPrevia() {
-        // 1. Obtener valores de los inputs (o usar defaults si están vacíos)
+        // 1. Obtener valores de los inputs
         const empresa = document.getElementById('inputEmpresa').value || "Nombre de tu Empresa";
         const slogan = document.getElementById('inputSlogan').value || "Tu Slogan va aquí";
         const web = document.getElementById('inputWeb').value || "";
@@ -391,7 +390,10 @@
         document.getElementById('prevSlogan').innerText = slogan;
         document.getElementById('prevWeb').innerText = web;
 
-        // 3. Mostrar Modal
+        // 3. Poner la fecha actual con JS para evitar errores de servidor
+        document.getElementById('prevFecha').innerText = new Date().toLocaleDateString();
+
+        // 4. Mostrar Modal
         const modal = new bootstrap.Modal(document.getElementById('modalPreview'));
         modal.show();
     }
