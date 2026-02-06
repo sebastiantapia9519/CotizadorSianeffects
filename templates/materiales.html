@@ -16,14 +16,24 @@
     </div>
 </div>
 
-<div class="row g-3">
+<div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
+    <div class="card-body p-2">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
+            <input type="text" id="buscadorMateriales" class="form-control border-0 shadow-none" 
+                   placeholder="Buscar material por nombre..." onkeyup="filtrarMateriales()">
+        </div>
+    </div>
+</div>
+
+<div class="row g-3" id="contenedorMateriales">
     {% for mat in materiales %}
-    <div class="col-md-6 col-lg-4">
-        <div class="card h-100 border-0 shadow-sm" style="border-radius: 15px;">
+    <div class="col-md-6 col-lg-4 item-material"> <div class="card h-100 border-0 shadow-sm" style="border-radius: 15px;">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div>
-                        <h6 class="fw-bold text-dark mb-1">{{ mat['nombre'] }}</h6>
+                        <h6 class="fw-bold text-dark mb-1 nombre-material">{{ mat['nombre'] }}</h6>
+                        
                         {% if mat['es_paquete'] %}
                         <span class="badge bg-light text-secondary border">
                             📦 Paquete de {{ mat['cantidad_paquete']|int }} u.
@@ -55,22 +65,22 @@
                         <small class="text-muted fw-bold" style="font-size: 0.7rem;">COSTO UNITARIO</small>
                         <div class="h5 fw-bold text-success mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
                     </div>
-
+                    
                     {% if config['inventario_activo'] %}
                     <div class="col-6 text-end border-start">
                         <small class="text-muted fw-bold" style="font-size: 0.7rem;">EN STOCK</small>
                         <div class="d-flex align-items-center justify-content-end gap-2">
-                            {% if mat['stock_actual'] <= mat['stock_minimo'] %} <i
-                                class="fas fa-exclamation-triangle text-warning" title="Stock Bajo"></i>
-                                {% endif %}
-                                <span class="h5 fw-bold text-dark mb-0 stock-valor">{{
-                                    mat['stock_actual']|float|round(2) }}</span>
-
-                                <button class="btn btn-sm btn-outline-primary rounded-circle py-0 px-1"
-                                    style="width: 24px; height: 24px;" onclick='abrirModalStock({{ mat|tojson }})'
+                            {% if mat['stock_actual'] <= mat['stock_minimo'] %}
+                                <i class="fas fa-exclamation-triangle text-warning" title="Stock Bajo"></i>
+                            {% endif %}
+                            <span class="h5 fw-bold text-dark mb-0 stock-valor">{{ mat['stock_actual']|float|round(2) }}</span>
+                            
+                            <button class="btn btn-sm btn-outline-primary rounded-circle py-0 px-1" 
+                                    style="width: 24px; height: 24px;"
+                                    onclick='abrirModalStock({{ mat|tojson }})'
                                     title="Registrar Compra / Agregar Stock">
-                                    <i class="fas fa-plus" style="font-size: 0.7rem;"></i>
-                                </button>
+                                <i class="fas fa-plus" style="font-size: 0.7rem;"></i>
+                            </button>
                         </div>
                         <small class="text-muted" style="font-size: 0.65rem;">Unidades sueltas</small>
                     </div>
@@ -85,6 +95,11 @@
         <p>No tienes materiales registrados.</p>
     </div>
     {% endfor %}
+</div>
+
+<div id="sinResultados" class="text-center py-5 d-none">
+    <i class="fas fa-search fa-3x mb-3 text-muted opacity-25"></i>
+    <p class="text-muted fw-bold">No se encontraron materiales con ese nombre.</p>
 </div>
 
 <div class="modal fade" id="modalMaterial" tabindex="-1">
@@ -138,8 +153,7 @@
                     </div>
 
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary fw-bold rounded-pill py-2">Guardar
-                            Material</button>
+                        <button type="submit" class="btn btn-primary fw-bold rounded-pill py-2">Guardar Material</button>
                     </div>
                 </form>
             </div>
@@ -156,15 +170,14 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="stock_id">
-
+                
                 <p class="small text-muted mb-1">Material:</p>
                 <h6 class="fw-bold mb-3" id="stock_nombre"></h6>
 
                 <div class="mb-3">
                     <label class="small fw-bold text-dark mb-1">¿Cuánto compraste?</label>
                     <div class="input-group">
-                        <input type="number" id="stock_cantidad" class="form-control fw-bold text-center" value="1"
-                            min="0.1" step="any">
+                        <input type="number" id="stock_cantidad" class="form-control fw-bold text-center" value="1" min="0.1" step="any">
                         <span class="input-group-text bg-light" id="stock_unidad_label">Paquetes</span>
                     </div>
                 </div>
@@ -173,8 +186,7 @@
                     <label class="small fw-bold text-muted mb-1">¿Cambió el costo? (Opcional)</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-light border-0">$</span>
-                        <input type="number" id="stock_nuevo_precio" class="form-control bg-light border-0"
-                            placeholder="Nuevo precio">
+                        <input type="number" id="stock_nuevo_precio" class="form-control bg-light border-0" placeholder="Nuevo precio">
                     </div>
                 </div>
 
@@ -189,6 +201,32 @@
 </div>
 
 <script>
+    // --- FUNCIÓN DE BÚSQUEDA ---
+    function filtrarMateriales() {
+        const input = document.getElementById('buscadorMateriales');
+        const filter = input.value.toLowerCase();
+        const items = document.getElementsByClassName('item-material');
+        let visibles = 0;
+
+        for (let i = 0; i < items.length; i++) {
+            const nombre = items[i].querySelector('.nombre-material').innerText || "";
+            if (nombre.toLowerCase().indexOf(filter) > -1) {
+                items[i].classList.remove('d-none');
+                visibles++;
+            } else {
+                items[i].classList.add('d-none');
+            }
+        }
+
+        const msg = document.getElementById('sinResultados');
+        if (visibles === 0 && items.length > 0) {
+            msg.classList.remove('d-none');
+        } else {
+            msg.classList.add('d-none');
+        }
+    }
+
+    // --- FUNCIONES EXISTENTES ---
     function toggleTipo() {
         const esPaquete = document.getElementById('tipo_paquete').checked;
         const divCant = document.getElementById('div_cantidad_paquete');
@@ -232,13 +270,14 @@
         modalStockObj = new bootstrap.Modal(document.getElementById('modalStock'));
         document.getElementById('stock_id').value = mat.id;
         document.getElementById('stock_nombre').innerText = mat.nombre;
-
+        
+        // Etiqueta inteligente
         const label = mat.es_paquete ? `Paquetes (de ${parseInt(mat.cantidad_paquete)})` : "Unidades";
         document.getElementById('stock_unidad_label').innerText = label;
-
+        
         document.getElementById('stock_cantidad').value = 1;
-        document.getElementById('stock_nuevo_precio').value = mat.precio_compra;
-
+        document.getElementById('stock_nuevo_precio').value = mat.precio_compra; // Sugerir el precio actual
+        
         modalStockObj.show();
     }
 
@@ -247,27 +286,27 @@
         const cant = document.getElementById('stock_cantidad').value;
         const precio = document.getElementById('stock_nuevo_precio').value;
 
-        if (!cant || cant <= 0) return alert("Ingresa una cantidad válida.");
+        if(!cant || cant <= 0) return alert("Ingresa una cantidad válida.");
 
         fetch('/api/registrar_compra', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 id: id,
                 cantidad: cant,
                 nuevo_precio: precio
             })
         })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    alert("✅ Inventario actualizado");
-                    location.reload();
-                } else {
-                    alert("Error: " + data.error);
-                }
-            })
-            .catch(e => alert("Error de conexión"));
+        .then(r => r.json())
+        .then(data => {
+            if(data.success) {
+                alert("✅ Inventario actualizado");
+                location.reload();
+            } else {
+                alert("Error: " + data.error);
+            }
+        })
+        .catch(e => alert("Error de conexión"));
     }
 </script>
 {% endblock %}
