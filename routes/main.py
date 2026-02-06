@@ -7,8 +7,16 @@ from utils.datetime_utils import now_utc, utc_to_local
 from db import get_db_connection as get_db
 from helpers import login_required
 from helpers import subscription_required
+from helpers import login_required, subscription_required, obtener_alertas
 
 main_bp = Blueprint('main', __name__)
+
+@main_bp.app_context_processor
+def inject_notifications():
+    if 'user_id' in session:
+        return {'notificaciones': obtener_alertas(session['user_id'])}
+    return {'notificaciones': []}
+
 
 # --- HELPER INTERNO PARA FORMATEAR FECHAS A LOCAL ---
 def procesar_fila_fechas(fila_db):

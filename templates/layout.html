@@ -55,10 +55,54 @@
             box-shadow: none;
         }
 
+        /* CAMPANA DE NOTIFICACIONES */
+        .nav-icon-btn {
+            position: relative;
+            color: #555;
+            font-size: 1.2rem;
+            padding: 8px;
+            transition: color 0.2s;
+        }
+
+        .nav-icon-btn:hover {
+            color: var(--sian-pink);
+        }
+
+        .notification-badge {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 10px;
+            height: 10px;
+            background-color: #dc3545;
+            border-radius: 50%;
+            border: 2px solid white;
+        }
+
+        .pulse-animation {
+            animation: pulse-red 2s infinite;
+        }
+
+        @keyframes pulse-red {
+            0% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
+            }
+
+            70% {
+                transform: scale(1);
+                box-shadow: 0 0 0 6px rgba(220, 53, 69, 0);
+            }
+
+            100% {
+                transform: scale(0.95);
+                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
+            }
+        }
+
         /* ==========================================
            TRUCO PARA EL MENÚ HÍBRIDO (OFFCANVAS)
            ========================================== */
-        /* En pantallas grandes (Desktop), reseteamos el offcanvas para que sea navbar normal */
         @media (min-width: 992px) {
             .offcanvas {
                 position: static !important;
@@ -76,7 +120,6 @@
 
             .offcanvas-header {
                 display: none !important;
-                /* Ocultar la X y título en desktop */
             }
 
             .offcanvas-body {
@@ -85,38 +128,30 @@
                 display: flex !important;
                 flex-direction: row !important;
                 justify-content: flex-end !important;
-                /* Alinear a la derecha en desktop */
             }
 
-            /* Quitamos el margen superior de los items en desktop */
             .navbar-nav {
                 margin-top: 0 !important;
             }
 
-            /* Quitamos el ancho 100% en desktop para que se ajusten al contenido */
             .nav-item {
                 width: auto !important;
             }
         }
 
-        /* Ajustes visuales para Móvil */
         @media (max-width: 991.98px) {
             .offcanvas {
                 max-width: 75%;
-                /* Que no ocupe toda la pantalla */
             }
 
             .nav-link {
                 text-align: left !important;
-                /* En móvil se ve mejor alineado a la izquierda */
                 padding-left: 1rem !important;
             }
 
             .dropdown-menu {
                 text-align: center;
-                /* Opcional: centrar dropdowns en móvil */
                 background-color: #f8f9fa;
-                /* Un fondo grisaseo para distinguir */
                 border: none;
             }
         }
@@ -138,6 +173,41 @@
             <a class="navbar-brand fw-bold text-primary me-auto" href="{{ url_for('main.cotizador') }}">
                 <span style="color: var(--sian-pink);">🎨 {{ config['nombre_empresa'] }}</span>
             </a>
+
+            {% if session.get('user_id') %}
+            <div class="dropdown me-2 order-lg-last">
+                <a class="nav-icon-btn" href="#" role="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-bell"></i>
+                    {% if notificaciones %}
+                    <span class="notification-badge pulse-animation"></span>
+                    {% endif %}
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2"
+                    style="width: 300px; max-height: 400px; overflow-y: auto;">
+                    <li class="dropdown-header text-uppercase small fw-bold text-muted">Notificaciones</li>
+
+                    {% if notificaciones %}
+                    {% for n in notificaciones %}
+                    <li>
+                        <a class="dropdown-item rounded p-2 mb-1 d-flex align-items-start text-wrap" href="{{ n.url }}">
+                            <div class="me-2 mt-1 text-{{ n.tipo }}">
+                                <i class="fas fa-{{ n.icono }}"></i>
+                            </div>
+                            <div>
+                                <small class="d-block text-dark">{{ n.msg|safe }}</small>
+                            </div>
+                        </a>
+                    </li>
+                    {% endfor %}
+                    {% else %}
+                    <li class="text-center p-3 text-muted">
+                        <i class="far fa-bell-slash mb-2"></i><br>
+                        <small>Sin novedades por ahora</small>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+            {% endif %}
 
             <div class="offcanvas offcanvas-start" tabindex="-1" id="miMenuMobile" aria-labelledby="miMenuLabel">
 
