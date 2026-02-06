@@ -314,3 +314,61 @@ def eliminar_receta(id):
     finally:
         conn.close()
     return redirect(url_for('inventory.recetas'))
+
+    @inventory_bp.route('/api/registrar_compra', methods=['POST'])
+@login_required
+def registrar_compra():
+    data = request.get_json()
+    material_id = data.get('id')
+    cantidad_compra = float(data.get('cantidad', 0))
+    nuevo_precio = float(data.get('nuevo_precio', 0)) # Opcional: Actualizar costo al comprar
+    
+    if not material_id or cantidad_compra <= 0:
+        return jsonify({'success': False, 'error': 'Datos inválidos'}), 400
+
+    conn = get_db()
+    try:
+        # 1. Obtener datos actuales del material
+        mat = conn.execute("SELECT * FROM materiales WHERE id=? AND user_id=?", (material_id, session['user_id'])).fetchone()
+        if not mat:
+            return jsonify({'success': False, 'error': 'Material no encontrado'}), 404
+
+        # 2. Calcular cuánto sumar al stock (Conversión de Unidades)
+        # Si es paquete (ej. 1 paquete de 100 hojas), y compras 2, sumamos 200 hojas.
+        cantidad_a_sumar = cantidad_compra
+        if mat['es_paquete'] and mat['cantidad_paquete'] > 1:
+            cantidad_a_sumar = cantidad_compra * mat['cantidad_paquete']
+
+        # 3. Actualizar Stock y Precio (si cambió)
+        sql_update = "UPDATE materiales SET stock_actual = stock_actual + ?"
+        params = [cantidad_a_sumar]
+
+        if nuevo_precio > 0:
+            sql_update += ", precio_compra = ?"
+            params.append(nuevo_precio)
+            
+            # Recalcular precio unitario si cambia el precio de compra
+            if mat['cantidad_paquete'] > 0:
+                nuevo_unitario = nuevo_precio / mat['cantidad_paquete']
+                sql_update += ", precio_unitario = ?"
+                params.append(nuevo_unitario)
+
+        sql_update += " WHERE id = ?"
+        params.append(material_id)
+
+        conn.execute(sql_update, params)
+
+        # 4. Registrar en Historial (Movimientos)
+        conn.execute("""
+            INSERT INTO movimientos_inventario (user_id, material_id, tipo, cantidad, motivo, stock_resultante)
+            VALUES (?, ?, 'entrada', ?, 'Compra / Ajuste', (SELECT stock_actual FROM materiales WHERE id=?))
+        """, (session['user_id'], material_id, cantidad_a_sumar, material_id))
+
+        conn.commit()
+        return jsonify({'success': True})
+
+    except Exception as e:
+        conn.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()

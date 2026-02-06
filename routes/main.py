@@ -73,6 +73,10 @@ def guardar_venta():
     cursor = conn.cursor()
     
     try:
+        # Recuperar configuración para saber si descontamos stock
+        config = cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=?', (session['user_id'],)).fetchone()
+        usar_inventario = config['inventario_activo'] if config else 0
+
         # Recuperar datos básicos
         venta_id = data.get('id')
         cliente = data.get('cliente', 'Cliente General')
@@ -83,17 +87,14 @@ def guardar_venta():
         descuento_pct = data.get('descuento_porcentaje', 0)
         descuento_monto = data.get('descuento_monto', 0)
         
-        # --- NUEVOS CAMPOS DE IMPUESTOS ---
-        # Recibimos el monto exacto y el porcentaje para construir el texto
+        # --- CAMPOS DE IMPUESTOS ---
         tax_amount = float(data.get('tax_amount', 0))
         tax_percent = float(data.get('tax_percent', 0))
         
-        # Construimos el string descriptivo (ej: "IVA 16%" o "none")
         if tax_amount > 0:
             tax_engine = f"IVA {int(tax_percent)}%" if tax_percent.is_integer() else f"IVA {tax_percent}%"
         else:
             tax_engine = "none"
-        # ----------------------------------
 
         total = data.get('total', 0)
         costo_total = data.get('costo_total', 0)
@@ -106,14 +107,15 @@ def guardar_venta():
         fecha_actual = now_utc()
         fecha_vencimiento = (now_utc() + timedelta(days=7)).isoformat()
 
+        # =================================================================
+        # 1. GUARDAR LA VENTA (Cabecera)
+        # =================================================================
         if venta_id:
-            # =================================================
-            # MODO ACTUALIZACIÓN (UPDATE)
-            # =================================================
+            # UPDATE
             cursor.execute('''
                 UPDATE ventas 
                 SET cliente=?, subtotal=?, descuento_porcentaje=?, descuento_monto=?,
-                    impuestos=?, tax_engine=?,  -- <--- ACTUALIZAMOS IMPUESTOS
+                    impuestos=?, tax_engine=?,
                     total=?, costo_total=?, estado=?, monto_pagado=?, saldo_pendiente=?
                 WHERE id=? AND user_id=?
             ''', (
@@ -122,18 +124,14 @@ def guardar_venta():
                 total, costo_total, estado, monto_pagado, saldo_pendiente,
                 venta_id, session['user_id']
             ))
-            
             cursor.execute('DELETE FROM venta_detalles WHERE venta_id=?', (venta_id,))
-            
         else:
-            # =================================================
-            # MODO CREACIÓN (INSERT)
-            # =================================================
+            # INSERT
             cursor.execute('''
                 INSERT INTO ventas (
                     user_id, fecha, cliente, subtotal, 
                     descuento_porcentaje, descuento_monto, 
-                    impuestos, tax_engine,  -- <--- INSERTAMOS IMPUESTOS
+                    impuestos, tax_engine,
                     total, costo_total, estado, 
                     monto_pagado, saldo_pendiente, fecha_vencimiento
                 )
@@ -147,10 +145,11 @@ def guardar_venta():
             ))
             venta_id = cursor.lastrowid
 
-        # =================================================
-        # INSERTAR DETALLES
-        # =================================================
+        # =================================================================
+        # 2. PROCESAR DETALLES Y DESCONTAR INVENTARIO
+        # =================================================================
         for item in items:
+            # A. Guardar detalle de venta
             cursor.execute('''
                 INSERT INTO venta_detalles (
                     venta_id, concepto, cantidad, precio_unitario, 
@@ -167,6 +166,46 @@ def guardar_venta():
                 item.get('composicion', '[]')
             ))
 
+            # B. Descontar Inventario (Solo si está activo y NO es una edición vieja)
+            # NOTA: Por seguridad, solo descontamos en ventas NUEVAS (venta_id recién creado)
+            # para evitar duplicidad al editar. 
+            # Si quisieras manejar devoluciones al editar, la lógica sería mucho más compleja.
+            if usar_inventario and not data.get('id'): 
+                try:
+                    import json
+                    composicion = json.loads(item.get('composicion', '[]'))
+                    cantidad_producto = float(item['cantidad'])
+
+                    for comp in composicion:
+                        if comp.get('tipo') == 'material':
+                            material_id = comp.get('id')
+                            # Cantidad unitaria x Cantidad de productos vendidos
+                            cantidad_a_descontar = float(comp.get('cantidad', 0)) * cantidad_producto
+                            
+                            if cantidad_a_descontar > 0:
+                                # Restar Stock
+                                cursor.execute('''
+                                    UPDATE materiales 
+                                    SET stock_actual = stock_actual - ? 
+                                    WHERE id = ?
+                                ''', (cantidad_a_descontar, material_id))
+
+                                # Registrar Movimiento (Salida)
+                                cursor.execute('''
+                                    INSERT INTO movimientos_inventario 
+                                    (user_id, material_id, tipo, cantidad, motivo, stock_resultante)
+                                    VALUES (?, ?, 'salida', ?, ?, (SELECT stock_actual FROM materiales WHERE id=?))
+                                ''', (
+                                    session['user_id'], 
+                                    material_id, 
+                                    cantidad_a_descontar, 
+                                    f"Venta #{venta_id} - {item['concepto']}", 
+                                    material_id
+                                ))
+                except Exception as e:
+                    print(f"Error descontando inventario: {e}")
+                    # No detenemos la venta si falla el inventario, pero lo logueamos
+
         conn.commit()
         return jsonify({'success': True, 'ticket_id': venta_id})
 
@@ -177,6 +216,8 @@ def guardar_venta():
     finally:
         conn.close()
 
+
+        
 # --- ACTUALIZAR VENTA (ABONOS) ---
 @main_bp.route('/api/actualizar_venta', methods=['POST'])
 @login_required

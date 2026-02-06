@@ -1,247 +1,272 @@
 {% extends "layout.html" %}
 
-{% block title %}Inventario de Materiales | SianEffects{% endblock %}
-
-{% block extra_css %}
-<style>
-    /* Estilos específicos para Materiales */
-    .card-material {
-        border: none;
-        border-radius: 20px;
-        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
-        transition: transform 0.2s;
-        background: white;
-    }
-
-    .search-input {
-        border-radius: 50px;
-        padding-left: 20px;
-        border: 2px solid #eee;
-        background-color: white;
-    }
-
-    .search-input:focus {
-        border-color: var(--sian-pink);
-        box-shadow: none;
-    }
-</style>
-{% endblock %}
+{% block title %}Materiales | SianEffects{% endblock %}
 
 {% block content %}
-<div class="row align-items-center mb-4 g-3">
+<div class="row align-items-center mb-4">
     <div class="col-md-6">
-        <h3 class="fw-bold text-secondary m-0">📦 Almacén de Insumos</h3>
-        <small class="text-muted">Gestiona tus materias primas.</small>
+        <h3 class="fw-bold m-0 text-dark"><i class="fas fa-boxes text-secondary me-2"></i>Mis Materiales</h3>
+        <small class="text-muted">Gestiona tus insumos y existencias.</small>
     </div>
-    <div class="col-md-6">
-        <div class="d-flex gap-2 justify-content-md-end">
-            <input type="text" id="buscador" class="form-control search-input" placeholder="🔍 Buscar material..."
-                onkeyup="filtrarTabla()">
-            <button class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal"
-                data-bs-target="#modalMaterial" onclick="resetModal()">
-                <i class="fas fa-plus"></i> Nuevo
-            </button>
-        </div>
+    <div class="col-md-6 text-end">
+        <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
+            data-bs-target="#modalMaterial" onclick="limpiarModal()">
+            <i class="fas fa-plus me-2"></i> Nuevo Material
+        </button>
     </div>
 </div>
 
-<div class="card card-material overflow-hidden">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" id="tablaMateriales">
-            <thead class="bg-light text-uppercase small text-muted">
-                <tr>
-                    <th class="ps-4 py-3">Material</th>
-                    <th>Tipo Compra</th>
-                    <th>Costo Unitario</th>
-                    <th class="text-end pe-4">Acciones</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for m in materiales %}
-                <tr>
-                    <td class="ps-4">
-                        <span class="fw-bold text-dark">{{ m['nombre'] }}</span>
-                        {% if m['es_paquete'] %}
-                        <div class="small text-muted">
-                            <i class="fas fa-box-open me-1"></i> Compras en paquete (${{ m['precio_compra'] }})
-                        </div>
+<div class="row g-3">
+    {% for mat in materiales %}
+    <div class="col-md-6 col-lg-4">
+        <div class="card h-100 border-0 shadow-sm" style="border-radius: 15px;">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <div>
+                        <h6 class="fw-bold text-dark mb-1">{{ mat['nombre'] }}</h6>
+                        {% if mat['es_paquete'] %}
+                        <span class="badge bg-light text-secondary border">
+                            📦 Paquete de {{ mat['cantidad_paquete']|int }} u.
+                        </span>
                         {% else %}
-                        <div class="small text-muted">
-                            <i class="fas fa-cube me-1"></i> Compras por unidad
-                        </div>
+                        <span class="badge bg-light text-secondary border">🔹 Unidad Individual</span>
                         {% endif %}
-                    </td>
-                    <td>
-                        {% if m['es_paquete'] %}
-                        <span class="badge bg-info text-dark rounded-pill">Paquete ({{ m['cantidad_paquete']|int
-                            }})</span>
-                        {% else %}
-                        <span class="badge bg-secondary rounded-pill">Unidad</span>
-                        {% endif %}
-                    </td>
-                    <td>
-                        <div class="fw-bold text-success fs-5">
-                            ${{ "%.2f"|format(m['precio_unitario']) }}
-                        </div>
-                        <small class="text-muted" style="font-size: 0.75rem;">Costo base para cotizar</small>
-                    </td>
-                    <td class="text-end pe-4">
-                        <button class="btn btn-light text-primary border rounded-circle btn-sm shadow-sm me-1"
-                            onclick='editarMaterial({{ m|tojson }})' title="Editar">
-                            <i class="fas fa-pen"></i>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-light btn-sm rounded-circle" data-bs-toggle="dropdown">
+                            <i class="fas fa-ellipsis-v text-muted"></i>
                         </button>
-                        <a href="{{ url_for('inventory.eliminar_material', id=m['id']) }}"
-                            class="btn btn-light text-danger border rounded-circle btn-sm shadow-sm"
-                            onclick="return confirm('¿Borrar este material?')" title="Eliminar">
-                            <i class="fas fa-trash-alt"></i>
-                        </a>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="text-center py-5 text-muted opacity-50">
-                        <i class="fas fa-boxes fa-3x mb-3"></i><br>No hay materiales registrados.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                        <ul class="dropdown-menu border-0 shadow">
+                            <li><a class="dropdown-item" href="#" onclick='editarMaterial({{ mat|tojson }})'><i
+                                        class="fas fa-edit me-2 text-primary"></i> Editar</a></li>
+                            <li>
+                                <hr class="dropdown-divider">
+                            </li>
+                            <li><a class="dropdown-item text-danger"
+                                    href="{{ url_for('inventory.eliminar_material', id=mat['id']) }}"
+                                    onclick="return confirm('¿Eliminar este material?')"><i
+                                        class="fas fa-trash-alt me-2"></i> Eliminar</a></li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="row mt-3 align-items-end">
+                    <div class="col-6">
+                        <small class="text-muted fw-bold" style="font-size: 0.7rem;">COSTO UNITARIO</small>
+                        <div class="h5 fw-bold text-success mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
+                    </div>
+
+                    <div class="col-6 text-end border-start">
+                        <small class="text-muted fw-bold" style="font-size: 0.7rem;">EN STOCK</small>
+                        <div class="d-flex align-items-center justify-content-end gap-2">
+                            {% if mat['stock_actual'] <= mat['stock_minimo'] %} <i
+                                class="fas fa-exclamation-triangle text-warning" title="Stock Bajo"></i>
+                                {% endif %}
+                                <span class="h5 fw-bold text-dark mb-0 stock-valor">{{
+                                    mat['stock_actual']|float|round(2) }}</span>
+
+                                <button class="btn btn-sm btn-outline-primary rounded-circle py-0 px-1"
+                                    style="width: 24px; height: 24px;" onclick='abrirModalStock({{ mat|tojson }})'
+                                    title="Registrar Compra / Agregar Stock">
+                                    <i class="fas fa-plus" style="font-size: 0.7rem;"></i>
+                                </button>
+                        </div>
+                        <small class="text-muted" style="font-size: 0.65rem;">Unidades sueltas</small>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
+    {% else %}
+    <div class="col-12 text-center py-5 opacity-50">
+        <i class="fas fa-box-open fa-3x mb-3 text-secondary"></i>
+        <p>No tienes materiales registrados.</p>
+    </div>
+    {% endfor %}
 </div>
 
 <div class="modal fade" id="modalMaterial" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold" id="modalTitle">Nuevo Material</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-bold">Gestión de Material</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post">
-                <div class="modal-body p-4">
-                    <input type="hidden" name="id_actualizar" id="inputId">
+            <div class="modal-body">
+                <form action="{{ url_for('inventory.materiales') }}" method="POST" id="formMaterial">
+                    <input type="hidden" name="id_actualizar" id="id_actualizar">
 
                     <div class="mb-3">
-                        <label class="fw-bold small text-muted">Nombre del Material</label>
-                        <input type="text" name="nombre" id="inputNombre" class="form-control"
-                            placeholder="Ej. Vinil Textil Rojo" required>
+                        <label class="form-label small fw-bold text-muted">Nombre del Material</label>
+                        <input type="text" name="nombre" id="nombre" class="form-control" required
+                            placeholder="Ej. Taza Blanca 11oz">
                     </div>
 
-                    <label class="fw-bold small text-muted mb-2">¿Cómo lo compras?</label>
-                    <div class="row g-2 mb-3">
+                    <div class="row g-3 mb-3">
                         <div class="col-6">
-                            <input type="radio" class="btn-check" name="tipo_entrada" id="tipoUnidad" value="unidad"
-                                checked onclick="togglePaquete(false)">
-                            <label class="btn btn-outline-secondary w-100 rounded-pill" for="tipoUnidad">Por
-                                Unidad</label>
+                            <label class="form-label small fw-bold text-muted">Tipo de Compra</label>
+                            <div class="form-check p-3 border rounded bg-light">
+                                <input class="form-check-input" type="radio" name="tipo_entrada" id="tipo_paquete"
+                                    value="paquete" checked onchange="toggleTipo()">
+                                <label class="form-check-label fw-bold" for="tipo_paquete">📦 Por Paquete</label>
+                            </div>
                         </div>
                         <div class="col-6">
-                            <input type="radio" class="btn-check" name="tipo_entrada" id="tipoPaquete" value="paquete"
-                                onclick="togglePaquete(true)">
-                            <label class="btn btn-outline-info w-100 rounded-pill" for="tipoPaquete">Por Paquete</label>
-                        </div>
-                    </div>
-
-                    <div class="row g-3">
-                        <div class="col-6">
-                            <label class="fw-bold small text-muted">Precio de Compra ($)</label>
-                            <input type="number" step="any" name="precio_compra" id="inputPrecio" class="form-control"
-                                placeholder="0.00" required>
-                        </div>
-                        <div class="col-6">
-                            <label class="fw-bold small text-muted" id="lblCantidad">Cantidad</label>
-                            <input type="number" step="any" name="cantidad_paquete" id="inputCantidad"
-                                class="form-control" value="1" readonly>
+                            <label class="form-label small fw-bold text-muted">&nbsp;</label>
+                            <div class="form-check p-3 border rounded bg-light">
+                                <input class="form-check-input" type="radio" name="tipo_entrada" id="tipo_unidad"
+                                    value="unidad" onchange="toggleTipo()">
+                                <label class="form-check-label fw-bold" for="tipo_unidad">🔹 Por Unidad</label>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="alert alert-light border mt-3 mb-0 small text-center">
-                        <i class="fas fa-calculator me-1"></i> Costo Unitario Calculado:
-                        <strong class="text-success" id="lblCalculo">$0.00</strong>
+                    <div class="row g-3 mb-3">
+                        <div class="col-6">
+                            <label class="form-label small fw-bold text-muted">Costo de Compra ($)</label>
+                            <input type="number" step="0.01" name="precio_compra" id="precio_compra"
+                                class="form-control" placeholder="0.00" required>
+                            <div class="form-text" style="font-size: 0.7rem;">Lo que te cuesta comprarlo.</div>
+                        </div>
+                        <div class="col-6" id="div_cantidad_paquete">
+                            <label class="form-label small fw-bold text-muted">Unidades por Paquete</label>
+                            <input type="number" step="1" name="cantidad_paquete" id="cantidad_paquete"
+                                class="form-control" placeholder="Ej. 100">
+                        </div>
                     </div>
-                </div>
-                <div class="modal-footer border-0 bg-light">
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold w-100">Guardar
-                        Material</button>
-                </div>
-            </form>
+
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-primary fw-bold rounded-pill py-2">Guardar
+                            Material</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
 </div>
-{% endblock %}
 
-{% block scripts %}
+<div class="modal fade" id="modalStock" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header bg-success text-white">
+                <h6 class="modal-title fw-bold"><i class="fas fa-shopping-cart me-2"></i>Registrar Compra</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <input type="hidden" id="stock_id">
+
+                <p class="small text-muted mb-1">Material:</p>
+                <h6 class="fw-bold mb-3" id="stock_nombre"></h6>
+
+                <div class="mb-3">
+                    <label class="small fw-bold text-dark mb-1">¿Cuánto compraste?</label>
+                    <div class="input-group">
+                        <input type="number" id="stock_cantidad" class="form-control fw-bold text-center" value="1"
+                            min="0.1" step="any">
+                        <span class="input-group-text bg-light" id="stock_unidad_label">Paquetes</span>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="small fw-bold text-muted mb-1">¿Cambió el costo? (Opcional)</label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-0">$</span>
+                        <input type="number" id="stock_nuevo_precio" class="form-control bg-light border-0"
+                            placeholder="Nuevo precio">
+                    </div>
+                </div>
+
+                <div class="d-grid">
+                    <button type="button" class="btn btn-success fw-bold" onclick="guardarCompra()">
+                        <i class="fas fa-save me-1"></i> Agregar al Inventario
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
-    function togglePaquete(esPaquete) {
-        const inputCant = document.getElementById('inputCantidad');
-        const lbl = document.getElementById('lblCantidad');
+    function toggleTipo() {
+        const esPaquete = document.getElementById('tipo_paquete').checked;
+        const divCant = document.getElementById('div_cantidad_paquete');
+        const inputCant = document.getElementById('cantidad_paquete');
+
         if (esPaquete) {
-            inputCant.readOnly = false;
+            divCant.style.display = 'block';
             inputCant.value = '';
-            inputCant.placeholder = "Ej. 50 (hojas)";
-            lbl.innerText = "Contenido del Paquete";
         } else {
-            inputCant.readOnly = true;
-            inputCant.value = 1;
-            lbl.innerText = "Unidad (1)";
+            divCant.style.display = 'none';
+            inputCant.value = '1';
         }
-        calcularUnitario();
     }
 
-    // Auto-Cálculo en el Modal
-    const inputs = ['inputPrecio', 'inputCantidad'];
-    inputs.forEach(id => document.getElementById(id).addEventListener('input', calcularUnitario));
-
-    function calcularUnitario() {
-        const p = parseFloat(document.getElementById('inputPrecio').value) || 0;
-        const c = parseFloat(document.getElementById('inputCantidad').value) || 1;
-        const res = c > 0 ? (p / c) : 0;
-        document.getElementById('lblCalculo').innerText = '$' + res.toFixed(2);
+    function limpiarModal() {
+        document.getElementById('formMaterial').reset();
+        document.getElementById('id_actualizar').value = '';
+        toggleTipo();
     }
 
-    // Función Editar (Rellena el modal con datos)
     function editarMaterial(mat) {
-        resetModal();
-        document.getElementById('modalTitle').innerText = "Editar Material";
-        document.getElementById('inputId').value = mat.id;
-        document.getElementById('inputNombre').value = mat.nombre;
-        document.getElementById('inputPrecio').value = mat.precio_compra;
+        const modal = new bootstrap.Modal(document.getElementById('modalMaterial'));
+        document.getElementById('id_actualizar').value = mat.id;
+        document.getElementById('nombre').value = mat.nombre;
+        document.getElementById('precio_compra').value = mat.precio_compra;
+        document.getElementById('cantidad_paquete').value = mat.cantidad_paquete;
 
         if (mat.es_paquete) {
-            document.getElementById('tipoPaquete').checked = true;
-            togglePaquete(true);
-            document.getElementById('inputCantidad').value = mat.cantidad_paquete;
+            document.getElementById('tipo_paquete').checked = true;
         } else {
-            document.getElementById('tipoUnidad').checked = true;
-            togglePaquete(false);
+            document.getElementById('tipo_unidad').checked = true;
         }
-        calcularUnitario();
-        new bootstrap.Modal(document.getElementById('modalMaterial')).show();
+        toggleTipo();
+        modal.show();
     }
 
-    function resetModal() {
-        document.getElementById('modalTitle').innerText = "Nuevo Material";
-        document.getElementById('inputId').value = "";
-        document.querySelector('form').reset();
-        togglePaquete(false);
-        document.getElementById('lblCalculo').innerText = "$0.00";
+    // --- FUNCIONES DE STOCK ---
+    let modalStockObj;
+
+    function abrirModalStock(mat) {
+        modalStockObj = new bootstrap.Modal(document.getElementById('modalStock'));
+        document.getElementById('stock_id').value = mat.id;
+        document.getElementById('stock_nombre').innerText = mat.nombre;
+
+        // Etiqueta inteligente
+        const label = mat.es_paquete ? `Paquetes (de ${parseInt(mat.cantidad_paquete)})` : "Unidades";
+        document.getElementById('stock_unidad_label').innerText = label;
+
+        document.getElementById('stock_cantidad').value = 1;
+        document.getElementById('stock_nuevo_precio').value = mat.precio_compra; // Sugerir el precio actual
+
+        modalStockObj.show();
     }
 
-    // Filtro de Tabla (Buscador JS)
-    function filtrarTabla() {
-        const filter = document.getElementById('buscador').value.toUpperCase();
-        const tbody = document.querySelector("#tablaMateriales tbody"); // Asegurar que buscamos en el cuerpo
-        const rows = tbody.getElementsByTagName('tr');
+    function guardarCompra() {
+        const id = document.getElementById('stock_id').value;
+        const cant = document.getElementById('stock_cantidad').value;
+        const precio = document.getElementById('stock_nuevo_precio').value;
 
-        for (let i = 0; i < rows.length; i++) {
-            // Saltamos la fila de "No hay materiales" si existe
-            if (rows[i].cells.length === 1) continue;
+        if (!cant || cant <= 0) return alert("Ingresa una cantidad válida.");
 
-            const td = rows[i].getElementsByTagName('td')[0];
-            if (td) {
-                const txtValue = td.textContent || td.innerText;
-                rows[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
-            }
-        }
+        fetch('/api/registrar_compra', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: id,
+                cantidad: cant,
+                nuevo_precio: precio
+            })
+        })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    alert("✅ Inventario actualizado");
+                    location.reload();
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch(e => alert("Error de conexión"));
     }
 </script>
 {% endblock %}
