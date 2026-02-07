@@ -109,102 +109,80 @@
         /* --- VISTA DE CATEGORÍAS (TIPO BERSHKA GRID) --- */
         .cat-grid-item {
             position: relative;
-            height: 400px;
-            /* Altura fija para impacto visual */
+            height: 450px;
+            /* Más altas para impacto visual */
             overflow: hidden;
             cursor: pointer;
-            background-color: #f8f9fa;
+            background-color: #f0f0f0;
+            /* Fondo gris suave mientras carga */
+            margin-bottom: 0;
+            /* Pegadas unas con otras si usas g-0 */
         }
 
         .cat-img {
             width: 100%;
             height: 100%;
             object-fit: cover;
-            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            transition: transform 0.7s ease;
+            /* Movimiento suave */
         }
 
         .cat-grid-item:hover .cat-img {
-            transform: scale(1.05);
+            transform: scale(1.08);
+            /* Zoom lento al pasar el mouse */
         }
 
+        /* Capa oscura degradada para que el texto blanco se lea siempre */
         .cat-overlay {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
+            height: 50%;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent);
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
             padding: 30px;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
-            color: white;
             pointer-events: none;
         }
 
         .cat-title {
-            font-weight: 900;
-            font-size: 1.8rem;
+            color: #fff;
+            font-weight: 800;
+            font-size: 2rem;
+            /* Texto grande */
             text-transform: uppercase;
-            margin: 0;
+            letter-spacing: -1px;
             line-height: 1;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
         }
 
-        .cat-subtitle {
-            font-size: 0.8rem;
-            font-weight: 400;
-            opacity: 0.9;
-            margin-top: 5px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        /* --- BREADCRUMB (NAVEGACIÓN) --- */
-        .nav-breadcrumb {
-            padding: 15px 0;
+        .cat-btn {
+            color: #fff;
             font-size: 0.85rem;
-            color: #888;
-            cursor: pointer;
-            display: none;
-            /* Oculto en home */
-        }
-
-        .nav-breadcrumb:hover {
-            text-decoration: underline;
-            color: var(--text-dark);
-        }
-
-        /* --- CARRITO WHATSAPP --- */
-        .btn-whatsapp {
-            background-color: #25d366;
-            color: white;
-            font-weight: bold;
-            width: 100%;
-            border: none;
-            padding: 15px;
+            font-weight: 600;
             text-transform: uppercase;
-            font-size: 0.9rem;
+            letter-spacing: 2px;
+            border-bottom: 2px solid transparent;
+            width: fit-content;
+            transition: border-color 0.3s;
         }
 
-        .btn-whatsapp:hover {
-            background-color: #1ebc57;
-            color: white;
+        .cat-grid-item:hover .cat-btn {
+            border-bottom-color: #fff;
+            /* Subrayado al hacer hover */
         }
 
-        /* PRODUCT CARD OVERRIDE (Minimalista) */
-        .card-producto {
-            border: none !important;
-            box-shadow: none !important;
-        }
-
-        .card-producto .card-img-top {
-            border-radius: 0 !important;
-        }
-
-        /* MOBILE ADJUST */
+        /* Ajuste Móvil */
         @media (max-width: 768px) {
             .cat-grid-item {
-                height: 250px;
+                height: 300px;
             }
 
             .cat-title {
-                font-size: 1.4rem;
+                font-size: 1.5rem;
             }
         }
     </style>
@@ -260,30 +238,40 @@
             </div>
         </div>
 
-        <div id="viewCategories" class="row g-1 g-md-3 mt-2">
+        <div id="viewCategories" class="row g-2 mt-2">
+
+            <div class="col-12 mb-3 d-flex justify-content-center d-md-none">
+                <div class="small text-muted text-uppercase fw-bold">Colecciones</div>
+            </div>
+
             {% for item in catalogo %}
-            <div class="col-12 col-md-6 col-lg-4">
+            <div class="col-6 col-md-4">
                 <div class="cat-grid-item" onclick="abrirCategoria('cat-{{ item.info.id }}', '{{ item.info.nombre }}')">
-                    {% set portada = 'https://via.placeholder.com/600x800/f0f0f0/cccccc?text=SianEffects' %}
-                    {% if item.productos and item.productos|length > 0 %}
-                    {% set portada = item.productos[0].media_url %}
-                    {% if item.productos[0].media_type == 'video' %}
-                    {% set portada = 'https://via.placeholder.com/600x800/f0f0f0/cccccc?text=Video+Preview' %}
+
+                    {% set portada = 'https://via.placeholder.com/600x800/e0e0e0/999999?text=' + item.info.nombre %}
+
+                    {# Buscamos la primera imagen válida (evitando videos si no tienen thumb) #}
+                    {% if item.productos %}
+                    {% for prod in item.productos %}
+                    {% if prod.media_type == 'image' %}
+                    {% set portada = prod.media_url %}
+                    {# Rompemos el ciclo al encontrar la primera imagen #}
+                    {% break %}
                     {% endif %}
+                    {% endfor %}
                     {% endif %}
 
-                    <img src="{{ portada }}" alt="{{ item.info.nombre }}" class="cat-img">
+                    <img src="{{ portada }}" alt="{{ item.info.nombre }}" class="cat-img" loading="lazy">
 
                     <div class="cat-overlay">
                         <h2 class="cat-title">{{ item.info.nombre }}</h2>
-                        <div class="cat-subtitle">VER COLECCIÓN <i class="fas fa-arrow-right ms-1"
-                                style="font-size: 0.7rem;"></i></div>
+                        <div class="cat-btn">Ver Productos</div>
                     </div>
                 </div>
             </div>
             {% else %}
-            <div class="text-center py-5">
-                <p class="text-muted">No hay categorías públicas aún.</p>
+            <div class="col-12 text-center py-5">
+                <h4 class="fw-light">Próximamente nuevas colecciones</h4>
             </div>
             {% endfor %}
         </div>
