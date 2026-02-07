@@ -255,40 +255,22 @@
                     encontrado = false
                     ) %}
 
-                    {% if item.productos %}
-                    {# 1️⃣ Prioridad: IMAGEN #}
                     {% for prod in item.productos %}
                     {% if prod.media_url and not ns.encontrado %}
-                    {% if prod.media_type in ['image', 'video'] %}
                     {% set ns.portada = prod.media_url %}
-                    {% set ns.tipo = prod.media_type %}
-                    {% set ns.encontrado = true %}
-                    {% endif %}
-                    {% endif %}
-                    {% endfor %}
 
-
-                    {# 2️⃣ Si no hubo imagen, buscar VIDEO #}
-                    {% if not ns.encontrado %}
-                    {% for prod in item.productos %}
-                    {% if prod.media_type == 'video' and not ns.encontrado %}
-                    {% set ns.portada = prod.media_url %}
+                    {% if prod.media_url.endswith(('.mp4', '.webm', '.ogg')) %}
                     {% set ns.tipo = 'video' %}
-                    {% set ns.encontrado = true %}
-                    {% endif %}
-                    {% endfor %}
+                    {% elif prod.media_url.endswith(('.mp3', '.wav')) %}
+                    {% set ns.tipo = 'audio' %}
+                    {% else %}
+                    {% set ns.tipo = 'image' %}
                     {% endif %}
 
-                    {# 3️⃣ Si solo hay AUDIO #}
-                    {% if not ns.encontrado %}
-                    {% for prod in item.productos %}
-                    {% if prod.media_type == 'audio' and not ns.encontrado %}
-                    {% set ns.tipo = 'audio' %}
                     {% set ns.encontrado = true %}
                     {% endif %}
                     {% endfor %}
-                    {% endif %}
-                    {% endif %}
+
 
 
                     {% if ns.tipo == 'imagen' %}
