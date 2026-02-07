@@ -803,29 +803,49 @@
             });
     }
 
-    // --- 7. CARGAR RECETA ---
+    // --- 7. CARGAR RECETA (MODO CHISMOSO / DIAGNÓSTICO) ---
     function cargarProductoDB() {
         const id = document.getElementById('selectCargarProducto').value;
         if (!id) return;
 
-        fetch('/api/receta/' + id).then(r => r.json()).then(d => {
-            if (d.error) return alert(d.error);
+        limpiarCalculadora();
+        document.getElementById('listaMateriales').innerHTML = '';
 
-            limpiarCalculadora();
-            document.getElementById('listaMateriales').innerHTML = '';
-            document.getElementById('nombreProductoActual').value = d.nombre;
+        fetch('/api/receta/' + id)
+            .then(r => {
+                if (!r.ok) throw new Error("Error en conexión");
+                return r.json();
+            })
+            .then(d => {
+                // --- EL CHISMOSO ---
+                // Esta alerta nos dirá la verdad cruda de la base de datos
+                alert("DATOS RECIBIDOS:\n" + JSON.stringify(d, null, 2));
+                // -------------------
 
-            d.materiales.forEach(i => {
-                agregarFila(i.id, i.cantidad);
+                if (d.error) return alert("Error del sistema: " + d.error);
+
+                document.getElementById('nombreProductoActual').value = d.nombre;
+
+                if (d.materiales && d.materiales.length > 0) {
+                    d.materiales.forEach(i => {
+                        agregarFila(i.id, i.cantidad);
+                    });
+                } else {
+                    alert("⚠️ OJO: La receta existe, pero la lista de materiales llegó vacía.");
+                    agregarFila();
+                }
+
+                if (d.maquinaria) {
+                    d.maquinaria.forEach(m => {
+                        const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
+                        if (c) c.checked = true;
+                    });
+                }
+                setTimeout(calcularTotal, 200);
+            })
+            .catch(err => {
+                alert("Error cargando receta: " + err);
             });
-
-            d.maquinaria.forEach(m => {
-                const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
-                if (c) c.checked = true;
-            });
-
-            setTimeout(calcularTotal, 200);
-        });
     }
 
     // ==========================================
