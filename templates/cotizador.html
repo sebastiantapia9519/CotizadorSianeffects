@@ -808,36 +808,29 @@
 
     // --- 7. CARGAR RECETA (MODO CHISMOSO / DIAGNÓSTICO) ---
     function cargarProductoDB() {
+        if (cargandoReceta) return;
+        cargandoReceta = true;
+
         const id = document.getElementById('selectCargarProducto').value;
-        if (!id) return;
+        if (!id) {
+            cargandoReceta = false;
+            return;
+        }
 
-        // 1️⃣ Limpia SOLO materiales (sin agregar filas vacías)
         limpiarMateriales();
-
-        // 2️⃣ Limpia otros campos manualmente
         document.getElementById('nombreProductoActual').value = '';
         document.getElementById('cantidadParaCarrito').value = 1;
         document.getElementById('costosExtra').value = 0;
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
         fetch('/api/receta/' + id)
-            .then(r => {
-                if (!r.ok) throw new Error("Error en conexión");
-                return r.json();
-            })
+            .then(r => r.json())
             .then(d => {
-                if (d.error) return alert("Error del sistema: " + d.error);
-
                 document.getElementById('nombreProductoActual').value = d.nombre;
 
-                if (d.materiales && d.materiales.length > 0) {
-                    d.materiales.forEach(i => {
-                        agregarFila(i.id, i.cantidad);
-                    });
-                } else {
-                    alert("⚠️ OJO: La receta existe, pero la lista de materiales llegó vacía.");
-                    agregarFila();
-                }
+                d.materiales.forEach(i => {
+                    agregarFila(i.id, i.cantidad);
+                });
 
                 if (d.maquinaria) {
                     d.maquinaria.forEach(m => {
@@ -845,12 +838,14 @@
                         if (c) c.checked = true;
                     });
                 }
-                setTimeout(calcularTotal, 200);
+
+                setTimeout(calcularTotal, 100);
             })
-            .catch(err => {
-                alert("Error cargando receta: " + err);
+            .finally(() => {
+                cargandoReceta = false;
             });
     }
+
 
     // ==========================================
     // 8. LÓGICA DE RECARGA (EL "ATRAPADOR")
@@ -915,6 +910,8 @@
         // --- LÓGICA 2: CARGAR DESDE URL (Botón "Usar" de Recetas) ---
         const urlParams = new URLSearchParams(window.location.search);
         const recetaIdUrl = urlParams.get('cargar_receta');
+        let cargandoReceta = false;
+
 
         if (recetaIdUrl) {
             const select = document.getElementById('selectCargarProducto');
