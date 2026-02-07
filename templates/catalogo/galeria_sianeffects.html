@@ -4,210 +4,420 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Catálogo | Sianeffects</title>
+    <title>Catálogo | SianEffects</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Nunito', sans-serif;
-            background-color: #f8f9fa;
+        :root {
+            --sian-pink: #ff6b81;
+            --sian-teal: #2ec4b6;
+            --text-dark: #1a1a1a;
         }
 
-        /* --- HEADER ESTILO SIAN --- */
-        .hero-header {
-            background: white;
-            padding: 40px 20px;
-            text-align: center;
-            border-bottom: 5px solid #ff6b81;
-            /* Pink Sian */
-            margin-bottom: 30px;
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            padding-top: 140px;
+            /* Espacio para el header fijo */
+        }
+
+        /* --- HEADER FIJO ESTILO BERSHKA --- */
+        .sticky-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            z-index: 1000;
+            border-bottom: 1px solid #f0f0f0;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+        }
+
+        .top-bar {
+            padding: 15px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .brand-logo {
+            font-weight: 900;
+            font-size: 1.5rem;
+            color: var(--sian-pink);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+
+        /* --- BARRAS DE HERRAMIENTAS --- */
+        .search-container {
+            flex-grow: 1;
+            max-width: 500px;
+            margin: 0 20px;
             position: relative;
         }
 
-        .hero-title {
-            color: #ff6b81;
-            font-weight: 900;
-            letter-spacing: -1px;
-            margin: 0;
-        }
-
-        .hero-subtitle {
-            color: #2ec4b6;
-            /* Teal Sian */
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+        .search-input {
+            width: 100%;
+            border: 1px solid #e0e0e0;
+            background: #f9f9f9;
+            border-radius: 4px;
+            padding: 8px 15px 8px 40px;
             font-size: 0.9rem;
-        }
-
-        /* --- TABS (PESTAÑAS) --- */
-        .nav-pills .nav-link {
-            color: #555;
-            font-weight: 700;
-            border-radius: 50px;
-            padding: 10px 25px;
-            margin: 0 5px 10px 0;
-            background: white;
-            border: 1px solid #eee;
             transition: all 0.3s;
         }
 
-        .nav-pills .nav-link:hover {
-            background-color: #f0f0f0;
+        .search-input:focus {
+            background: #fff;
+            border-color: var(--sian-teal);
+            outline: none;
         }
 
-        .nav-pills .nav-link.active {
-            background-color: #ff6b81;
-            color: white;
-            box-shadow: 0 5px 15px rgba(255, 107, 129, 0.4);
-            border-color: #ff6b81;
+        .search-icon {
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #999;
+            font-size: 0.9rem;
         }
 
-        /* --- BOTÓN FLOTANTE WHATSAPP --- */
-        .whatsapp-float {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            background-color: #25d366;
+        .action-icons .btn-icon {
+            color: var(--text-dark);
+            font-size: 1.2rem;
+            position: relative;
+            margin-left: 15px;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .cart-badge {
+            position: absolute;
+            top: -5px;
+            right: -8px;
+            background: var(--sian-teal);
             color: white;
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            text-align: center;
-            font-size: 30px;
-            box-shadow: 0 5px 15px rgba(37, 211, 102, 0.4);
-            z-index: 100;
+            font-size: 0.6rem;
+            font-weight: bold;
+            padding: 2px 5px;
+            border-radius: 10px;
+        }
+
+        /* --- NAV DE CATEGORÍAS --- */
+        .cat-nav {
+            display: flex;
+            justify-content: center;
+            padding: 10px 0;
+            overflow-x: auto;
+            white-space: nowrap;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .cat-link {
+            color: #666;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-decoration: none;
+            padding: 5px 15px;
+            text-transform: uppercase;
+            transition: color 0.3s;
+            cursor: pointer;
+        }
+
+        .cat-link:hover,
+        .cat-link.active {
+            color: var(--text-dark);
+            text-decoration: underline;
+            text-underline-offset: 5px;
+            text-decoration-thickness: 2px;
+        }
+
+        /* --- GRID PRODUCTOS --- */
+        .product-grid {
+            opacity: 1;
+            transition: opacity 0.3s;
+        }
+
+        .product-wrapper {
+            margin-bottom: 30px;
+        }
+
+        /* --- CARRITO OFFCANVAS --- */
+        .offcanvas-cart {
+            border-left: none;
+        }
+
+        .cart-item {
             display: flex;
             align-items: center;
-            justify-content: center;
-            text-decoration: none;
-            transition: transform 0.3s;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
         }
 
-        .whatsapp-float:hover {
-            transform: scale(1.1);
-            color: white;
+        .cart-total {
+            font-size: 1.2rem;
+            font-weight: 900;
+            color: var(--text-dark);
         }
 
-        /* --- BOTÓN ADMIN --- */
-        .btn-admin-custom {
-            background-color: #2ec4b6;
+        .btn-whatsapp {
+            background-color: #25d366;
             color: white;
-            border: none;
             font-weight: bold;
+            width: 100%;
+            border: none;
+            padding: 12px;
         }
 
-        .btn-admin-custom:hover {
-            background-color: #25a397;
+        .btn-whatsapp:hover {
+            background-color: #1ebc57;
             color: white;
         }
 
-        /* Ajuste para que las tarjetas del include hereden estilos si es necesario */
-        .product-wrapper {
-            transition: transform 0.3s;
-        }
+        /* MÓVIL AJUSTES */
+        @media (max-width: 768px) {
+            body {
+                padding-top: 170px;
+            }
 
-        .product-wrapper:hover {
-            transform: translateY(-5px);
+            .top-bar {
+                flex-wrap: wrap;
+            }
+
+            .search-container {
+                order: 3;
+                max-width: 100%;
+                margin: 10px 0 0 0;
+            }
+
+            .cat-nav {
+                justify-content: flex-start;
+                padding-left: 20px;
+            }
         }
     </style>
 </head>
 
 <body>
 
-    <div class="hero-header">
+    <header class="sticky-header">
+        <div class="top-bar">
+            <a href="#" class="brand-logo" onclick="filtrarCategoria('all')">SianEffects</a>
 
-        {% if session.get('role', 0) >= 1 %}
-        <div class="position-absolute top-0 end-0 p-3">
-            <a href="{{ url_for('catalogo.admin_categorias') }}"
-                class="btn btn-admin-custom rounded-pill shadow-sm btn-sm">
-                <i class="fas fa-cogs me-1"></i> Panel
-            </a>
+            <div class="search-container">
+                <i class="fas fa-search search-icon"></i>
+                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre, SKU..."
+                    onkeyup="filtrarProductos()">
+            </div>
+
+            <div class="action-icons d-flex align-items-center">
+                {% if session.get('role', 0) >= 1 %}
+                <a href="{{ url_for('catalogo.admin_categorias') }}" class="btn-icon" title="Panel Admin">
+                    <i class="fas fa-cog"></i>
+                </a>
+                {% endif %}
+
+                <a class="btn-icon" data-bs-toggle="offcanvas" data-bs-target="#cartCanvas">
+                    <i class="fas fa-shopping-bag"></i>
+                    <span class="cart-badge" id="cartCount">0</span>
+                </a>
+            </div>
         </div>
-        {% endif %}
 
-        <h1 class="hero-title display-4">Sianeffects</h1>
-        <p class="hero-subtitle">Catálogo de Productos & Diseños</p>
+        <nav class="cat-nav">
+            <a class="cat-link active" onclick="filtrarCategoria('all', this)">Todo</a>
+            {% for item in catalogo %}
+            <a class="cat-link" onclick="filtrarCategoria('cat-{{ item.info.id }}', this)">{{ item.info.nombre }}</a>
+            {% endfor %}
+        </nav>
+    </header>
+
+    <div class="container">
+        <div class="row" id="productsContainer">
+            {% for item in catalogo %}
+            {% for producto in item.productos %}
+            <div class="col-6 col-md-4 col-lg-3 product-wrapper" data-cat="cat-{{ item.info.id }}"
+                data-search="{{ producto.titulo|lower }} {{ producto.sku|lower }}">
+
+                {% include 'catalogo/card_producto.html' %}
+
+            </div>
+            {% endfor %}
+            {% endfor %}
+        </div>
+
+        <div id="noResults" class="text-center py-5 d-none">
+            <i class="fas fa-search fa-3x text-muted mb-3 opacity-25"></i>
+            <p class="text-muted">No encontramos lo que buscas.</p>
+        </div>
     </div>
 
-    <div class="container pb-5">
-
-        <ul class="nav nav-pills justify-content-center mb-5" id="pills-tab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="pills-todos-tab" data-bs-toggle="pill" data-bs-target="#pills-todos"
-                    type="button">
-                    ✨ Todo
-                </button>
-            </li>
-
-            {% for item in catalogo %}
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="pills-cat{{ item.info.id }}-tab" data-bs-toggle="pill"
-                    data-bs-target="#pills-cat{{ item.info.id }}" type="button">
-                    {{ item.info.nombre }}
-                </button>
-            </li>
-            {% endfor %}
-        </ul>
-
-        <div class="tab-content" id="pills-tabContent">
-
-            <div class="tab-pane fade show active" id="pills-todos">
-                <div class="row g-4">
-                    {% for item in catalogo %}
-                    {% for producto in item.productos %}
-                    <div class="col-md-6 col-lg-4 col-xl-3 product-wrapper">
-                        {% include 'catalogo/card_producto.html' %}
-                    </div>
-                    {% endfor %}
-                    {% endfor %}
-                </div>
-
-                {% if not catalogo %}
-                <div class="text-center py-5 text-muted">
-                    <i class="fas fa-box-open fa-3x mb-3"></i>
-                    <p>No hay productos disponibles por el momento.</p>
-                </div>
-                {% endif %}
-            </div>
-
-            {% for item in catalogo %}
-            <div class="tab-pane fade" id="pills-cat{{ item.info.id }}">
-
-                <div class="text-center mb-4">
-                    <h3 class="fw-bold text-dark">{{ item.info.nombre }}</h3>
-                    <div style="width: 50px; height: 4px; background: #ff6b81; margin: 0 auto; border-radius: 2px;">
-                    </div>
-                </div>
-
-                <div class="row g-4">
-                    {% for producto in item.productos %}
-                    <div class="col-md-6 col-lg-4 col-xl-3 product-wrapper">
-                        {% include 'catalogo/card_producto.html' %}
-                    </div>
-                    {% endfor %}
-
-                    {% if not item.productos %}
-                    <div class="col-12 text-center text-muted">
-                        <small>Esta categoría está vacía.</small>
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-
+    <div class="offcanvas offcanvas-end offcanvas-cart" tabindex="-1" id="cartCanvas">
+        <div class="offcanvas-header border-bottom">
+            <h5 class="offcanvas-title fw-bold">MI BOLSA (<span id="cartCountHeader">0</span>)</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
-    </div> <a href="https://wa.me/?text=Hola,%20vi%20tu%20catálogo%20en%20SianEffects..." class="whatsapp-float"
-        target="_blank">
-        <i class="fab fa-whatsapp"></i>
-    </a>
+        <div class="offcanvas-body d-flex flex-column">
+            <div id="cartItems" class="flex-grow-1 overflow-auto">
+                <div class="text-center py-5 text-muted empty-msg">
+                    Tu bolsa está vacía 🛍️
+                </div>
+            </div>
+
+            <div class="border-top pt-3 mt-3">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="fw-bold">Total Estimado</span>
+                    <span class="cart-total" id="cartTotal">$0.00</span>
+                </div>
+                <button class="btn btn-whatsapp rounded-0" onclick="enviarPedidoWhatsapp()">
+                    <i class="fab fa-whatsapp me-2"></i> COTIZAR POR WHATSAPP
+                </button>
+            </div>
+        </div>
+    </div>
 
     {% include 'catalogo/media_modal.html' %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // --- 1. LÓGICA DE FILTRADO (CATEGORÍAS Y BÚSQUEDA) ---
+        let currentCategory = 'all';
+
+        function filtrarCategoria(catId, element) {
+            currentCategory = catId;
+
+            // Estilos visuales
+            document.querySelectorAll('.cat-link').forEach(el => el.classList.remove('active'));
+            if (element) element.classList.add('active');
+
+            aplicarFiltros();
+        }
+
+        function filtrarProductos() {
+            aplicarFiltros();
+        }
+
+        function aplicarFiltros() {
+            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+            const products = document.querySelectorAll('.product-wrapper');
+            let visibleCount = 0;
+
+            products.forEach(prod => {
+                const prodCat = prod.getAttribute('data-cat');
+                const prodData = prod.getAttribute('data-search');
+
+                const matchCat = (currentCategory === 'all' || prodCat === currentCategory);
+                const matchSearch = (prodData.includes(searchTerm));
+
+                if (matchCat && matchSearch) {
+                    prod.classList.remove('d-none');
+                    visibleCount++;
+                } else {
+                    prod.classList.add('d-none');
+                }
+            });
+
+            const noRes = document.getElementById('noResults');
+            if (visibleCount === 0) noRes.classList.remove('d-none');
+            else noRes.classList.add('d-none');
+        }
+
+        // --- 2. LÓGICA DEL CARRITO (COTIZACIÓN) ---
+        let cart = [];
+
+        function agregarAlCarrito(btn) {
+            const id = btn.getAttribute('data-id');
+            const titulo = btn.getAttribute('data-titulo');
+            const precio = parseFloat(btn.getAttribute('data-precio')) || 0;
+
+            // Buscar si ya existe
+            const existing = cart.find(item => item.id === id);
+            if (existing) {
+                existing.cantidad++;
+            } else {
+                cart.push({ id, titulo, precio, cantidad: 1 });
+            }
+
+            actualizarUI();
+
+            // Feedback visual simple
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> Agregado';
+            btn.classList.replace('btn-outline-dark', 'btn-dark');
+            setTimeout(() => {
+                btn.innerHTML = originalText;
+                btn.classList.replace('btn-dark', 'btn-outline-dark');
+            }, 1000);
+        }
+
+        function actualizarUI() {
+            const countBadge = document.getElementById('cartCount');
+            const countHeader = document.getElementById('cartCountHeader');
+            const container = document.getElementById('cartItems');
+            const totalLabel = document.getElementById('cartTotal');
+
+            // Conteo total items
+            const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
+            countBadge.innerText = totalItems;
+            countHeader.innerText = totalItems;
+
+            // Renderizar lista
+            container.innerHTML = '';
+            let totalMoney = 0;
+
+            if (cart.length === 0) {
+                container.innerHTML = '<div class="text-center py-5 text-muted">Tu bolsa está vacía 🛍️</div>';
+            } else {
+                cart.forEach((item, index) => {
+                    totalMoney += (item.precio * item.cantidad);
+                    container.innerHTML += `
+                        <div class="cart-item">
+                            <div>
+                                <div class="fw-bold small">${item.titulo}</div>
+                                <div class="text-muted small">$${item.precio} x ${item.cantidad}</div>
+                            </div>
+                            <div class="d-flex align-items-center">
+                                <span class="fw-bold me-3">$${(item.precio * item.cantidad).toFixed(2)}</span>
+                                <i class="fas fa-times text-danger" style="cursor:pointer" onclick="eliminarItem(${index})"></i>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            totalLabel.innerText = '$' + totalMoney.toFixed(2);
+        }
+
+        function eliminarItem(index) {
+            cart.splice(index, 1);
+            actualizarUI();
+        }
+
+        function enviarPedidoWhatsapp() {
+            if (cart.length === 0) return alert("Agrega productos primero.");
+
+            let mensaje = "Hola SianEffects! 👋 Me interesa cotizar estos productos:\n\n";
+            let total = 0;
+
+            cart.forEach(item => {
+                mensaje += `▪️ ${item.cantidad}x ${item.titulo}\n`;
+                total += (item.precio * item.cantidad);
+            });
+
+            mensaje += `\n*Total Estimado: $${total.toFixed(2)}*`;
+            mensaje += "\n\n¿Tienen disponibilidad?";
+
+            const telefono = "5218122135474"; // Formato internacional
+            const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
+            window.open(url, '_blank');
+        }
+    </script>
 
 </body>
 
