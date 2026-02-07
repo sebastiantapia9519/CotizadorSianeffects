@@ -249,21 +249,43 @@
                 <div class="cat-grid-item" onclick="abrirCategoria('cat-{{ item.info.id }}', '{{ item.info.nombre }}')">
 
                     {# 1. Definimos el valor por defecto (Placeholder) #}
-                    {% set ns = namespace(portada = 'https://via.placeholder.com/600x800/e0e0e0/999999?text=' +
-                    item.info.nombre, encontrado = false) %}
+                    {% set ns = namespace(
+                    portada = '',
+                    tipo = '',
+                    encontrado = false
+                    ) %}
 
-                    {# 2. Buscamos la primera imagen válida #}
                     {% if item.productos %}
+                    {# 1️⃣ Prioridad: IMAGEN #}
                     {% for prod in item.productos %}
-                    {# Si es imagen y aún no hemos encontrado una, la guardamos #}
                     {% if prod.media_type == 'image' and not ns.encontrado %}
                     {% set ns.portada = prod.media_url %}
+                    {% set ns.tipo = 'image' %}
+                    {% set ns.encontrado = true %}
+                    {% endif %}
+                    {% endfor %}
+
+                    {# 2️⃣ Si no hubo imagen, buscar VIDEO #}
+                    {% if not ns.encontrado %}
+                    {% for prod in item.productos %}
+                    {% if prod.media_type == 'video' and not ns.encontrado %}
+                    {% set ns.portada = prod.media_url %}
+                    {% set ns.tipo = 'video' %}
                     {% set ns.encontrado = true %}
                     {% endif %}
                     {% endfor %}
                     {% endif %}
 
-                    <img src="{{ ns.portada }}" alt="{{ item.info.nombre }}" class="cat-img" loading="lazy">
+                    {# 3️⃣ Si solo hay AUDIO #}
+                    {% if not ns.encontrado %}
+                    {% for prod in item.productos %}
+                    {% if prod.media_type == 'audio' and not ns.encontrado %}
+                    {% set ns.tipo = 'audio' %}
+                    {% set ns.encontrado = true %}
+                    {% endif %}
+                    {% endfor %}
+                    {% endif %}
+                    {% endif %}
 
                     <div class="cat-overlay">
                         <h2 class="cat-title">{{ item.info.nombre }}</h2>
