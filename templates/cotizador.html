@@ -307,7 +307,7 @@
 
                     <div class="d-flex justify-content-between align-items-center mb-1 text-success">
                         <span class="small fw-bold">Descuento:</span>
-                        <span id="labelDescuento">- $0.00</span>
+                        <span id="labelDescuento">-$0.00</span>
                     </div>
 
                     <div class="d-flex justify-content-between mb-1 text-muted" id="taxRow" style="display: none;">
@@ -515,8 +515,6 @@
 
         // Actualizar UI Derecha
         document.getElementById('labelSubtotal').innerText = formatMoney(subtotalCarrito);
-
-        // CORRECCIÓN VISUAL: Signos limpios (sin doble $)
         document.getElementById('labelDescuento').innerText = '-' + formatMoney(descuentoMonto);
         document.getElementById('taxAmountDisplay').innerText = '+' + formatMoney(impuestosMonto);
 
@@ -701,9 +699,9 @@
             const inputPago = document.getElementById('inputPagoInicial').value;
             pago_inicial = parseFloat(inputPago) || 0;
             if (!inputPago || pago_inicial <= 0) return alert("Ingresa un monto válido para el anticipo.");
-            if (pago_inicial >= total) estado = 'pagado'; // <-- CORRECCIÓN AQUÍ: Si paga todo, es 'pagado'
+            if (pago_inicial >= total) estado = 'pagado';
         } else if (tipo === 'venta_completa') {
-            estado = 'pagado'; // <-- CORRECCIÓN AQUÍ: Enviamos 'pagado' para que el Ticket lo entienda
+            estado = 'pagado';
             pago_inicial = total;
         }
 
@@ -733,7 +731,7 @@
                 tax_percent: tax_percent,
                 total: total,
                 costo_total: costo_total,
-                estado: estado, // Ahora enviamos 'pagado' correctamente
+                estado: estado,
                 pago_inicial: pago_inicial
             })
         }).then(res => res.json()).then(data => {
@@ -834,11 +832,11 @@
     // 8. LÓGICA DE RECARGA (EL "ATRAPADOR")
     // ==========================================
     document.addEventListener("DOMContentLoaded", function () {
+        // --- LOGICA 1: CARGAR DESDE SESSION STORAGE (Edición) ---
         const datosPendientes = sessionStorage.getItem('recarga_cotizacion');
         const clientePendiente = sessionStorage.getItem('recarga_cliente');
         const idPendiente = sessionStorage.getItem('recarga_id');
 
-        // --- RECUPERAR IMPUESTOS ---
         const taxActive = sessionStorage.getItem('recarga_tax_active');
         const taxPercent = sessionStorage.getItem('recarga_tax_percent');
 
@@ -862,19 +860,15 @@
 
                 if (clientePendiente) document.getElementById('nombreCliente').value = clientePendiente;
 
-                // --- ACTIVAR IMPUESTOS SI VENÍAN GUARDADOS ---
                 if (taxActive === 'true') {
                     document.getElementById('taxSwitch').checked = true;
                     if (taxPercent) document.getElementById('taxPercent').value = taxPercent;
                 }
 
-                renderizarCarrito(); // Esto llama a calcularTotal(), que actualizará el UI con los impuestos
+                renderizarCarrito();
 
-                // ESTABLECER MODO EDICIÓN
                 if (idPendiente) {
                     document.getElementById('ventaIdEdicion').value = idPendiente;
-
-                    // Aviso visual más claro
                     const alerta = document.createElement('div');
                     alerta.className = 'alert alert-warning position-fixed top-0 start-50 translate-middle-x mt-4 shadow fw-bold';
                     alerta.style.zIndex = '9999';
@@ -891,6 +885,23 @@
                 sessionStorage.removeItem('recarga_id');
                 sessionStorage.removeItem('recarga_tax_active');
                 sessionStorage.removeItem('recarga_tax_percent');
+            }
+        }
+
+        // --- LÓGICA 2: CARGAR DESDE URL (Botón "Usar" de Recetas) ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const recetaIdUrl = urlParams.get('cargar_receta');
+
+        if (recetaIdUrl) {
+            const select = document.getElementById('selectCargarProducto');
+            if (select) {
+                select.value = recetaIdUrl;
+                // Si el valor se asignó correctamente (existe en la lista)
+                if (select.value === recetaIdUrl) {
+                    cargarProductoDB();
+                    // Limpiamos la URL para que no recargue al refrescar
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
             }
         }
     });
