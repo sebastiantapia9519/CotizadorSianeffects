@@ -248,20 +248,22 @@
             <div class="col-6 col-md-4">
                 <div class="cat-grid-item" onclick="abrirCategoria('cat-{{ item.info.id }}', '{{ item.info.nombre }}')">
 
-                    {% set portada = 'https://via.placeholder.com/600x800/e0e0e0/999999?text=' + item.info.nombre %}
+                    {# 1. Definimos el valor por defecto (Placeholder) #}
+                    {% set ns = namespace(portada = 'https://via.placeholder.com/600x800/e0e0e0/999999?text=' +
+                    item.info.nombre, encontrado = false) %}
 
-                    {# Buscamos la primera imagen válida (evitando videos si no tienen thumb) #}
+                    {# 2. Buscamos la primera imagen válida #}
                     {% if item.productos %}
                     {% for prod in item.productos %}
-                    {% if prod.media_type == 'image' %}
-                    {% set portada = prod.media_url %}
-                    {# Rompemos el ciclo al encontrar la primera imagen #}
-                    {% break %}
+                    {# Si es imagen y aún no hemos encontrado una, la guardamos #}
+                    {% if prod.media_type == 'image' and not ns.encontrado %}
+                    {% set ns.portada = prod.media_url %}
+                    {% set ns.encontrado = true %}
                     {% endif %}
                     {% endfor %}
                     {% endif %}
 
-                    <img src="{{ portada }}" alt="{{ item.info.nombre }}" class="cat-img" loading="lazy">
+                    <img src="{{ ns.portada }}" alt="{{ item.info.nombre }}" class="cat-img" loading="lazy">
 
                     <div class="cat-overlay">
                         <h2 class="cat-title">{{ item.info.nombre }}</h2>
