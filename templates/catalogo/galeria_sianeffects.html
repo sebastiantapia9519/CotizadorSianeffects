@@ -248,20 +248,18 @@
             <div class="col-6 col-md-4">
                 <div class="cat-grid-item" onclick="abrirCategoria('cat-{{ item.info.id }}', '{{ item.info.nombre }}')">
 
-                    {# 1. Definimos el valor por defecto (Placeholder) #}
-                    {% set ns = namespace(
-                    portada = '',
-                    tipo = '',
-                    encontrado = false
-                    ) %}
+                    {# === INICIALIZACIÓN OBLIGATORIA === #}
+                    {% set ns = namespace(portada='', tipo='', encontrado=false) %}
 
+                    {# === OBTENER PRIMER MEDIA VÁLIDO === #}
                     {% for prod in item.productos %}
                     {% if prod.media_url and not ns.encontrado %}
+                    {% set url = prod.media_url | lower %}
                     {% set ns.portada = prod.media_url %}
 
-                    {% if prod.media_url.endswith(('.mp4', '.webm', '.ogg')) %}
+                    {% if '.mp4' in url or '.webm' in url or '.ogg' in url %}
                     {% set ns.tipo = 'video' %}
-                    {% elif prod.media_url.endswith(('.mp3', '.wav')) %}
+                    {% elif '.mp3' in url or '.wav' in url %}
                     {% set ns.tipo = 'audio' %}
                     {% else %}
                     {% set ns.tipo = 'image' %}
@@ -271,13 +269,12 @@
                     {% endif %}
                     {% endfor %}
 
-
-
-                    {% if ns.tipo == 'imagen' %}
+                    {# === RENDER SEGÚN TIPO === #}
+                    {% if ns.tipo == 'image' %}
                     <img src="{{ ns.portada }}" class="cat-img" alt="{{ item.info.nombre }}">
 
                     {% elif ns.tipo == 'video' %}
-                    <video src="{{ ns.portada }}" class="cat-img" muted playsinline preload="metadata"></video>
+                    <video src="{{ ns.portada }}" class="cat-img" muted autoplay loop playsinline></video>
                     <div class="position-absolute top-50 start-50 translate-middle text-white opacity-75">
                         <i class="fas fa-play-circle fa-3x"></i>
                     </div>
@@ -294,218 +291,212 @@
                     {% endif %}
 
                     <div class="cat-overlay">
-                        <h2 class="cat-title">{{ item.info.nombre }}</h2>
-                        <div class="cat-btn">Ver Productos</div>
+                        <h2 class="cat-title">{{ item.info.nom
+
+
+                            <div id="viewProducts" class="container mt-3 d-none">
+                                <div class="row g-4" id="productsContainer">
+                                    {% for item in catalogo %}
+                                    {% for producto in item.productos %}
+                                    <div class="col-6 col-md-4 col-lg-3 product-wrapper"
+                                        data-cat="cat-{{ item.info.id }}"
+                                        data-search="{{ producto.titulo|lower }} {{ producto.sku|lower }}">
+
+                                        {% include 'catalogo/card_producto.html' %}
+
+                                    </div>
+                                    {% endfor %}
+                                    {% endfor %}
+                                </div>
+
+                                <div id="noResults" class="text-center py-5 d-none">
+                                    <h4 class="fw-bold">No encontramos resultados :(</h4>
+                                    <p class="text-muted">Intenta con otra palabra clave.</p>
+                                    <button class="btn btn-outline-dark rounded-pill px-4 mt-2"
+                                        onclick="irAlInicio()">Ver todo el
+                                        catálogo</button>
+                                </div>
+                            </div>
+
                     </div>
-                </div>
-            </div>
-            {% else %}
-            <div class="col-12 text-center py-5">
-                <h4 class="fw-light">Próximamente nuevas colecciones</h4>
-            </div>
-            {% endfor %}
-        </div>
 
-        <div id="viewProducts" class="container mt-3 d-none">
-            <div class="row g-4" id="productsContainer">
-                {% for item in catalogo %}
-                {% for producto in item.productos %}
-                <div class="col-6 col-md-4 col-lg-3 product-wrapper" data-cat="cat-{{ item.info.id }}"
-                    data-search="{{ producto.titulo|lower }} {{ producto.sku|lower }}">
+                    <div class="offcanvas offcanvas-end" tabindex="-1" id="cartCanvas" style="width: 400px;">
+                        <div class="offcanvas-header border-bottom">
+                            <h5 class="offcanvas-title fw-bold text-uppercase">Tu Bolsa (<span
+                                    id="cartCountHeader">0</span>)</h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+                        </div>
+                        <div class="offcanvas-body d-flex flex-column p-0">
+                            <div id="cartItems" class="flex-grow-1 overflow-auto p-3">
+                                <div class="text-center py-5 text-muted">
+                                    <i class="fas fa-shopping-bag fa-2x mb-3 opacity-25"></i><br>
+                                    Tu bolsa está vacía
+                                </div>
+                            </div>
 
-                    {% include 'catalogo/card_producto.html' %}
+                            <div class="p-4 bg-light border-top">
+                                <div class="d-flex justify-content-between mb-3 align-items-end">
+                                    <span class="small text-uppercase fw-bold text-muted">Total Estimado</span>
+                                    <span class="fs-4 fw-900 text-dark" id="cartTotal">$0.00</span>
+                                </div>
+                                <button class="btn btn-whatsapp" onclick="enviarPedidoWhatsapp()">
+                                    COTIZAR POR WHATSAPP <i class="fab fa-whatsapp ms-2"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
 
-                </div>
-                {% endfor %}
-                {% endfor %}
-            </div>
+                    {% include 'catalogo/media_modal.html' %}
 
-            <div id="noResults" class="text-center py-5 d-none">
-                <h4 class="fw-bold">No encontramos resultados :(</h4>
-                <p class="text-muted">Intenta con otra palabra clave.</p>
-                <button class="btn btn-outline-dark rounded-pill px-4 mt-2" onclick="irAlInicio()">Ver todo el
-                    catálogo</button>
-            </div>
-        </div>
+                    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-    </div>
+                    <script>
+                        // --- NAVEGACIÓN ENTRE VISTAS ---
+                        const viewCats = document.getElementById('viewCategories');
+                        const viewProds = document.getElementById('viewProducts');
+                        const breadcrumbRow = document.getElementById('breadcrumbRow');
+                        const catNameDisplay = document.getElementById('catNameDisplay');
+                        const searchInput = document.getElementById('searchInput');
 
-    <div class="offcanvas offcanvas-end" tabindex="-1" id="cartCanvas" style="width: 400px;">
-        <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title fw-bold text-uppercase">Tu Bolsa (<span id="cartCountHeader">0</span>)</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
-        </div>
-        <div class="offcanvas-body d-flex flex-column p-0">
-            <div id="cartItems" class="flex-grow-1 overflow-auto p-3">
-                <div class="text-center py-5 text-muted">
-                    <i class="fas fa-shopping-bag fa-2x mb-3 opacity-25"></i><br>
-                    Tu bolsa está vacía
-                </div>
-            </div>
+                        function abrirCategoria(catId, catName) {
+                            // 1. Ocultar Home, Mostrar Productos
+                            viewCats.classList.add('d-none');
+                            viewProds.classList.remove('d-none');
 
-            <div class="p-4 bg-light border-top">
-                <div class="d-flex justify-content-between mb-3 align-items-end">
-                    <span class="small text-uppercase fw-bold text-muted">Total Estimado</span>
-                    <span class="fs-4 fw-900 text-dark" id="cartTotal">$0.00</span>
-                </div>
-                <button class="btn btn-whatsapp" onclick="enviarPedidoWhatsapp()">
-                    COTIZAR POR WHATSAPP <i class="fab fa-whatsapp ms-2"></i>
-                </button>
-            </div>
-        </div>
-    </div>
+                            // 2. Mostrar Breadcrumb
+                            breadcrumbRow.style.display = 'block';
+                            catNameDisplay.innerText = catName ? catName.toUpperCase() : 'BÚSQUEDA';
 
-    {% include 'catalogo/media_modal.html' %}
+                            // 3. Filtrar los productos
+                            const products = document.querySelectorAll('.product-wrapper');
+                            let found = 0;
+                            products.forEach(p => {
+                                if (p.getAttribute('data-cat') === catId) {
+                                    p.classList.remove('d-none');
+                                    found++;
+                                } else {
+                                    p.classList.add('d-none');
+                                }
+                            });
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+                            // Scroll arriba
+                            window.scrollTo(0, 0);
+                        }
 
-    <script>
-        // --- NAVEGACIÓN ENTRE VISTAS ---
-        const viewCats = document.getElementById('viewCategories');
-        const viewProds = document.getElementById('viewProducts');
-        const breadcrumbRow = document.getElementById('breadcrumbRow');
-        const catNameDisplay = document.getElementById('catNameDisplay');
-        const searchInput = document.getElementById('searchInput');
+                        function irAlInicio() {
+                            // Resetear vista
+                            viewCats.classList.remove('d-none');
+                            viewProds.classList.add('d-none');
+                            breadcrumbRow.style.display = 'none';
 
-        function abrirCategoria(catId, catName) {
-            // 1. Ocultar Home, Mostrar Productos
-            viewCats.classList.add('d-none');
-            viewProds.classList.remove('d-none');
+                            // Limpiar buscador
+                            searchInput.value = '';
+                            document.getElementById('noResults').classList.add('d-none');
+                        }
 
-            // 2. Mostrar Breadcrumb
-            breadcrumbRow.style.display = 'block';
-            catNameDisplay.innerText = catName ? catName.toUpperCase() : 'BÚSQUEDA';
+                        function filtrarGlobal(texto) {
+                            texto = texto.toLowerCase().trim();
 
-            // 3. Filtrar los productos
-            const products = document.querySelectorAll('.product-wrapper');
-            let found = 0;
-            products.forEach(p => {
-                if (p.getAttribute('data-cat') === catId) {
-                    p.classList.remove('d-none');
-                    found++;
-                } else {
-                    p.classList.add('d-none');
-                }
-            });
+                            if (texto === '') {
+                                // Si borra el texto, regresamos a la vista de categorías
+                                irAlInicio();
+                                return;
+                            }
 
-            // Scroll arriba
-            window.scrollTo(0, 0);
-        }
+                            // Cambiar a vista de productos
+                            viewCats.classList.add('d-none');
+                            viewProds.classList.remove('d-none');
+                            breadcrumbRow.style.display = 'block';
+                            catNameDisplay.innerText = 'RESULTADOS DE BÚSQUEDA';
 
-        function irAlInicio() {
-            // Resetear vista
-            viewCats.classList.remove('d-none');
-            viewProds.classList.add('d-none');
-            breadcrumbRow.style.display = 'none';
+                            // Filtrar en todos los productos
+                            const products = document.querySelectorAll('.product-wrapper');
+                            let visibleCount = 0;
 
-            // Limpiar buscador
-            searchInput.value = '';
-            document.getElementById('noResults').classList.add('d-none');
-        }
+                            products.forEach(p => {
+                                const data = p.getAttribute('data-search');
+                                if (data.includes(texto)) {
+                                    p.classList.remove('d-none');
+                                    visibleCount++;
+                                } else {
+                                    p.classList.add('d-none');
+                                }
+                            });
 
-        function filtrarGlobal(texto) {
-            texto = texto.toLowerCase().trim();
+                            const noRes = document.getElementById('noResults');
+                            if (visibleCount === 0) noRes.classList.remove('d-none');
+                            else noRes.classList.add('d-none');
+                        }
 
-            if (texto === '') {
-                // Si borra el texto, regresamos a la vista de categorías
-                irAlInicio();
-                return;
-            }
+                        function toggleSearchMobile() {
+                            const el = document.getElementById('mobileSearch');
+                            el.classList.toggle('d-none');
+                            if (!el.classList.contains('d-none')) {
+                                el.querySelector('input').focus();
+                            }
+                        }
 
-            // Cambiar a vista de productos
-            viewCats.classList.add('d-none');
-            viewProds.classList.remove('d-none');
-            breadcrumbRow.style.display = 'block';
-            catNameDisplay.innerText = 'RESULTADOS DE BÚSQUEDA';
+                        // --- CARRITO DE COMPRAS (JS) ---
+                        let cart = [];
 
-            // Filtrar en todos los productos
-            const products = document.querySelectorAll('.product-wrapper');
-            let visibleCount = 0;
+                        // Función que debe ser llamada desde el botón "Agregar" en card_producto.html
+                        // Asegúrate que tu botón tenga: onclick="agregarAlCarrito(this)"
+                        function agregarAlCarrito(btn, id, titulo, precio) {
 
-            products.forEach(p => {
-                const data = p.getAttribute('data-search');
-                if (data.includes(texto)) {
-                    p.classList.remove('d-none');
-                    visibleCount++;
-                } else {
-                    p.classList.add('d-none');
-                }
-            });
+                            // 1. Agregar a la data
+                            const existing = cart.find(i => i.id === id);
+                            if (existing) {
+                                existing.cantidad++;
+                            } else {
+                                cart.push({ id: id, titulo: titulo, precio: parseFloat(precio), cantidad: 1 });
+                            }
 
-            const noRes = document.getElementById('noResults');
-            if (visibleCount === 0) noRes.classList.remove('d-none');
-            else noRes.classList.add('d-none');
-        }
+                            // 2. Actualizar UI del carrito (Badge y Lista)
+                            actualizarCarritoUI();
 
-        function toggleSearchMobile() {
-            const el = document.getElementById('mobileSearch');
-            el.classList.toggle('d-none');
-            if (!el.classList.contains('d-none')) {
-                el.querySelector('input').focus();
-            }
-        }
+                            // 3. Feedback visual en el botón (Animación)
+                            const textoOriginal = btn.innerHTML;
+                            const claseOriginal = btn.className;
 
-        // --- CARRITO DE COMPRAS (JS) ---
-        let cart = [];
+                            btn.innerHTML = '<i class="fas fa-check"></i> LISTO';
+                            btn.className = 'btn btn-sm btn-success w-100 rounded-pill fw-bold'; // Cambia a verde
 
-        // Función que debe ser llamada desde el botón "Agregar" en card_producto.html
-        // Asegúrate que tu botón tenga: onclick="agregarAlCarrito(this)"
-        function agregarAlCarrito(btn, id, titulo, precio) {
+                            // Abrir el carrito lateral automáticamente
+                            const cartCanvas = document.getElementById('cartCanvas');
+                            const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(cartCanvas);
+                            bsOffcanvas.show();
 
-            // 1. Agregar a la data
-            const existing = cart.find(i => i.id === id);
-            if (existing) {
-                existing.cantidad++;
-            } else {
-                cart.push({ id: id, titulo: titulo, precio: parseFloat(precio), cantidad: 1 });
-            }
+                            // Regresar el botón a la normalidad después de 2 segundos
+                            setTimeout(() => {
+                                btn.innerHTML = textoOriginal;
+                                btn.className = claseOriginal;
+                            }, 2000);
+                        }
 
-            // 2. Actualizar UI del carrito (Badge y Lista)
-            actualizarCarritoUI();
+                        function actualizarCarritoUI() {
+                            const container = document.getElementById('cartItems');
+                            const countBadge = document.getElementById('cartCount');
+                            const countHeader = document.getElementById('cartCountHeader');
+                            const totalLabel = document.getElementById('cartTotal');
 
-            // 3. Feedback visual en el botón (Animación)
-            const textoOriginal = btn.innerHTML;
-            const claseOriginal = btn.className;
+                            // Calcular totales
+                            const totalQty = cart.reduce((acc, item) => acc + item.cantidad, 0);
+                            const totalMoney = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
 
-            btn.innerHTML = '<i class="fas fa-check"></i> LISTO';
-            btn.className = 'btn btn-sm btn-success w-100 rounded-pill fw-bold'; // Cambia a verde
+                            // Actualizar textos
+                            countBadge.innerText = totalQty;
+                            countHeader.innerText = totalQty;
+                            totalLabel.innerText = '$' + totalMoney.toFixed(2);
 
-            // Abrir el carrito lateral automáticamente
-            const cartCanvas = document.getElementById('cartCanvas');
-            const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(cartCanvas);
-            bsOffcanvas.show();
+                            // Dibujar lista
+                            container.innerHTML = '';
+                            if (cart.length === 0) {
+                                container.innerHTML = '<div class="text-center py-5 text-muted"><i class="fas fa-shopping-bag fa-2x mb-3 opacity-25"></i><br>Tu bolsa está vacía</div>';
+                                return;
+                            }
 
-            // Regresar el botón a la normalidad después de 2 segundos
-            setTimeout(() => {
-                btn.innerHTML = textoOriginal;
-                btn.className = claseOriginal;
-            }, 2000);
-        }
-
-        function actualizarCarritoUI() {
-            const container = document.getElementById('cartItems');
-            const countBadge = document.getElementById('cartCount');
-            const countHeader = document.getElementById('cartCountHeader');
-            const totalLabel = document.getElementById('cartTotal');
-
-            // Calcular totales
-            const totalQty = cart.reduce((acc, item) => acc + item.cantidad, 0);
-            const totalMoney = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
-
-            // Actualizar textos
-            countBadge.innerText = totalQty;
-            countHeader.innerText = totalQty;
-            totalLabel.innerText = '$' + totalMoney.toFixed(2);
-
-            // Dibujar lista
-            container.innerHTML = '';
-            if (cart.length === 0) {
-                container.innerHTML = '<div class="text-center py-5 text-muted"><i class="fas fa-shopping-bag fa-2x mb-3 opacity-25"></i><br>Tu bolsa está vacía</div>';
-                return;
-            }
-
-            cart.forEach((item, idx) => {
-                container.innerHTML += `
+                            cart.forEach((item, idx) => {
+                                container.innerHTML += `
                 <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                     <div>
                         <div class="fw-bold text-dark small">${item.titulo}</div>
@@ -516,42 +507,42 @@
                         <i class="fas fa-trash-alt text-danger small" style="cursor:pointer" onclick="eliminarItem(${idx})"></i>
                     </div>
                 </div>`;
-            });
-        }
+                            });
+                        }
 
-        function eliminarItem(idx) {
-            cart.splice(idx, 1);
-            actualizarCarritoUI();
-        }
+                        function eliminarItem(idx) {
+                            cart.splice(idx, 1);
+                            actualizarCarritoUI();
+                        }
 
-        function enviarPedidoWhatsapp() {
-            if (cart.length === 0) return alert("Agrega productos primero");
+                        function enviarPedidoWhatsapp() {
+                            if (cart.length === 0) return alert("Agrega productos primero");
 
-            let msg = "Hola SianEffects! 👋 Me interesa cotizar los siguientes productos:\n\n";
-            let total = 0;
-            cart.forEach(i => {
-                msg += `▪️ ${i.cantidad}x ${i.titulo} \n`;
-                total += (i.cantidad * i.precio);
-            });
-            msg += `\n*Total Estimado: $${total.toFixed(2)}*`;
-            msg += "\n\n¿Tienen disponibilidad?";
+                            let msg = "Hola SianEffects! 👋 Me interesa cotizar los siguientes productos:\n\n";
+                            let total = 0;
+                            cart.forEach(i => {
+                                msg += `▪️ ${i.cantidad}x ${i.titulo} \n`;
+                                total += (i.cantidad * i.precio);
+                            });
+                            msg += `\n*Total Estimado: $${total.toFixed(2)}*`;
+                            msg += "\n\n¿Tienen disponibilidad?";
 
-            const telefono = "5218122135474";
-            window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
-        }
+                            const telefono = "5218122135474";
+                            window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
+                        }
 
-        // Detectar cuando se cierra el modal para pausar el video (Limpieza)
-        const myModalEl = document.getElementById('mediaModal');
-        if (myModalEl) {
-            myModalEl.addEventListener('hidden.bs.modal', event => {
-                const vid = myModalEl.querySelector('video');
-                if (vid) {
-                    vid.pause();
-                    vid.currentTime = 0;
-                }
-            });
-        }
-    </script>
+                        // Detectar cuando se cierra el modal para pausar el video (Limpieza)
+                        const myModalEl = document.getElementById('mediaModal');
+                        if (myModalEl) {
+                            myModalEl.addEventListener('hidden.bs.modal', event => {
+                                const vid = myModalEl.querySelector('video');
+                                if (vid) {
+                                    vid.pause();
+                                    vid.currentTime = 0;
+                                }
+                            });
+                        }
+                    </script>
 </body>
 
 </html>
