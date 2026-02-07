@@ -258,12 +258,15 @@
                     {% if item.productos %}
                     {# 1️⃣ Prioridad: IMAGEN #}
                     {% for prod in item.productos %}
-                    {% if prod.media_type == 'image' and not ns.encontrado %}
+                    {% if prod.media_url and not ns.encontrado %}
+                    {% if prod.media_type in ['image', 'video'] %}
                     {% set ns.portada = prod.media_url %}
-                    {% set ns.tipo = 'image' %}
+                    {% set ns.tipo = prod.media_type %}
                     {% set ns.encontrado = true %}
                     {% endif %}
+                    {% endif %}
                     {% endfor %}
+
 
                     {# 2️⃣ Si no hubo imagen, buscar VIDEO #}
                     {% if not ns.encontrado %}
