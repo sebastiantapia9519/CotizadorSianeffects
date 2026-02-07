@@ -3,58 +3,68 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 import io
+import json  # <--- IMPORTANTE: Agregamos json que faltaba
 from utils.datetime_utils import now_utc, utc_to_local
 from db import get_db_connection as get_db
-from helpers import login_required
-from helpers import subscription_required
 from helpers import login_required, subscription_required, obtener_alertas
 
 main_bp = Blueprint('main', __name__)
 
+# --- INYECTOR DE NOTIFICACIONES (PARA TODAS LAS PÁGINAS) ---
 @main_bp.app_context_processor
 def inject_notifications():
     if 'user_id' in session:
         return {'notificaciones': obtener_alertas(session['user_id'])}
     return {'notificaciones': []}
 
-
 # --- HELPER INTERNO PARA FORMATEAR FECHAS A LOCAL ---
 def procesar_fila_fechas(fila_db):
-    """
-    Convierte una fila de SQLite a dict y transforma las fechas UTC 
-    a hora local con formato bonito (DD/MM/YYYY HH:MM).
-    """
-    if not fila_db:
-        return None
-    
+    if not fila_db: return None
     item = dict(fila_db)
-    
     campos_fecha = ['fecha', 'fecha_vencimiento', 'created_at']
-    
     for campo in campos_fecha:
         valor_original = item.get(campo)
         if valor_original:
             try:
-                # 1. Limpieza de formato ISO
                 str_fecha = str(valor_original).replace('T', ' ')[:19]
-                
-                # 2. Parsear (Leer como UTC)
                 dt_utc = datetime.strptime(str_fecha, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
-                
-                # 3. Convertir a hora local
                 dt_local = utc_to_local(dt_utc)
-                
-                # 4. Formatear
                 item[campo] = dt_local.strftime('%d/%m/%Y %H:%M')
-                
             except ValueError:
                 pass 
-                
     return item
 
 @main_bp.route('/')
 def index():
     return redirect(url_for('main.cotizador'))
+
+# --- RUTA DE MIGRACIÓN PARA INVENTARIO ---
+@main_bp.route('/migrar-inventario')
+@login_required
+def migrar_inventario_db():
+    conn = get_db()
+    try:
+        try: conn.execute("ALTER TABLE configuracion ADD COLUMN inventario_activo BOOLEAN DEFAULT 0")
+        except: pass
+        try: conn.execute("ALTER TABLE materiales ADD COLUMN stock_actual REAL DEFAULT 0")
+        except: pass
+        try: conn.execute("ALTER TABLE materiales ADD COLUMN stock_minimo REAL DEFAULT 5")
+        except: pass
+        conn.execute("""
+        CREATE TABLE IF NOT EXISTS movimientos_inventario (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            material_id INTEGER,
+            tipo TEXT, cantidad REAL, motivo TEXT, stock_resultante REAL,
+            fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(material_id) REFERENCES materiales(id)
+        )""")
+        conn.commit()
+        return "Base de datos actualizada con éxito. <a href='/configuracion'>Ir a Configuración</a>"
+    except Exception as e:
+        return f"Error en migración: {e}"
+    finally:
+        conn.close()
 
 @main_bp.route('/cotizador')
 @subscription_required
@@ -72,7 +82,47 @@ def cotizador():
         conn.close()
     return render_template('cotizador.html', **data)
 
-# --- GUARDAR VENTA (Lógica de Estados, Saldos e Impuestos) ---
+# --- API PARA CARGAR RECETA EN EL COTIZADOR ---
+# (Esta es la función que movimos aquí para asegurar que el link funcione)
+@main_bp.route('/api/receta/<int:id>')
+@login_required
+def obtener_receta_api(id):
+    conn = get_db()
+    try:
+        # 1. Datos básicos
+        prod = conn.execute("SELECT id, nombre FROM productos WHERE id=? AND user_id=?", (id, session['user_id'])).fetchone()
+        if not prod:
+            return jsonify({'error': 'Receta no encontrada'}), 404
+
+        # 2. Materiales
+        materiales_rows = conn.execute("""
+            SELECT material_id as id, cantidad
+            FROM producto_detalles
+            WHERE producto_id = ?
+        """, (id,)).fetchall()
+        materiales_lista = [dict(row) for row in materiales_rows]
+
+        # 3. Maquinaria
+        maquinaria_rows = conn.execute("""
+            SELECT maquinaria_id as id
+            FROM producto_maquinaria
+            WHERE producto_id = ?
+        """, (id,)).fetchall()
+        maquinaria_lista = [dict(row) for row in maquinaria_rows]
+
+        return jsonify({
+            'id': prod['id'],
+            'nombre': prod['nombre'],
+            'materiales': materiales_lista,
+            'maquinaria': maquinaria_lista
+        })
+    except Exception as e:
+        print(f"Error API Receta ID {id}: {e}")
+        return jsonify({'error': 'Error al cargar los detalles'}), 500
+    finally:
+        conn.close()
+
+# --- GUARDAR VENTA ---
 @main_bp.route('/guardar_venta', methods=['POST'])
 @login_required
 def guardar_venta():
@@ -81,21 +131,16 @@ def guardar_venta():
     cursor = conn.cursor()
     
     try:
-        # Recuperar configuración para saber si descontamos stock
         config = cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=?', (session['user_id'],)).fetchone()
         usar_inventario = config['inventario_activo'] if config else 0
 
-        # Recuperar datos básicos
         venta_id = data.get('id')
         cliente = data.get('cliente', 'Cliente General')
         items = data.get('items', [])
-        
-        # Totales calculados en JS
         subtotal = data.get('subtotal', 0)
         descuento_pct = data.get('descuento_porcentaje', 0)
         descuento_monto = data.get('descuento_monto', 0)
         
-        # --- CAMPOS DE IMPUESTOS ---
         tax_amount = float(data.get('tax_amount', 0))
         tax_percent = float(data.get('tax_percent', 0))
         
@@ -115,11 +160,7 @@ def guardar_venta():
         fecha_actual = now_utc()
         fecha_vencimiento = (now_utc() + timedelta(days=7)).isoformat()
 
-        # =================================================================
-        # 1. GUARDAR LA VENTA (Cabecera)
-        # =================================================================
         if venta_id:
-            # UPDATE
             cursor.execute('''
                 UPDATE ventas 
                 SET cliente=?, subtotal=?, descuento_porcentaje=?, descuento_monto=?,
@@ -134,7 +175,6 @@ def guardar_venta():
             ))
             cursor.execute('DELETE FROM venta_detalles WHERE venta_id=?', (venta_id,))
         else:
-            # INSERT
             cursor.execute('''
                 INSERT INTO ventas (
                     user_id, fecha, cliente, subtotal, 
@@ -153,11 +193,7 @@ def guardar_venta():
             ))
             venta_id = cursor.lastrowid
 
-        # =================================================================
-        # 2. PROCESAR DETALLES Y DESCONTAR INVENTARIO
-        # =================================================================
         for item in items:
-            # A. Guardar detalle de venta
             cursor.execute('''
                 INSERT INTO venta_detalles (
                     venta_id, concepto, cantidad, precio_unitario, 
@@ -174,31 +210,23 @@ def guardar_venta():
                 item.get('composicion', '[]')
             ))
 
-            # B. Descontar Inventario (Solo si está activo y NO es una edición vieja)
-            # NOTA: Por seguridad, solo descontamos en ventas NUEVAS (venta_id recién creado)
-            # para evitar duplicidad al editar. 
-            # Si quisieras manejar devoluciones al editar, la lógica sería mucho más compleja.
             if usar_inventario and not data.get('id'): 
                 try:
-                    import json
                     composicion = json.loads(item.get('composicion', '[]'))
                     cantidad_producto = float(item['cantidad'])
 
                     for comp in composicion:
                         if comp.get('tipo') == 'material':
                             material_id = comp.get('id')
-                            # Cantidad unitaria x Cantidad de productos vendidos
                             cantidad_a_descontar = float(comp.get('cantidad', 0)) * cantidad_producto
                             
                             if cantidad_a_descontar > 0:
-                                # Restar Stock
                                 cursor.execute('''
                                     UPDATE materiales 
                                     SET stock_actual = stock_actual - ? 
                                     WHERE id = ?
                                 ''', (cantidad_a_descontar, material_id))
 
-                                # Registrar Movimiento (Salida)
                                 cursor.execute('''
                                     INSERT INTO movimientos_inventario 
                                     (user_id, material_id, tipo, cantidad, motivo, stock_resultante)
@@ -212,7 +240,6 @@ def guardar_venta():
                                 ))
                 except Exception as e:
                     print(f"Error descontando inventario: {e}")
-                    # No detenemos la venta si falla el inventario, pero lo logueamos
 
         conn.commit()
         return jsonify({'success': True, 'ticket_id': venta_id})
@@ -224,8 +251,6 @@ def guardar_venta():
     finally:
         conn.close()
 
-
-        
 # --- ACTUALIZAR VENTA (ABONOS) ---
 @main_bp.route('/api/actualizar_venta', methods=['POST'])
 @login_required
@@ -279,7 +304,6 @@ def historial():
     uid = session['user_id']
     q = request.args.get('q')
     
-    # Agregamos impuestos y tax_engine a la consulta para mostrarlos si se quiere
     sql = '''
         SELECT id, cliente, fecha, total, estado, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine
         FROM ventas 
@@ -376,7 +400,7 @@ def configuracion():
             empresa = request.form['nombre_empresa']
             slogan = request.form['slogan']
             website = request.form['website']
-
+            
             inventario_activo = 1 if request.form.get('inventario_activo') else 0
 
             config_existente = conn.execute('SELECT id FROM configuracion WHERE user_id=?', (uid,)).fetchone()
@@ -429,8 +453,6 @@ def descargar_excel():
             v.cliente as Cliente, 
             v.estado as Estado_Actual,
             v.document_type as Tipo_Doc,
-            
-            -- Detalles
             d.concepto as Producto, 
             d.cantidad as Cantidad, 
             d.precio_unitario as Precio_Unit_Venta, 
@@ -438,16 +460,13 @@ def descargar_excel():
             (d.precio_unitario - d.costo_unitario) as Ganancia_Unitaria,
             d.subtotal as Subtotal_Linea,
             d.composicion as Receta_Materiales,
-            
-            -- Totales
             v.subtotal as Subtotal_Venta,
             v.descuento_monto as Descuento_Aplicado,
-            v.impuestos as Impuestos_Monto,   -- <--- NUEVO EN EXCEL
-            v.tax_engine as Impuestos_Info,   -- <--- NUEVO EN EXCEL
+            v.impuestos as Impuestos_Monto,
+            v.tax_engine as Impuestos_Info,
             v.total as Total_Ticket,
             v.monto_pagado as Pagado, 
             v.saldo_pendiente as Resta_Por_Pagar
-            
         FROM ventas v 
         JOIN venta_detalles d ON v.id = d.venta_id 
         WHERE v.user_id = ? 
@@ -470,15 +489,13 @@ def descargar_excel():
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer: 
             df.to_excel(writer, index=False, sheet_name='Detalle de Ventas')
-            
             worksheet = writer.sheets['Detalle de Ventas']
             for column_cells in worksheet.columns:
                 try:
                     max_len = max(len(str(cell.value)) for cell in column_cells)
                     adjusted_width = min(max_len + 2, 50) 
                     worksheet.column_dimensions[column_cells[0].column_letter].width = adjusted_width
-                except:
-                    pass
+                except: pass
 
         output.seek(0)
         filename = f"Reporte_SianEffects_{datetime.now().strftime('%Y%m%d')}.xlsx"
