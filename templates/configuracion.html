@@ -2,7 +2,7 @@
 
 {% block extra_css %}
 <style>
-    /* Estilos del Ticket (Copia exacta de ticket.html para fidelidad) */
+    /* Estilos del Ticket Preview */
     .ticket-preview {
         background: white;
         padding: 20px;
@@ -103,16 +103,6 @@
         </div>
 
         <div class="col-md-9">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-            {% for category, message in messages %}
-            <div class="alert alert-{{ category }} alert-dismissible fade show shadow-sm" role="alert">
-                {{ message }}
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
-            {% endfor %}
-            {% endif %}
-            {% endwith %}
 
             <div class="tab-content" id="nav-tabContent">
 
@@ -315,7 +305,8 @@
 
                 <div class="tp-info">
                     Folio #0000<br>
-                    <span id="prevFecha">--/--/----</span><br> Cliente: <strong>Cliente Ejemplo</strong>
+                    <span id="prevFecha">--/--/----</span><br>
+                    Cliente: <strong>Cliente Ejemplo</strong>
                 </div>
 
                 <table class="tp-table">
@@ -360,7 +351,6 @@
 </div>
 
 <script>
-    // Validar contraseña (existente)
     function validarPassword() {
         var p1 = document.getElementById("pass1").value;
         var p2 = document.getElementById("pass2").value;
@@ -378,22 +368,17 @@
         }
     }
 
-    // Actualizar y Mostrar Ticket (NUEVO)
     function actualizarVistaPrevia() {
-        // 1. Obtener valores de los inputs
         const empresa = document.getElementById('inputEmpresa').value || "Nombre de tu Empresa";
         const slogan = document.getElementById('inputSlogan').value || "Tu Slogan va aquí";
         const web = document.getElementById('inputWeb').value || "";
 
-        // 2. Inyectar en el ticket
         document.getElementById('prevEmpresa').innerText = empresa;
         document.getElementById('prevSlogan').innerText = slogan;
         document.getElementById('prevWeb').innerText = web;
 
-        // 3. Poner la fecha actual con JS para evitar errores de servidor
         document.getElementById('prevFecha').innerText = new Date().toLocaleDateString();
 
-        // 4. Mostrar Modal
         const modal = new bootstrap.Modal(document.getElementById('modalPreview'));
         modal.show();
     }
