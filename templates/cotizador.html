@@ -388,8 +388,31 @@
 
     function obtenerOpciones() { return document.getElementById('masterSelect').innerHTML }
 
-    // --- 2. GESTIÓN DE FILAS (RESPONSIVE) ---
+    // --- 2. GESTIÓN DE FILAS (CON FILTRO ANTI-FANTASMAS) ---
     function agregarFila(idMat = 0, cantidad = 1) {
+        // PASO 1: EL PORTERO (Validación)
+        // Si nos piden cargar un material específico (idMat > 0), revisamos si existe.
+        if (idMat > 0) {
+            const masterSelect = document.getElementById('masterSelect');
+            let existe = false;
+
+            // Buscamos el ID en la lista maestra oculta
+            for (let i = 0; i < masterSelect.options.length; i++) {
+                if (masterSelect.options[i].value == idMat) {
+                    existe = true;
+                    break;
+                }
+            }
+
+            // Si el material ya no existe en la DB, cancelamos esta función.
+            // Así evitamos crear la fila vacía.
+            if (!existe) {
+                console.warn(`Material fantasma detectado (ID: ${idMat}). Se omitió de la carga.`);
+                return;
+            }
+        }
+
+        // PASO 2: CREACIÓN DE LA FILA (Solo si pasó la validación o es fila nueva vacía)
         const container = document.getElementById('listaMateriales');
         const div = document.createElement('div');
         div.className = 'row g-2 align-items-end mb-3 item-row border-bottom pb-3 pb-md-0 border-md-0 position-relative';
@@ -421,19 +444,19 @@
                 <i class="fas fa-trash-alt"></i> <span class="d-md-none ms-2">Eliminar</span>
             </button>
         </div>
-    `;
+        `;
 
         container.appendChild(div);
 
+        // PASO 3: ASIGNACIÓN DE VALORES
         if (idMat > 0) {
             const s = div.querySelector('select');
-
-
+            // Usamos setTimeout para asegurar que el DOM esté listo
             setTimeout(() => {
                 s.value = idMat;
-                actualizarFila(s);
+                actualizarFila(s); // Esto jala el precio
                 div.querySelector('.input-cantidad').value = cantidad;
-                calcularFila(s);
+                calcularFila(s);   // Esto calcula el subtotal
             }, 0);
         }
     }
