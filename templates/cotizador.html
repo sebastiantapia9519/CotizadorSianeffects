@@ -812,8 +812,14 @@
         const id = document.getElementById('selectCargarProducto').value;
         if (!id) return;
 
-        limpiarCalculadora();
-        document.getElementById('listaMateriales').innerHTML = '';
+        // 1️⃣ Limpia SOLO materiales (sin agregar filas vacías)
+        limpiarMateriales();
+
+        // 2️⃣ Limpia otros campos manualmente
+        document.getElementById('nombreProductoActual').value = '';
+        document.getElementById('cantidadParaCarrito').value = 1;
+        document.getElementById('costosExtra').value = 0;
+        document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
         fetch('/api/receta/' + id)
             .then(r => {
@@ -821,11 +827,6 @@
                 return r.json();
             })
             .then(d => {
-                // --- EL CHISMOSO ---
-                // Esta alerta nos dirá la verdad cruda de la base de datos
-                alert("DATOS RECIBIDOS:\n" + JSON.stringify(d, null, 2));
-                // -------------------
-
                 if (d.error) return alert("Error del sistema: " + d.error);
 
                 document.getElementById('nombreProductoActual').value = d.nombre;
@@ -941,5 +942,9 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => agregarFila());
+
+    function limpiarMateriales() {
+        document.getElementById('listaMateriales').innerHTML = '';
+    }
 </script>
 {% endblock %}
