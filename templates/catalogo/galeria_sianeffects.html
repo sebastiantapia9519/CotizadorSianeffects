@@ -512,54 +512,6 @@
             window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        // --- 3. LÓGICA DEL MODAL MULTIMEDIA (Versión Data Attributes) ---
-        function cargarModalMultimedia(element) {
-            // 1. Extraer datos del HTML (dataset)
-            const data = element.dataset;
-            const titulo = data.titulo;
-            const descripcion = data.desc;
-            const url = data.url;
-            const tipo = data.type;
-
-            // 2. Identificar el Modal
-            const modal = document.getElementById('mediaModal');
-            if (!modal) return;
-
-            // 3. Elementos internos
-            const modalTitle = modal.querySelector('.modal-title') || modal.querySelector('h5');
-            const modalDesc = modal.querySelector('p');
-            const modalImg = modal.querySelector('img');
-            const modalVideo = modal.querySelector('video');
-
-            // 4. Llenar Textos
-            if (modalTitle) modalTitle.innerText = titulo;
-            if (modalDesc) modalDesc.innerText = descripcion;
-
-            // 5. Lógica Video vs Imagen
-            if (tipo === 'video') {
-                // MODO VIDEO
-                if (modalImg) modalImg.style.display = 'none';
-
-                if (modalVideo) {
-                    modalVideo.style.display = 'block';
-                    modalVideo.src = url;
-                    modalVideo.load();
-                    modalVideo.play().catch(e => console.log("Autoplay bloqueado por navegador"));
-                }
-            } else {
-                // MODO IMAGEN
-                if (modalVideo) {
-                    modalVideo.style.display = 'none';
-                    modalVideo.pause();
-                }
-
-                if (modalImg) {
-                    modalImg.style.display = 'block';
-                    modalImg.src = url;
-                }
-            }
-        }
-
         // Detectar cuando se cierra el modal para pausar el video (Limpieza)
         const myModalEl = document.getElementById('mediaModal');
         if (myModalEl) {
