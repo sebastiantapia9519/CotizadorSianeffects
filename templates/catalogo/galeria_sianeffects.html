@@ -20,78 +20,77 @@
         body {
             font-family: 'Inter', sans-serif;
             background-color: #ffffff;
-            padding-top: 140px;
-            /* Espacio para el header fijo */
+            padding-top: 80px;
+            /* Header fijo más delgado */
         }
 
-        /* --- HEADER FIJO ESTILO BERSHKA --- */
+        /* --- HEADER --- */
         .sticky-header {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: rgba(255, 255, 255, 0.98);
             z-index: 1000;
             border-bottom: 1px solid #f0f0f0;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-        }
-
-        .top-bar {
-            padding: 15px 20px;
+            height: 80px;
             display: flex;
             align-items: center;
-            justify-content: space-between;
         }
 
         .brand-logo {
             font-weight: 900;
-            font-size: 1.5rem;
-            color: var(--sian-pink);
+            font-size: 1.4rem;
+            color: var(--text-dark);
             text-decoration: none;
             text-transform: uppercase;
-            letter-spacing: -0.5px;
+            letter-spacing: -1px;
+            cursor: pointer;
         }
 
-        /* --- BARRAS DE HERRAMIENTAS --- */
-        .search-container {
-            flex-grow: 1;
-            max-width: 500px;
-            margin: 0 20px;
+        .brand-logo span {
+            color: var(--sian-pink);
+        }
+
+        /* BUSCADOR ESTILO CAMPO */
+        .search-wrapper {
             position: relative;
+            max-width: 400px;
+            width: 100%;
         }
 
         .search-input {
             width: 100%;
-            border: 1px solid #e0e0e0;
-            background: #f9f9f9;
-            border-radius: 4px;
-            padding: 8px 15px 8px 40px;
+            border: none;
+            border-bottom: 1px solid #ccc;
+            padding: 8px 30px 8px 0;
+            border-radius: 0;
+            outline: none;
             font-size: 0.9rem;
-            transition: all 0.3s;
+            background: transparent;
+            transition: border-color 0.3s;
         }
 
         .search-input:focus {
-            background: #fff;
-            border-color: var(--sian-teal);
-            outline: none;
+            border-bottom-color: var(--text-dark);
         }
 
         .search-icon {
             position: absolute;
-            left: 12px;
+            right: 0;
             top: 50%;
             transform: translateY(-50%);
             color: #999;
-            font-size: 0.9rem;
+            pointer-events: none;
         }
 
-        .action-icons .btn-icon {
-            color: var(--text-dark);
+        /* --- ICONOS --- */
+        .nav-icon {
             font-size: 1.2rem;
-            position: relative;
-            margin-left: 15px;
+            color: var(--text-dark);
             text-decoration: none;
+            margin-left: 20px;
+            position: relative;
             cursor: pointer;
         }
 
@@ -99,7 +98,7 @@
             position: absolute;
             top: -5px;
             right: -8px;
-            background: var(--sian-teal);
+            background: var(--sian-pink);
             color: white;
             font-size: 0.6rem;
             font-weight: bold;
@@ -107,71 +106,80 @@
             border-radius: 10px;
         }
 
-        /* --- NAV DE CATEGORÍAS --- */
-        .cat-nav {
-            display: flex;
-            justify-content: center;
-            padding: 10px 0;
-            overflow-x: auto;
-            white-space: nowrap;
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .cat-link {
-            color: #666;
-            font-weight: 600;
-            font-size: 0.85rem;
-            text-decoration: none;
-            padding: 5px 15px;
-            text-transform: uppercase;
-            transition: color 0.3s;
+        /* --- VISTA DE CATEGORÍAS (TIPO BERSHKA GRID) --- */
+        .cat-grid-item {
+            position: relative;
+            height: 400px;
+            /* Altura fija para impacto visual */
+            overflow: hidden;
             cursor: pointer;
+            background-color: #f8f9fa;
         }
 
-        .cat-link:hover,
-        .cat-link.active {
-            color: var(--text-dark);
-            text-decoration: underline;
-            text-underline-offset: 5px;
-            text-decoration-thickness: 2px;
+        .cat-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
         }
 
-        /* --- GRID PRODUCTOS --- */
-        .product-grid {
-            opacity: 1;
-            transition: opacity 0.3s;
+        .cat-grid-item:hover .cat-img {
+            transform: scale(1.05);
         }
 
-        .product-wrapper {
-            margin-bottom: 30px;
+        .cat-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 30px;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.6), transparent);
+            color: white;
+            pointer-events: none;
         }
 
-        /* --- CARRITO OFFCANVAS --- */
-        .offcanvas-cart {
-            border-left: none;
-        }
-
-        .cart-item {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
-        }
-
-        .cart-total {
-            font-size: 1.2rem;
+        .cat-title {
             font-weight: 900;
+            font-size: 1.8rem;
+            text-transform: uppercase;
+            margin: 0;
+            line-height: 1;
+        }
+
+        .cat-subtitle {
+            font-size: 0.8rem;
+            font-weight: 400;
+            opacity: 0.9;
+            margin-top: 5px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* --- BREADCRUMB (NAVEGACIÓN) --- */
+        .nav-breadcrumb {
+            padding: 15px 0;
+            font-size: 0.85rem;
+            color: #888;
+            cursor: pointer;
+            display: none;
+            /* Oculto en home */
+        }
+
+        .nav-breadcrumb:hover {
+            text-decoration: underline;
             color: var(--text-dark);
         }
 
+        /* --- CARRITO WHATSAPP --- */
         .btn-whatsapp {
             background-color: #25d366;
             color: white;
             font-weight: bold;
             width: 100%;
             border: none;
-            padding: 12px;
+            padding: 15px;
+            text-transform: uppercase;
+            font-size: 0.9rem;
         }
 
         .btn-whatsapp:hover {
@@ -179,25 +187,24 @@
             color: white;
         }
 
-        /* MÓVIL AJUSTES */
+        /* PRODUCT CARD OVERRIDE (Minimalista) */
+        .card-producto {
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        .card-producto .card-img-top {
+            border-radius: 0 !important;
+        }
+
+        /* MOBILE ADJUST */
         @media (max-width: 768px) {
-            body {
-                padding-top: 170px;
+            .cat-grid-item {
+                height: 250px;
             }
 
-            .top-bar {
-                flex-wrap: wrap;
-            }
-
-            .search-container {
-                order: 3;
-                max-width: 100%;
-                margin: 10px 0 0 0;
-            }
-
-            .cat-nav {
-                justify-content: flex-start;
-                padding-left: 20px;
+            .cat-title {
+                font-size: 1.4rem;
             }
         }
     </style>
@@ -206,76 +213,125 @@
 <body>
 
     <header class="sticky-header">
-        <div class="top-bar">
-            <a href="#" class="brand-logo" onclick="filtrarCategoria('all')">SianEffects</a>
+        <div class="container-fluid px-4">
+            <div class="d-flex justify-content-between align-items-center w-100">
 
-            <div class="search-container">
-                <i class="fas fa-search search-icon"></i>
-                <input type="text" id="searchInput" class="search-input" placeholder="Buscar por nombre, SKU..."
-                    onkeyup="filtrarProductos()">
+                <div class="d-flex align-items-center">
+                    <a onclick="irAlInicio()" class="brand-logo me-4">Sian<span>Effects</span></a>
+                </div>
+
+                <div class="search-wrapper d-none d-md-block">
+                    <input type="text" id="searchInput" class="search-input" placeholder="BUSCAR..."
+                        onkeyup="filtrarGlobal(this.value)">
+                    <i class="fas fa-search search-icon"></i>
+                </div>
+
+                <div class="d-flex align-items-center">
+                    <a class="nav-icon d-md-none" onclick="toggleSearchMobile()">
+                        <i class="fas fa-search"></i>
+                    </a>
+
+                    {% if session.get('role', 0) >= 1 %}
+                    <a href="{{ url_for('catalogo.admin_categorias') }}" class="nav-icon" title="Admin">
+                        <i class="fas fa-cog"></i>
+                    </a>
+                    {% endif %}
+
+                    <a class="nav-icon" data-bs-toggle="offcanvas" data-bs-target="#cartCanvas">
+                        <i class="fas fa-shopping-bag"></i>
+                        <span class="cart-badge" id="cartCount">0</span>
+                    </a>
+                </div>
             </div>
 
-            <div class="action-icons d-flex align-items-center">
-                {% if session.get('role', 0) >= 1 %}
-                <a href="{{ url_for('catalogo.admin_categorias') }}" class="btn-icon" title="Panel Admin">
-                    <i class="fas fa-cog"></i>
-                </a>
-                {% endif %}
-
-                <a class="btn-icon" data-bs-toggle="offcanvas" data-bs-target="#cartCanvas">
-                    <i class="fas fa-shopping-bag"></i>
-                    <span class="cart-badge" id="cartCount">0</span>
-                </a>
+            <div id="mobileSearch" class="py-2 d-md-none d-none border-top mt-2">
+                <input type="text" class="form-control border-0 bg-light" placeholder="Buscar producto..."
+                    onkeyup="filtrarGlobal(this.value)">
             </div>
         </div>
-
-        <nav class="cat-nav">
-            <a class="cat-link active" onclick="filtrarCategoria('all', this)">Todo</a>
-            {% for item in catalogo %}
-            <a class="cat-link" onclick="filtrarCategoria('cat-{{ item.info.id }}', this)">{{ item.info.nombre }}</a>
-            {% endfor %}
-        </nav>
     </header>
 
-    <div class="container">
-        <div class="row" id="productsContainer">
+    <div class="container-fluid px-0 px-md-4 pb-5">
+
+        <div id="breadcrumbRow" class="container mt-3 mb-2" style="display: none;">
+            <div class="nav-breadcrumb" onclick="irAlInicio()">
+                <i class="fas fa-arrow-left me-1"></i> VOLVER A CATEGORÍAS / <span id="catNameDisplay"
+                    class="fw-bold text-dark"></span>
+            </div>
+        </div>
+
+        <div id="viewCategories" class="row g-1 g-md-3 mt-2">
             {% for item in catalogo %}
-            {% for producto in item.productos %}
-            <div class="col-6 col-md-4 col-lg-3 product-wrapper" data-cat="cat-{{ item.info.id }}"
-                data-search="{{ producto.titulo|lower }} {{ producto.sku|lower }}">
+            <div class="col-12 col-md-6 col-lg-4">
+                <div class="cat-grid-item" onclick="abrirCategoria('cat-{{ item.info.id }}', '{{ item.info.nombre }}')">
+                    {% set portada = 'https://via.placeholder.com/600x800/f0f0f0/cccccc?text=SianEffects' %}
+                    {% if item.productos and item.productos|length > 0 %}
+                    {% set portada = item.productos[0].media_url %}
+                    {% if item.productos[0].media_type == 'video' %}
+                    {% set portada = 'https://via.placeholder.com/600x800/f0f0f0/cccccc?text=Video+Preview' %}
+                    {% endif %}
+                    {% endif %}
 
-                {% include 'catalogo/card_producto.html' %}
+                    <img src="{{ portada }}" alt="{{ item.info.nombre }}" class="cat-img">
 
+                    <div class="cat-overlay">
+                        <h2 class="cat-title">{{ item.info.nombre }}</h2>
+                        <div class="cat-subtitle">VER COLECCIÓN <i class="fas fa-arrow-right ms-1"
+                                style="font-size: 0.7rem;"></i></div>
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="text-center py-5">
+                <p class="text-muted">No hay categorías públicas aún.</p>
             </div>
             {% endfor %}
-            {% endfor %}
         </div>
 
-        <div id="noResults" class="text-center py-5 d-none">
-            <i class="fas fa-search fa-3x text-muted mb-3 opacity-25"></i>
-            <p class="text-muted">No encontramos lo que buscas.</p>
+        <div id="viewProducts" class="container mt-3 d-none">
+            <div class="row g-4" id="productsContainer">
+                {% for item in catalogo %}
+                {% for producto in item.productos %}
+                <div class="col-6 col-md-4 col-lg-3 product-wrapper" data-cat="cat-{{ item.info.id }}"
+                    data-search="{{ producto.titulo|lower }} {{ producto.sku|lower }}">
+
+                    {% include 'catalogo/card_producto.html' %}
+
+                </div>
+                {% endfor %}
+                {% endfor %}
+            </div>
+
+            <div id="noResults" class="text-center py-5 d-none">
+                <h4 class="fw-bold">No encontramos resultados :(</h4>
+                <p class="text-muted">Intenta con otra palabra clave.</p>
+                <button class="btn btn-outline-dark rounded-pill px-4 mt-2" onclick="irAlInicio()">Ver todo el
+                    catálogo</button>
+            </div>
         </div>
+
     </div>
 
-    <div class="offcanvas offcanvas-end offcanvas-cart" tabindex="-1" id="cartCanvas">
+    <div class="offcanvas offcanvas-end" tabindex="-1" id="cartCanvas" style="width: 400px;">
         <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title fw-bold">MI BOLSA (<span id="cartCountHeader">0</span>)</h5>
+            <h5 class="offcanvas-title fw-bold text-uppercase">Tu Bolsa (<span id="cartCountHeader">0</span>)</h5>
             <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
         </div>
-        <div class="offcanvas-body d-flex flex-column">
-            <div id="cartItems" class="flex-grow-1 overflow-auto">
-                <div class="text-center py-5 text-muted empty-msg">
-                    Tu bolsa está vacía 🛍️
+        <div class="offcanvas-body d-flex flex-column p-0">
+            <div id="cartItems" class="flex-grow-1 overflow-auto p-3">
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-shopping-bag fa-2x mb-3 opacity-25"></i><br>
+                    Tu bolsa está vacía
                 </div>
             </div>
 
-            <div class="border-top pt-3 mt-3">
-                <div class="d-flex justify-content-between mb-3">
-                    <span class="fw-bold">Total Estimado</span>
-                    <span class="cart-total" id="cartTotal">$0.00</span>
+            <div class="p-4 bg-light border-top">
+                <div class="d-flex justify-content-between mb-3 align-items-end">
+                    <span class="small text-uppercase fw-bold text-muted">Total Estimado</span>
+                    <span class="fs-4 fw-900 text-dark" id="cartTotal">$0.00</span>
                 </div>
-                <button class="btn btn-whatsapp rounded-0" onclick="enviarPedidoWhatsapp()">
-                    <i class="fab fa-whatsapp me-2"></i> COTIZAR POR WHATSAPP
+                <button class="btn btn-whatsapp" onclick="enviarPedidoWhatsapp()">
+                    COTIZAR POR WHATSAPP <i class="fab fa-whatsapp ms-2"></i>
                 </button>
             </div>
         </div>
@@ -286,40 +342,75 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        // --- 1. LÓGICA DE FILTRADO (CATEGORÍAS Y BÚSQUEDA) ---
-        let currentCategory = 'all';
+        // --- NAVEGACIÓN ENTRE VISTAS ---
+        const viewCats = document.getElementById('viewCategories');
+        const viewProds = document.getElementById('viewProducts');
+        const breadcrumbRow = document.getElementById('breadcrumbRow');
+        const catNameDisplay = document.getElementById('catNameDisplay');
+        const searchInput = document.getElementById('searchInput');
 
-        function filtrarCategoria(catId, element) {
-            currentCategory = catId;
+        function abrirCategoria(catId, catName) {
+            // 1. Ocultar Home, Mostrar Productos
+            viewCats.classList.add('d-none');
+            viewProds.classList.remove('d-none');
 
-            // Estilos visuales
-            document.querySelectorAll('.cat-link').forEach(el => el.classList.remove('active'));
-            if (element) element.classList.add('active');
+            // 2. Mostrar Breadcrumb
+            breadcrumbRow.style.display = 'block';
+            catNameDisplay.innerText = catName ? catName.toUpperCase() : 'BÚSQUEDA';
 
-            aplicarFiltros();
+            // 3. Filtrar los productos
+            const products = document.querySelectorAll('.product-wrapper');
+            let found = 0;
+            products.forEach(p => {
+                if (p.getAttribute('data-cat') === catId) {
+                    p.classList.remove('d-none');
+                    found++;
+                } else {
+                    p.classList.add('d-none');
+                }
+            });
+
+            // Scroll arriba
+            window.scrollTo(0, 0);
         }
 
-        function filtrarProductos() {
-            aplicarFiltros();
+        function irAlInicio() {
+            // Resetear vista
+            viewCats.classList.remove('d-none');
+            viewProds.classList.add('d-none');
+            breadcrumbRow.style.display = 'none';
+
+            // Limpiar buscador
+            searchInput.value = '';
+            document.getElementById('noResults').classList.add('d-none');
         }
 
-        function aplicarFiltros() {
-            const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        function filtrarGlobal(texto) {
+            texto = texto.toLowerCase().trim();
+
+            if (texto === '') {
+                // Si borra el texto, regresamos a la vista de categorías
+                irAlInicio();
+                return;
+            }
+
+            // Cambiar a vista de productos
+            viewCats.classList.add('d-none');
+            viewProds.classList.remove('d-none');
+            breadcrumbRow.style.display = 'block';
+            catNameDisplay.innerText = 'RESULTADOS DE BÚSQUEDA';
+
+            // Filtrar en todos los productos
             const products = document.querySelectorAll('.product-wrapper');
             let visibleCount = 0;
 
-            products.forEach(prod => {
-                const prodCat = prod.getAttribute('data-cat');
-                const prodData = prod.getAttribute('data-search');
-
-                const matchCat = (currentCategory === 'all' || prodCat === currentCategory);
-                const matchSearch = (prodData.includes(searchTerm));
-
-                if (matchCat && matchSearch) {
-                    prod.classList.remove('d-none');
+            products.forEach(p => {
+                const data = p.getAttribute('data-search');
+                if (data.includes(texto)) {
+                    p.classList.remove('d-none');
                     visibleCount++;
                 } else {
-                    prod.classList.add('d-none');
+                    p.classList.add('d-none');
                 }
             });
 
@@ -328,97 +419,103 @@
             else noRes.classList.add('d-none');
         }
 
-        // --- 2. LÓGICA DEL CARRITO (COTIZACIÓN) ---
+        function toggleSearchMobile() {
+            const el = document.getElementById('mobileSearch');
+            el.classList.toggle('d-none');
+            if (!el.classList.contains('d-none')) {
+                el.querySelector('input').focus();
+            }
+        }
+
+        // --- CARRITO DE COMPRAS (JS) ---
         let cart = [];
 
+        // Función que debe ser llamada desde el botón "Agregar" en card_producto.html
+        // Asegúrate que tu botón tenga: onclick="agregarAlCarrito(this)"
         function agregarAlCarrito(btn) {
             const id = btn.getAttribute('data-id');
             const titulo = btn.getAttribute('data-titulo');
             const precio = parseFloat(btn.getAttribute('data-precio')) || 0;
 
-            // Buscar si ya existe
-            const existing = cart.find(item => item.id === id);
-            if (existing) {
-                existing.cantidad++;
-            } else {
-                cart.push({ id, titulo, precio, cantidad: 1 });
-            }
+            const existing = cart.find(i => i.id === id);
+            if (existing) existing.cantidad++;
+            else cart.push({ id, titulo, precio, cantidad: 1 });
 
-            actualizarUI();
+            actualizarCarritoUI();
 
-            // Feedback visual simple
-            const originalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check"></i> Agregado';
-            btn.classList.replace('btn-outline-dark', 'btn-dark');
+            // Feedback botón
+            const originalHTML = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-check"></i> LISTO';
+            btn.classList.add('btn-dark');
+            btn.classList.remove('btn-outline-dark');
             setTimeout(() => {
-                btn.innerHTML = originalText;
-                btn.classList.replace('btn-dark', 'btn-outline-dark');
-            }, 1000);
+                btn.innerHTML = originalHTML;
+                btn.classList.remove('btn-dark');
+                btn.classList.add('btn-outline-dark');
+            }, 1500);
+
+            // Abrir offcanvas automáticamente (opcional)
+            const bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartCanvas'));
+            bsOffcanvas.show();
         }
 
-        function actualizarUI() {
+        function actualizarCarritoUI() {
+            const container = document.getElementById('cartItems');
             const countBadge = document.getElementById('cartCount');
             const countHeader = document.getElementById('cartCountHeader');
-            const container = document.getElementById('cartItems');
             const totalLabel = document.getElementById('cartTotal');
 
-            // Conteo total items
-            const totalItems = cart.reduce((acc, item) => acc + item.cantidad, 0);
-            countBadge.innerText = totalItems;
-            countHeader.innerText = totalItems;
+            // Totales
+            const totalQty = cart.reduce((acc, item) => acc + item.cantidad, 0);
+            const totalMoney = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
 
-            // Renderizar lista
+            countBadge.innerText = totalQty;
+            countHeader.innerText = totalQty;
+            totalLabel.innerText = '$' + totalMoney.toFixed(2);
+
+            // Renderizado
             container.innerHTML = '';
-            let totalMoney = 0;
-
             if (cart.length === 0) {
-                container.innerHTML = '<div class="text-center py-5 text-muted">Tu bolsa está vacía 🛍️</div>';
-            } else {
-                cart.forEach((item, index) => {
-                    totalMoney += (item.precio * item.cantidad);
-                    container.innerHTML += `
-                        <div class="cart-item">
-                            <div>
-                                <div class="fw-bold small">${item.titulo}</div>
-                                <div class="text-muted small">$${item.precio} x ${item.cantidad}</div>
-                            </div>
-                            <div class="d-flex align-items-center">
-                                <span class="fw-bold me-3">$${(item.precio * item.cantidad).toFixed(2)}</span>
-                                <i class="fas fa-times text-danger" style="cursor:pointer" onclick="eliminarItem(${index})"></i>
-                            </div>
-                        </div>
-                    `;
-                });
+                container.innerHTML = '<div class="text-center py-5 text-muted"><i class="fas fa-shopping-bag fa-2x mb-3 opacity-25"></i><br>Tu bolsa está vacía</div>';
+                return;
             }
 
-            totalLabel.innerText = '$' + totalMoney.toFixed(2);
+            cart.forEach((item, idx) => {
+                container.innerHTML += `
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <div>
+                        <div class="fw-bold text-dark small">${item.titulo}</div>
+                        <div class="text-muted small">${item.cantidad} x $${item.precio}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold text-dark mb-1">$${(item.cantidad * item.precio).toFixed(2)}</div>
+                        <i class="fas fa-trash-alt text-danger small" style="cursor:pointer" onclick="eliminarItem(${idx})"></i>
+                    </div>
+                </div>`;
+            });
         }
 
-        function eliminarItem(index) {
-            cart.splice(index, 1);
-            actualizarUI();
+        function eliminarItem(idx) {
+            cart.splice(idx, 1);
+            actualizarCarritoUI();
         }
 
         function enviarPedidoWhatsapp() {
-            if (cart.length === 0) return alert("Agrega productos primero.");
+            if (cart.length === 0) return alert("Agrega productos primero");
 
-            let mensaje = "Hola SianEffects! 👋 Me interesa cotizar estos productos:\n\n";
+            let msg = "Hola SianEffects! 👋 Me interesa cotizar los siguientes productos:\n\n";
             let total = 0;
-
-            cart.forEach(item => {
-                mensaje += `▪️ ${item.cantidad}x ${item.titulo}\n`;
-                total += (item.precio * item.cantidad);
+            cart.forEach(i => {
+                msg += `▪️ ${i.cantidad}x ${i.titulo} \n`;
+                total += (i.cantidad * i.precio);
             });
+            msg += `\n*Total Estimado: $${total.toFixed(2)}*`;
+            msg += "\n\n¿Tienen disponibilidad?";
 
-            mensaje += `\n*Total Estimado: $${total.toFixed(2)}*`;
-            mensaje += "\n\n¿Tienen disponibilidad?";
-
-            const telefono = "5218122135474"; // Formato internacional
-            const url = `https://wa.me/${telefono}?text=${encodeURIComponent(mensaje)}`;
-            window.open(url, '_blank');
+            const telefono = "5218122135474";
+            window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
         }
     </script>
-
 </body>
 
 </html>
