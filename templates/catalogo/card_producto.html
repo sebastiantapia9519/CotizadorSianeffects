@@ -1,73 +1,39 @@
-{% set tipo = producto.media_type|default('')|lower|trim %}
-{% set url = producto.media_url|default('') %}
+<div class="card h-100 card-producto border-0 shadow-sm">
 
-<div class="card h-100 border-0 shadow-sm product-card"
-    style="cursor: pointer; border-radius: 15px; overflow: hidden; transition: transform 0.2s;"
-    onclick="openMedia(this)" data-tipo="{{ tipo }}" data-src="{{ url }}" data-titulo="{{ producto.titulo }}"
-    data-desc="{{ producto.descripcion }}">
+    <div style="cursor: pointer; position: relative; overflow: hidden;" data-bs-toggle="modal"
+        data-bs-target="#mediaModal" onclick="cargarModalMultimedia({{ producto|tojson }})">
 
-    <div class="position-relative bg-secondary bg-opacity-10" style="height: 220px; overflow: hidden;">
+        <span class="badge bg-white text-dark position-absolute top-0 start-0 m-2 shadow-sm border"
+            style="font-size: 0.7rem;">
+            {% if producto.media_type == 'video' %}<i class="fas fa-video text-danger"></i> Video
+            {% else %}<i class="fas fa-image text-primary"></i> Imagen{% endif %}
+        </span>
 
-        {% if tipo == 'audio' %}
-        <div class="d-flex flex-column justify-content-center align-items-center h-100 w-100"
-            style="background: linear-gradient(135deg, #FF9A9E 0%, #FECFEF 100%);">
-            <div class="rounded-circle bg-white p-3 shadow-sm mb-2 text-danger">
-                <i class="fas fa-music fa-2x"></i>
-            </div>
-            <small class="text-white fw-bold text-shadow">Click para escuchar</small>
-        </div>
-
-        {% elif tipo == 'video' %}
-        <video class="w-100 h-100 object-fit-cover" muted loop onmouseover="this.play()"
-            onmouseout="this.pause();this.currentTime=0;">
-            <source src="{{ url }}">
-        </video>
-        <div class="position-absolute top-0 start-0 w-100 h-100 d-flex justify-content-center align-items-center"
-            style="background: rgba(0,0,0,0.2); pointer-events: none;">
-            <div class="rounded-circle bg-white text-danger d-flex justify-content-center align-items-center shadow"
-                style="width: 50px; height: 50px;">
-                <i class="fas fa-play ms-1"></i>
-            </div>
-        </div>
-
-        {% else %}
-        <img src="{{ url }}" class="w-100 h-100 object-fit-cover" alt="{{ producto.titulo }}" loading="lazy"
-            onerror="this.onerror=null; this.src='https://placehold.co/400x300/ff6b81/white?text=Sin+Imagen';">
-        {% endif %}
+        <img src="{{ producto.media_url }}" class="card-img-top" alt="{{ producto.titulo }}"
+            style="height: 250px; object-fit: cover;">
     </div>
 
-    <div class="card-body p-3">
-        <div class="mb-2">
-            {% if tipo == 'audio' %}
-            <span class="badge bg-warning text-dark rounded-pill"><i class="fas fa-headphones me-1"></i> Audio</span>
-            {% elif tipo == 'video' %}
-            <span class="badge bg-danger rounded-pill"><i class="fas fa-video me-1"></i> Video</span>
-            {% else %}
-            <span class="badge bg-info rounded-pill"><i class="fas fa-image me-1"></i> Imagen</span>
-            {% endif %}
+    <div class="card-body p-3 d-flex flex-column">
+
+        <div style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#mediaModal"
+            onclick="cargarModalMultimedia({{ producto|tojson }})">
+
+            <h6 class="fw-bold text-dark mb-1 text-truncate">{{ producto.titulo }}</h6>
+            <p class="text-muted small mb-2 text-truncate">{{ producto.descripcion }}</p>
+
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="text-muted small" style="font-size: 0.75rem;">
+                    <i class="fas fa-tag me-1"></i> {{ producto.sku }}
+                </span>
+                <span class="fw-bold text-primary">${{ "%.2f"|format(producto.precio) }}</span>
+            </div>
         </div>
 
-        <h6 class="card-title fw-bold text-dark mb-1 text-truncate">{{ producto.titulo }}</h6>
-        <p class="card-text small text-muted text-truncate">{{ producto.descripcion }}</p>
-
-        <div class="mt-auto d-flex justify-content-between align-items-center border-top pt-2">
-
-            <div class="text-muted" style="font-size: 0.75rem;" title="Código de referencia">
-                <i class="fas fa-tag me-1 text-secondary opacity-50"></i>
-                <span class="font-monospace fw-bold">{{ producto.sku }}</span>
-            </div>
-
-            <div>
-                {% if producto.precio > 0 %}
-                <span class="fw-bold" style="color: #2ec4b6;">${{ producto.precio }}</span>
-                {% else %}
-                <span class="fw-bold text-muted">Gratis</span>
-                {% endif %}
-                <button class="btn btn-sm btn-dark w-100 mt-2 btn-add-cart" data-id="{{ producto.id }}"
-                    data-titulo="{{ producto.titulo }}" data-precio="{{ producto.precio }}"
-                    onclick="agregarAlCarrito(event, this)"> <i class="fas fa-shopping-bag me-1"></i> Agregar
-                </button>
-            </div>
+        <div class="mt-auto">
+            <button class="btn btn-sm btn-outline-dark w-100 btn-add-cart rounded-pill fw-bold"
+                onclick="agregarAlCarrito(this, '{{ producto.id }}', '{{ producto.titulo }}', {{ producto.precio }})">
+                <i class="fas fa-shopping-bag me-1"></i> AGREGAR
+            </button>
         </div>
 
     </div>

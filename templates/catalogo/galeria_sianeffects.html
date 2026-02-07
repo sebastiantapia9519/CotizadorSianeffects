@@ -432,34 +432,36 @@
 
         // Función que debe ser llamada desde el botón "Agregar" en card_producto.html
         // Asegúrate que tu botón tenga: onclick="agregarAlCarrito(this)"
-        function agregarAlCarrito(btn) {
-            event.stopPropagation();
-            event.preventDefault();
+        function agregarAlCarrito(btn, id, titulo, precio) {
 
-            const id = btn.getAttribute('data-id');
-            const titulo = btn.getAttribute('data-titulo');
-            const precio = parseFloat(btn.getAttribute('data-precio')) || 0;
-
+            // 1. Agregar a la data
             const existing = cart.find(i => i.id === id);
-            if (existing) existing.cantidad++;
-            else cart.push({ id, titulo, precio, cantidad: 1 });
+            if (existing) {
+                existing.cantidad++;
+            } else {
+                cart.push({ id: id, titulo: titulo, precio: parseFloat(precio), cantidad: 1 });
+            }
 
+            // 2. Actualizar UI del carrito (Badge y Lista)
             actualizarCarritoUI();
 
-            // Feedback botón
-            const originalHTML = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-check"></i> LISTO';
-            btn.classList.add('btn-dark');
-            btn.classList.remove('btn-outline-dark');
-            setTimeout(() => {
-                btn.innerHTML = originalHTML;
-                btn.classList.remove('btn-dark');
-                btn.classList.add('btn-outline-dark');
-            }, 1500);
+            // 3. Feedback visual en el botón (Animación)
+            const textoOriginal = btn.innerHTML;
+            const claseOriginal = btn.className;
 
-            // Abrir offcanvas automáticamente (opcional)
-            const bsOffcanvas = new bootstrap.Offcanvas(document.getElementById('cartCanvas'));
+            btn.innerHTML = '<i class="fas fa-check"></i> LISTO';
+            btn.className = 'btn btn-sm btn-success w-100 rounded-pill fw-bold'; // Cambia a verde
+
+            // Abrir el carrito lateral automáticamente
+            const cartCanvas = document.getElementById('cartCanvas');
+            const bsOffcanvas = bootstrap.Offcanvas.getOrCreateInstance(cartCanvas);
             bsOffcanvas.show();
+
+            // Regresar el botón a la normalidad después de 2 segundos
+            setTimeout(() => {
+                btn.innerHTML = textoOriginal;
+                btn.className = claseOriginal;
+            }, 2000);
         }
 
         function actualizarCarritoUI() {
@@ -468,15 +470,16 @@
             const countHeader = document.getElementById('cartCountHeader');
             const totalLabel = document.getElementById('cartTotal');
 
-            // Totales
+            // Calcular totales
             const totalQty = cart.reduce((acc, item) => acc + item.cantidad, 0);
             const totalMoney = cart.reduce((acc, item) => acc + (item.precio * item.cantidad), 0);
 
+            // Actualizar textos
             countBadge.innerText = totalQty;
             countHeader.innerText = totalQty;
             totalLabel.innerText = '$' + totalMoney.toFixed(2);
 
-            // Renderizado
+            // Dibujar lista
             container.innerHTML = '';
             if (cart.length === 0) {
                 container.innerHTML = '<div class="text-center py-5 text-muted"><i class="fas fa-shopping-bag fa-2x mb-3 opacity-25"></i><br>Tu bolsa está vacía</div>';
@@ -488,7 +491,7 @@
                 <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
                     <div>
                         <div class="fw-bold text-dark small">${item.titulo}</div>
-                        <div class="text-muted small">${item.cantidad} x $${item.precio}</div>
+                        <div class="text-muted small">${item.cantidad} x $${item.precio.toFixed(2)}</div>
                     </div>
                     <div class="text-end">
                         <div class="fw-bold text-dark mb-1">$${(item.cantidad * item.precio).toFixed(2)}</div>
