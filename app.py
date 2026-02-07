@@ -146,6 +146,13 @@ def add_header(response):
     return response
 
 
+@app.template_filter('now_local_format')
+def now_local_format(value=None, tz_name='America/Monterrey'):
+    try:
+        tz = pytz.timezone(tz_name)
+        return datetime.now(tz).strftime('%d/%m/%Y %H:%M')
+    except Exception:
+        return ''
 
 # =========================
 # MAIN
