@@ -512,44 +512,50 @@
             window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
         }
 
-        // --- 3. LÓGICA DEL MODAL MULTIMEDIA (El Cerebro que faltaba) ---
-        function cargarModalMultimedia(producto) {
-            // 1. Identificar el Modal
-            const modal = document.getElementById('mediaModal');
-            if (!modal) return console.error("No se encontró el modal #mediaModal");
+        // --- 3. LÓGICA DEL MODAL MULTIMEDIA (Versión Data Attributes) ---
+        function cargarModalMultimedia(element) {
+            // 1. Extraer datos del HTML (dataset)
+            const data = element.dataset;
+            const titulo = data.titulo;
+            const descripcion = data.desc;
+            const url = data.url;
+            const tipo = data.type;
 
-            // 2. Buscar los elementos dentro del modal automágicamente
-            // (Usamos querySelector para no depender de IDs específicos)
+            // 2. Identificar el Modal
+            const modal = document.getElementById('mediaModal');
+            if (!modal) return;
+
+            // 3. Elementos internos
             const modalTitle = modal.querySelector('.modal-title') || modal.querySelector('h5');
-            const modalDesc = modal.querySelector('p'); // Asume que la descripción es un párrafo
+            const modalDesc = modal.querySelector('p');
             const modalImg = modal.querySelector('img');
             const modalVideo = modal.querySelector('video');
 
-            // 3. Llenar Textos
-            if (modalTitle) modalTitle.innerText = producto.titulo;
-            if (modalDesc) modalDesc.innerText = producto.descripcion || '';
+            // 4. Llenar Textos
+            if (modalTitle) modalTitle.innerText = titulo;
+            if (modalDesc) modalDesc.innerText = descripcion;
 
-            // 4. Lógica Inteligente: ¿Es Video o Imagen?
-            if (producto.media_type === 'video') {
+            // 5. Lógica Video vs Imagen
+            if (tipo === 'video') {
                 // MODO VIDEO
-                if (modalImg) modalImg.style.display = 'none'; // Ocultar foto
+                if (modalImg) modalImg.style.display = 'none';
 
                 if (modalVideo) {
-                    modalVideo.style.display = 'block'; // Mostrar video
-                    modalVideo.src = producto.media_url;
-                    modalVideo.load(); // Cargar nuevo video
-                    modalVideo.play(); // Auto-play al abrir
+                    modalVideo.style.display = 'block';
+                    modalVideo.src = url;
+                    modalVideo.load();
+                    modalVideo.play().catch(e => console.log("Autoplay bloqueado por navegador"));
                 }
             } else {
                 // MODO IMAGEN
                 if (modalVideo) {
-                    modalVideo.style.display = 'none'; // Ocultar video
-                    modalVideo.pause(); // Detener audio si hubiera
+                    modalVideo.style.display = 'none';
+                    modalVideo.pause();
                 }
 
                 if (modalImg) {
-                    modalImg.style.display = 'block'; // Mostrar foto
-                    modalImg.src = producto.media_url;
+                    modalImg.style.display = 'block';
+                    modalImg.src = url;
                 }
             }
         }
