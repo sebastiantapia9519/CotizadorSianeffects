@@ -44,38 +44,58 @@ def resolver_mapa():
         return jsonify({"error": "No se envió ningún link"}), 400
 
     try:
-        # 1. Fingimos ser un navegador real para que Google no nos bloquee
+        # Headers para parecer un navegador real
         headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
         }
         
-        # 2. Seguimos el link corto hasta su destino final
+        # Intentamos seguir el link
+        # timeout=10 evita que se quede colgado eternamente
         response = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
         url_final = response.url
         
-        # 3. Buscamos las coordenadas en la URL final (formato @lat,lng)
-        # Regex mejorado para capturar coordenadas
+        # --- DIAGNÓSTICO: Imprimir en consola por si acaso ---
+        print(f"DEBUG MAPS: Link original: {url}")
+        print(f"DEBUG MAPS: Link final: {url_final}")
+        # ---------------------------------------------------
+
+        # 1. Búsqueda Estándar (@lat,lng)
         match = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', url_final)
-        
         if match:
             return jsonify({
-                "success": True,
-                "lat": match.group(1),
+                "success": True, 
+                "lat": match.group(1), 
                 "lng": match.group(2),
-                "url_expandida": url_final
+                "debug_url": url_final
             })
         
-        # Intento secundario: a veces están en parámetros ?q=lat,lng
+        # 2. Búsqueda Secundaria (?q=lat,lng)
         match_q = re.search(r'q=(-?\d+\.\d+),(-?\d+\.\d+)', url_final)
         if match_q:
              return jsonify({
-                "success": True,
-                "lat": match_q.group(1),
-                "lng": match_q.group(2)
+                "success": True, 
+                "lat": match_q.group(1), 
+                "lng": match_q.group(2),
+                "debug_url": url_final
             })
-            
-        return jsonify({"error": "No pude encontrar coordenadas en ese link. Intenta copiar el link de la barra de arriba."}), 400
+        
+        # 3. Búsqueda Terciaria (!3dlat!4dlng) - A veces Google usa este formato raro
+        match_3d = re.search(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)', url_final)
+        if match_3d:
+             return jsonify({
+                "success": True, 
+                "lat": match_3d.group(1), 
+                "lng": match_3d.group(2),
+                "debug_url": url_final
+            })
+
+        # Si llegamos aquí, conectamos bien pero el Regex falló
+        return jsonify({
+            "error": f"Conexión OK, pero no hallé coordenadas. URL final: {url_final[:60]}..."
+        }), 400
 
     except Exception as e:
-        print(f"Error resolviendo mapa: {e}")
-        return jsonify({"error": "Error al conectar con Google Maps"}), 500
+        # AQUÍ ESTÁ EL CAMBIO IMPORTANTE:
+        # Devolvemos el error real (str(e)) para verlo en la alerta
+        print(f"ERROR CRÍTICO MAPS: {e}")
+        return jsonify({"error": f"Fallo Técnico: {str(e)}"}), 500
