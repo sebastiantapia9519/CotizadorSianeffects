@@ -310,6 +310,29 @@
                         <span id="labelDescuento">-$0.00</span>
                     </div>
 
+                    <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <label class="fw-bold small text-muted m-0">
+                                <i class="fas fa-truck-fast me-1"></i> Envío
+                            </label>
+                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold"
+                                onclick="abrirModalEnvios()">
+                                <span id="btnTextoEnvio">Cotizar</span>
+                            </button>
+                        </div>
+
+                        <div id="resumenEnvio" class="mt-2 p-2 bg-light rounded border d-none">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted" id="descEnvio">Local (12km)</small>
+                                <span class="fw-bold text-dark" id="montoEnvioDisplay">$0.00</span>
+                            </div>
+                            <small class="text-danger d-block text-end" style="font-size: 0.7rem; cursor:pointer"
+                                onclick="limpiarEnvio()">
+                                [Quitar]
+                            </small>
+                        </div>
+                    </div>
+
                     <div class="d-flex justify-content-between mb-1 text-muted" id="taxRow" style="display: none;">
                         <span class="small">Impuestos:</span>
                         <span class="fw-bold" id="taxAmountDisplay">+$0.00</span>
@@ -372,6 +395,105 @@
                     <button class="btn btn-warning fw-bold text-dark py-2" onclick="finalizarCompra('anticipo')">
                         <i class="fas fa-hourglass-half me-2"></i> Solo Anticipo
                     </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEnvios" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header bg-dark text-white">
+                <h6 class="modal-title fw-bold"><i class="fas fa-route me-2"></i>Calcular Envío</h6>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+
+                <ul class="nav nav-pills nav-fill mb-4 gap-2" id="pills-tab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold border rounded-pill" id="pills-local-tab"
+                            data-bs-toggle="pill" data-bs-target="#pills-local" type="button">
+                            🛵 Local
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold border rounded-pill" id="pills-nacional-tab"
+                            data-bs-toggle="pill" data-bs-target="#pills-nacional" type="button">
+                            📦 Nacional
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="pills-tabContent">
+
+                    <div class="tab-pane fade show active" id="pills-local">
+                        <div class="alert alert-light border small text-muted">
+                            <i class="fas fa-info-circle text-primary"></i> Pega un link de Google Maps o ingresa
+                            coordenadas.
+                        </div>
+                        <label class="small fw-bold mb-1">Link de Ubicación / Coordenadas</label>
+                        <div class="input-group mb-3">
+                            <input type="text" id="inputMapsLink" class="form-control"
+                                placeholder="https://maps.google.com/..." onchange="extraerCoordenadas(this)">
+                            <button class="btn btn-outline-secondary" type="button" onclick="pegarDelPortapapeles()"><i
+                                    class="fas fa-paste"></i></button>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <input type="text" id="latDestino"
+                                    class="form-control form-control-sm text-muted bg-light" placeholder="Latitud"
+                                    readonly>
+                            </div>
+                            <div class="col-6">
+                                <input type="text" id="lngDestino"
+                                    class="form-control form-control-sm text-muted bg-light" placeholder="Longitud"
+                                    readonly>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-primary w-100 fw-bold rounded-pill"
+                            onclick="solicitarCotizacion('local')">
+                            Calcular Tarifa Local
+                        </button>
+                    </div>
+
+                    <div class="tab-pane fade" id="pills-nacional">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="small fw-bold">Estado Destino</label>
+                                <select class="form-select" id="estadoDestino">
+                                    <option value="NL">Nuevo León (Fuera de zona metro)</option>
+                                    <option value="CDMX">Ciudad de México</option>
+                                    <option value="JAL">Jalisco</option>
+                                    <option value="ALL">Resto de la República</option>
+                                </select>
+                            </div>
+                            <div class="col-6">
+                                <label class="small fw-bold">Peso (Kg)</label>
+                                <input type="number" id="envioPeso" class="form-control" value="1">
+                            </div>
+                            <div class="col-12">
+                                <label class="small fw-bold">Dimensiones (cm)</label>
+                                <div class="input-group">
+                                    <input type="number" id="envioLargo" class="form-control" placeholder="L">
+                                    <span class="input-group-text">x</span>
+                                    <input type="number" id="envioAncho" class="form-control" placeholder="A">
+                                    <span class="input-group-text">x</span>
+                                    <input type="number" id="envioAlto" class="form-control" placeholder="Alt">
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn btn-primary w-100 fw-bold rounded-pill mt-4"
+                            onclick="solicitarCotizacion('nacional')">
+                            Cotizar Paquetería
+                        </button>
+                    </div>
+                </div>
+
+                <div id="loaderEnvio" class="text-center py-3 d-none">
+                    <div class="spinner-border text-primary" role="status"></div>
                 </div>
             </div>
         </div>
@@ -520,6 +642,15 @@
         const descuentoMonto = subtotalCarrito * (descuentoPct / 100);
         const subtotalConDescuento = subtotalCarrito - descuentoMonto;
 
+        //SUMAR ENVÍO ---
+        const envio = typeof costoEnvio !== 'undefined' ? costoEnvio : 0;
+
+        // Si quieres que el IVA aplique al envío, súmalo antes. 
+        // Si no, súmalo después. Generalmente el envío lleva IVA.
+        // Asumiré que se suma al subtotal antes de impuestos:
+
+        const baseImponible = (subtotalConDescuento + envio);
+
         // --- IMPUESTOS (NUEVA LÓGICA) ---
         let impuestosMonto = 0;
         const taxSwitch = document.getElementById('taxSwitch');
@@ -532,13 +663,13 @@
             taxRow.style.display = 'flex';
 
             const taxRate = parseFloat(taxPercentInput.value) || 0;
-            impuestosMonto = subtotalConDescuento * (taxRate / 100);
+            impuestosMonto = baseImponible * (taxRate / 100);
         } else {
             taxInputContainer.style.display = 'none';
             taxRow.style.display = 'none';
         }
 
-        const totalFinal = subtotalConDescuento + impuestosMonto;
+        const totalFinal = baseImponible + impuestosMonto;
 
         // Actualizar UI Derecha
         document.getElementById('labelSubtotal').innerText = formatMoney(subtotalCarrito);
@@ -972,6 +1103,126 @@
     function limpiarReceta() {
         tbody.innerHTML = '';
         materialesActuales = [];   // ← esto es CLAVE
+    }
+
+
+    // --- VARIABLES NUEVAS ---
+    let costoEnvio = 0;
+    let infoEnvio = null; // Para guardar metadata (km, zona, etc)
+
+    // --- A. GESTIÓN DEL MODAL ---
+    function abrirModalEnvios() {
+        const modal = new bootstrap.Modal(document.getElementById('modalEnvios'));
+        modal.show();
+    }
+
+    function limpiarEnvio() {
+        costoEnvio = 0;
+        infoEnvio = null;
+        document.getElementById('resumenEnvio').classList.add('d-none');
+        document.getElementById('btnTextoEnvio').innerText = "Cotizar";
+        calcularTotal(); // Tu función existente recalculará todo
+    }
+
+    // --- B. EXTRAER COORDENADAS (Magia de UX) ---
+    function extraerCoordenadas(input) {
+        const url = input.value;
+        // Regex para detectar coordenadas en URLs de Google Maps
+        const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+        const match = url.match(regex);
+
+        if (match) {
+            document.getElementById('latDestino').value = match[1];
+            document.getElementById('lngDestino').value = match[2];
+            input.classList.add('is-valid');
+        } else {
+            // Intento fallback para links cortos o de compartir
+            if (url.includes('maps')) {
+                alert("Por favor, usa el link completo de la barra de direcciones o selecciona la ubicación exacta.");
+            }
+        }
+    }
+
+    async function pegarDelPortapapeles() {
+        try {
+            const text = await navigator.clipboard.readText();
+            document.getElementById('inputMapsLink').value = text;
+            extraerCoordenadas(document.getElementById('inputMapsLink'));
+        } catch (err) {
+            alert('Permiso denegado para pegar');
+        }
+    }
+
+    // --- C. LLAMADA AL API ---
+    function solicitarCotizacion(tipo) {
+        const loader = document.getElementById('loaderEnvio');
+        loader.classList.remove('d-none');
+
+        let payload = { tipo: tipo };
+
+        if (tipo === 'local') {
+            const lat = document.getElementById('latDestino').value;
+            const lng = document.getElementById('lngDestino').value;
+            if (!lat || !lng) {
+                loader.classList.add('d-none');
+                return alert("Necesitamos una ubicación válida.");
+            }
+            payload.lat = lat;
+            payload.lng = lng;
+        } else {
+            payload.peso = document.getElementById('envioPeso').value;
+            payload.largo = document.getElementById('envioLargo').value || 10;
+            payload.ancho = document.getElementById('envioAncho').value || 10;
+            payload.alto = document.getElementById('envioAlto').value || 10;
+            payload.estado = document.getElementById('estadoDestino').value;
+        }
+
+        fetch('/api/cotizar-envio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(r => r.json())
+            .then(data => {
+                loader.classList.add('d-none');
+                if (data.error) return alert(data.error);
+
+                // ÉXITO
+                aplicarEnvio(data);
+            })
+            .catch(e => {
+                loader.classList.add('d-none');
+                alert("Error de conexión");
+            });
+    }
+
+    function aplicarEnvio(data) {
+        // Cerrar modal
+        const modalEl = document.getElementById('modalEnvios');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        modal.hide();
+
+        // Guardar datos
+        costoEnvio = parseFloat(data.costo_sugerido);
+        infoEnvio = data;
+
+        // Actualizar UI del Widget
+        const resumen = document.getElementById('resumenEnvio');
+        resumen.classList.remove('d-none');
+
+        let descripcion = "";
+        if (data.tipo === 'local') {
+            descripcion = `Local (${data.distancia_km} km)`;
+        } else {
+            descripcion = `Nacional (${data.zona})`;
+        }
+
+        document.getElementById('descEnvio').innerText = descripcion;
+        document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
+        document.getElementById('btnTextoEnvio').innerText = "Cambiar";
+
+        // Recalcular Total General
+        calcularTotal();
     }
 </script>
 {% endblock %}

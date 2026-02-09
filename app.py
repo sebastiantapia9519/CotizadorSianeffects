@@ -132,6 +132,7 @@ app.register_blueprint(inventory_bp)
 app.register_blueprint(admin_bp, url_prefix='/admin')
 app.register_blueprint(api_bp, url_prefix='/api')
 app.register_blueprint(catalogo_bp)
+app.register_blueprint(shipping_bp)
 
 # =========================
 # ANTI-CACHÉ

@@ -244,5 +244,47 @@ def init_db():
         FOREIGN KEY (categoria_id) REFERENCES categorias (id)
     )
     """)
+
+
+    # =========================
+    # 9. ENVÍOS 
+    # =========================
+    conn.execute("""
+            CREATE TABLE IF NOT EXISTS shipping_configs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                rigin_address TEXT,
+                origin_lat REAL,
+                origin_lng REAL,
+                local_base_rate REAL DEFAULT 0,
+                local_km_rate REAL DEFAULT 0,
+                free_shipping_threshold REAL DEFAULT 0,
+                safety_margin_percent INTEGER DEFAULT 10,
+                FOREIGN KEY(user_id) REFERENCES usuarios(id)
+            )
+        """)
+
+    # Tabla de Zonas (Nacional)
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS shipping_zones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        zone_name TEXT,
+        states_included TEXT, -- En SQLite guardaremos el JSON como texto string
+        FOREIGN KEY(user_id) REFERENCES usuarios(id)
+    )
+    """)
+
+    # Tabla de Tarifas
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS shipping_rates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        zone_id INTEGER,
+        max_weight_kg REAL,
+        price REAL,
+        FOREIGN KEY(zone_id) REFERENCES shipping_zones(id)
+    )
+    """)
+
     conn.commit()
     conn.close()
