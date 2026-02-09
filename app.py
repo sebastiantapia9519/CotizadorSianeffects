@@ -125,6 +125,7 @@ from routes.inventory import inventory_bp
 from routes.admin import admin_bp
 from routes.api import api_bp
 from routes.catalogo import catalogo_bp
+from routes.shipping import shipping_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
