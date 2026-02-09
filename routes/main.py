@@ -3,7 +3,7 @@ from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
 import pandas as pd
 import io
-import json  # <--- IMPORTANTE: Agregamos json que faltaba
+import json
 from utils.datetime_utils import now_utc, utc_to_local
 from db import get_db_connection as get_db
 from helpers import login_required, subscription_required, obtener_alertas
@@ -83,7 +83,6 @@ def cotizador():
     return render_template('cotizador.html', **data)
 
 # --- API PARA CARGAR RECETA EN EL COTIZADOR ---
-# (Esta es la función que movimos aquí para asegurar que el link funcione)
 @main_bp.route('/api/receta/<int:id>')
 @login_required
 def obtener_receta_api(id):
@@ -419,6 +418,35 @@ def configuracion():
 
             flash('Datos del negocio guardados correctamente.', 'success')
 
+        # --- NUEVA LÓGICA DE ENVÍOS (AQUÍ ESTÁ LO NUEVO) ---
+        elif action == 'update_shipping':
+            try:
+                origin_lat = request.form.get('origin_lat')
+                origin_lng = request.form.get('origin_lng')
+                local_base = float(request.form.get('local_base_rate') or 0)
+                local_km = float(request.form.get('local_km_rate') or 0)
+                safety_margin = int(request.form.get('safety_margin') or 10)
+
+                existing = conn.execute("SELECT id FROM shipping_configs WHERE user_id=?", (uid,)).fetchone()
+
+                if existing:
+                    conn.execute("""
+                        UPDATE shipping_configs 
+                        SET origin_lat=?, origin_lng=?, local_base_rate=?, local_km_rate=?, safety_margin_percent=?
+                        WHERE user_id=?
+                    """, (origin_lat, origin_lng, local_base, local_km, safety_margin, uid))
+                else:
+                    conn.execute("""
+                        INSERT INTO shipping_configs (user_id, origin_lat, origin_lng, local_base_rate, local_km_rate, safety_margin_percent)
+                        VALUES (?, ?, ?, ?, ?, ?)
+                    """, (uid, origin_lat, origin_lng, local_base, local_km, safety_margin))
+
+                flash('Configuración de envíos actualizada.', 'success')
+            except Exception as e:
+                print(f"Error shipping: {e}")
+                flash(f'Error al guardar envíos: {e}', 'danger')
+        # ---------------------------------------------------
+
         conn.commit()
         conn.close()
         return redirect(url_for('main.configuracion'))
@@ -426,9 +454,12 @@ def configuracion():
     config = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone()
     user_raw = conn.execute('SELECT * FROM usuarios WHERE id=?', (uid,)).fetchone()
     user_display = procesar_fila_fechas(user_raw)
+    
+    # --- Y AQUÍ LEEMOS LA CONFIG DE ENVÍOS PARA PASARLA AL HTML ---
+    shipping_config = conn.execute("SELECT * FROM shipping_configs WHERE user_id=?", (uid,)).fetchone()
 
     conn.close()
-    return render_template('configuracion.html', config=config, usuario=user_display)
+    return render_template('configuracion.html', config=config, usuario=user_display, shipping_config=shipping_config)
 
 
 @main_bp.route('/terminos')
@@ -438,6 +469,7 @@ def terminos():
 @main_bp.route('/plan_vencido')
 def plan_vencido():
     return render_template('plan_vencido.html')
+
 
 @main_bp.route('/descargar_excel')
 @login_required
