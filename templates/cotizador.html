@@ -1125,20 +1125,59 @@
     }
 
     // --- B. EXTRAER COORDENADAS (Magia de UX) ---
-    function extraerCoordenadas(input) {
-        const url = input.value;
-        // Regex para detectar coordenadas en URLs de Google Maps
+    async function extraerCoordenadas(input) {
+        const url = input.value.trim();
+        if (!url) return;
+
+        // 1. Intento Rápido (Local): Si es un link largo con coordenadas visibles
         const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
         const match = url.match(regex);
 
         if (match) {
+            // ¡Éxito instantáneo!
             document.getElementById('latDestino').value = match[1];
             document.getElementById('lngDestino').value = match[2];
+            input.classList.remove('is-invalid');
             input.classList.add('is-valid');
-        } else {
-            // Intento fallback para links cortos o de compartir
-            if (url.includes('maps')) {
-                alert("Por favor, usa el link completo de la barra de direcciones o selecciona la ubicación exacta.");
+            return;
+        }
+
+        // 2. Intento Profundo (Backend): Si es un link corto (goo.gl) o raro
+        if (url.includes('goo.gl') || url.includes('maps.app') || !match) {
+
+            // Mostramos feedback visual de que estamos "pensando"
+            input.setAttribute('disabled', 'true');
+            input.value = "🔍 Buscando coordenadas exactas...";
+
+            try {
+                const response = await fetch('/api/resolver-mapa', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    document.getElementById('latDestino').value = data.lat;
+                    document.getElementById('lngDestino').value = data.lng;
+
+                    // Restauramos el input pero lo marcamos como válido
+                    input.value = url;
+                    input.classList.remove('is-invalid');
+                    input.classList.add('is-valid');
+                } else {
+                    alert("⚠️ " + (data.error || "Link no válido"));
+                    input.classList.add('is-invalid');
+                    input.value = url; // Regresamos el texto original
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert("Error de conexión al resolver el mapa.");
+                input.value = url;
+            } finally {
+                input.removeAttribute('disabled');
             }
         }
     }
