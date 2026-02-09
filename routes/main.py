@@ -468,7 +468,7 @@ def configuracion():
         # --- GESTIÓN DE ZONAS (Borrar) ---
         elif action == 'delete_zone':
             try:
-                zone_id = request.form.get('zone_id')
+                zone_id = int(request.form.get('zone_id')) # FORZAMOS ENTERO
                 # Primero borramos las tarifas asociadas
                 conn.execute("DELETE FROM shipping_rates WHERE zone_id=?", (zone_id,))
                 conn.execute("DELETE FROM shipping_zones WHERE id=? AND user_id=?", (zone_id, uid))
@@ -476,10 +476,12 @@ def configuracion():
             except Exception as e:
                 flash(f'Error al eliminar zona: {e}', 'danger')
 
-        # --- GESTIÓN DE TARIFAS (Agregar) ---
+        # --- GESTIÓN DE TARIFAS (Agregar) - AQUÍ ESTABA EL ERROR ---
         elif action == 'add_rate':
             try:
-                zone_id = request.form.get('zone_id')
+                # IMPORTANTE: Forzamos 'zone_id' a ser entero (INT)
+                # Si llega como texto "1", Python lo convierte a número 1 para que SQLite lo encuentre.
+                zone_id = int(request.form.get('zone_id')) 
                 peso = float(request.form.get('max_weight'))
                 precio = float(request.form.get('price'))
                 
@@ -487,12 +489,13 @@ def configuracion():
                              (zone_id, peso, precio))
                 flash('Tarifa agregada correctamente.', 'success')
             except Exception as e:
+                print(f"Error rate: {e}")
                 flash(f'Error al agregar tarifa: {e}', 'danger')
 
         # --- GESTIÓN DE TARIFAS (Borrar) ---
         elif action == 'delete_rate':
             try:
-                rate_id = request.form.get('rate_id')
+                rate_id = int(request.form.get('rate_id')) # FORZAMOS ENTERO
                 conn.execute("DELETE FROM shipping_rates WHERE id=?", (rate_id,))
                 flash('Tarifa eliminada.', 'warning')
             except Exception as e:
@@ -514,6 +517,7 @@ def configuracion():
     for z in zones_db:
         z_dict = dict(z)
         # Cargamos las tarifas de esta zona específica
+        # Aquí también asegura que z['id'] es int, así que el INSERT anterior con int() es clave
         rates_db = conn.execute("SELECT * FROM shipping_rates WHERE zone_id=? ORDER BY max_weight_kg ASC", (z['id'],)).fetchall()
         z_dict['rates'] = [dict(r) for r in rates_db]
         
