@@ -5,11 +5,11 @@ class ShippingService:
     
     def __init__(self, user_id):
         self.user_id = user_id
-        # Obtenemos la config real de la base de datos
         self.config = ShippingModel.get_config(user_id)
 
     def calcular_peso_volumetrico(self, largo, ancho, alto):
-        return (largo * ancho * alto) / 5000
+        # PROTECCIÓN: Convertimos a float por si llega texto
+        return (float(largo) * float(ancho) * float(alto)) / 5000
 
     def cotizar_local(self, destino_lat, destino_lng):
         if not self.config:
@@ -36,26 +36,42 @@ class ShippingService:
 
     def cotizar_nacional(self, peso_kg, largo, ancho, alto, estado_destino):
         if not self.config:
-            return {"error": "Configuración no encontrada"}
+            return {"error": "Configuración no encontrada. Ve a Configuración > Envíos."}
 
-        # 1. Calcular peso cobrable
+        try:
+            # 1. BLINDAJE DE TIPOS DE DATOS
+            peso_kg = float(peso_kg)
+            largo = float(largo)
+            ancho = float(ancho)
+            alto = float(alto)
+        except ValueError:
+            return {"error": "Las dimensiones y peso deben ser números válidos."}
+
+        # 2. Calcular peso cobrable
         peso_vol = self.calcular_peso_volumetrico(largo, ancho, alto)
-        peso_cobrable = max(float(peso_kg), peso_vol)
+        peso_cobrable = max(peso_kg, peso_vol)
         
-        # 2. Encontrar la zona
+        # 3. Encontrar la zona
         zona = ShippingModel.get_zone_by_state(self.user_id, estado_destino)
+        
+        # Si no hay zona específica, intentamos buscar la zona "ALL" (Nacional General)
         if not zona:
-            return {"error": f"No hay cobertura configurada para {estado_destino}"}
+             zona = ShippingModel.get_zone_by_state(self.user_id, "ALL")
+
+        if not zona:
+            return {"error": f"No hay cobertura configurada para {estado_destino} ni tarifa Nacional General."}
             
-        # 3. Encontrar la tarifa
+        # 4. Encontrar la tarifa
         tarifa = ShippingModel.get_rate_for_zone(zona['id'], peso_cobrable)
         
         if not tarifa:
-            return {"error": "El paquete excede el peso máximo configurado para esta zona"}
+            return {"error": f"Tu paquete ({peso_cobrable:.2f}kg cobrables) excede el peso máximo configurado en la tarifa."}
             
         return {
             "tipo": "nacional",
             "zona": zona['zone_name'],
+            "peso_real": peso_kg,
+            "peso_volumetrico": round(peso_vol, 2),
             "peso_cobrable": round(peso_cobrable, 2),
             "costo_sugerido": tarifa['price']
         }

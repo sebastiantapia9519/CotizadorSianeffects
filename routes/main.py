@@ -418,7 +418,7 @@ def configuracion():
 
             flash('Datos del negocio guardados correctamente.', 'success')
 
-        # --- NUEVA LÓGICA DE ENVÍOS (AQUÍ ESTÁ LO NUEVO) ---
+        # --- GESTIÓN DE ENVÍOS (Config Base) ---
         elif action == 'update_shipping':
             try:
                 origin_lat = request.form.get('origin_lat')
@@ -443,23 +443,95 @@ def configuracion():
 
                 flash('Configuración de envíos actualizada.', 'success')
             except Exception as e:
-                print(f"Error shipping: {e}")
+                print(f"Error shipping config: {e}")
                 flash(f'Error al guardar envíos: {e}', 'danger')
-        # ---------------------------------------------------
+
+        # --- GESTIÓN DE ZONAS (Crear) ---
+        elif action == 'create_zone':
+            try:
+                nombre = request.form.get('zone_name')
+                estados_str = request.form.get('zone_states', '').upper()
+                
+                # Convertimos "NL, COAH" a lista ["NL", "COAH"]
+                if 'TODOS' in estados_str or 'ALL' in estados_str:
+                    estados_json = json.dumps(['ALL'])
+                else:
+                    estados_lista = [x.strip() for x in estados_str.split(',') if x.strip()]
+                    estados_json = json.dumps(estados_lista)
+
+                conn.execute("INSERT INTO shipping_zones (user_id, zone_name, states_included) VALUES (?, ?, ?)",
+                             (uid, nombre, estados_json))
+                flash('Zona de envío creada con éxito.', 'success')
+            except Exception as e:
+                flash(f'Error al crear zona: {e}', 'danger')
+
+        # --- GESTIÓN DE ZONAS (Borrar) ---
+        elif action == 'delete_zone':
+            try:
+                zone_id = request.form.get('zone_id')
+                # Primero borramos las tarifas asociadas
+                conn.execute("DELETE FROM shipping_rates WHERE zone_id=?", (zone_id,))
+                conn.execute("DELETE FROM shipping_zones WHERE id=? AND user_id=?", (zone_id, uid))
+                flash('Zona y sus tarifas eliminadas.', 'warning')
+            except Exception as e:
+                flash(f'Error al eliminar zona: {e}', 'danger')
+
+        # --- GESTIÓN DE TARIFAS (Agregar) ---
+        elif action == 'add_rate':
+            try:
+                zone_id = request.form.get('zone_id')
+                peso = float(request.form.get('max_weight'))
+                precio = float(request.form.get('price'))
+                
+                conn.execute("INSERT INTO shipping_rates (zone_id, max_weight_kg, price) VALUES (?, ?, ?)",
+                             (zone_id, peso, precio))
+                flash('Tarifa agregada correctamente.', 'success')
+            except Exception as e:
+                flash(f'Error al agregar tarifa: {e}', 'danger')
+
+        # --- GESTIÓN DE TARIFAS (Borrar) ---
+        elif action == 'delete_rate':
+            try:
+                rate_id = request.form.get('rate_id')
+                conn.execute("DELETE FROM shipping_rates WHERE id=?", (rate_id,))
+                flash('Tarifa eliminada.', 'warning')
+            except Exception as e:
+                flash(f'Error al eliminar tarifa: {e}', 'danger')
 
         conn.commit()
         conn.close()
         return redirect(url_for('main.configuracion'))
 
+    # --- GET: Cargar datos para mostrar ---
     config = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone()
     user_raw = conn.execute('SELECT * FROM usuarios WHERE id=?', (uid,)).fetchone()
     user_display = procesar_fila_fechas(user_raw)
-    
-    # --- Y AQUÍ LEEMOS LA CONFIG DE ENVÍOS PARA PASARLA AL HTML ---
     shipping_config = conn.execute("SELECT * FROM shipping_configs WHERE user_id=?", (uid,)).fetchone()
 
+    # Cargar Zonas y sus Tarifas
+    zones_db = conn.execute("SELECT * FROM shipping_zones WHERE user_id=?", (uid,)).fetchall()
+    zones = []
+    for z in zones_db:
+        z_dict = dict(z)
+        # Cargamos las tarifas de esta zona específica
+        rates_db = conn.execute("SELECT * FROM shipping_rates WHERE zone_id=? ORDER BY max_weight_kg ASC", (z['id'],)).fetchall()
+        z_dict['rates'] = [dict(r) for r in rates_db]
+        
+        # Formateamos los estados para mostrar bonito
+        try:
+            states_list = json.loads(z['states_included'])
+            z_dict['states_str'] = ", ".join(states_list)
+        except:
+            z_dict['states_str'] = z['states_included']
+            
+        zones.append(z_dict)
+
     conn.close()
-    return render_template('configuracion.html', config=config, usuario=user_display, shipping_config=shipping_config)
+    return render_template('configuracion.html', 
+                           config=config, 
+                           usuario=user_display, 
+                           shipping_config=shipping_config,
+                           zones=zones)
 
 
 @main_bp.route('/terminos')

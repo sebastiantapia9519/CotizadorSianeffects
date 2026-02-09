@@ -195,6 +195,7 @@
                             <h5 class="mb-0 text-primary">Configuración de Logística</h5>
                         </div>
                         <div class="card-body p-4">
+
                             <form method="POST" action="{{ url_for('main.configuracion') }}">
                                 <input type="hidden" name="action" value="update_shipping">
 
@@ -275,6 +276,108 @@
                                         Envíos</button>
                                 </div>
                             </form>
+
+                            <hr class="my-5">
+
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="fw-bold text-primary m-0"><i class="fas fa-globe-americas me-2"></i>Tarifas
+                                    Nacionales (Por Zonas)</h6>
+                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
+                                    data-bs-toggle="modal" data-bs-target="#modalNuevaZona">
+                                    <i class="fas fa-plus"></i> Nueva Zona
+                                </button>
+                            </div>
+
+                            {% if not zones %}
+                            <div class="alert alert-warning text-center">
+                                <small>No tienes zonas configuradas. Crea una para envíos nacionales (Ej: "Nacional"
+                                    para todo el país).</small>
+                            </div>
+                            {% else %}
+                            <div class="row g-4">
+                                {% for zone in zones %}
+                                <div class="col-md-6">
+                                    <div class="card h-100 border shadow-sm">
+                                        <div
+                                            class="card-header bg-light d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <strong>{{ zone.zone_name }}</strong>
+                                                <div class="small text-muted" style="font-size: 0.75rem;">
+                                                    Cobertura: {{ zone.states_str }}
+                                                </div>
+                                            </div>
+                                            <form method="POST" action="{{ url_for('main.configuracion') }}"
+                                                onsubmit="return confirm('¿Borrar zona?')">
+                                                <input type="hidden" name="action" value="delete_zone">
+                                                <input type="hidden" name="zone_id" value="{{ zone.id }}">
+                                                <button class="btn btn-sm text-danger"><i
+                                                        class="fas fa-trash"></i></button>
+                                            </form>
+                                        </div>
+                                        <div class="card-body p-0">
+                                            <table class="table table-sm table-striped m-0" style="font-size: 0.85rem;">
+                                                <thead class="bg-white">
+                                                    <tr>
+                                                        <th class="ps-3">Hasta (Kg)</th>
+                                                        <th>Precio</th>
+                                                        <th></th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {% for rate in zone.rates %}
+                                                    <tr>
+                                                        <td class="ps-3 fw-bold">{{ rate.max_weight_kg }} kg</td>
+                                                        <td class="text-success fw-bold">${{ "{:.2f}".format(rate.price)
+                                                            }}</td>
+                                                        <td class="text-end pe-3">
+                                                            <form method="POST"
+                                                                action="{{ url_for('main.configuracion') }}"
+                                                                style="display:inline;">
+                                                                <input type="hidden" name="action" value="delete_rate">
+                                                                <input type="hidden" name="rate_id"
+                                                                    value="{{ rate.id }}">
+                                                                <button class="btn btn-link p-0 text-muted"
+                                                                    style="font-size:0.7rem">❌</button>
+                                                            </form>
+                                                        </td>
+                                                    </tr>
+                                                    {% else %}
+                                                    <tr>
+                                                        <td colspan="3" class="text-center text-muted py-3">Sin tarifas
+                                                            asignadas</td>
+                                                    </tr>
+                                                    {% endfor %}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        <div class="card-footer bg-white border-top-0 p-2">
+                                            <form method="POST" action="{{ url_for('main.configuracion') }}"
+                                                class="row g-1 align-items-center">
+                                                <input type="hidden" name="action" value="add_rate">
+                                                <input type="hidden" name="zone_id" value="{{ zone.id }}">
+
+                                                <div class="col-4">
+                                                    <input type="number" step="0.1" name="max_weight"
+                                                        class="form-control form-control-sm" placeholder="Kg Max"
+                                                        required>
+                                                </div>
+                                                <div class="col-4">
+                                                    <input type="number" step="1" name="price"
+                                                        class="form-control form-control-sm" placeholder="$ Precio"
+                                                        required>
+                                                </div>
+                                                <div class="col-4">
+                                                    <button type="submit"
+                                                        class="btn btn-sm btn-success w-100">Agregar</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+
                         </div>
                     </div>
                 </div>
@@ -439,6 +542,40 @@
             <div class="text-center mt-3">
                 <button class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cerrar Vista
                     Previa</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalNuevaZona" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h6 class="modal-title fw-bold">Crear Nueva Zona de Envío</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('main.configuracion') }}">
+                    <input type="hidden" name="action" value="create_zone">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Nombre de la Zona</label>
+                        <input type="text" name="zone_name" class="form-control" placeholder="Ej. Nacional Estándar"
+                            required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Estados / Cobertura</label>
+                        <input type="text" name="zone_states" class="form-control"
+                            placeholder="Ej. NL, CDMX, JAL (o escribe TODOS)" required>
+                        <div class="form-text small">Separa los códigos de estado por comas. Usa "TODOS" para cubrir el
+                            resto del país.</div>
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary">Crear Zona</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
