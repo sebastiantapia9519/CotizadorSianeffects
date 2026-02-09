@@ -479,9 +479,13 @@ def configuracion():
         # --- GESTIÓN DE TARIFAS (Agregar) - AQUÍ ESTABA EL ERROR ---
         elif action == 'add_rate':
             try:
-                # IMPORTANTE: Forzamos 'zone_id' a ser entero (INT)
-                # Si llega como texto "1", Python lo convierte a número 1 para que SQLite lo encuentre.
-                zone_id = int(request.form.get('zone_id')) 
+                raw_zone_id = request.form.get('zone_id')
+                
+                # VALIDACIÓN DE SEGURIDAD
+                if not raw_zone_id or raw_zone_id == 'None':
+                    raise ValueError("El ID de la zona no se cargó correctamente. Recarga la página.")
+
+                zone_id = int(raw_zone_id) 
                 peso = float(request.form.get('max_weight'))
                 precio = float(request.form.get('price'))
                 
@@ -490,7 +494,7 @@ def configuracion():
                 flash('Tarifa agregada correctamente.', 'success')
             except Exception as e:
                 print(f"Error rate: {e}")
-                flash(f'Error al agregar tarifa: {e}', 'danger')
+                flash(f'No se pudo agregar: {e}', 'danger')
 
         # --- GESTIÓN DE TARIFAS (Borrar) ---
         elif action == 'delete_rate':
