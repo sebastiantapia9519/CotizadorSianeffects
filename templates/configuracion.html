@@ -505,7 +505,18 @@
                                 <h6 class="text-muted small text-uppercase fw-bold mb-2">Tu plan vence el:</h6>
                                 <h2 class="fw-bold text-dark m-0">
                                     {% if usuario['subscription_end'] %}
-                                    {{ (usuario['subscription_end']|string)[:10] }}
+                                    {% set fecha_str = usuario['subscription_end']|string %}
+                                    {% set anio = fecha_str[0:4] %}
+                                    {% set mes = fecha_str[5:7] %}
+                                    {% set dia = fecha_str[8:10]|int %}
+
+                                    {% set nombres_meses = {
+                                    '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
+                                    '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
+                                    '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
+                                    } %}
+
+                                    {{ dia }} de {{ nombres_meses[mes] }} del {{ anio }}
                                     {% else %}
                                     <span class="text-success">Licencia Permanente / Admin</span>
                                     {% endif %}
