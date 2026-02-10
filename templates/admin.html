@@ -414,10 +414,88 @@
 
 {% block scripts %}
 <script>
+
     function abrirReset(id, name) {
         document.getElementById('resetUserId').value = id;
         document.getElementById('resetUsername').innerText = name;
         new bootstrap.Modal(document.getElementById('modalReset')).show();
+    }
+
+    // --- NUEVAS FUNCIONES DE FILTRO Y ORDEN ---
+
+    function filtrarTabla() {
+        const input = document.getElementById('searchInput').value.toLowerCase();
+        const role = document.getElementById('roleFilter').value;
+        const rows = document.querySelectorAll('tbody tr');
+        let visibles = 0;
+
+        rows.forEach(row => {
+            // Obtenemos el texto de las columnas clave
+            // Columna 0: Nombre/Email/Empresa
+            const textoUsuario = row.cells[0].innerText.toLowerCase();
+            // Columna 1: Rol (buscamos el texto dentro del badge)
+            const textoRol = row.cells[1].innerText;
+
+            // Lógica de coincidencia
+            const matchText = textoUsuario.includes(input);
+            const matchRole = role === 'all' || textoRol.includes(role);
+
+            if (matchText && matchRole) {
+                row.style.display = '';
+                visibles++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+
+        // Actualizar contador
+        document.getElementById('conteoFilas').innerText = `${visibles} resultados`;
+    }
+
+    function ordenarTabla() {
+        const criterio = document.getElementById('sortFilter').value;
+        const tbody = document.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+
+        if (criterio === 'default') {
+            // Si es default, podrías recargar o simplemente dejarlo como quedó tras el filtro
+            // Lo ideal aquí sería ordenar por ID si lo tuviéramos visible, 
+            // pero ordenaremos por nombre para tener un orden base.
+            rows.sort((a, b) => a.cells[0].innerText.localeCompare(b.cells[0].innerText));
+        } else {
+            rows.sort((a, b) => {
+                let valorA, valorB;
+
+                if (criterio.includes('login')) {
+                    // Columna 2: Última Vez (Formato esperado: YYYY-MM-DD HH:MM o "Nunca")
+                    valorA = a.cells[2].innerText.trim();
+                    valorB = b.cells[2].innerText.trim();
+                    // "Nunca" lo tratamos como fecha muy antigua
+                    if (valorA === 'Nunca') valorA = '1900-01-01';
+                    if (valorB === 'Nunca') valorB = '1900-01-01';
+                }
+                else if (criterio.includes('sub')) {
+                    // Columna 3: Suscripción (YYYY-MM-DD o "Sin fecha")
+                    valorA = a.cells[3].innerText.trim();
+                    valorB = b.cells[3].innerText.trim();
+                    if (valorA === 'Sin fecha') valorA = '2099-12-31'; // Los mandamos al final
+                    if (valorB === 'Sin fecha') valorB = '2099-12-31';
+                }
+
+                // Comparación de fechas
+                const dateA = new Date(valorA);
+                const dateB = new Date(valorB);
+
+                if (criterio.endsWith('desc')) {
+                    return dateB - dateA; // Mayor a menor
+                } else {
+                    return dateA - dateB; // Menor a mayor
+                }
+            });
+        }
+
+        // Reinsertar las filas en el nuevo orden
+        rows.forEach(row => tbody.appendChild(row));
     }
 </script>
 {% endblock %}
