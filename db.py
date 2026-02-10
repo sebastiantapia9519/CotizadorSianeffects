@@ -89,7 +89,7 @@ def init_db():
     """)
 
     # =========================
-    # 4.5 MOVIMIENTOS DE INVENTARIO (HISTORIAL) - NUEVA TABLA
+    # 4.5 MOVIMIENTOS DE INVENTARIO (HISTORIAL)
     # =========================
     conn.execute("""
     CREATE TABLE IF NOT EXISTS movimientos_inventario (
