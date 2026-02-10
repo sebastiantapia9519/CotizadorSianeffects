@@ -73,6 +73,23 @@ def cotizador():
     conn = get_db()
     uid = session['user_id']
     try:
+        # --- VERIFICACIÓN DE TUTORIAL ---
+        user = conn.execute('SELECT tutorial_visto FROM usuarios WHERE id=?', (uid,)).fetchone()
+        
+        # Si no ha visto el tutorial (es 0 o Null)
+        if not user or not user['tutorial_visto']:
+            # 1. Lo marcamos como visto para que no lo moleste la próxima vez
+            conn.execute('UPDATE usuarios SET tutorial_visto=1 WHERE id=?', (uid,))
+            conn.commit()
+            
+            # 2. Le avisamos y lo redirigimos
+            flash('👋 ¡Bienvenido! Te hemos traído al Manual para que conozcas tu nuevo sistema.', 'info')
+            conn.close() # Importante cerrar antes del return
+            return redirect(url_for('main.ayuda'))
+        # ---------------------------------------
+
+        # Si ya lo vio, carga el cotizador normal
+
         data = {
             'config': conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone(),
             'materiales': conn.execute('SELECT * FROM materiales WHERE user_id=?', (uid,)).fetchall(),

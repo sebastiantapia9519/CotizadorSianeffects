@@ -39,7 +39,8 @@ def init_db():
         created_at DATETIME,
         terms_accepted BOOLEAN DEFAULT 0,
         country_code TEXT DEFAULT 'MX',
-        last_login DATETIME
+        last_login DATETIME,
+        tutorial_visto BOOLEAN DEFAULT 0
     )
     """)
 

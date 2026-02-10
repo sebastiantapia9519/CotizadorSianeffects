@@ -635,4 +635,24 @@
         </div>
     </div>
 </div>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Detectar todos los botones del menú lateral
+        const tabButtons = document.querySelectorAll('#v-pills-tab button');
+        const contentSection = document.getElementById('v-pills-tabContent');
+
+        tabButtons.forEach(btn => {
+            btn.addEventListener('shown.bs.tab', function () {
+                // Solo aplicar en móviles (ancho menor a 768px)
+                if (window.innerWidth < 768) {
+                    // Esperar un milisegundo para que renderice y bajar suavemente
+                    setTimeout(() => {
+                        contentSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 100);
+                }
+            });
+        });
+    });
+</script>
+
 {% endblock %}
