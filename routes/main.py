@@ -4,6 +4,7 @@ from datetime import datetime, timedelta, timezone
 import pandas as pd
 import io
 import json
+import math
 from utils.datetime_utils import now_utc, utc_to_local
 from db import get_db_connection as get_db
 from helpers import login_required, subscription_required, obtener_alertas
@@ -301,8 +302,30 @@ def actualizar_venta():
 def historial():
     conn = get_db()
     uid = session['user_id']
-    q = request.args.get('q')
     
+    # 1. Variables de Paginación y Búsqueda
+    q = request.args.get('q', '').strip()
+    page = request.args.get('page', 1, type=int) # Página actual (por defecto la 1)
+    per_page = 20  # Cantidad de registros por página
+    offset = (page - 1) * per_page # Desde dónde empezar a cortar
+
+    # 2. Primero contamos el TOTAL de resultados (Query COUNT)
+    # Esto es necesario para calcular el número total de páginas
+    sql_count = "SELECT COUNT(*) FROM ventas WHERE user_id=?"
+    params_count = [uid]
+
+    if q:
+        # Usamos CAST(id AS TEXT) para que la búsqueda por folio sea flexible (ej: buscas "1" y encuentra "1", "10", "12")
+        sql_count += " AND (CAST(id AS TEXT) LIKE ? OR cliente LIKE ?)"
+        params_count.extend([f'%{q}%', f'%{q}%'])
+
+    total_registros = conn.execute(sql_count, params_count).fetchone()[0]
+    
+    # Calculamos total de páginas (importamos math aquí por si acaso no está arriba)
+    import math 
+    total_pages = math.ceil(total_registros / per_page)
+
+    # 3. Ahora traemos los datos de la página actual (Query DATA)
     sql = '''
         SELECT id, cliente, fecha, total, estado, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine
         FROM ventas 
@@ -311,17 +334,24 @@ def historial():
     params = [uid]
     
     if q:
-        sql += " AND (id=? OR cliente LIKE ?)"
-        params.extend([q, f'%{q}%'])
+        sql += " AND (CAST(id AS TEXT) LIKE ? OR cliente LIKE ?)"
+        params.extend([f'%{q}%', f'%{q}%'])
         
-    sql += " ORDER BY id DESC"
+    # Aquí está la magia: LIMIT y OFFSET recortan los resultados
+    sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    params.extend([per_page, offset])
     
     ventas_db = conn.execute(sql, params).fetchall()
     conn.close()
     
     ventas_display = [procesar_fila_fechas(v) for v in ventas_db]
     
-    return render_template('historial.html', ventas=ventas_display)
+    # 4. Pasamos las variables de paginación al HTML
+    return render_template('historial.html', 
+                           ventas=ventas_display, 
+                           page=page, 
+                           total_pages=total_pages, 
+                           q=q)
 
 
 @main_bp.route('/ticket/<int:id>')

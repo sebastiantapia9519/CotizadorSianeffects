@@ -80,6 +80,31 @@
         margin-bottom: 0;
         border-left: 2px solid #eee;
     }
+
+    /* Estilos Paginación */
+    .page-link {
+        border: none;
+        color: #666;
+        border-radius: 50%;
+        width: 35px;
+        height: 35px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 2px;
+        font-weight: 600;
+    }
+
+    .page-item.active .page-link {
+        background-color: var(--sian-pink);
+        color: white;
+        box-shadow: 0 4px 10px rgba(255, 107, 129, 0.3);
+    }
+
+    .page-link:hover:not(.active) {
+        background-color: #f1f2f6;
+        color: var(--sian-pink);
+    }
 </style>
 {% endblock %}
 
@@ -100,8 +125,7 @@
     <div class="card-body">
         <form action="{{ url_for('main.historial') }}" method="GET" class="d-flex gap-2">
             <input type="text" name="q" class="form-control search-input border-0 bg-light"
-                placeholder="🔍 Buscar por Folio (ej. 1) o Nombre del Cliente..."
-                value="{{ request.args.get('q', '') }}">
+                placeholder="🔍 Buscar por Folio (ej. 1) o Nombre del Cliente..." value="{{ q }}">
             <button type="submit" class="btn btn-primary px-4">Buscar</button>
         </form>
     </div>
@@ -228,6 +252,40 @@
             </tbody>
         </table>
     </div>
+
+    {% if total_pages > 1 %}
+    <div class="card-footer bg-white border-top-0 py-3">
+        <nav aria-label="Navegación de historial">
+            <ul class="pagination justify-content-center m-0">
+                <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.historial', page=page-1, q=q) }}" aria-label="Anterior">
+                        <i class="fas fa-chevron-left small"></i>
+                    </a>
+                </li>
+
+                {% for p in range(1, total_pages + 1) %}
+                {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %} <li
+                    class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.historial', page=p, q=q) }}">{{ p }}</a>
+                    </li>
+                    {% elif p == page - 3 or p == page + 3 %}
+                    <li class="page-item disabled"><span class="page-link border-0">...</span></li>
+                    {% endif %}
+                    {% endfor %}
+
+                    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('main.historial', page=page+1, q=q) }}"
+                            aria-label="Siguiente">
+                            <i class="fas fa-chevron-right small"></i>
+                        </a>
+                    </li>
+            </ul>
+        </nav>
+        <div class="text-center mt-2 text-muted small">
+            Página {{ page }} de {{ total_pages }}
+        </div>
+    </div>
+    {% endif %}
 </div>
 
 <div class="modal fade" id="modalDetalle" tabindex="-1">
