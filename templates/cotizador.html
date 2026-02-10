@@ -4,9 +4,7 @@
 
 {% block extra_css %}
 <style>
-    /* Estilos específicos del Cotizador (Restaurados) */
-
-    /* Tarjetas */
+    /* Estilos SianEffects (Estables) */
     .card {
         border: none;
         border-radius: 20px;
@@ -18,6 +16,28 @@
         border-bottom: 2px solid var(--sian-pink-light);
         padding: 15px;
         border-radius: 20px 20px 0 0;
+    }
+
+    /* Pestañas Personalizadas Sian */
+    .nav-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        font-weight: 600;
+        border-radius: 50px;
+        padding: 8px 20px;
+        margin-right: 5px;
+        transition: all 0.2s;
+    }
+
+    .nav-tabs .nav-link.active {
+        background-color: var(--sian-pink);
+        color: white;
+        font-weight: 800;
+        box-shadow: 0 4px 10px rgba(255, 107, 129, 0.3);
+    }
+
+    .nav-tabs {
+        border-bottom: none;
     }
 
     /* Inputs y Botones */
@@ -62,7 +82,6 @@
         color: white;
     }
 
-    /* Textos de Precios */
     .text-price-main {
         color: var(--sian-teal);
         font-size: 1.2rem;
@@ -75,7 +94,6 @@
         color: var(--sian-pink);
     }
 
-    /* Checkbox Maquinaria */
     .check-maquinaria-label {
         cursor: pointer;
         user-select: none;
@@ -94,33 +112,10 @@
         font-weight: 800;
     }
 
-    /* Filas dinámicas */
-    .item-row {
-        transition: background 0.3s;
-    }
-
-    .item-row:hover {
-        background-color: #fafafa;
-    }
-
-    /* Estilos para inputs numéricos limpios */
-    .no-arrow {
-        -moz-appearance: textfield;
-        appearance: textfield;
-    }
-
     .no-arrow::-webkit-outer-spin-button,
     .no-arrow::-webkit-inner-spin-button {
         -webkit-appearance: none;
         margin: 0;
-    }
-
-    .input-group.rounded-pill input {
-        border-radius: 50px 0 0 50px;
-    }
-
-    .input-group.rounded-pill span {
-        border-radius: 0 50px 50px 0;
     }
 </style>
 {% endblock %}
@@ -139,105 +134,190 @@
 <div class="row g-4">
     <div class="col-lg-7">
         <div class="card h-100">
-            <div class="card-header-sian">
-                <div class="d-flex justify-content-between align-items-center">
-                    <h5 class="m-0 fw-bold text-uppercase" style="color: var(--sian-pink)">1. Receta del Producto</h5>
-                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
-                        onclick="limpiarCalculadora()">Limpiar</button>
-                </div>
-                <div class="mt-3 d-flex flex-column flex-md-row gap-2">
-                    <select class="form-select form-select-sm" id="selectCargarProducto" onchange="cargarProductoDB()">
-                        <option value="">📂 Cargar Receta Guardada...</option>
-                        {% for prod in productos %}
-                        <option value="{{ prod['id'] }}">{{ prod['nombre'] }}</option>
-                        {% endfor %}
-                    </select>
-                    <button class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="agregarFila()">
-                        <i class="fas fa-plus-circle me-1"></i> Material
-                    </button>
-                </div>
+            <div class="card-header-sian pb-0">
+                <ul class="nav nav-tabs" id="myTab" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="receta-tab" data-bs-toggle="tab"
+                            data-bs-target="#panelReceta" type="button" role="tab">
+                            <i class="fas fa-hammer me-2"></i>Armar Receta
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="express-tab" data-bs-toggle="tab" data-bs-target="#panelExpress"
+                            type="button" role="tab">
+                            <i class="fas fa-bolt me-2 text-warning"></i>Venta Rápida
+                        </button>
+                    </li>
+                </ul>
             </div>
 
-            <div class="card-body p-3">
-                <div class="d-none d-md-flex row px-2 mb-2 text-muted small fw-bold text-uppercase">
-                    <div class="col-5">Material</div>
-                    <div class="col-2">$ Unit.</div>
-                    <div class="col-2">Cant.</div>
-                    <div class="col-2">Total</div>
-                    <div class="col-1"></div>
-                </div>
+            <div class="card-body p-4">
+                <div class="tab-content" id="myTabContent">
 
-                <div id="listaMateriales"></div>
-
-                <div class="p-3 bg-light rounded-4 mt-3 border">
-                    <label class="fw-bold small text-muted d-block mb-2">2. Maquinaria y Procesos</label>
-                    <div class="row g-2">
-                        {% for eq in equipos %}
-                        <div class="col-6 col-md-4">
-                            <label
-                                class="check-maquinaria-label d-flex align-items-center gap-2 border bg-white p-2 rounded shadow-sm h-100">
-                                <input type="checkbox" class="form-check-input check-maquinaria-input m-0"
-                                    value="{{ eq['costo_desgaste'] }}" data-id="{{ eq['id'] }}"
-                                    onchange="calcularTotal()">
-                                <span class="lh-sm">{{ eq['nombre'] }} <br> <small class="text-success"
-                                        style="font-size:0.75rem">(+${{ eq['costo_desgaste'] }})</small></span>
-                            </label>
+                    <div class="tab-pane fade show active" id="panelReceta" role="tabpanel">
+                        <div class="d-flex justify-content-end mb-3">
+                            <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                                onclick="limpiarCalculadora()">
+                                <i class="fas fa-eraser me-1"></i> Limpiar Todo
+                            </button>
                         </div>
-                        {% endfor %}
-                    </div>
-                </div>
 
-                <div class="p-3 bg-light rounded-4 mt-3 d-flex align-items-center justify-content-between border">
-                    <label class="fw-bold small text-muted m-0">Extras (Mano de Obra)</label>
-                    <div class="input-group w-50">
-                        <span class="input-group-text border-0 bg-white">$</span>
-
-                        <input type="number" class="form-control border-0" id="costosExtra" value="0"
-                            onfocus="if(this.value=='0') this.value=''"
-                            onblur="if(this.value=='') { this.value='0'; } calcularTotal()" oninput="calcularTotal()">
-
-                    </div>
-                </div>
-
-                <div class="mt-4 p-3 border rounded-4 bg-white shadow-sm">
-                    <label class="small fw-bold text-muted mb-1">Nombre del Producto Final</label>
-                    <input type="text" id="nombreProductoActual" class="form-control fw-bold mb-3 bg-light border-0"
-                        placeholder="Ej. Termo Mágico">
-
-                    <div class="row align-items-end g-3">
-                        <div class="col-4">
-                            <small class="text-muted fw-bold d-block">Costo Real</small>
-                            <div id="resultadoCosto" class="text-secondary fw-bold fs-5">$0.00</div>
+                        <div class="mt-2 d-flex flex-column flex-md-row gap-2 mb-4">
+                            <select class="form-select form-select-sm" id="selectCargarProducto"
+                                onchange="cargarProductoDB()">
+                                <option value="">📂 Cargar Receta Guardada...</option>
+                                {% for prod in productos %}
+                                <option value="{{ prod['id'] }}">{{ prod['nombre'] }}</option>
+                                {% endfor %}
+                            </select>
+                            <button class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-sm"
+                                onclick="agregarFila()">
+                                <i class="fas fa-plus-circle me-1"></i> Material
+                            </button>
                         </div>
-                        <div class="col-4">
-                            <small class="text-muted fw-bold d-block">Venta Unit.</small>
-                            <div id="resultadoPrecio" class="text-price-main">$0.00</div>
+
+                        <div class="d-none d-md-flex row px-2 mb-2 text-muted small fw-bold text-uppercase">
+                            <div class="col-5">Material</div>
+                            <div class="col-2">$ Unit.</div>
+                            <div class="col-2">Cant.</div>
+                            <div class="col-2">Total</div>
+                            <div class="col-1"></div>
                         </div>
-                        <div class="col-4">
-                            <label class="small fw-bold text-success d-block">Cantidad</label>
-                            <input type="number" id="cantidadParaCarrito"
-                                class="form-control text-center border-success fw-bold" value="1">
+
+                        <div id="listaMateriales"></div>
+
+                        <div class="p-3 bg-light rounded-4 mt-3 border">
+                            <label class="fw-bold small text-muted d-block mb-2">2. Maquinaria y Procesos</label>
+                            <div class="row g-2">
+                                {% for eq in equipos %}
+                                <div class="col-6 col-md-4">
+                                    <label
+                                        class="check-maquinaria-label d-flex align-items-center gap-2 border bg-white p-2 rounded shadow-sm h-100">
+                                        <input type="checkbox" class="form-check-input check-maquinaria-input m-0"
+                                            value="{{ eq['costo_desgaste'] }}" data-id="{{ eq['id'] }}"
+                                            onchange="calcularTotal()">
+                                        <span class="lh-sm">{{ eq['nombre'] }} <br> <small class="text-success"
+                                                style="font-size:0.75rem">(+${{ eq['costo_desgaste'] }})</small></span>
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div
+                            class="p-3 bg-light rounded-4 mt-3 d-flex align-items-center justify-content-between border">
+                            <label class="fw-bold small text-muted m-0">Extras (Mano de Obra)</label>
+                            <div class="input-group w-50">
+                                <span class="input-group-text border-0 bg-white">$</span>
+                                <input type="number" class="form-control border-0" id="costosExtra" value="0"
+                                    onfocus="if(this.value=='0') this.value=''"
+                                    onblur="if(this.value=='') { this.value='0'; } calcularTotal()"
+                                    oninput="calcularTotal()">
+                            </div>
+                        </div>
+
+                        <div class="mt-4 p-3 border rounded-4 bg-white shadow-sm">
+                            <label class="small fw-bold text-muted mb-1">Nombre del Producto Final</label>
+                            <input type="text" id="nombreProductoActual"
+                                class="form-control fw-bold mb-3 bg-light border-0" placeholder="Ej. Termo Mágico">
+
+                            <div class="row align-items-end g-3">
+                                <div class="col-4">
+                                    <small class="text-muted fw-bold d-block">Costo Real</small>
+                                    <div id="resultadoCosto" class="text-secondary fw-bold fs-5">$0.00</div>
+                                </div>
+                                <div class="col-4">
+                                    <small class="text-muted fw-bold d-block">Venta Unit.</small>
+                                    <div id="resultadoPrecio" class="text-price-main">$0.00</div>
+                                </div>
+                                <div class="col-4">
+                                    <label class="small fw-bold text-success d-block">Cantidad</label>
+                                    <input type="number" id="cantidadParaCarrito"
+                                        class="form-control text-center border-success fw-bold" value="1">
+                                </div>
+                            </div>
+
+                            <button class="btn btn-add-cart mt-3 shadow" onclick="agregarAlCarrito()">
+                                <i class="fas fa-cart-plus me-2"></i> AGREGAR AL CARRITO
+                            </button>
+
+                            <div class="text-end mt-2">
+                                <a href="javascript:void(0)" class="small text-muted text-decoration-none"
+                                    onclick="mostrarGuardar()">
+                                    <i class="fas fa-save me-1"></i> Guardar esta receta
+                                </a>
+                            </div>
+
+                            <div class="mt-2 p-3 border rounded d-none bg-light" id="boxGuardar">
+                                <div class="input-group">
+                                    <input type="text" id="nombreNuevoProducto" class="form-control"
+                                        placeholder="Nombre para guardar">
+                                    <button class="btn btn-primary" onclick="guardarProductoDB()">Guardar</button>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <button class="btn btn-add-cart mt-3 shadow" onclick="agregarAlCarrito()">
-                        <i class="fas fa-cart-plus me-2"></i> AGREGAR AL CARRITO
-                    </button>
-
-                    <div class="text-end mt-2">
-                        <a href="javascript:void(0)" class="small text-muted text-decoration-none"
-                            onclick="mostrarGuardar()">
-                            <i class="fas fa-save me-1"></i> Guardar esta receta
-                        </a>
-                    </div>
-
-                    <div class="mt-2 p-3 border rounded d-none bg-light" id="boxGuardar">
-                        <div class="input-group">
-                            <input type="text" id="nombreNuevoProducto" class="form-control"
-                                placeholder="Nombre para guardar (Ej. Playera Básica)">
-                            <button class="btn btn-primary" onclick="guardarProductoDB()">Guardar</button>
+                    <div class="tab-pane fade" id="panelExpress" role="tabpanel">
+                        <div class="text-center py-4">
+                            <div class="avatar bg-warning bg-opacity-10 text-warning rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                                style="width: 70px; height: 70px;">
+                                <i class="fas fa-bolt fa-2x"></i>
+                            </div>
+                            <h4 class="fw-bold text-dark">Venta Rápida</h4>
+                            <p class="text-muted small px-5">Usa esto para copias, servicios simples o productos que ya
+                                tienen un precio definido.</p>
                         </div>
+
+                        <div class="mb-4">
+                            <label class="fw-bold small text-muted">¿Qué vendiste?</label>
+                            <input type="text" id="expressConcepto" class="form-control form-control-lg border-2"
+                                placeholder="Ej. Copias, Diseño, Agua...">
+                        </div>
+
+                        <div class="row g-3 mb-4">
+                            <div class="col-7">
+                                <label class="fw-bold small text-muted">Precio Unitario ($)</label>
+                                <input type="number" id="expressPrecio"
+                                    class="form-control form-control-lg text-success fw-bold border-2"
+                                    placeholder="0.00">
+                            </div>
+                            <div class="col-5">
+                                <label class="fw-bold small text-muted">Cantidad</label>
+                                <input type="number" id="expressCantidad"
+                                    class="form-control form-control-lg text-center border-2" value="1">
+                            </div>
+                        </div>
+
+                        <div class="accordion mb-4" id="accordionCosto">
+                            <div class="accordion-item border-0 bg-transparent">
+                                <h2 class="accordion-header">
+                                    <button
+                                        class="accordion-button collapsed py-2 px-0 bg-transparent shadow-none small text-muted"
+                                        type="button" data-bs-toggle="collapse" data-bs-target="#collapseCosto">
+                                        <i class="fas fa-plus-circle me-2"></i> Registrar Costo (Opcional)
+                                    </button>
+                                </h2>
+                                <div id="collapseCosto" class="accordion-collapse collapse"
+                                    data-bs-parent="#accordionCosto">
+                                    <div class="accordion-body px-0 pt-2">
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light border-0 small text-muted">Costo Real
+                                                $</span>
+                                            <input type="number" class="form-control bg-light border-0"
+                                                id="expressCosto" placeholder="0.00">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button class="btn btn-warning w-100 py-3 rounded-4 fw-bold shadow text-dark"
+                            onclick="agregarExpressAlCarrito()">
+                            <i class="fas fa-check-circle me-2"></i> AGREGAR VENTA RÁPIDA
+                        </button>
                     </div>
+
                 </div>
             </div>
         </div>
@@ -270,17 +350,15 @@
                 <div class="p-4 bg-light border-top">
                     <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
                         <label class="fw-bold small text-muted d-block mb-2">Descuento (%)</label>
-
                         <div class="d-flex align-items-center gap-2">
                             <input type="range" class="form-range flex-grow-1" min="0" max="100" step="5"
                                 id="sliderDescuento" value="0" oninput="actualizarDescuento(this.value)">
-
                             <div class="input-group flex-shrink-0 shadow-sm rounded-pill overflow-hidden"
                                 style="width: 85px;">
                                 <input type="number" id="inputDescuento"
                                     class="form-control text-center fw-bold border-0 bg-light no-arrow" value="0"
-                                    min="0" max="100" oninput="actualizarDescuento(this.value)"> <span
-                                    class="input-group-text border-0 bg-light px-1 text-muted small">%</span>
+                                    min="0" max="100" oninput="actualizarDescuento(this.value)">
+                                <span class="input-group-text border-0 bg-light px-1 text-muted small">%</span>
                             </div>
                         </div>
                     </div>
@@ -288,11 +366,9 @@
                     <div class="d-flex align-items-center justify-content-between mb-2">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" id="taxSwitch" onchange="calcularTotal()">
-                            <label class="form-check-label small fw-bold text-muted" for="taxSwitch">
-                                Más Impuestos (IVA)
-                            </label>
+                            <label class="form-check-label small fw-bold text-muted" for="taxSwitch">Más Impuestos
+                                (IVA)</label>
                         </div>
-
                         <div class="input-group input-group-sm w-25" id="taxInputContainer" style="display: none;">
                             <input type="number" class="form-control text-end" id="taxPercent" value="16"
                                 oninput="calcularTotal()">
@@ -304,7 +380,6 @@
                         <span class="small text-muted">Subtotal:</span>
                         <span id="labelSubtotal" class="fw-bold">$0.00</span>
                     </div>
-
                     <div class="d-flex justify-content-between align-items-center mb-1 text-success">
                         <span class="small fw-bold">Descuento:</span>
                         <span id="labelDescuento">-$0.00</span>
@@ -312,24 +387,20 @@
 
                     <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
                         <div class="d-flex justify-content-between align-items-center">
-                            <label class="fw-bold small text-muted m-0">
-                                <i class="fas fa-truck-fast me-1"></i> Envío
-                            </label>
+                            <label class="fw-bold small text-muted m-0"><i class="fas fa-truck-fast me-1"></i>
+                                Envío</label>
                             <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold"
                                 onclick="abrirModalEnvios()">
                                 <span id="btnTextoEnvio">Cotizar</span>
                             </button>
                         </div>
-
                         <div id="resumenEnvio" class="mt-2 p-2 bg-light rounded border d-none">
                             <div class="d-flex justify-content-between align-items-center">
                                 <small class="text-muted" id="descEnvio">Local (12km)</small>
                                 <span class="fw-bold text-dark" id="montoEnvioDisplay">$0.00</span>
                             </div>
                             <small class="text-danger d-block text-end" style="font-size: 0.7rem; cursor:pointer"
-                                onclick="limpiarEnvio()">
-                                [Quitar]
-                            </small>
+                                onclick="limpiarEnvio()">[Quitar]</small>
                         </div>
                     </div>
 
@@ -409,56 +480,39 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-
                 <ul class="nav nav-pills nav-fill mb-4 gap-2" id="pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active fw-bold border rounded-pill" id="pills-local-tab"
-                            data-bs-toggle="pill" data-bs-target="#pills-local" type="button">
-                            🛵 Local
-                        </button>
+                            data-bs-toggle="pill" data-bs-target="#pills-local" type="button">🛵 Local</button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link fw-bold border rounded-pill" id="pills-nacional-tab"
-                            data-bs-toggle="pill" data-bs-target="#pills-nacional" type="button">
-                            📦 Nacional
-                        </button>
+                            data-bs-toggle="pill" data-bs-target="#pills-nacional" type="button">📦 Nacional</button>
                     </li>
                 </ul>
-
                 <div class="tab-content" id="pills-tabContent">
-
                     <div class="tab-pane fade show active" id="pills-local">
-                        <div class="alert alert-light border small text-muted">
-                            <i class="fas fa-info-circle text-primary"></i> Pega un link de Google Maps o ingresa
-                            coordenadas.
-                        </div>
+                        <div class="alert alert-light border small text-muted"><i
+                                class="fas fa-info-circle text-primary"></i> Pega un link de Google Maps o ingresa
+                            coordenadas.</div>
                         <label class="small fw-bold mb-1">Link de Ubicación / Coordenadas</label>
                         <div class="input-group mb-3">
                             <input type="text" id="inputMapsLink" class="form-control"
-                                placeholder="https://maps.google.com/..." onchange="extraerCoordenadas(this)">
+                                placeholder="http://googleusercontent.com/maps..." onchange="extraerCoordenadas(this)">
                             <button class="btn btn-outline-secondary" type="button" onclick="pegarDelPortapapeles()"><i
                                     class="fas fa-paste"></i></button>
                         </div>
-
                         <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <input type="text" id="latDestino"
+                            <div class="col-6"><input type="text" id="latDestino"
                                     class="form-control form-control-sm text-muted bg-light" placeholder="Latitud"
-                                    readonly>
-                            </div>
-                            <div class="col-6">
-                                <input type="text" id="lngDestino"
+                                    readonly></div>
+                            <div class="col-6"><input type="text" id="lngDestino"
                                     class="form-control form-control-sm text-muted bg-light" placeholder="Longitud"
-                                    readonly>
-                            </div>
+                                    readonly></div>
                         </div>
-
                         <button class="btn btn-primary w-100 fw-bold rounded-pill"
-                            onclick="solicitarCotizacion('local')">
-                            Calcular Tarifa Local
-                        </button>
+                            onclick="solicitarCotizacion('local')">Calcular Tarifa Local</button>
                     </div>
-
                     <div class="tab-pane fade" id="pills-nacional">
                         <div class="row g-3">
                             <div class="col-12">
@@ -486,12 +540,9 @@
                             </div>
                         </div>
                         <button class="btn btn-primary w-100 fw-bold rounded-pill mt-4"
-                            onclick="solicitarCotizacion('nacional')">
-                            Cotizar Paquetería
-                        </button>
+                            onclick="solicitarCotizacion('nacional')">Cotizar Paquetería</button>
                     </div>
                 </div>
-
                 <div id="loaderEnvio" class="text-center py-3 d-none">
                     <div class="spinner-border text-primary" role="status"></div>
                 </div>
@@ -503,39 +554,69 @@
 
 {% block scripts %}
 <script>
-    // --- 1. VARIABLES GLOBALES ---
     let precioVentaCalculado = 0;
     let costoProduccionCalculado = 0;
     let carrito = [];
 
     function obtenerOpciones() { return document.getElementById('masterSelect').innerHTML }
 
-    // --- 2. GESTIÓN DE FILAS (CON FILTRO ANTI-FANTASMAS) ---
+    // --- AGREGAR VENTA EXPRESS AL CARRITO ---
+    function agregarExpressAlCarrito() {
+        const concepto = document.getElementById('expressConcepto').value.trim();
+        const precio = parseFloat(document.getElementById('expressPrecio').value);
+        const cantidad = parseFloat(document.getElementById('expressCantidad').value);
+        const costo = parseFloat(document.getElementById('expressCosto').value) || 0;
+
+        if (!concepto) {
+            document.getElementById('expressConcepto').focus();
+            return alert("Escribe qué estás vendiendo.");
+        }
+        if (isNaN(precio) || precio <= 0) {
+            document.getElementById('expressPrecio').focus();
+            return alert("Ponle un precio válido.");
+        }
+        if (isNaN(cantidad) || cantidad < 1) {
+            return alert("Cantidad mínima 1.");
+        }
+
+        carrito.push({
+            concepto: concepto,
+            precio_unitario: precio,
+            costo_unitario: costo,
+            cantidad: cantidad,
+            subtotal: precio * cantidad,
+            composicion: JSON.stringify([{ tipo: 'manual', nombre: 'Venta Rápida' }])
+        });
+
+        renderizarCarrito();
+
+        // Limpiar campos express
+        document.getElementById('expressConcepto').value = '';
+        document.getElementById('expressPrecio').value = '';
+        document.getElementById('expressCantidad').value = '1';
+        document.getElementById('expressCosto').value = '';
+
+        // Efecto scroll en móvil para que vean que se agregó
+        if (window.innerWidth < 992) {
+            const carritoDiv = document.querySelector('.col-lg-5');
+            if (carritoDiv) carritoDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+
+    // --- FUNCIONES ESTABLES (MATERIALES) ---
     function agregarFila(idMat = 0, cantidad = 1) {
-        // PASO 1: EL PORTERO (Validación)
-        // Si nos piden cargar un material específico (idMat > 0), revisamos si existe.
         if (idMat > 0) {
             const masterSelect = document.getElementById('masterSelect');
             let existe = false;
-
-            // Buscamos el ID en la lista maestra oculta
             for (let i = 0; i < masterSelect.options.length; i++) {
-                if (masterSelect.options[i].value == idMat) {
-                    existe = true;
-                    break;
-                }
+                if (masterSelect.options[i].value == idMat) { existe = true; break; }
             }
-
-            // Si el material ya no existe en la DB, cancelamos esta función.
-            // Así evitamos crear la fila vacía.
-            if (!existe) {
-                console.warn(`Material fantasma detectado (ID: ${idMat}). Se omitió de la carga.`);
-                return;
-            }
+            if (!existe) return;
         }
 
-        // PASO 2: CREACIÓN DE LA FILA (Solo si pasó la validación o es fila nueva vacía)
         const container = document.getElementById('listaMateriales');
+        if (!container) return console.error("No encontré listaMateriales"); // Safety check
+
         const div = document.createElement('div');
         div.className = 'row g-2 align-items-end mb-3 item-row border-bottom pb-3 pb-md-0 border-md-0 position-relative';
 
@@ -570,15 +651,13 @@
 
         container.appendChild(div);
 
-        // PASO 3: ASIGNACIÓN DE VALORES
         if (idMat > 0) {
             const s = div.querySelector('select');
-            // Usamos setTimeout para asegurar que el DOM esté listo
             setTimeout(() => {
                 s.value = idMat;
-                actualizarFila(s); // Esto jala el precio
+                actualizarFila(s);
                 div.querySelector('.input-cantidad').value = cantidad;
-                calcularFila(s);   // Esto calcula el subtotal
+                calcularFila(s);
             }, 0);
         }
     }
@@ -604,9 +683,9 @@
         calcularTotal();
     }
 
-    // --- 3. CÁLCULO DE TOTALES ---
     function calcularTotal() {
-        // --- 1. LADO IZQUIERDO (CALCULADORA DE COSTOS) ---
+        // Si estamos en la pestaña express, no recalculamos receta
+        // (Aunque no estorba)
         let totalCostosMat = 0;
         document.querySelectorAll('.item-row').forEach(row => {
             const sub = parseFloat(row.querySelector('.subtotal').innerText.replace('$', '')) || 0;
@@ -624,34 +703,23 @@
         const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
         const precioSugerido = costoTotal * (1 + (margen / 100));
 
-        // Actualizar UI Izquierda
         document.getElementById('resultadoCosto').innerText = '$' + costoTotal.toFixed(2);
         document.getElementById('resultadoPrecio').innerText = '$' + precioSugerido.toFixed(2);
 
         costoProduccionCalculado = costoTotal;
         precioVentaCalculado = precioSugerido;
 
-        // --- 2. LADO DERECHO (CARRITO DE VENTA) ---
+        // CARRITO
         let subtotalCarrito = 0;
-        carrito.forEach(item => {
-            subtotalCarrito += item.subtotal;
-        });
+        carrito.forEach(item => { subtotalCarrito += item.subtotal; });
 
-        // Aplicar Descuento
         const descuentoPct = parseFloat(document.getElementById('inputDescuento').value) || 0;
         const descuentoMonto = subtotalCarrito * (descuentoPct / 100);
         const subtotalConDescuento = subtotalCarrito - descuentoMonto;
 
-        //SUMAR ENVÍO ---
         const envio = typeof costoEnvio !== 'undefined' ? costoEnvio : 0;
-
-        // Si quieres que el IVA aplique al envío, súmalo antes. 
-        // Si no, súmalo después. Generalmente el envío lleva IVA.
-        // Asumiré que se suma al subtotal antes de impuestos:
-
         const baseImponible = (subtotalConDescuento + envio);
 
-        // --- IMPUESTOS (NUEVA LÓGICA) ---
         let impuestosMonto = 0;
         const taxSwitch = document.getElementById('taxSwitch');
         const taxInputContainer = document.getElementById('taxInputContainer');
@@ -661,7 +729,6 @@
         if (taxSwitch.checked) {
             taxInputContainer.style.display = 'flex';
             taxRow.style.display = 'flex';
-
             const taxRate = parseFloat(taxPercentInput.value) || 0;
             impuestosMonto = baseImponible * (taxRate / 100);
         } else {
@@ -671,11 +738,9 @@
 
         const totalFinal = baseImponible + impuestosMonto;
 
-        // Actualizar UI Derecha
         document.getElementById('labelSubtotal').innerText = formatMoney(subtotalCarrito);
         document.getElementById('labelDescuento').innerText = '-' + formatMoney(descuentoMonto);
         document.getElementById('taxAmountDisplay').innerText = '+' + formatMoney(impuestosMonto);
-
         document.getElementById('totalTicket').innerText = formatMoney(totalFinal);
     }
 
@@ -693,16 +758,12 @@
         agregarFila();
     }
 
-    // --- 4. LÓGICA DEL CARRITO ---
     function agregarAlCarrito() {
         if (precioVentaCalculado <= 0) return alert("Calcula primero el precio.");
         const nom = document.getElementById('nombreProductoActual').value || "Producto Personalizado";
         const cant = parseFloat(document.getElementById('cantidadParaCarrito').value) || 1;
 
-        // Capturar la "Receta" actual de la pantalla
         let composicionActual = [];
-
-        // 1. Capturar Materiales de la tabla
         document.querySelectorAll('.item-row').forEach(row => {
             const sel = row.querySelector('select');
             const inputCant = row.querySelector('.input-cantidad');
@@ -716,9 +777,8 @@
             }
         });
 
-        // 2. Capturar Maquinaria seleccionada
         document.querySelectorAll('.check-maquinaria-input:checked').forEach(chk => {
-            const label = chk.closest('label').innerText.split('\n')[0]; // Truco para obtener solo el nombre
+            const label = chk.closest('label').innerText.split('\n')[0];
             composicionActual.push({
                 tipo: 'maquinaria',
                 nombre: label,
@@ -752,19 +812,17 @@
                 <tr>
                     <td class="ps-3">
                         <small class="fw-bold">${i.concepto}</small>
-                        ${i.composicion && i.composicion.length > 0 ? '<br><span class="badge bg-light text-secondary border" style="font-size:0.6rem">Con Receta</span>' : ''}
+                        ${i.composicion && i.composicion.length > 0 && typeof i.composicion !== 'string' ? '<br><span class="badge bg-light text-secondary border" style="font-size:0.6rem">Con Receta</span>' : ''}
                     </td>
                     <td class="text-center small">${i.cantidad}</td>
                     <td class="text-end small fw-bold">$${i.subtotal.toFixed(2)}</td>
                     <td class="text-end pe-3">
-                        <i class="fas fa-pen text-primary me-3" onclick="editarItemCarrito(${x})" style="cursor:pointer" title="Editar / Ver Materiales"></i>
-                        
                         <i class="fas fa-trash-alt text-danger" onclick="eliminarDelCarrito(${x})" style="cursor:pointer" title="Eliminar"></i>
                     </td>
                 </tr>`;
             });
         }
-        calcularTotal(); // Recalcula totales globales
+        calcularTotal();
     }
 
     function actualizarDescuento(v) {
@@ -778,57 +836,10 @@
         renderizarCarrito();
     }
 
-    function editarItemCarrito(index) {
-        // 1. Obtener el item
-        const item = carrito[index];
-
-        // Validar si tiene receta
-        if (!item.composicion || item.composicion.length === 0) {
-            return alert("Este producto no tiene una receta guardada para editar.");
-        }
-
-        if (!confirm(`¿Quieres editar "${item.concepto}"?\n\nSe moverá a la izquierda para que hagas cambios.`)) return;
-
-        // 2. Limpiar la mesa de trabajo (izquierda)
-        limpiarCalculadora();
-
-        // 3. Rellenar datos básicos
-        document.getElementById('nombreProductoActual').value = item.concepto;
-        document.getElementById('cantidadParaCarrito').value = item.cantidad;
-
-        // 4. "Explotar" la receta (Composición)
-        document.getElementById('listaMateriales').innerHTML = '';
-
-        item.composicion.forEach(comp => {
-            if (comp.tipo === 'material') {
-                agregarFila(comp.id, comp.cantidad);
-            }
-            else if (comp.tipo === 'maquinaria') {
-                const checkbox = document.querySelector(`.check-maquinaria-input[data-id="${comp.id}"]`);
-                if (checkbox) {
-                    checkbox.checked = true;
-                }
-            }
-        });
-
-        // 5. Sacarlo del carrito
-        carrito.splice(index, 1);
-        renderizarCarrito();
-
-        // 6. Recalcular
-        setTimeout(() => {
-            calcularTotal();
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-        }, 300);
-    }
-
-    // --- 5. CHECKOUT (VENTA CON ESTADOS) ---
     function finalizarCompra(tipo) {
         if (carrito.length === 0) return alert("El carrito está vacío.");
-
         const cli = document.getElementById('nombreCliente').value || "Cliente General";
 
-        // Calcular valores financieros
         let subtotal = 0;
         let costo_total = 0;
         carrito.forEach(i => {
@@ -836,14 +847,11 @@
             costo_total += (i.costo_unitario * i.cantidad);
         });
 
-        // Recuperar datos de impuestos y descuento desde la pantalla
         const desc_porcentaje = parseInt(document.getElementById('inputDescuento').value) || 0;
         const desc_monto = subtotal * (desc_porcentaje / 100);
-
         const taxAmountText = document.getElementById('taxAmountDisplay').innerText.replace('+$', '').replace('$', '').replace(',', '');
         const tax_amount = parseFloat(taxAmountText) || 0;
         const tax_percent = document.getElementById('taxSwitch').checked ? parseFloat(document.getElementById('taxPercent').value) : 0;
-
         const total = (subtotal - desc_monto) + tax_amount;
 
         let estado = 'pagado';
@@ -856,17 +864,12 @@
             estado = 'anticipo';
             const inputPago = document.getElementById('inputPagoInicial').value;
             pago_inicial = parseFloat(inputPago) || 0;
-            if (!inputPago || pago_inicial <= 0) return alert("Ingresa un monto válido para el anticipo.");
+            if (!inputPago || pago_inicial <= 0) return alert("Ingresa un monto válido.");
             if (pago_inicial >= total) estado = 'pagado';
-        } else if (tipo === 'venta_completa') {
-            estado = 'pagado';
-            pago_inicial = total;
         }
 
         const ventanaTicket = window.open('', '_blank');
-        if (ventanaTicket) {
-            ventanaTicket.document.write('<h2 style="text-align:center;font-family:sans-serif;margin-top:50px">Generando Ticket... 🧾</h2>');
-        }
+        if (ventanaTicket) ventanaTicket.document.write('<h2 style="text-align:center;font-family:sans-serif;margin-top:50px">Generando Ticket... 🧾</h2>');
 
         fetch('/guardar_venta', {
             method: 'POST',
@@ -880,7 +883,7 @@
                     precio: i.precio_unitario,
                     costo: i.costo_unitario,
                     subtotal: i.subtotal,
-                    composicion: JSON.stringify(i.composicion)
+                    composicion: typeof i.composicion === 'string' ? i.composicion : JSON.stringify(i.composicion)
                 })),
                 subtotal: subtotal,
                 descuento_porcentaje: desc_porcentaje,
@@ -907,7 +910,6 @@
         });
     }
 
-    // --- 6. GUARDAR RECETA ---
     function mostrarGuardar() {
         event.preventDefault();
         document.getElementById('boxGuardar').classList.remove('d-none');
@@ -915,17 +917,15 @@
 
     function guardarProductoDB() {
         const nom = document.getElementById('nombreNuevoProducto').value.trim();
-        if (!nom) return alert("Escribe un nombre para el producto.");
-
+        if (!nom) return alert("Escribe un nombre.");
         const materiales = [];
         const maquinaria = [];
 
         document.querySelectorAll('.item-row').forEach(row => {
-            const s = row.querySelector('material-select');
+            const s = row.querySelector('.material-select'); // Ojo aqui selector
             const c = row.querySelector('.input-cantidad');
-            if (s && s.value > 0) {
-                materiales.push({ id: parseInt(s.value), cantidad: parseFloat(c.value) });
-            }
+            // Nota: En la version estable, material-select es clase
+            if (s && s.value > 0) materiales.push({ id: parseInt(s.value), cantidad: parseFloat(c.value) });
         });
 
         document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
@@ -937,231 +937,74 @@
         fetch('/guardar_receta', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                nombre: nom,
-                materiales: materiales,
-                maquinaria: maquinaria
-            })
+            body: JSON.stringify({ nombre: nom, materiales: materiales, maquinaria: maquinaria })
         })
             .then(async response => {
-                const isJson = response.headers.get('content-type')?.includes('application/json');
-                const data = isJson ? await response.json() : null;
-
-                if (!response.ok) {
-                    const error = (data && data.error) || response.statusText;
-                    return Promise.reject(error);
-                }
-
-                alert("¡Receta guardada con éxito!");
+                const data = await response.json();
+                if (!response.ok) return Promise.reject(data.error || response.statusText);
+                alert("¡Receta guardada!");
                 location.reload();
             })
-            .catch(error => {
-                console.error("Detalle del error:", error);
-                alert("Error al guardar: " + error);
-            });
+            .catch(error => alert("Error: " + error));
     }
 
-    // --- 7. CARGAR RECETA (MODO CHISMOSO / DIAGNÓSTICO) ---
     function cargarProductoDB() {
         const id = document.getElementById('selectCargarProducto').value;
         if (!id) return;
-
-        // 1️⃣ Limpia SOLO materiales (sin agregar filas vacías)
         limpiarMateriales();
-
-        // 2️⃣ Limpia otros campos manualmente
         document.getElementById('nombreProductoActual').value = '';
         document.getElementById('cantidadParaCarrito').value = 1;
         document.getElementById('costosExtra').value = 0;
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
-        fetch('/api/receta/' + id)
-            .then(r => {
-                if (!r.ok) throw new Error("Error en conexión");
-                return r.json();
-            })
-            .then(d => {
-                if (d.error) return alert("Error del sistema: " + d.error);
-
-                document.getElementById('nombreProductoActual').value = d.nombre;
-
-                if (d.materiales && d.materiales.length > 0) {
-                    d.materiales.forEach(i => {
-                        agregarFila(i.id, i.cantidad);
-                    });
-                } else {
-                    alert("⚠️ OJO: La receta existe, pero la lista de materiales llegó vacía.");
-                    agregarFila();
-                }
-
-                if (d.maquinaria) {
-                    d.maquinaria.forEach(m => {
-                        const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
-                        if (c) c.checked = true;
-                    });
-                }
-                setTimeout(calcularTotal, 200);
-            })
-            .catch(err => {
-                alert("Error cargando receta: " + err);
-            });
-    }
-
-    // ==========================================
-    // 8. LÓGICA DE RECARGA (EL "ATRAPADOR")
-    // ==========================================
-    document.addEventListener("DOMContentLoaded", function () {
-        // --- LOGICA 1: CARGAR DESDE SESSION STORAGE (Edición) ---
-        const datosPendientes = sessionStorage.getItem('recarga_cotizacion');
-        const clientePendiente = sessionStorage.getItem('recarga_cliente');
-        const idPendiente = sessionStorage.getItem('recarga_id');
-
-        const taxActive = sessionStorage.getItem('recarga_tax_active');
-        const taxPercent = sessionStorage.getItem('recarga_tax_percent');
-
-        if (datosPendientes) {
-            try {
-                const items = JSON.parse(datosPendientes);
-
-                items.forEach(item => {
-                    let recetaOriginal = [];
-                    if (item.composicion) { try { recetaOriginal = JSON.parse(item.composicion); } catch (e) { } }
-
-                    carrito.push({
-                        concepto: item.concepto,
-                        precio_unitario: parseFloat(item.precio_unitario),
-                        costo_unitario: parseFloat(item.costo_unitario),
-                        cantidad: parseFloat(item.cantidad),
-                        subtotal: parseFloat(item.subtotal),
-                        composicion: recetaOriginal
-                    });
+        fetch('/api/receta/' + id).then(r => r.json()).then(d => {
+            if (d.error) return alert("Error: " + d.error);
+            document.getElementById('nombreProductoActual').value = d.nombre;
+            if (d.materiales && d.materiales.length > 0) {
+                d.materiales.forEach(i => agregarFila(i.id, i.cantidad));
+            } else {
+                agregarFila();
+            }
+            if (d.maquinaria) {
+                d.maquinaria.forEach(m => {
+                    const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
+                    if (c) c.checked = true;
                 });
-
-                if (clientePendiente) document.getElementById('nombreCliente').value = clientePendiente;
-
-                if (taxActive === 'true') {
-                    document.getElementById('taxSwitch').checked = true;
-                    if (taxPercent) document.getElementById('taxPercent').value = taxPercent;
-                }
-
-                renderizarCarrito();
-
-                if (idPendiente) {
-                    document.getElementById('ventaIdEdicion').value = idPendiente;
-                    const alerta = document.createElement('div');
-                    alerta.className = 'alert alert-warning position-fixed top-0 start-50 translate-middle-x mt-4 shadow fw-bold';
-                    alerta.style.zIndex = '9999';
-                    alerta.innerHTML = `<i class="fas fa-edit me-2"></i> Editando Cotización #${idPendiente}`;
-                    document.body.appendChild(alerta);
-                    setTimeout(() => alerta.remove(), 4000);
-                }
-
-            } catch (e) {
-                console.error(e);
-            } finally {
-                sessionStorage.removeItem('recarga_cotizacion');
-                sessionStorage.removeItem('recarga_cliente');
-                sessionStorage.removeItem('recarga_id');
-                sessionStorage.removeItem('recarga_tax_active');
-                sessionStorage.removeItem('recarga_tax_percent');
             }
-        }
-
-        // --- LÓGICA 2: CARGAR DESDE URL (Botón "Usar" de Recetas) ---
-        const urlParams = new URLSearchParams(window.location.search);
-        const recetaIdUrl = urlParams.get('cargar_receta');
-
-        if (recetaIdUrl) {
-            const select = document.getElementById('selectCargarProducto');
-            if (select) {
-                select.value = recetaIdUrl;
-                // Si el valor se asignó correctamente (existe en la lista)
-                if (select.value === recetaIdUrl) {
-                    cargarProductoDB();
-                    // Limpiamos la URL para que no recargue al refrescar
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            }
-        }
-    });
-
-
-    // Event Listeners
-    const modalCobro = document.getElementById('modalCobro');
-    if (modalCobro) {
-        modalCobro.addEventListener('show.bs.modal', () => {
-            document.getElementById('modalTotalPago').innerText = document.getElementById('totalTicket').innerText;
-            document.getElementById('inputPagoInicial').value = '';
+            setTimeout(calcularTotal, 200);
         });
     }
 
-    document.addEventListener('DOMContentLoaded', () => agregarFila());
+    function limpiarMateriales() { document.getElementById('listaMateriales').innerHTML = ''; }
 
-    function limpiarMateriales() {
-        document.getElementById('listaMateriales').innerHTML = '';
-    }
-    function limpiarReceta() {
-        tbody.innerHTML = '';
-        materialesActuales = [];   // ← esto es CLAVE
-    }
-
-
-    // --- VARIABLES NUEVAS ---
+    // --- VARIABLES ENVIO ---
     let costoEnvio = 0;
-    let infoEnvio = null; // Para guardar metadata (km, zona, etc)
+    let infoEnvio = null;
 
-    // --- A. GESTIÓN DEL MODAL ---
-    function abrirModalEnvios() {
-        const modal = new bootstrap.Modal(document.getElementById('modalEnvios'));
-        modal.show();
-    }
-
+    function abrirModalEnvios() { new bootstrap.Modal(document.getElementById('modalEnvios')).show(); }
     function limpiarEnvio() {
         costoEnvio = 0;
         infoEnvio = null;
         document.getElementById('resumenEnvio').classList.add('d-none');
         document.getElementById('btnTextoEnvio').innerText = "Cotizar";
-        calcularTotal(); // Tu función existente recalculará todo
+        calcularTotal();
     }
 
-    // --- B. EXTRAER COORDENADAS (Magia de UX) ---
     function extraerCoordenadas(input) {
         const url = input.value.trim();
         if (!url) return;
-
-        // 1. Buscamos coordenadas en el texto del link (Funciona OFFLINE y GRATIS)
-        // Busca patrones como @25.66,-100.26 o ?q=25.66,-100.26
         const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
         const match = url.match(regex);
-
-        const regexQ = /q=(-?\d+\.\d+),(-?\d+\.\d+)/; // Para otros formatos
-        const matchQ = url.match(regexQ);
-
-        const matchFinal = match || matchQ;
-
-        if (matchFinal) {
-            // ¡Éxito! Encontramos las coordenadas sin salir a internet
-            document.getElementById('latDestino').value = matchFinal[1];
-            document.getElementById('lngDestino').value = matchFinal[2];
-
+        if (match) {
+            document.getElementById('latDestino').value = match[1];
+            document.getElementById('lngDestino').value = match[2];
             input.classList.remove('is-invalid');
             input.classList.add('is-valid');
-
-            // Feedback visual positivo
-            const btn = document.querySelector('button[onclick="solicitarCotizacion(\'local\')"]');
-            btn.innerText = "¡Ubicación Detectada! Calcular";
-            setTimeout(() => btn.innerText = "Calcular Tarifa Local", 2000);
             return;
         }
-
-        // 2. Si no encontramos coordenadas y es un link corto...
         if (url.includes('goo.gl') || url.includes('maps.app')) {
-            // ALERTA EDUCATIVA: Le decimos al usuario qué hacer
-            alert("⚠️ OJO: Los links cortos de 'Compartir' no funcionan en la versión gratuita del servidor.\n\n✅ SOLUCIÓN: Copia el link largo de la barra de direcciones de arriba (el que empieza con google.com/maps/place...)");
-
-            input.classList.add('is-invalid');
-            input.value = ""; // Limpiamos para que lo intente de nuevo
-            input.placeholder = "Pega aquí el link largo...";
+            alert("Usa el link largo de Maps.");
+            input.value = "";
         }
     }
 
@@ -1170,27 +1013,19 @@
             const text = await navigator.clipboard.readText();
             document.getElementById('inputMapsLink').value = text;
             extraerCoordenadas(document.getElementById('inputMapsLink'));
-        } catch (err) {
-            alert('Permiso denegado para pegar');
-        }
+        } catch (err) { }
     }
 
-    // --- C. LLAMADA AL API ---
     function solicitarCotizacion(tipo) {
         const loader = document.getElementById('loaderEnvio');
         loader.classList.remove('d-none');
-
         let payload = { tipo: tipo };
 
         if (tipo === 'local') {
             const lat = document.getElementById('latDestino').value;
             const lng = document.getElementById('lngDestino').value;
-            if (!lat || !lng) {
-                loader.classList.add('d-none');
-                return alert("Necesitamos una ubicación válida.");
-            }
-            payload.lat = lat;
-            payload.lng = lng;
+            if (!lat || !lng) { loader.classList.add('d-none'); return alert("Falta ubicación."); }
+            payload.lat = lat; payload.lng = lng;
         } else {
             payload.peso = document.getElementById('envioPeso').value;
             payload.largo = document.getElementById('envioLargo').value || 10;
@@ -1203,48 +1038,31 @@
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
-        })
-            .then(r => r.json())
-            .then(data => {
-                loader.classList.add('d-none');
-                if (data.error) return alert(data.error);
+        }).then(r => r.json()).then(data => {
+            loader.classList.add('d-none');
+            if (data.error) return alert(data.error);
 
-                // ÉXITO
-                aplicarEnvio(data);
-            })
-            .catch(e => {
-                loader.classList.add('d-none');
-                alert("Error de conexión");
-            });
+            // Cerrar modal y aplicar
+            const modalEl = document.getElementById('modalEnvios');
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            modal.hide();
+
+            costoEnvio = parseFloat(data.costo_sugerido);
+            infoEnvio = data;
+            const resumen = document.getElementById('resumenEnvio');
+            resumen.classList.remove('d-none');
+
+            let desc = data.tipo === 'local' ? `Local (${data.distancia_km} km)` : `Nacional (${data.zona})`;
+            document.getElementById('descEnvio').innerText = desc;
+            document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
+            document.getElementById('btnTextoEnvio').innerText = "Cambiar";
+            calcularTotal();
+        }).catch(e => {
+            loader.classList.add('d-none');
+            alert("Error de conexión");
+        });
     }
 
-    function aplicarEnvio(data) {
-        // Cerrar modal
-        const modalEl = document.getElementById('modalEnvios');
-        const modal = bootstrap.Modal.getInstance(modalEl);
-        modal.hide();
-
-        // Guardar datos
-        costoEnvio = parseFloat(data.costo_sugerido);
-        infoEnvio = data;
-
-        // Actualizar UI del Widget
-        const resumen = document.getElementById('resumenEnvio');
-        resumen.classList.remove('d-none');
-
-        let descripcion = "";
-        if (data.tipo === 'local') {
-            descripcion = `Local (${data.distancia_km} km)`;
-        } else {
-            descripcion = `Nacional (${data.zona})`;
-        }
-
-        document.getElementById('descEnvio').innerText = descripcion;
-        document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
-        document.getElementById('btnTextoEnvio').innerText = "Cambiar";
-
-        // Recalcular Total General
-        calcularTotal();
-    }
+    document.addEventListener('DOMContentLoaded', () => agregarFila());
 </script>
 {% endblock %}
