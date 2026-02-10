@@ -4,7 +4,7 @@
 
 {% block extra_css %}
 <style>
-    /* Estilos específicos del Cotizador */
+    /* Estilos específicos del Cotizador (Restaurados) */
 
     /* Tarjetas */
     .card {
@@ -122,45 +122,6 @@
     .input-group.rounded-pill span {
         border-radius: 0 50px 50px 0;
     }
-
-    /* Estilos para las Pestañas Responsivas */
-    .nav-pills .nav-link {
-        border: 2px solid #eee;
-        color: #6c757d;
-        border-radius: 12px;
-        margin: 0 5px;
-        padding: 12px 10px;
-        /* Más espacio para el dedo */
-        transition: all 0.2s ease;
-    }
-
-    /* Estado Activo: "Receta" (Azul Sian) */
-    .nav-pills .nav-link#pills-receta-tab.active {
-        background-color: #e3f2fd;
-        /* Azul muy clarito */
-        border-color: #0d6efd;
-        color: #0d6efd;
-        font-weight: 800;
-    }
-
-    /* Estado Activo: "Express" (Amarillo/Naranja) */
-    .nav-pills .nav-link#pills-express-tab.active {
-        background-color: #fff3cd;
-        /* Amarillo clarito */
-        border-color: #ffc107;
-        color: #856404;
-        font-weight: 800;
-    }
-
-    /* Ajuste para móviles muy pequeños */
-    @media (max-width: 576px) {
-        .nav-pills .nav-link {
-            font-size: 0.9rem;
-            /* Texto un poco más chico para que quepa */
-            margin-bottom: 8px;
-            /* Separación vertical si se apilan */
-        }
-    }
 </style>
 {% endblock %}
 
@@ -176,189 +137,108 @@
 </select>
 
 <div class="row g-4">
-    <div class="col-12 col-lg-7">
-        <div class="card shadow-sm border-0 mb-4 rounded-4">
-            <div class="card-body p-3 p-md-4">
-                <ul class="nav nav-pills nav-fill mb-4" id="pills-tab" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active shadow-sm" id="pills-receta-tab" data-bs-toggle="pill"
-                            data-bs-target="#pills-receta" type="button" role="tab">
-                            <i class="fas fa-tools me-2"></i><span class="d-none d-sm-inline">Armar Receta</span><span
-                                class="d-inline d-sm-none">Receta</span>
-                        </button>
-                    </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link shadow-sm" id="pills-express-tab" data-bs-toggle="pill"
-                            data-bs-target="#pills-express" type="button" role="tab">
-                            <i class="fas fa-bolt me-2"></i><span class="d-none d-sm-inline">Venta Rápida</span><span
-                                class="d-inline d-sm-none">Express</span>
-                        </button>
-                    </li>
-                </ul>
+    <div class="col-lg-7">
+        <div class="card h-100">
+            <div class="card-header-sian">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="m-0 fw-bold text-uppercase" style="color: var(--sian-pink)">1. Receta del Producto</h5>
+                    <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                        onclick="limpiarCalculadora()">Limpiar</button>
+                </div>
+                <div class="mt-3 d-flex flex-column flex-md-row gap-2">
+                    <select class="form-select form-select-sm" id="selectCargarProducto" onchange="cargarProductoDB()">
+                        <option value="">📂 Cargar Receta Guardada...</option>
+                        {% for prod in productos %}
+                        <option value="{{ prod['id'] }}">{{ prod['nombre'] }}</option>
+                        {% endfor %}
+                    </select>
+                    <button class="btn btn-sm btn-success rounded-pill px-4 fw-bold shadow-sm" onclick="agregarFila()">
+                        <i class="fas fa-plus-circle me-1"></i> Material
+                    </button>
+                </div>
+            </div>
 
-                <div class="tab-content" id="pills-tabContent">
+            <div class="card-body p-3">
+                <div class="d-none d-md-flex row px-2 mb-2 text-muted small fw-bold text-uppercase">
+                    <div class="col-5">Material</div>
+                    <div class="col-2">$ Unit.</div>
+                    <div class="col-2">Cant.</div>
+                    <div class="col-2">Total</div>
+                    <div class="col-1"></div>
+                </div>
 
-                    <div class="tab-pane fade show active" id="pills-receta" role="tabpanel">
+                <div id="listaMateriales"></div>
 
-                        <div class="d-flex justify-content-between align-items-center mb-3">
-                            <h6 class="text-primary fw-bold m-0 text-uppercase ls-1">🛠️ Constructor</h6>
-                            <button class="btn btn-sm btn-link text-muted text-decoration-none"
-                                onclick="limpiarFormulario()">
-                                <i class="fas fa-eraser"></i> Limpiar
-                            </button>
+                <div class="p-3 bg-light rounded-4 mt-3 border">
+                    <label class="fw-bold small text-muted d-block mb-2">2. Maquinaria y Procesos</label>
+                    <div class="row g-2">
+                        {% for eq in equipos %}
+                        <div class="col-6 col-md-4">
+                            <label
+                                class="check-maquinaria-label d-flex align-items-center gap-2 border bg-white p-2 rounded shadow-sm h-100">
+                                <input type="checkbox" class="form-check-input check-maquinaria-input m-0"
+                                    value="{{ eq['costo_desgaste'] }}" data-id="{{ eq['id'] }}"
+                                    onchange="calcularTotal()">
+                                <span class="lh-sm">{{ eq['nombre'] }} <br> <small class="text-success"
+                                        style="font-size:0.75rem">(+${{ eq['costo_desgaste'] }})</small></span>
+                            </label>
                         </div>
-
-                        <div class="input-group mb-3 shadow-sm rounded">
-                            <span class="input-group-text bg-white border-end-0"><i
-                                    class="fas fa-folder-open text-warning"></i></span>
-                            <select class="form-select border-start-0 py-2" id="selectRecetaGuardada"
-                                onchange="cargarRecetaGuardada(this.value)">
-                                <option value="">Cargar Receta Guardada...</option>
-                                {% for prod in productos %}
-                                <option value="{{ prod.id }}">{{ prod.nombre }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-
-                        <div class="d-flex justify-content-between align-items-center mb-2 mt-4">
-                            <label class="fw-bold small text-muted">MATERIALES</label>
-                            <button type="button" class="btn btn-sm btn-success rounded-pill px-3 shadow-sm"
-                                onclick="agregarFilaMaterial()">
-                                <i class="fas fa-plus"></i>
-                            </button>
-                        </div>
-                        <div id="contenedorMateriales"></div>
-
-                        <div class="card bg-light border-0 p-3 mb-3 mt-3 rounded-3">
-                            <label class="fw-bold small text-muted mb-2">MAQUINARIA</label>
-                            <div class="row g-2">
-                                {% for mq in equipos %}
-                                <div class="col-6 col-sm-4 col-md-3">
-                                    <div
-                                        class="form-check p-2 bg-white border rounded shadow-sm h-100 d-flex align-items-center">
-                                        <input class="form-check-input ms-1 mt-0" type="checkbox"
-                                            value="{{ mq.costo_por_hora }}" id="mq_{{ mq.id }}"
-                                            onchange="calcularTotal()">
-                                        <label class="form-check-label small w-100 ps-2 lh-sm" for="mq_{{ mq.id }}">
-                                            <div class="fw-bold text-dark text-truncate">{{ mq.nombre }}</div>
-                                            <div class="text-success x-small fw-bold">+${{ mq.costo_por_hora }}</div>
-                                        </label>
-                                    </div>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label class="fw-bold small text-muted">MANO DE OBRA / EXTRA</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-white">$</span>
-                                <input type="number" class="form-control" id="inputManoObra" value="0"
-                                    oninput="calcularTotal()">
-                            </div>
-                        </div>
-
-                        <div class="card border-primary border-opacity-25 bg-primary bg-opacity-10 mb-3 rounded-3">
-                            <div class="card-body py-3">
-                                <input type="text" class="form-control fw-bold mb-3 border-0 bg-white"
-                                    id="inputNombreProducto" placeholder="Nombre del Producto (Ej. Termo)">
-
-                                <div class="row align-items-end text-center g-2">
-                                    <div class="col-4 border-end border-primary border-opacity-25">
-                                        <small class="d-block text-muted x-small">Costo</small>
-                                        <h6 class="fw-bold text-secondary m-0" id="displayCosto">$0.00</h6>
-                                    </div>
-                                    <div class="col-4 border-end border-primary border-opacity-25">
-                                        <small class="d-block text-muted x-small">Venta</small>
-                                        <h5 class="fw-bold text-success m-0" id="displayPrecio">$0.00</h5>
-                                    </div>
-                                    <div class="col-4">
-                                        <small class="d-block text-success fw-bold x-small">Cant.</small>
-                                        <input type="number"
-                                            class="form-control form-control-sm border-success text-center fw-bold mx-auto"
-                                            id="inputCantidadMain" value="1" style="max-width: 60px;">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button class="btn btn-success w-100 py-3 rounded-pill fw-bold shadow hover-scale"
-                            onclick="agregarAlCarrito()">
-                            <i class="fas fa-cart-plus me-2"></i> AGREGAR
-                        </button>
-
-                        <div class="text-center mt-2">
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" id="checkGuardarReceta">
-                                <label class="form-check-label small text-muted" for="checkGuardarReceta">Guardar
-                                    receta</label>
-                            </div>
-                        </div>
+                        {% endfor %}
                     </div>
+                </div>
 
-                    <div class="tab-pane fade" id="pills-express" role="tabpanel">
+                <div class="p-3 bg-light rounded-4 mt-3 d-flex align-items-center justify-content-between border">
+                    <label class="fw-bold small text-muted m-0">Extras (Mano de Obra)</label>
+                    <div class="input-group w-50">
+                        <span class="input-group-text border-0 bg-white">$</span>
 
-                        <div class="text-center mb-4 pt-2">
-                            <h5 class="fw-bold text-dark"><i class="fas fa-bolt text-warning me-2"></i>Venta Rápida</h5>
-                            <p class="small text-muted">Para servicios, copias o precios ya pactados.</p>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="fw-bold small text-muted">¿Qué vendiste?</label>
-                            <input type="text" class="form-control form-control-lg bg-light" id="expressConcepto"
-                                placeholder="Ej. Copias, Diseño...">
-                        </div>
-
-                        <div class="row g-3 mb-4">
-                            <div class="col-7">
-                                <label class="fw-bold small text-muted">Precio Unitario</label>
-                                <div class="input-group input-group-lg">
-                                    <span class="input-group-text bg-white text-success border-end-0 fw-bold">$</span>
-                                    <input type="number"
-                                        class="form-control border-start-0 fw-bold text-success bg-white"
-                                        id="expressPrecio" placeholder="0.00">
-                                </div>
-                            </div>
-                            <div class="col-5">
-                                <label class="fw-bold small text-muted">Cant.</label>
-                                <input type="number" class="form-control form-control-lg text-center bg-light"
-                                    id="expressCantidad" value="1">
-                            </div>
-                        </div>
-
-                        <div class="accordion mb-4" id="accordionCosto">
-                            <div class="accordion-item border-0 bg-transparent">
-                                <h2 class="accordion-header">
-                                    <button
-                                        class="accordion-button collapsed py-2 px-0 bg-transparent shadow-none small text-muted"
-                                        type="button" data-bs-toggle="collapse" data-bs-target="#collapseCosto">
-                                        <i class="fas fa-plus-circle me-2"></i> Registrar Costo (Opcional)
-                                    </button>
-                                </h2>
-                                <div id="collapseCosto" class="accordion-collapse collapse"
-                                    data-bs-parent="#accordionCosto">
-                                    <div class="accordion-body px-0 pt-2">
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light border-0 small text-muted">Costo Real
-                                                $</span>
-                                            <input type="number" class="form-control bg-light border-0"
-                                                id="expressCosto" placeholder="0.00">
-                                        </div>
-                                        <small class="text-muted" style="font-size: 0.7rem;">*Útil para que tus reportes
-                                            de ganancia sean reales.</small>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <button class="btn btn-warning w-100 py-3 rounded-pill fw-bold shadow text-dark hover-scale"
-                            onclick="agregarExpressAlCarrito()">
-                            <i class="fas fa-check-circle me-2"></i> REGISTRAR VENTA
-                        </button>
+                        <input type="number" class="form-control border-0" id="costosExtra" value="0"
+                            onfocus="if(this.value=='0') this.value=''"
+                            onblur="if(this.value=='') { this.value='0'; } calcularTotal()" oninput="calcularTotal()">
 
                     </div>
                 </div>
 
+                <div class="mt-4 p-3 border rounded-4 bg-white shadow-sm">
+                    <label class="small fw-bold text-muted mb-1">Nombre del Producto Final</label>
+                    <input type="text" id="nombreProductoActual" class="form-control fw-bold mb-3 bg-light border-0"
+                        placeholder="Ej. Termo Mágico">
+
+                    <div class="row align-items-end g-3">
+                        <div class="col-4">
+                            <small class="text-muted fw-bold d-block">Costo Real</small>
+                            <div id="resultadoCosto" class="text-secondary fw-bold fs-5">$0.00</div>
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted fw-bold d-block">Venta Unit.</small>
+                            <div id="resultadoPrecio" class="text-price-main">$0.00</div>
+                        </div>
+                        <div class="col-4">
+                            <label class="small fw-bold text-success d-block">Cantidad</label>
+                            <input type="number" id="cantidadParaCarrito"
+                                class="form-control text-center border-success fw-bold" value="1">
+                        </div>
+                    </div>
+
+                    <button class="btn btn-add-cart mt-3 shadow" onclick="agregarAlCarrito()">
+                        <i class="fas fa-cart-plus me-2"></i> AGREGAR AL CARRITO
+                    </button>
+
+                    <div class="text-end mt-2">
+                        <a href="javascript:void(0)" class="small text-muted text-decoration-none"
+                            onclick="mostrarGuardar()">
+                            <i class="fas fa-save me-1"></i> Guardar esta receta
+                        </a>
+                    </div>
+
+                    <div class="mt-2 p-3 border rounded d-none bg-light" id="boxGuardar">
+                        <div class="input-group">
+                            <input type="text" id="nombreNuevoProducto" class="form-control"
+                                placeholder="Nombre para guardar (Ej. Playera Básica)">
+                            <button class="btn btn-primary" onclick="guardarProductoDB()">Guardar</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -1041,7 +921,7 @@
         const maquinaria = [];
 
         document.querySelectorAll('.item-row').forEach(row => {
-            const s = row.querySelector('.material-select');
+            const s = row.querySelector('material-select');
             const c = row.querySelector('.input-cantidad');
             if (s && s.value > 0) {
                 materiales.push({ id: parseInt(s.value), cantidad: parseFloat(c.value) });
@@ -1365,67 +1245,6 @@
 
         // Recalcular Total General
         calcularTotal();
-
-
-        // --- FUNCIÓN VENTA EXPRESS (JAVASCRIPT) ---
-        function agregarExpressAlCarrito() {
-            // 1. Obtener valores
-            const concepto = document.getElementById('expressConcepto').value.trim();
-            const precio = parseFloat(document.getElementById('expressPrecio').value);
-            const cantidad = parseFloat(document.getElementById('expressCantidad').value);
-            const costo = parseFloat(document.getElementById('expressCosto').value) || 0;
-
-            // 2. Validaciones visuales (marcar borde rojo)
-            if (!concepto) {
-                document.getElementById('expressConcepto').classList.add('is-invalid');
-                return;
-            } else {
-                document.getElementById('expressConcepto').classList.remove('is-invalid');
-            }
-
-            if (isNaN(precio) || precio <= 0) {
-                document.getElementById('expressPrecio').classList.add('is-invalid');
-                return;
-            } else {
-                document.getElementById('expressPrecio').classList.remove('is-invalid');
-            }
-
-            // 3. Crear Objeto
-            const subtotal = precio * cantidad;
-            const item = {
-                id: Date.now(),
-                concepto: concepto,
-                cantidad: cantidad,
-                precio: precio,
-                costo: costo,
-                subtotal: subtotal,
-                composicion: JSON.stringify([{ tipo: 'manual', nombre: 'Venta Express' }])
-            };
-
-            // 4. Agregar y Renderizar
-            carrito.push(item);
-            renderizarCarrito();
-
-            // 5. Limpiar y Feedback
-            document.getElementById('expressConcepto').value = '';
-            document.getElementById('expressPrecio').value = '';
-            document.getElementById('expressCantidad').value = '1';
-            document.getElementById('expressCosto').value = '';
-
-            // CERRAR ACORDEÓN COSTO SI ESTABA ABIERTO
-            var collapseElement = document.getElementById('collapseCosto');
-            var bsCollapse = bootstrap.Collapse.getInstance(collapseElement);
-            if (bsCollapse) { bsCollapse.hide(); }
-
-            // 6. SCROLL AUTOMÁTICO EN MÓVIL (UX CLAVE)
-            // Si la pantalla es pequeña (celular/tablet), bajamos para que vean el carrito
-            if (window.innerWidth < 992) {
-                const carritoDiv = document.querySelector('.col-lg-5'); // La columna derecha
-                if (carritoDiv) {
-                    carritoDiv.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            }
-        }
     }
 </script>
 {% endblock %}
