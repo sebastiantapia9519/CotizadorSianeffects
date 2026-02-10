@@ -246,23 +246,23 @@ def init_db():
     """)
 
 
-    # =========================
-    # 9. ENVÍOS 
+ # =========================
+    # 9. ENVÍOS (LOGÍSTICA)
     # =========================
     conn.execute("""
-            CREATE TABLE IF NOT EXISTS shipping_configs (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                rigin_address TEXT,
-                origin_lat REAL,
-                origin_lng REAL,
-                local_base_rate REAL DEFAULT 0,
-                local_km_rate REAL DEFAULT 0,
-                free_shipping_threshold REAL DEFAULT 0,
-                safety_margin_percent INTEGER DEFAULT 10,
-                FOREIGN KEY(user_id) REFERENCES usuarios(id)
-            )
-        """)
+    CREATE TABLE IF NOT EXISTS shipping_configs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        origin_address TEXT, 
+        origin_lat REAL,
+        origin_lng REAL,
+        local_base_rate REAL DEFAULT 0,
+        local_km_rate REAL DEFAULT 0,
+        free_shipping_threshold REAL DEFAULT 0,
+        safety_margin_percent INTEGER DEFAULT 10,
+        FOREIGN KEY(user_id) REFERENCES usuarios(id)
+    )
+    """)
 
     # Tabla de Zonas (Nacional)
     conn.execute("""
@@ -270,7 +270,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         zone_name TEXT,
-        states_included TEXT, -- En SQLite guardaremos el JSON como texto string
+        states_included TEXT, -- Guardamos el JSON como texto en SQLite
         FOREIGN KEY(user_id) REFERENCES usuarios(id)
     )
     """)

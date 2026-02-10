@@ -550,6 +550,11 @@ def terminos():
 def plan_vencido():
     return render_template('plan_vencido.html')
 
+# --- RUTA DE AYUDA Y DOCUMENTACIÓN ---
+@main_bp.route('/ayuda')
+@login_required
+def ayuda():
+    return render_template('ayuda.html')
 
 @main_bp.route('/descargar_excel')
 @login_required
