@@ -382,18 +382,18 @@
                     tbody.innerHTML = '';
 
                     let sumaCostos = 0;
-                    let sumaGanancias = 0;
+                    let sumaGanancias = 0; // NUEVO: Acumulador de ganancia real
 
                     data.items.forEach(item => {
                         let cant = item.cantidad % 1 === 0 ? Math.round(item.cantidad) : item.cantidad;
 
-                        // CÁLCULOS CLAROS (Todo a Totales)
-                        let ventaTotalItem = item.subtotal; // Lo que pagó el cliente por los 5
-                        let costoTotalItem = item.costo_unitario * item.cantidad; // Lo que te costaron los 5
-                        let gananciaTotalItem = ventaTotalItem - costoTotalItem; // Lo que ganaste de los 5
+                        // CÁLCULOS POR FILA
+                        let ventaTotalItem = item.subtotal;
+                        let costoTotalItem = item.costo_unitario * item.cantidad;
+                        let gananciaTotalItem = ventaTotalItem - costoTotalItem;
 
                         sumaCostos += costoTotalItem;
-                        sumaGanancias += gananciaTotalItem;
+                        sumaGanancias += gananciaTotalItem; // Sumamos la ganancia de esta fila
 
                         // Composición (Ingredientes)
                         let htmlIngredientes = '';
@@ -407,7 +407,7 @@
                             } catch (e) { }
                         }
 
-                        // RENDERIZADO CORREGIDO
+                        // RENDERIZADO DE FILA
                         tbody.innerHTML += `
                             <tr>
                                 <td class="ps-3">
@@ -435,21 +435,21 @@
                         `;
                     });
 
-                    // --- PANEL FINANCIERO (CON IMPUESTOS) ---
+                    // --- PANEL FINANCIERO ---
                     const totalVenta = parseFloat(data.total || 0);
-                    const subtotal = parseFloat(data.subtotal || 0); // Asumiendo que el API devuelve subtotal
-                    const impuestos = parseFloat(data.impuestos || 0); // Nuevo campo
+                    const impuestos = parseFloat(data.impuestos || 0);
                     const descuento = parseFloat(data.descuento_monto || 0);
+
+                    // Si subtotal viene vacío o es 0 (posible en migraciones viejas), usamos el total base
+                    const subtotal = parseFloat(data.subtotal || totalVenta);
 
                     const pagado = parseFloat(data.monto_pagado || 0);
                     const pendiente = parseFloat(data.saldo_pendiente || 0);
 
                     const costoProduccion = sumaCostos;
 
-                    // La ganancia real no debe incluir impuestos, ya que eso se le paga al SAT
-                    // Ganancia = (Total sin IVA) - Costos. Ojo con esto.
-                    // Simplificado: Ganancia = (Subtotal - Descuento) - Costos
-                    const gananciaReal = (subtotal - descuento) - costoProduccion;
+                    // CORRECCIÓN MATEMÁTICA: Usamos la suma acumulada de las filas - descuento
+                    const gananciaReal = sumaGanancias - descuento;
 
                     let colorResta = pendiente > 0.1 ? "text-danger" : "text-success";
                     let textoResta = pendiente > 0.1 ? `$${pendiente.toFixed(2)}` : "$0.00";
@@ -488,7 +488,7 @@
                             <div class="row justify-content-center">
                                 <div class="col-4 border-end">
                                     <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Subtotal</small>
-                                    <span class="h6 text-muted">$${subtotal.toFixed(2)}</span>
+                                    <span class="h6 text-muted">$${(totalVenta - impuestos + descuento).toFixed(2)}</span>
                                 </div>
                                 ${descuento > 0 ? `
                                 <div class="col-4 border-end">
