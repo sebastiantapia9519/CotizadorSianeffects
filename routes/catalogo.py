@@ -299,7 +299,7 @@ def ver_catalogo():
         catalogo=catalogo_data
     )
 
-@catalogo.route('/upload-r2', methods=['POST'])
+@catalogo_bp.route('/upload-r2', methods=['POST'])
 def upload_r2():
     file = request.files.get('file')
     if not file:
