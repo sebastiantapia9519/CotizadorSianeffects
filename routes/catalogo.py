@@ -16,8 +16,10 @@ SECRET_KEY = '8d6b5dc8d9b01a8196b9e1a7d3e425f600cefad5e189bf42f0264edde035ab70'
 ENDPOINT_URL = 'https://e063cc1ad223c0544aee7a03d9f0f9a6.r2.cloudflarestorage.com'
 BUCKET_NAME = 'sianeffectscatalogo'
 # La URL que te dio R2.dev en el Paso 3
-PUBLIC_URL = 'https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev' 
+PUBLIC_URL = 'https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev'
 
+# Y en tu función de subida, asegúrate de usar f-strings correctamente:
+url_final = f"{PUBLIC_URL}/{nombre_archivo}"
 
 
 
@@ -333,7 +335,8 @@ def upload_r2():
             ExtraArgs={'ContentType': file.content_type}
         )
         # Construye la URL usando tu subdominio r2.dev o dominio personalizado
-        url = f".r2.dev/{filename}"
-        return jsonify({"success": True, "url": url})
+        url_final = f"{PUBLIC_URL}/{filename}"
+        
+        return jsonify({"success": True, "url": url_final})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
