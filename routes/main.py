@@ -589,39 +589,31 @@ def configuracion():
     # Así, aunque en config esté vacío, se verá "AAA" o lo que tenga el usuario.
     config['nombre_empresa'] = user_raw['company_name'] if user_raw['company_name'] else ''
 
-    # Cargar Zonas y sus Tarifas
-    zones_db = conn.execute("SELECT * FROM shipping_zones WHERE user_id=?", (uid,)).fetchall()
+     # -------------------------------------------------
+    # Zonas y tarifas (sin tocar lógica)
+    # -------------------------------------------------
+    zones_db = conn.execute(
+        "SELECT * FROM shipping_zones WHERE user_id=?",
+        (uid,)
+    ).fetchall()
+
     zones = []
     for z in zones_db:
         z_dict = dict(z)
-        # Cargamos las tarifas de esta zona específica
-        # Aquí también asegura que z['id'] es int, así que el INSERT anterior con int() es clave
-        rates_db = conn.execute("SELECT * FROM shipping_rates WHERE zone_id=? ORDER BY max_weight_kg ASC", (z['id'],)).fetchall()
+
+        rates_db = conn.execute(
+            "SELECT * FROM shipping_rates WHERE zone_id=? ORDER BY max_weight_kg ASC",
+            (z['id'],)
+        ).fetchall()
         z_dict['rates'] = [dict(r) for r in rates_db]
-        
-        # Formateamos los estados para mostrar bonito
+
         try:
             states_list = json.loads(z['states_included'])
             z_dict['states_str'] = ", ".join(states_list)
         except:
             z_dict['states_str'] = z['states_included']
-            
+
         zones.append(z_dict)
-
-        # Cargar configuración de envíos
-        shipping_config_row = conn.execute(
-        "SELECT * FROM shipping_configs WHERE user_id=?",
-        (uid,)
-        ).fetchone()
-
-        shipping_config = dict(shipping_config_row) if shipping_config_row else {
-        'origin_lat': '',
-        'origin_lng': '',
-        'local_base_rate': 0,
-        'local_km_rate': 0,
-        'safety_margin_percent': 10
-        }
-
 
 
 
