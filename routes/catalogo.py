@@ -5,6 +5,7 @@ from db import get_db_connection as get_db
 from helpers import login_required
 import boto3
 from botocore.config import Config
+from werkzeug.utils import secure_filename
 from flask import request, jsonify # Asumiendo que usas Flask
 
 catalogo_bp = Blueprint('catalogo', __name__)
