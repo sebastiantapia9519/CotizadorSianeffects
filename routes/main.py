@@ -608,6 +608,22 @@ def configuracion():
             
         zones.append(z_dict)
 
+        # Cargar configuración de envíos
+        shipping_config_row = conn.execute(
+        "SELECT * FROM shipping_configs WHERE user_id=?",
+        (uid,)
+        ).fetchone()
+
+        shipping_config = dict(shipping_config_row) if shipping_config_row else {
+        'origin_lat': '',
+        'origin_lng': '',
+        'local_base_rate': 0,
+        'local_km_rate': 0,
+        'safety_margin_percent': 10
+        }
+
+
+
     conn.close()
     return render_template('configuracion.html', 
                            config=config, 
