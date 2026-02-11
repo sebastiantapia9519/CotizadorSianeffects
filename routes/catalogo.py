@@ -3,6 +3,40 @@ import string
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from db import get_db_connection as get_db
 from helpers import login_required
+import boto3
+from botocore.config import Config
+from flask import request, jsonify # Asumiendo que usas Flask
+
+# Tus llaves de Cloudflare (Paso 2)
+ACCESS_KEY = '5dad301112cb3db90de60278e5d4e101'
+SECRET_KEY = '8d6b5dc8d9b01a8196b9e1a7d3e425f600cefad5e189bf42f0264edde035ab70'
+ENDPOINT_URL = 'https://e063cc1ad223c0544aee7a03d9f0f9a6.r2.cloudflarestorage.com'
+BUCKET_NAME = 'sianeffectscatalogo'
+# La URL que te dio R2.dev en el Paso 3
+PUBLIC_URL = 'https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev' 
+
+s3_client = boto3.client(
+    service_name='s3',
+    endpoint_url=ENDPOINT_URL,
+    aws_access_key_id=ACCESS_KEY,
+    aws_secret_access_key=SECRET_KEY,
+    region_name='auto',
+    config=Config(signature_version='s3v4')
+)
+
+@catalogo.route('/subir-archivo', methods=['POST'])
+def subir_archivo():
+    file = request.files['file']
+    if file:
+        nombre_archivo = file.filename
+        # Subida a R2
+        s3_client.upload_fileobj(file, BUCKET_NAME, nombre_archivo)
+        
+        # Generamos el link final para tu base de datos
+        url_final = f"{PUBLIC_URL}/{nombre_archivo}"
+        return jsonify({"success": True, "url": url_final})
+    return jsonify({"success": False, "error": "No hay archivo"})
+
 
 catalogo_bp = Blueprint('catalogo', __name__)
 
@@ -259,3 +293,25 @@ def ver_catalogo():
         'catalogo/galeria_sianeffects.html',
         catalogo=catalogo_data
     )
+
+@catalogo.route('/upload-r2', methods=['POST'])
+def upload_r2():
+    file = request.files.get('file')
+    if not file:
+        return jsonify({"success": False, "error": "No file"}), 400
+
+    # Limpiamos el nombre del archivo para evitar espacios o caracteres raros
+    filename = secure_filename(file.filename) 
+    
+    try:
+        s3_client.upload_fileobj(
+            file,
+            BUCKET_NAME,
+            filename,
+            ExtraArgs={'ContentType': file.content_type}
+        )
+        # Construye la URL usando tu subdominio r2.dev o dominio personalizado
+        url = f"https://tu-subdominio.r2.dev/{filename}"
+        return jsonify({"success": True, "url": url})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500

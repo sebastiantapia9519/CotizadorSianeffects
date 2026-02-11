@@ -3,6 +3,50 @@
 {% block title %}Productos: {{ categoria['nombre'] }} | SianEffects{% endblock %}
 
 {% block content %}
+<style>
+    /* Estilos del nuevo SianEffects R2 Widget */
+    .r2-upload-zone {
+        border: 2px dashed #FF6B81;
+        border-radius: 15px;
+        padding: 30px;
+        text-align: center;
+        background: #fffafa;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        position: relative;
+    }
+
+    .r2-upload-zone:hover {
+        background: #fff0f2;
+        border-color: #e65a6f;
+    }
+
+    .r2-upload-zone.dragover {
+        background: #ffe4e8;
+        border-style: solid;
+    }
+
+    .progress {
+        height: 12px;
+        border-radius: 10px;
+        background-color: #f0f0f0;
+    }
+
+    .progress-bar {
+        background-color: #FF6B81;
+    }
+
+    .btn-pink {
+        background-color: #FF6B81;
+        color: white;
+    }
+
+    .btn-pink:hover {
+        background-color: #e65a6f;
+        color: white;
+    }
+</style>
+
 <div class="d-flex align-items-center mb-4">
     <a href="{{ url_for('catalogo.admin_categorias') }}" class="btn btn-light rounded-circle shadow-sm me-3">
         <i class="fas fa-arrow-left"></i>
@@ -13,8 +57,8 @@
     </div>
     <div class="ms-auto">
         <button class="btn btn-success rounded-pill shadow fw-bold px-4" data-bs-toggle="modal"
-            data-bs-target="#modalNuevoProd" onclick="resetearFormulario()"> <i
-                class="fas fa-cloud-upload-alt me-2"></i> Subir Producto
+            data-bs-target="#modalNuevoProd" onclick="resetearFormulario()">
+            <i class="fas fa-cloud-upload-alt me-2"></i> Subir Producto
         </button>
     </div>
 </div>
@@ -23,32 +67,26 @@
     {% for prod in productos %}
     <div class="col-md-6 col-lg-4">
         <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative">
-
             <div class="bg-light d-flex align-items-center justify-content-center"
                 style="height: 200px; overflow: hidden;">
 
                 {% if prod.media_url %}
-                {# Creamos una variable temporal para analizar la extensión, igual que en tu código funcional #}
                 {% set url_lower = prod.media_url | lower %}
 
                 {% if '.mp4' in url_lower or '.webm' in url_lower or prod.media_type == 'video' %}
-                {# RENDER DE VIDEO #}
                 <video src="{{ prod.media_url }}" class="w-100 h-100" controls style="object-fit: cover;"></video>
 
                 {% elif '.mp3' in url_lower or '.wav' in url_lower or prod.media_type == 'audio' %}
-                {# RENDER DE AUDIO #}
                 <div class="text-center p-3 w-100">
                     <i class="fas fa-music fa-3x text-primary mb-2"></i>
                     <audio src="{{ prod.media_url }}" controls class="w-100" style="height: 30px;"></audio>
                 </div>
 
                 {% else %}
-                {# RENDER DE IMAGEN (Default) #}
                 <img src="{{ prod.media_url }}" class="w-100 h-100" style="object-fit: cover;"
                     onerror="this.parentElement.innerHTML='<i class=&#34;fas fa-image fa-3x text-muted opacity-50&#34;></i>'">
                 {% endif %}
                 {% else %}
-                {# ESTADO VACÍO #}
                 <i class="fas fa-file-upload fa-3x text-muted opacity-25"></i>
                 {% endif %}
             </div>
@@ -89,7 +127,7 @@
         <div class="opacity-50">
             <i class="fas fa-box-open fa-3x mb-3 text-secondary"></i>
             <h5>Carpeta vacía</h5>
-            <p>¡Sube tu primer producto usando el botón verde!</p>
+            <p>¡Sube tu primer producto!</p>
         </div>
     </div>
     {% endfor %}
@@ -99,30 +137,39 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0">
             <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold">Agregar al Catálogo</h5>
+                <h5 class="modal-title fw-bold">Agregar al Catálogo (R2)</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
                 <input type="hidden" name="producto_id" id="producto_id">
                 <div class="modal-body">
-                    <div class="text-center mb-4 p-4 border rounded-3 bg-light" id="uploadArea">
-                        <button type="button" id="upload_widget"
-                            class="btn btn-primary rounded-pill fw-bold shadow-sm px-4">
-                            <i class="fas fa-camera me-2"></i> Elegir Foto / Video / Audio
-                        </button>
-                        <div id="previewContainer" class="mt-3 d-none">
-                            <span class="badge bg-success mb-2">¡Archivo cargado!</span>
-                            <div id="previewMedia" class="rounded shadow-sm overflow-hidden" style="max-height: 150px;">
+
+                    <div class="r2-upload-zone" id="dropZone" onclick="document.getElementById('r2_file').click()">
+                        <div id="uploadPrompt">
+                            <i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color: #FF6B81;"></i>
+                            <h6 class="fw-bold">Arrastra o haz clic aquí</h6>
+                            <p class="text-muted small">Soporta videos pesados (+150MB)</p>
+                            <span class="btn btn-pink btn-sm rounded-pill px-3">Elegir Archivo</span>
+                        </div>
+
+                        <div id="uploadStatus" class="d-none">
+                            <div id="previewMedia" class="rounded shadow-sm overflow-hidden mb-3"
+                                style="max-height: 150px;"></div>
+                            <div class="progress mb-2">
+                                <div id="r2ProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                    style="width: 0%"></div>
                             </div>
+                            <small id="r2ProgressText" class="text-muted">Subiendo... 0%</small>
                         </div>
                     </div>
+
+                    <input type="file" id="r2_file" hidden onchange="handleR2Upload(this)">
 
                     <input type="hidden" name="media_url" id="media_url" required>
                     <input type="hidden" name="media_type" id="media_type" required>
 
-                    <div class="alert alert-info py-2 px-3 small border-0 mb-3">
-                        <i class="fas fa-magic me-2"></i> El SKU se generará automáticamente (Ej. {{
-                        categoria['nombre'][:3]|upper }}-12345).
+                    <div class="alert alert-info py-2 px-3 small border-0 my-3">
+                        <i class="fas fa-magic me-2"></i> SKU automático: {{ categoria['nombre'][:3]|upper }}-XXXXX
                     </div>
 
                     <div class="form-floating mb-3">
@@ -155,65 +202,94 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="https://upload-widget.cloudinary.com/global/all.js" type="text/javascript"></script>
+<script>
+    // --- LÓGICA DE SUBIDA R2 CON PROGRESO ---
+    function handleR2Upload(input) {
+        const file = input.files[0];
+        if (!file) return;
 
-<script type="text/javascript">
-    // 1. CONFIGURACIÓN DEL WIDGET
-    var myWidget = cloudinary.createUploadWidget({
-        cloudName: 'dktkwnbm0',        // <--- TU CLOUD NAME
-        uploadPreset: 'catalogo_sianeffects', // <--- TU PRESET
-        sources: ['local', 'camera', 'url'], // De dónde sacar la foto
-        resourceType: 'auto', // Permite imagen, video y audio
-        multiple: false,
-        clientAllowedFormats: ["png", "gif", "jpeg", "jpg", "mp4", "mp3"], // Filtro de seguridad
-        styles: {
-            palette: {
-                window: "#FFFFFF",
-                windowBorder: "#90A0B3",
-                tabIcon: "#FF6B81", // Tu rosa SianEffects
-                menuIcons: "#5A616A",
-                textDark: "#000000",
-                textLight: "#FFFFFF",
-                link: "#FF6B81",
-                action: "#FF6B81",
-                inactiveTabIcon: "#0E2F5A",
-                error: "#F44235",
-                inProgress: "#0078FF",
-                complete: "#20B832",
-                sourceBg: "#E4EBF1"
+        const prompt = document.getElementById('uploadPrompt');
+        const status = document.getElementById('uploadStatus');
+        const progressBar = document.getElementById('r2ProgressBar');
+        const progressText = document.getElementById('r2ProgressText');
+        const btnGuardar = document.getElementById('btnGuardar');
+        const mediaBox = document.getElementById('previewMedia');
+
+        // Reset UI para carga
+        prompt.classList.add('d-none');
+        status.classList.remove('d-none');
+        btnGuardar.disabled = true;
+        progressBar.style.width = '0%';
+        progressBar.classList.add('progress-bar-animated');
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const xhr = new XMLHttpRequest();
+
+        // Seguimiento de progreso real
+        xhr.upload.addEventListener("progress", (e) => {
+            if (e.lengthComputable) {
+                const percent = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = percent + '%';
+                progressText.innerText = `Subiendo a R2... ${percent}%`;
             }
-        }
-    }, (error, result) => {
-        if (!error && result && result.event === "success") {
-            console.log('Done! Here is the image info: ', result.info);
+        });
 
-            // 2. LLENAR CAMPOS AL FINALIZAR SUBIDA
-            document.getElementById('media_url').value = result.info.secure_url;
-            document.getElementById('media_type').value = result.info.resource_type;
+        xhr.onreadystatechange = function () {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    const res = JSON.parse(xhr.responseText);
+                    if (res.success) {
+                        document.getElementById('media_url').value = res.url;
 
-            // 3. MOSTRAR PREVIEW
-            const container = document.getElementById('previewContainer');
-            const mediaBox = document.getElementById('previewMedia');
-            container.classList.remove('d-none');
+                        // Determinar tipo
+                        let type = 'imagen';
+                        if (file.type.includes('video')) type = 'video';
+                        if (file.type.includes('audio')) type = 'audio';
+                        document.getElementById('media_type').value = type;
 
-            if (result.info.resource_type === 'imagen') {
-                mediaBox.innerHTML = `<img src="${result.info.secure_url}" class="img-fluid">`;
-            } else if (result.info.resource_type === 'video') {
-                mediaBox.innerHTML = `<video src="${result.info.secure_url}" class="img-fluid" controls></video>`;
-            } else {
-                mediaBox.innerHTML = `<div class="p-3 text-center bg-white"><i class="fas fa-music"></i> Audio cargado</div>`;
+                        // Render Preview
+                        if (type === 'video') {
+                            mediaBox.innerHTML = `<video src="${res.url}" class="img-fluid" controls></video>`;
+                        } else if (type === 'audio') {
+                            mediaBox.innerHTML = `<div class="p-3 bg-white border text-center"><i class="fas fa-music fa-2x"></i><br>Audio Listo</div>`;
+                        } else {
+                            mediaBox.innerHTML = `<img src="${res.url}" class="img-fluid">`;
+                        }
+
+                        progressText.innerHTML = "✅ ¡Archivo listo!";
+                        progressBar.classList.remove('progress-bar-animated');
+                        btnGuardar.disabled = false;
+                    }
+                } else {
+                    alert("Error en la subida. Verifica tu conexión.");
+                    resetearFormulario();
+                }
             }
+        };
 
-            // 4. HABILITAR BOTÓN DE GUARDAR
-            document.getElementById('btnGuardar').disabled = false;
+        xhr.open("POST", "/upload-r2", true);
+        xhr.send(formData);
+    }
+
+    // --- DRAG AND DROP ---
+    const dropZone = document.getElementById('dropZone');
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+    });
+    dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+    dropZone.addEventListener('drop', (e) => {
+        dropZone.classList.remove('dragover');
+        const files = e.dataTransfer.files;
+        if (files.length) {
+            document.getElementById('r2_file').files = files;
+            handleR2Upload(document.getElementById('r2_file'));
         }
     });
 
-    document.getElementById("upload_widget").addEventListener("click", function () {
-        myWidget.open();
-    }, false);
-
-    // LOGICA DE TOGGLE (ON/OFF)
+    // --- FUNCIONES DE GESTIÓN ---
     function toggleEstado(tipo, id, checkbox) {
         const estado = checkbox.checked ? 1 : 0;
         fetch('/api/catalogo/toggle', {
@@ -223,61 +299,43 @@
         });
     }
 
-    // FUNCIÓN PARA CARGAR DATOS EN EL MODAL (EDITAR)
     function cargarDatosEdicion(prod) {
-        // Llenar ID (esto le dice al backend que es UPDATE)
         document.getElementById('producto_id').value = prod.id;
-
-        // Llenar campos de texto
         document.querySelector('input[name="titulo"]').value = prod.titulo;
         document.querySelector('textarea[name="descripcion"]').value = prod.descripcion;
         document.querySelector('input[name="precio"]').value = prod.precio;
-
-        // Llenar campos ocultos de media
         document.getElementById('media_url').value = prod.media_url;
         document.getElementById('media_type').value = prod.media_type;
 
-        // Mostrar Preview Visual
-        const container = document.getElementById('previewContainer');
+        document.getElementById('uploadPrompt').classList.add('d-none');
+        document.getElementById('uploadStatus').classList.remove('d-none');
         const mediaBox = document.getElementById('previewMedia');
-        container.classList.remove('d-none');
 
-        if (prod.media_type === 'imagen') {
-            mediaBox.innerHTML = `<img src="${prod.media_url}" class="img-fluid">`;
-        } else if (prod.media_type === 'video') {
+        if (prod.media_type === 'video') {
             mediaBox.innerHTML = `<video src="${prod.media_url}" class="img-fluid" controls></video>`;
+        } else if (prod.media_type === 'audio') {
+            mediaBox.innerHTML = `<div class="p-3 bg-white text-center"><i class="fas fa-music fa-2x"></i></div>`;
         } else {
-            mediaBox.innerHTML = `<div class="p-3 text-center bg-white"><i class="fas fa-music"></i> Audio cargado</div>`;
+            mediaBox.innerHTML = `<img src="${prod.media_url}" class="img-fluid">`;
         }
 
-        // Habilitar botón y cambiar texto
         const btn = document.getElementById('btnGuardar');
         btn.disabled = false;
         btn.innerText = "Actualizar Producto";
-
-        // Abrir el modal manualmente
-        var myModal = new bootstrap.Modal(document.getElementById('modalNuevoProd'));
-        myModal.show();
+        new bootstrap.Modal(document.getElementById('modalNuevoProd')).show();
     }
 
-    // FUNCIÓN PARA LIMPIAR EL MODAL (CREAR NUEVO)
     function resetearFormulario() {
-        // Limpiar formulario HTML
         document.querySelector('form').reset();
-
-        // VACIAR EL ID (Importante: esto le dice al backend que es INSERT)
         document.getElementById('producto_id').value = "";
         document.getElementById('media_url').value = "";
         document.getElementById('media_type').value = "";
-
-        // Ocultar preview
-        document.getElementById('previewContainer').classList.add('d-none');
+        document.getElementById('uploadPrompt').classList.remove('d-none');
+        document.getElementById('uploadStatus').classList.add('d-none');
         document.getElementById('previewMedia').innerHTML = "";
-
-        // Resetear botón
         const btn = document.getElementById('btnGuardar');
         btn.innerText = "Guardar Producto";
-        btn.disabled = true; // Deshabilitado hasta que suban imagen
+        btn.disabled = true;
     }
 </script>
 {% endblock %}
