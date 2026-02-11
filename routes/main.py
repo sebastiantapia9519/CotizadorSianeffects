@@ -624,6 +624,7 @@ def configuracion():
 
 
 
+
     conn.close()
     return render_template('configuracion.html', 
                            config=config, 
