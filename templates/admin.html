@@ -256,174 +256,166 @@
                                 <div class="avatar-circle">
                                     {{ u['username'][0]|upper }}
                                 </div>
-                                <div>
-                                    <div class="fw-bold text-dark">{{ u['username'] }}</div>
-                                    <div class="d-flex align-items-center gap-2">
-                                        <small class="text-muted">{{ u['email'] }}</small>
-                                        {% if u['telefono'] %}
-                                        <a href="https://wa.me/{{ u['telefono']|replace('+', '')|replace(' ', '') }}"
-                                            target="_blank" class="text-success" title="Enviar WhatsApp">
-                                            <i class="fab fa-whatsapp"></i>
-                                        </a>
-                                        {% endif %}
-                                    </div>
-                                    <small class="text-muted">{{ u['email'] }}</small><br>
-                                    <small class="text-primary" style="font-size: 0.75rem;">
-                                        <i class="fas fa-building me-1"></i> {{ u['company_name'] }}
-                                    </small>
-                                </div>
+                        <td>
+                            <div class="fw-bold text-dark">{{ u['username'] }}</div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <small class="text-muted">{{ u['email'] }}</small>
+                                {% if u['telefono'] %}
+                                <a href="https://wa.me/{{ u['telefono']|replace('+', '')|replace(' ', '') }}"
+                                    target="_blank" class="text-success" title="Enviar WhatsApp">
+                                    <i class="fab fa-whatsapp"></i>
+                                </a>
+                                {% endif %}
                             </div>
+
+                            <small class="text-primary" style="font-size: 0.75rem;">
+                                <i class="fas fa-building me-1"></i> {{ u['company_name'] }}
+                            </small>
                         </td>
-
-                        <td>
-                            {% if u['role'] == 2 %}
-                            <span class="badge bg-warning text-dark border border-warning rounded-pill">👑 DUEÑO</span>
-                            {% elif u['role'] == 1 %}
-                            <span class="badge bg-info text-dark rounded-pill">🛡️ Admin</span>
-                            {% else %}
-                            <span class="badge bg-light text-secondary border rounded-pill">👤 Usuario</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if u['last_login'] %}
-                            <small class="fw-bold text-dark">{{ u['last_login'][:16] }}</small>
-                            {% else %}
-                            <span class="badge bg-light text-muted border">Nunca</span>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if u['subscription_end'] %}
-                            <small class="fw-bold text-dark">{{ u['subscription_end'][:10] }}</small>
-                            {% else %}
-                            <small class="text-muted">Sin fecha</small>
-                            {% endif %}
-                        </td>
-
-                        <td>
-                            {% if u['role'] >= 1 %}
-                            <span class="badge bg-success bg-opacity-10 text-success">∞ Infinito</span>
-                            {% elif is_active %}
-                            <span class="badge bg-success rounded-pill">Activo</span>
-                            {% else %}
-                            <span class="badge bg-danger rounded-pill">Vencido</span>
-                            {% endif %}
-                        </td>
-
-                        <td class="text-end pe-4">
-                            <div class="dropdown">
-                                <button class="btn action-btn" type="button" data-bs-toggle="dropdown"
-                                    data-bs-display="static">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-
-                                <ul
-                                    class="dropdown-menu dropdown-menu-end custom-dropdown-menu animate__animated animate__fadeIn faster">
-
-                                    <li>
-                                        <h6 class="dropdown-header">MEMBRESÍA</h6>
-                                    </li>
-
-                                    <li>
-                                        <a class="dropdown-item text-dark"
-                                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=1) }}">
-                                            <i
-                                                class="fas fa-calendar-plus text-success bg-success bg-opacity-10 rounded p-1"></i>
-                                            Sumar 1 Mes
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item text-dark"
-                                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=12) }}">
-                                            <i
-                                                class="fas fa-calendar-check text-primary bg-primary bg-opacity-10 rounded p-1"></i>
-                                            Sumar 1 Año
-                                        </a>
-                                    </li>
-
-                                    <li>
-                                        <hr class="dropdown-divider my-2">
-                                    </li>
-
-                                    <li>
-                                        <h6 class="dropdown-header">SEGURIDAD</h6>
-                                    </li>
-
-                                    <li>
-                                        <button class="dropdown-item text-dark"
-                                            onclick="abrirReset({{u['id']}}, '{{u['username']}}')">
-                                            <i class="fas fa-key text-warning bg-warning bg-opacity-10 rounded p-1"></i>
-                                            Resetear Clave
-                                        </button>
-                                    </li>
-
-                                    {% if session['role'] == 2 and u['id'] != session['user_id'] %}
-                                    <li>
-                                        <hr class="dropdown-divider my-2">
-                                    </li>
-                                    <li>
-                                        <h6 class="dropdown-header">STAFF</h6>
-                                    </li>
-
-                                    {% if u['role'] == 0 %}
-                                    <li>
-                                        <a class="dropdown-item text-dark"
-                                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=1) }}">
-                                            <i
-                                                class="fas fa-user-shield text-info bg-info bg-opacity-10 rounded p-1"></i>
-                                            Hacer Admin
-                                        </a>
-                                    </li>
-                                    {% else %}
-                                    <li>
-                                        <a class="dropdown-item text-danger"
-                                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=0) }}">
-                                            <i
-                                                class="fas fa-user-times text-danger bg-danger bg-opacity-10 rounded p-1"></i>
-                                            Quitar Admin
-                                        </a>
-                                    </li>
-                                    {% endif %}
-                                    {% endif %}
-                                    <li>
-                                        <hr class="dropdown-divider my-2">
-                                    </li>
-                                    <li>
-                                        <h6 class="dropdown-header">ZONA DE PELIGRO</h6>
-                                    </li>
-
-                                    {% if u['role'] == 0 %} <li>
-                                        <a class="dropdown-item text-dark"
-                                            href="{{ url_for('admin.impersonate', user_id=u['id']) }}">
-                                            <i
-                                                class="fas fa-user-secret text-dark bg-dark bg-opacity-10 rounded p-1"></i>
-                                            Entrar como este usuario
-                                        </a>
-                                    </li>
-                                    {% endif %}
-
-                                    {% if u['id'] != session['user_id'] %} <li>
-                                        <form action="{{ url_for('admin.delete_user') }}" method="POST"
-                                            onsubmit="return confirm('⚠️ ¿ESTÁS SEGURO?\n\nSe borrará TODO: Ventas, Inventario, Configuración.\nEsta acción NO se puede deshacer.');">
-                                            <input type="hidden" name="user_id" value="{{ u['id'] }}">
-                                            <button type="submit" class="dropdown-item text-danger">
-                                                <i
-                                                    class="fas fa-trash-alt text-danger bg-danger bg-opacity-10 rounded p-1"></i>
-                                                Eliminar Cuenta
-                                            </button>
-                                        </form>
-                                    </li>
-                                    {% endif %}
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
         </div>
+        </td>
+
+        <td>
+            {% if u['role'] == 2 %}
+            <span class="badge bg-warning text-dark border border-warning rounded-pill">👑 DUEÑO</span>
+            {% elif u['role'] == 1 %}
+            <span class="badge bg-info text-dark rounded-pill">🛡️ Admin</span>
+            {% else %}
+            <span class="badge bg-light text-secondary border rounded-pill">👤 Usuario</span>
+            {% endif %}
+        </td>
+
+        <td>
+            {% if u['last_login'] %}
+            <small class="fw-bold text-dark">{{ u['last_login'][:16] }}</small>
+            {% else %}
+            <span class="badge bg-light text-muted border">Nunca</span>
+            {% endif %}
+        </td>
+
+        <td>
+            {% if u['subscription_end'] %}
+            <small class="fw-bold text-dark">{{ u['subscription_end'][:10] }}</small>
+            {% else %}
+            <small class="text-muted">Sin fecha</small>
+            {% endif %}
+        </td>
+
+        <td>
+            {% if u['role'] >= 1 %}
+            <span class="badge bg-success bg-opacity-10 text-success">∞ Infinito</span>
+            {% elif is_active %}
+            <span class="badge bg-success rounded-pill">Activo</span>
+            {% else %}
+            <span class="badge bg-danger rounded-pill">Vencido</span>
+            {% endif %}
+        </td>
+
+        <td class="text-end pe-4">
+            <div class="dropdown">
+                <button class="btn action-btn" type="button" data-bs-toggle="dropdown" data-bs-display="static">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+
+                <ul
+                    class="dropdown-menu dropdown-menu-end custom-dropdown-menu animate__animated animate__fadeIn faster">
+
+                    <li>
+                        <h6 class="dropdown-header">MEMBRESÍA</h6>
+                    </li>
+
+                    <li>
+                        <a class="dropdown-item text-dark"
+                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=1) }}">
+                            <i class="fas fa-calendar-plus text-success bg-success bg-opacity-10 rounded p-1"></i>
+                            Sumar 1 Mes
+                        </a>
+                    </li>
+                    <li>
+                        <a class="dropdown-item text-dark"
+                            href="{{ url_for('admin.renovar', user_id=u['id'], meses=12) }}">
+                            <i class="fas fa-calendar-check text-primary bg-primary bg-opacity-10 rounded p-1"></i>
+                            Sumar 1 Año
+                        </a>
+                    </li>
+
+                    <li>
+                        <hr class="dropdown-divider my-2">
+                    </li>
+
+                    <li>
+                        <h6 class="dropdown-header">SEGURIDAD</h6>
+                    </li>
+
+                    <li>
+                        <button class="dropdown-item text-dark" onclick="abrirReset({{u['id']}}, '{{u['username']}}')">
+                            <i class="fas fa-key text-warning bg-warning bg-opacity-10 rounded p-1"></i>
+                            Resetear Clave
+                        </button>
+                    </li>
+
+                    {% if session['role'] == 2 and u['id'] != session['user_id'] %}
+                    <li>
+                        <hr class="dropdown-divider my-2">
+                    </li>
+                    <li>
+                        <h6 class="dropdown-header">STAFF</h6>
+                    </li>
+
+                    {% if u['role'] == 0 %}
+                    <li>
+                        <a class="dropdown-item text-dark"
+                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=1) }}">
+                            <i class="fas fa-user-shield text-info bg-info bg-opacity-10 rounded p-1"></i>
+                            Hacer Admin
+                        </a>
+                    </li>
+                    {% else %}
+                    <li>
+                        <a class="dropdown-item text-danger"
+                            href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=0) }}">
+                            <i class="fas fa-user-times text-danger bg-danger bg-opacity-10 rounded p-1"></i>
+                            Quitar Admin
+                        </a>
+                    </li>
+                    {% endif %}
+                    {% endif %}
+                    <li>
+                        <hr class="dropdown-divider my-2">
+                    </li>
+                    <li>
+                        <h6 class="dropdown-header">ZONA DE PELIGRO</h6>
+                    </li>
+
+                    {% if u['role'] == 0 %} <li>
+                        <a class="dropdown-item text-dark" href="{{ url_for('admin.impersonate', user_id=u['id']) }}">
+                            <i class="fas fa-user-secret text-dark bg-dark bg-opacity-10 rounded p-1"></i>
+                            Entrar como este usuario
+                        </a>
+                    </li>
+                    {% endif %}
+
+                    {% if u['id'] != session['user_id'] %} <li>
+                        <form action="{{ url_for('admin.delete_user') }}" method="POST"
+                            onsubmit="return confirm('⚠️ ¿ESTÁS SEGURO?\n\nSe borrará TODO: Ventas, Inventario, Configuración.\nEsta acción NO se puede deshacer.');">
+                            <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="fas fa-trash-alt text-danger bg-danger bg-opacity-10 rounded p-1"></i>
+                                Eliminar Cuenta
+                            </button>
+                        </form>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </td>
+        </tr>
+        {% endfor %}
+        </tbody>
+        </table>
     </div>
+</div>
 </div>
 
 <div class="modal fade" id="modalReset" tabindex="-1">
