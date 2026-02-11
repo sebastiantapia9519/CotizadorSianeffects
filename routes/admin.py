@@ -175,7 +175,7 @@ def stop_impersonate():
         flash('👻 Modo Fantasma finalizado. Bienvenido de vuelta, Jefe.', 'success')
         
         # --- AQUÍ ESTABA EL ERROR ---
-        return redirect(url_for('admin.index'))  # <--- Cambiado de 'panel' a 'index'
+        return redirect(url_for('admin.dashboard'))
     
     # Si algo falla gravemente, te saca
     session.clear()
