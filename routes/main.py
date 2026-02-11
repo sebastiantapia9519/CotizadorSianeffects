@@ -398,6 +398,7 @@ def ver_ticket(id):
 def configuracion():
     conn = get_db()
     uid = session['user_id']
+    shipping_config = None
 
     if request.method == 'POST':
         action = request.form.get('action')
