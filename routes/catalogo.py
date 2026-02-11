@@ -239,27 +239,43 @@ def delete_item(tipo, id_obj):
     conn = get_db()
     
     if tipo == 'categoria':
+        # Antes de borrar la categoría, podrías querer borrar los archivos de sus productos
+        # pero por simplicidad ahora solo borramos los registros
         conn.execute('DELETE FROM catalogo_productos WHERE categoria_id = ?', (id_obj,))
         conn.execute('DELETE FROM categorias WHERE id = ?', (id_obj,))
         flash('Categoría eliminada.', 'warning')
-        dest = 'catalogo.admin_categorias'
-        cat_arg = {}
+        dest, cat_arg = 'catalogo.admin_categorias', {}
     else:
+        # 1. Obtenemos la URL del archivo antes de borrar el registro
         prod = conn.execute(
-            'SELECT categoria_id FROM catalogo_productos WHERE id = ?',
+            'SELECT categoria_id, media_url FROM catalogo_productos WHERE id = ?', 
             (id_obj,)
         ).fetchone()
 
         if prod:
             cat_id = prod['categoria_id']
+            url_archivo = prod['media_url']
+            
+            # 2. Intentamos borrar el archivo de Cloudflare R2
+            try:
+                # Extraemos el nombre del archivo de la URL
+                # Ejemplo: https://pub-xxx.r2.dev/foto.jpg -> foto.jpg
+                nombre_archivo = url_archivo.split('/')[-1]
+                
+                s3_client.delete_object(Bucket=BUCKET_NAME, Key=nombre_archivo)
+                print(f"Archivo {nombre_archivo} eliminado de R2")
+            except Exception as e:
+                print(f"Error al borrar en R2: {e}")
+                # Opcional: podrías decidir no borrar de la DB si falla R2
+                # pero usualmente es mejor limpiar la DB de todos modos
+
+            # 3. Borramos el registro de la base de datos
             conn.execute('DELETE FROM catalogo_productos WHERE id = ?', (id_obj,))
-            flash('Producto eliminado.', 'success')
-            dest = 'catalogo.admin_productos'
-            cat_arg = {'cat_id': cat_id}
+            flash('Producto y archivo eliminados correctamente.', 'success')
+            dest, cat_arg = ('catalogo.admin_productos', {'cat_id': cat_id})
         else:
             flash('Producto no encontrado', 'error')
-            dest = 'catalogo.admin_categorias'
-            cat_arg = {}
+            dest, cat_arg = 'catalogo.admin_categorias', {}
         
     conn.commit()
     conn.close()
