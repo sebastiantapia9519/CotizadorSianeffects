@@ -18,10 +18,6 @@ BUCKET_NAME = 'sianeffectscatalogo'
 # La URL que te dio R2.dev en el Paso 3
 PUBLIC_URL = 'https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev'
 
-# Y en tu función de subida, asegúrate de usar f-strings correctamente:
-url_final = f"{PUBLIC_URL}/{nombre_archivo}"
-
-
 
 s3_client = boto3.client(
     service_name='s3',
