@@ -115,6 +115,32 @@
                             onchange="toggleEstado('producto', {{ prod['id'] }}, this)" {% if prod['activo'] %}checked{%
                             endif %}>
                     </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <span class="badge bg-light text-dark border mb-1">{{ prod['sku'] }}</span>
+                                <h5 class="fw-bold text-dark mb-0">{{ prod['titulo'] }}</h5>
+                                <span id="badge-agotado-{{ prod.id }}"
+                                    class="badge bg-danger rounded-pill {{ 'd-none' if prod['stock'] > 0 }}">
+                                    AGOTADO
+                                </span>
+                            </div>
+                            <div class="text-end">
+                                <div class="form-check form-switch small">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                        onchange="toggleEstado('producto', {{ prod['id'] }}, this)" {% if prod['activo']
+                                        %}checked{% endif %}>
+                                    <label class="small text-muted">Visible</label>
+                                </div>
+                                <div class="form-check form-switch small">
+                                    <input class="form-check-input" type="checkbox" role="switch"
+                                        onchange="toggleStock({{ prod['id'] }}, this)" {% if prod['stock']> 0
+                                    %}checked{% endif %}>
+                                    <label class="small text-muted">En Stock</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <p class="text-muted small mb-0">{{ prod['descripcion'] }}</p>
                 {% if prod['precio'] > 0 %}
@@ -202,6 +228,10 @@
                         <label>Precio (Opcional)</label>
                     </div>
                 </div>
+                <div class="form-check form-switch mb-3 ms-1">
+                    <input class="form-check-input" type="checkbox" name="en_stock" id="en_stock" checked>
+                    <label class="form-check-label fw-bold" for="en_stock">Producto en Stock</label>
+                </div>
                 <div class="modal-footer border-0">
                     <button type="submit" class="btn btn-success w-100 rounded-pill fw-bold py-2" id="btnGuardar"
                         disabled>
@@ -288,6 +318,26 @@
         xhr.send(formData);
     }
 
+    function toggleStock(id, checkbox) {
+        const hayStock = checkbox.checked ? 1 : 0;
+        const badge = document.getElementById(`badge-agotado-${id}`);
+
+        fetch('/api/catalogo/update-stock', { // Asegúrate de crear esta ruta en tu Python
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, stock: hayStock })
+        }).then(res => {
+            if (res.ok) {
+                // Actualizar el badge visualmente
+                if (hayStock) {
+                    badge.classList.add('d-none');
+                } else {
+                    badge.classList.remove('d-none');
+                }
+            }
+        });
+    }
+
     // --- DRAG AND DROP ---
     const dropZone = document.getElementById('dropZone');
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
@@ -321,6 +371,8 @@
         document.querySelector('input[name="precio"]').value = prod.precio;
         document.getElementById('media_url').value = prod.media_url;
         document.getElementById('media_type').value = prod.media_type;
+
+        document.getElementById('en_stock').checked = prod.stock > 0;
 
         document.getElementById('uploadPrompt').classList.add('d-none');
         document.getElementById('uploadStatus').classList.remove('d-none');

@@ -89,6 +89,7 @@ def admin_productos(cat_id):
         titulo = request.form['titulo']
         descripcion = request.form['descripcion']
         precio = request.form.get('precio', 0)
+        stock_status = 1 if request.form.get('en_stock') else 0
 
         media_url = request.form.get('media_url', '').strip()
         # Tomamos el tipo que dice el formulario, pero...
@@ -112,13 +113,10 @@ def admin_productos(cat_id):
         if producto_id:
             conn.execute('''
                 UPDATE catalogo_productos
-                SET titulo = ?,
-                    descripcion = ?,
-                    precio = ?,
-                    media_url = ?,
-                    media_type = ?
+                SET titulo = ?, descripcion = ?, precio = ?, media_url = ?, media_type = ?, stock = ?
                 WHERE id = ?
-            ''', (titulo, descripcion, precio, media_url, media_type, producto_id))
+            ''', (titulo, descripcion, precio, media_url, media_type, stock_status, producto_id))
+            flash('Producto actualizado.', 'success')
 
             conn.commit()
             flash('Producto actualizado correctamente.', 'success')
@@ -143,17 +141,9 @@ def admin_productos(cat_id):
 
             conn.execute('''
                 INSERT INTO catalogo_productos
-                (categoria_id, sku, titulo, descripcion, media_url, media_type, precio)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (
-                cat_id,
-                sku_generado,
-                titulo,
-                descripcion,
-                media_url,
-                media_type,
-                precio
-            ))
+                (categoria_id, sku, titulo, descripcion, media_url, media_type, precio, stock)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (cat_id, sku_generado, titulo, descripcion, media_url, media_type, precio, stock_status))
 
             conn.commit()
             flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
@@ -336,3 +326,22 @@ def upload_r2():
         return jsonify({"success": True, "url": url_final})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+        
+@catalogo_bp.route('/api/catalogo/update-stock', methods=['POST'])
+@login_required
+def update_stock():
+    data = request.get_json()
+    prod_id = data.get('id')
+    nuevo_stock = data.get('stock') # 1 o 0
+    
+    conn = get_db()
+    try:
+        conn.execute('UPDATE catalogo_productos SET stock = ? WHERE id = ?', (nuevo_stock, prod_id))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()

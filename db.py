@@ -239,6 +239,7 @@ def init_db():
         media_url TEXT NOT NULL,
         media_type TEXT DEFAULT 'image',
         precio REAL DEFAULT 0,
+        stock INTEGER DEFAULT 1,
         orden INTEGER DEFAULT 0,
         activo BOOLEAN DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
