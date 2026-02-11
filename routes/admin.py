@@ -82,3 +82,68 @@ def reset_password():
     conn.commit(); conn.close()
     flash('Password actualizada.', 'success')
     return redirect(url_for('admin.dashboard'))
+
+@admin_bp.route('/impersonate/<int:user_id>')
+@admin_required # Solo admins pueden hacer esto
+def impersonate(user_id):
+    conn = get_db()
+    user = conn.execute("SELECT * FROM usuarios WHERE id=?", (user_id,)).fetchone()
+    conn.close()
+    
+    if user:
+        # Guardamos quién eras antes (por si quieres poner un botón de "Volver a Admin")
+        session['original_admin_id'] = session['user_id']
+        
+        # Suplantamos la identidad
+        session['user_id'] = user['id']
+        session['username'] = user['username']
+        session['role'] = user['role']
+        
+        flash(f'👻 Modo Fantasma: Ahora estás viendo el sistema como {user["username"]}', 'info')
+        return redirect(url_for('main.index'))
+    
+    return redirect(url_for('admin.panel'))
+
+@admin_bp.route('/delete_user', methods=['POST'])
+@admin_required
+def delete_user():
+    user_id = request.form.get('user_id')
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # 1. Borrar Configuración
+        cursor.execute("DELETE FROM configuracion WHERE user_id = ?", (user_id,))
+        
+        # 2. Borrar Detalles de Ventas y Ventas
+        cursor.execute("DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id = ?)", (user_id,))
+        cursor.execute("DELETE FROM ventas WHERE user_id = ?", (user_id,))
+        
+        # 3. Borrar Inventario y Materiales
+        cursor.execute("DELETE FROM materiales WHERE user_id = ?", (user_id,))
+        try: cursor.execute("DELETE FROM movimientos_inventario WHERE user_id = ?", (user_id,))
+        except: pass
+        
+        # 4. Borrar Maquinaria y Productos
+        cursor.execute("DELETE FROM maquinaria WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM productos WHERE user_id = ?", (user_id,))
+        
+        # 5. Borrar Logs de Envíos
+        try:
+            cursor.execute("DELETE FROM shipping_configs WHERE user_id = ?", (user_id,))
+            cursor.execute("DELETE FROM shipping_zones WHERE user_id = ?", (user_id,))
+        except: pass
+
+        # 6. Finalmente borrar al usuario
+        cursor.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
+        
+        conn.commit()
+        flash('✅ Usuario y todos sus datos eliminados correctamente.', 'success')
+        
+    except Exception as e:
+        conn.rollback()
+        flash(f'Error al eliminar: {str(e)}', 'danger')
+    finally:
+        conn.close()
+
+    return redirect(url_for('admin.panel'))
