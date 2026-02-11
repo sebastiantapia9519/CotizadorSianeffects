@@ -67,34 +67,23 @@
     {% for prod in productos %}
     <div class="col-md-6 col-lg-4">
         <div class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden position-relative">
+
             <div class="bg-light d-flex align-items-center justify-content-center"
                 style="height: 200px; overflow: hidden;">
-
                 {% if prod.media_url %}
                 {% set url_lower = prod.media_url | lower %}
-
                 {% if '.mp4' in url_lower or '.webm' in url_lower or prod.media_type == 'video' %}
                 <video src="{{ prod.media_url }}" class="w-100 h-100" controls style="object-fit: cover;"></video>
-
                 {% elif '.mp3' in url_lower or '.wav' in url_lower or prod.media_type == 'audio' %}
-                {# RENDER DE AUDIO ESTILO SPOTIFY PARA ADMIN #}
                 <div class="w-100 h-100 d-flex flex-column align-items-center justify-content-center p-3"
                     style="background: linear-gradient(180deg, #282828 0%, #121212 100%); min-height: 200px;">
-
                     <div class="mb-3">
                         <i class="fas fa-compact-disc fa-spin fa-4x"
                             style="color: #1DB954; opacity: 0.8; --fa-animation-duration: 8s;"></i>
                     </div>
-
                     <audio src="{{ prod.media_url }}" controls class="w-100 shadow-sm"
                         style="height: 32px; filter: invert(100%) hue-rotate(180deg) brightness(1.5);"></audio>
-
-                    <span class="badge rounded-pill mt-3"
-                        style="background-color: #1DB954; color: #000; font-size: 0.7rem;">
-                        <i class="fas fa-play me-1"></i> VISTA PREVIA AUDIO
-                    </span>
                 </div>
-
                 {% else %}
                 <img src="{{ prod.media_url }}" class="w-100 h-100" style="object-fit: cover;"
                     onerror="this.parentElement.innerHTML='<i class=&#34;fas fa-image fa-3x text-muted opacity-50&#34;></i>'">
@@ -106,53 +95,44 @@
 
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div>
+                    <div style="max-width: 60%;">
                         <span class="badge bg-light text-dark border mb-1">{{ prod['sku'] }}</span>
-                        <h5 class="fw-bold text-dark mb-0">{{ prod['titulo'] }}</h5>
+                        <h5 class="fw-bold text-dark mb-0 text-truncate">{{ prod['titulo'] }}</h5>
+                        <span id="badge-agotado-{{ prod.id }}"
+                            class="badge bg-danger rounded-pill {{ 'd-none' if prod['stock'] > 0 }}">
+                            AGOTADO
+                        </span>
                     </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox"
-                            onchange="toggleEstado('producto', {{ prod['id'] }}, this)" {% if prod['activo'] %}checked{%
-                            endif %}>
-                    </div>
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div>
-                                <span class="badge bg-light text-dark border mb-1">{{ prod['sku'] }}</span>
-                                <h5 class="fw-bold text-dark mb-0">{{ prod['titulo'] }}</h5>
-                                <span id="badge-agotado-{{ prod.id }}"
-                                    class="badge bg-danger rounded-pill {{ 'd-none' if prod['stock'] > 0 }}">
-                                    AGOTADO
-                                </span>
-                            </div>
-                            <div class="text-end">
-                                <div class="form-check form-switch small">
-                                    <input class="form-check-input" type="checkbox" role="switch"
-                                        onchange="toggleEstado('producto', {{ prod['id'] }}, this)" {% if prod['activo']
-                                        %}checked{% endif %}>
-                                    <label class="small text-muted">Visible</label>
-                                </div>
-                                <div class="form-check form-switch small">
-                                    <input class="form-check-input" type="checkbox" role="switch"
-                                        onchange="toggleStock({{ prod['id'] }}, this)" {% if prod['stock']> 0
-                                    %}checked{% endif %}>
-                                    <label class="small text-muted">En Stock</label>
-                                </div>
-                            </div>
+
+                    <div class="text-end">
+                        <div class="form-check form-switch small mb-1">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                onchange="toggleEstado('producto', {{ prod['id'] }}, this)" {% if prod['activo']
+                                %}checked{% endif %}>
+                            <label class="small text-muted">Visible</label>
+                        </div>
+                        <div class="form-check form-switch small">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                onchange="toggleStock({{ prod['id'] }}, this)" {% if prod['stock']> 0 %}checked{% endif
+                            %}>
+                            <label class="small text-muted">En Stock</label>
                         </div>
                     </div>
                 </div>
-                <p class="text-muted small mb-0">{{ prod['descripcion'] }}</p>
+
+                <p class="text-muted small mb-2 text-truncate-2" style="height: 40px; overflow: hidden;">{{
+                    prod['descripcion'] }}</p>
+
                 {% if prod['precio'] > 0 %}
-                <div class="mt-2 fw-bold text-primary">${{ "%.2f"|format(prod['precio']) }}</div>
+                <div class="fw-bold text-primary">${{ "%.2f"|format(prod['precio']) }}</div>
                 {% endif %}
             </div>
-            <div class="card-footer bg-white border-0 pt-0 text-end">
+
+            <div class="card-footer bg-white border-0 pt-0 text-end pb-3">
                 <button class="btn btn-sm btn-outline-primary border-0 rounded-pill me-2"
                     onclick='cargarDatosEdicion({{ prod | tojson }})'>
                     <i class="fas fa-edit me-1"></i> Editar
                 </button>
-
                 <a href="{{ url_for('catalogo.delete_item', tipo='producto', id_obj=prod['id']) }}"
                     class="btn btn-sm btn-outline-danger border-0 rounded-pill"
                     onclick="return confirm('¿Eliminar este producto?');">
@@ -162,13 +142,6 @@
         </div>
     </div>
     {% else %}
-    <div class="col-12 text-center py-5">
-        <div class="opacity-50">
-            <i class="fas fa-box-open fa-3x mb-3 text-secondary"></i>
-            <h5>Carpeta vacía</h5>
-            <p>¡Sube tu primer producto!</p>
-        </div>
-    </div>
     {% endfor %}
 </div>
 
