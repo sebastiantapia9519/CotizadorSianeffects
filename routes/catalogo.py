@@ -7,6 +7,8 @@ import boto3
 from botocore.config import Config
 from flask import request, jsonify # Asumiendo que usas Flask
 
+catalogo_bp = Blueprint('catalogo', __name__)
+
 # Tus llaves de Cloudflare (Paso 2)
 ACCESS_KEY = '5dad301112cb3db90de60278e5d4e101'
 SECRET_KEY = '8d6b5dc8d9b01a8196b9e1a7d3e425f600cefad5e189bf42f0264edde035ab70'
@@ -15,7 +17,7 @@ BUCKET_NAME = 'sianeffectscatalogo'
 # La URL que te dio R2.dev en el Paso 3
 PUBLIC_URL = 'https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev' 
 
-catalogo_bp = Blueprint('catalogo', __name__)
+
 
 
 s3_client = boto3.client(
