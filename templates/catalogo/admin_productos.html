@@ -26,15 +26,30 @@
 
             <div class="bg-light d-flex align-items-center justify-content-center"
                 style="height: 200px; overflow: hidden;">
-                {% if prod['media_type'] == 'image' %}
-                <img src="{{ prod['media_url'] }}" class="w-100 h-100" style="object-fit: cover;">
-                {% elif prod['media_type'] == 'video' %}
-                <video src="{{ prod['media_url'] }}" class="w-100 h-100" controls style="object-fit: cover;"></video>
-                {% elif prod['media_type'] == 'audio' %}
-                <div class="text-center p-3">
-                    <i class="fas fa-music fa-3x text-primary mb-3"></i>
-                    <audio src="{{ prod['media_url'] }}" controls class="w-100"></audio>
+
+                {% if prod.media_url %}
+                {# Creamos una variable temporal para analizar la extensión, igual que en tu código funcional #}
+                {% set url_lower = prod.media_url | lower %}
+
+                {% if '.mp4' in url_lower or '.webm' in url_lower or prod.media_type == 'video' %}
+                {# RENDER DE VIDEO #}
+                <video src="{{ prod.media_url }}" class="w-100 h-100" controls style="object-fit: cover;"></video>
+
+                {% elif '.mp3' in url_lower or '.wav' in url_lower or prod.media_type == 'audio' %}
+                {# RENDER DE AUDIO #}
+                <div class="text-center p-3 w-100">
+                    <i class="fas fa-music fa-3x text-primary mb-2"></i>
+                    <audio src="{{ prod.media_url }}" controls class="w-100" style="height: 30px;"></audio>
                 </div>
+
+                {% else %}
+                {# RENDER DE IMAGEN (Default) #}
+                <img src="{{ prod.media_url }}" class="w-100 h-100" style="object-fit: cover;"
+                    onerror="this.parentElement.innerHTML='<i class=&#34;fas fa-image fa-3x text-muted opacity-50&#34;></i>'">
+                {% endif %}
+                {% else %}
+                {# ESTADO VACÍO #}
+                <i class="fas fa-file-upload fa-3x text-muted opacity-25"></i>
                 {% endif %}
             </div>
 
