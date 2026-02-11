@@ -29,7 +29,7 @@ s3_client = boto3.client(
     config=Config(signature_version='s3v4')
 )
 
-@catalogo.route('/subir-archivo', methods=['POST'])
+@catalogo_bp.route('/subir-archivo', methods=['POST'])
 def subir_archivo():
     file = request.files['file']
     if file:
