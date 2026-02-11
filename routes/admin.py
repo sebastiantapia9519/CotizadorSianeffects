@@ -148,3 +148,33 @@ def delete_user():
         conn.close()
 
     return redirect(url_for('admin.panel'))
+
+    
+@admin_bp.route('/stop_impersonate')
+def stop_impersonate():
+    # Solo funciona si hay un admin "escondido" en la sesión
+    if 'original_admin_id' not in session:
+        return redirect(url_for('main.index'))
+
+    # Recuperamos tu ID real
+    original_id = session['original_admin_id']
+
+    conn = get_db()
+    admin_user = conn.execute('SELECT * FROM usuarios WHERE id = ?', (original_id,)).fetchone()
+    conn.close()
+
+    if admin_user:
+        # 1. Restauramos tu sesión de Admin/Dueño
+        session['user_id'] = admin_user['id']
+        session['username'] = admin_user['username']
+        session['role'] = admin_user['role']
+
+        # 2. Borramos el rastro del modo fantasma
+        session.pop('original_admin_id', None)
+
+        flash('👻 Modo Fantasma finalizado. Bienvenido de vuelta, Jefe.', 'success')
+        return redirect(url_for('admin.panel'))
+    
+    # Si algo falla gravemente, te saca
+    session.clear()
+    return redirect(url_for('auth.login'))
