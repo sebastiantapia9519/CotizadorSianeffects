@@ -15,6 +15,9 @@ BUCKET_NAME = 'sianeffectscatalogo'
 # La URL que te dio R2.dev en el Paso 3
 PUBLIC_URL = 'https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev' 
 
+catalogo_bp = Blueprint('catalogo', __name__)
+
+
 s3_client = boto3.client(
     service_name='s3',
     endpoint_url=ENDPOINT_URL,
@@ -38,7 +41,7 @@ def subir_archivo():
     return jsonify({"success": False, "error": "No hay archivo"})
 
 
-catalogo_bp = Blueprint('catalogo', __name__)
+
 
 # =========================================================
 # 1. GESTIÓN DE CATEGORÍAS (PANEL PRINCIPAL)
