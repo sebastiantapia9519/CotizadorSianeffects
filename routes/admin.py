@@ -149,7 +149,7 @@ def delete_user():
 
     return redirect(url_for('admin.panel'))
 
-    
+
 @admin_bp.route('/stop_impersonate')
 def stop_impersonate():
     # Solo funciona si hay un admin "escondido" en la sesión
@@ -173,7 +173,9 @@ def stop_impersonate():
         session.pop('original_admin_id', None)
 
         flash('👻 Modo Fantasma finalizado. Bienvenido de vuelta, Jefe.', 'success')
-        return redirect(url_for('admin.panel'))
+        
+        # --- AQUÍ ESTABA EL ERROR ---
+        return redirect(url_for('admin.index'))  # <--- Cambiado de 'panel' a 'index'
     
     # Si algo falla gravemente, te saca
     session.clear()
