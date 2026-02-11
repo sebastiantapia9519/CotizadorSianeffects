@@ -443,12 +443,16 @@ def configuracion():
 
         elif action == 'update_business':
             margen = request.form['margen']
-            empresa = request.form['nombre_empresa']
+            empresa = request.form['nombre_empresa'] # Este es el dato clave
             slogan = request.form['slogan']
             website = request.form['website']
             
             inventario_activo = 1 if request.form.get('inventario_activo') else 0
 
+            # PASO 1: Actualizar la tabla USUARIOS (Fuente de la verdad del nombre)
+            conn.execute('UPDATE usuarios SET company_name=? WHERE id=?', (empresa, uid))
+
+            # PASO 2: Actualizar o Crear la tabla CONFIGURACION
             config_existente = conn.execute('SELECT id FROM configuracion WHERE user_id=?', (uid,)).fetchone()
 
             if config_existente:
@@ -463,6 +467,7 @@ def configuracion():
                     VALUES (?, ?, ?, ?, ?, ?)
                 ''', (uid, margen, empresa, slogan, website, inventario_activo))
 
+            
             flash('Datos del negocio guardados correctamente.', 'success')
 
         # --- GESTIÓN DE ENVÍOS (Config Base) ---
@@ -558,9 +563,31 @@ def configuracion():
 
     # --- GET: Cargar datos para mostrar ---
     config = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone()
+   # 1. Traemos al usuario (que TIENE el company_name "AAA")
     user_raw = conn.execute('SELECT * FROM usuarios WHERE id=?', (uid,)).fetchone()
-    user_display = procesar_fila_fechas(user_raw)
-    shipping_config = conn.execute("SELECT * FROM shipping_configs WHERE user_id=?", (uid,)).fetchone()
+    user_display = procesar_fila_fechas(user_raw) # Tu función existente
+    
+    # 2. Traemos la configuración (que puede estar vacía o incompleta)
+    config_row = conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone()
+    
+    # 3. CREAMOS UN DICCIONARIO HÍBRIDO (LA SOLUCIÓN FINAL)
+    # Convertimos la fila de BD a un diccionario editable de Python
+    if config_row:
+        # Convertimos sqlite3.Row a diccionario normal para poder editarlo
+        config = dict(config_row) 
+    else:
+        # Valores por defecto si no hay configuración previa
+        config = {
+            'margen_ganancia': 100, 
+            'slogan': '', 
+            'website': '', 
+            'inventario_activo': 0
+        }
+    
+    # AQUI ESTÁ EL TRUCO: 
+    # Sobrescribimos 'nombre_empresa' con lo que diga la tabla de usuarios ('company_name').
+    # Así, aunque en config esté vacío, se verá "AAA" o lo que tenga el usuario.
+    config['nombre_empresa'] = user_raw['company_name'] if user_raw['company_name'] else ''
 
     # Cargar Zonas y sus Tarifas
     zones_db = conn.execute("SELECT * FROM shipping_zones WHERE user_id=?", (uid,)).fetchall()
