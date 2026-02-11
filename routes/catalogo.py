@@ -6,7 +6,7 @@ from helpers import login_required
 import boto3
 from botocore.config import Config
 from werkzeug.utils import secure_filename
-from flask import request, jsonify # Asumiendo que usas Flask
+from flask import request, jsonify 
 
 catalogo_bp = Blueprint('catalogo', __name__)
 
@@ -333,7 +333,7 @@ def upload_r2():
             ExtraArgs={'ContentType': file.content_type}
         )
         # Construye la URL usando tu subdominio r2.dev o dominio personalizado
-        url = f"https://tu-subdominio.r2.dev/{filename}"
+        url = f".r2.dev/{filename}"
         return jsonify({"success": True, "url": url})
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
