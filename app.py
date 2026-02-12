@@ -2,6 +2,7 @@ import os
 from flask import Flask
 from flask import Flask, session
 from flask_apscheduler import APScheduler
+import logging
 from datetime import timedelta
 from dotenv import load_dotenv
 
@@ -22,6 +23,14 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev_key_fallback_insegura')
 # Si en .env FLASK_DEBUG es 1, será True. Si no, False.
 app.config['DEBUG'] = os.getenv('FLASK_DEBUG') == '1'
 
+# Configuración del log (puedes poner esto al inicio de tu app.py)
+logging.basicConfig(
+    filename='limpieza.log',
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    encoding='utf-8'
+)
+
 # =========================
 # SESIÓN
 # =========================
@@ -33,29 +42,69 @@ app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 # =========================
 def tarea_limpieza():
     """
-    Limpia cotizaciones vencidas.
-    IMPORTANTE:
-    - now_utc() asegura que el criterio sea consistente
-    - la BD debe guardar fechas en UTC
+    Limpia cotizaciones y ejecuta el borrado total de cuentas/datos 
+    después de 12 meses, usando la lógica UTC de SianEffects.
     """
     with app.app_context():
         try:
             conn = get_db_connection()
-
-            conn.execute(
-                """
-                DELETE FROM ventas
-                WHERE estado = 'cotizacion'
-                AND fecha_vencimiento < ?
-                """,
-                (now_utc(),)  #UTC, no hora del servidor
+            # USAMOS TU FUNCIÓN ORIGINAL
+            ahora = now_utc() 
+            
+            # 1. Limpieza de cotizaciones (2 días)
+            cursor = conn.execute(
+                "DELETE FROM ventas WHERE estado = 'cotizacion' AND fecha_vencimiento < ?",
+                (ahora,)
             )
+            if cursor.rowcount > 0:
+                logging.info(f"Cotizaciones eliminadas: {cursor.rowcount}")
 
-            conn.commit()
+            # 2. Identificar usuarios (role 0) con 12 meses de vencimiento
+            limite_12_meses = ahora - timedelta(days=365)
+            
+            # Buscamos quiénes cumplen el criterio
+            usuarios_out = conn.execute(
+                "SELECT id, email FROM usuarios WHERE role = 0 AND subscription_end < ?",
+                (limite_12_meses,)
+            ).fetchall()
+
+            if usuarios_out:
+                ids = [u['id'] for u in usuarios_out]
+                emails = [u['email'] for u in usuarios_out]
+                placeholder = ', '.join(['?'] * len(ids))
+
+                # --- A. BORRAR DETALLES (Hijos) ---
+                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id IN ({placeholder}))", ids)
+                conn.execute(f"DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({placeholder}))", ids)
+                conn.execute(f"DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({placeholder}))", ids)
+                conn.execute(f"DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id IN ({placeholder}))", ids)
+
+                # --- B. BORRAR TABLAS PRINCIPALES (Padres) ---
+                tablas_directas = [
+                    'configuracion', 'maquinaria', 'materiales', 
+                    'movimientos_inventario', 'productos', 'ventas', 
+                    'shipping_configs', 'shipping_zones'
+                ]
+                for tabla in tablas_directas:
+                    conn.execute(f"DELETE FROM {tabla} WHERE user_id IN ({placeholder})", ids)
+
+                # --- C. BORRAR AL USUARIO ---
+                conn.execute(f"DELETE FROM usuarios WHERE id IN ({placeholder})", ids)
+                
+                conn.commit()
+                
+                # Registrar en el historial
+                for email in emails:
+                    logging.warning(f"CUENTA ELIMINADA POR INACTIVIDAD (12 MESES): {email}")
+                
+                print(f"♻️ Limpieza UTC completada para {len(ids)} usuarios.")
+
             conn.close()
 
         except Exception as e:
-            print("❌ Error en tarea_limpieza:", e)
+            error_msg = f"Error en tarea_limpieza: {str(e)}"
+            logging.error(error_msg)
+            print(f"❌ {error_msg}")
 
 # =========================
 # BASE DE DATOS

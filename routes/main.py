@@ -630,6 +630,10 @@ def configuracion():
 def terminos():
     return render_template('terminos.html')
 
+@main_bp.route('/privacidad')
+def privacidad():
+    return render_template('privacidad.html')
+
 @main_bp.route('/plan_vencido')
 def plan_vencido():
     return render_template('plan_vencido.html')
