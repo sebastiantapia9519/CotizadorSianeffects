@@ -149,6 +149,29 @@ def delete_user():
 
     return redirect(url_for('admin.panel'))
 
+@admin_bp.route('/descargar-log')
+@login_required
+def descargar_log():
+    # Solo permitimos a Admins (role >= 1)
+    # Usamos current_user.role porque es más seguro que la sesión
+    if current_user.role < 1:
+        abort(403)
+
+    # Definimos la ruta del archivo. 
+    # Si configuraste el logging como lo hicimos antes, el archivo está en la raíz.
+    log_path = os.path.join(current_app.root_path, 'limpieza.log')
+    
+    # Verificamos si el archivo existe antes de intentar enviarlo
+    if os.path.exists(log_path):
+        return send_from_directory(
+            directory=current_app.root_path, 
+            path='limpieza.log', 
+            as_attachment=True
+        )
+    else:
+        # Si el log no existe aún (porque la tarea no ha borrado a nadie), 
+        # devolvemos un mensaje amigable.
+        return "El archivo de historial (limpieza.log) aún no se ha generado.", 404
 
 @admin_bp.route('/stop_impersonate')
 def stop_impersonate():
