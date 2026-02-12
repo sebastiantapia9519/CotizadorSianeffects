@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify, send_from_directory, abort
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
 import pandas as pd
@@ -38,6 +38,31 @@ def procesar_fila_fechas(fila_db):
 @main_bp.route('/')
 def index():
     return redirect(url_for('main.cotizador'))
+
+
+@admin.route('/descargar-log')
+@login_required
+def descargar_log():
+    # Solo permitimos a Admins (role >= 1)
+    # Usamos current_user.role porque es más seguro que la sesión
+    if current_user.role < 1:
+        abort(403)
+
+    # Definimos la ruta del archivo. 
+    # Si configuraste el logging como lo hicimos antes, el archivo está en la raíz.
+    log_path = os.path.join(current_app.root_path, 'limpieza.log')
+    
+    # Verificamos si el archivo existe antes de intentar enviarlo
+    if os.path.exists(log_path):
+        return send_from_directory(
+            directory=current_app.root_path, 
+            path='limpieza.log', 
+            as_attachment=True
+        )
+    else:
+        # Si el log no existe aún (porque la tarea no ha borrado a nadie), 
+        # devolvemos un mensaje amigable.
+        return "El archivo de historial (limpieza.log) aún no se ha generado.", 404
 
 # --- RUTA DE MIGRACIÓN PARA INVENTARIO ---
 @main_bp.route('/migrar-inventario')
@@ -311,6 +336,21 @@ def actualizar_venta():
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
         conn.close()
+
+
+@admin_bp.route('/admin/descargar-log')
+@login_required
+def descargar_log():
+    # Solo permitimos a Roles superiores (Admin = 1, SuperAdmin = 2)
+    if current_user.role < 1:
+        abort(403) # Prohibido para usuarios normales
+
+    log_path = os.path.join(app.root_path, 'limpieza.log')
+    
+    if os.path.exists(log_path):
+        return send_from_directory(directory=app.root_path, path='limpieza.log', as_attachment=True)
+    else:
+        return "El archivo de log aún no se ha creado.", 404
 
 # --- RUTAS DE VISUALIZACIÓN ---
 
@@ -637,6 +677,8 @@ def privacidad():
 @main_bp.route('/plan_vencido')
 def plan_vencido():
     return render_template('plan_vencido.html')
+
+
 
 # --- RUTA DE AYUDA Y DOCUMENTACIÓN ---
 @main_bp.route('/ayuda')
