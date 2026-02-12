@@ -315,20 +315,6 @@ def actualizar_venta():
         conn.close()
 
 
-@admin_bp.route('/admin/descargar-log')
-@login_required
-def descargar_log():
-    # Solo permitimos a Roles superiores (Admin = 1, SuperAdmin = 2)
-    if current_user.role < 1:
-        abort(403) # Prohibido para usuarios normales
-
-    log_path = os.path.join(app.root_path, 'limpieza.log')
-    
-    if os.path.exists(log_path):
-        return send_from_directory(directory=app.root_path, path='limpieza.log', as_attachment=True)
-    else:
-        return "El archivo de log aún no se ha creado.", 404
-
 # --- RUTAS DE VISUALIZACIÓN ---
 
 @main_bp.route('/historial')
