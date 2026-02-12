@@ -1,6 +1,5 @@
 import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session
-from flask_login import login_required, current_user
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
 from db import get_db_connection
@@ -152,11 +151,11 @@ def delete_user():
     return redirect(url_for('admin.panel'))
 
 @admin_bp.route('/descargar-log')
-@login_required
+@admin_required
 def descargar_log():
     # Solo permitimos a Admins (role >= 1)
     # Usamos current_user.role porque es más seguro que la sesión
-    if current_user.role < 1:
+    if session.get('role') < 1:
         abort(403)
 
     # Definimos la ruta del archivo. 
