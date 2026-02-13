@@ -125,7 +125,7 @@ if not scheduler.get_job('Limpieza'):
         id='Limpieza',
         func=tarea_limpieza,
         trigger='interval',
-        minutes=60,
+        hours=12,
         replace_existing=True
     )
 
