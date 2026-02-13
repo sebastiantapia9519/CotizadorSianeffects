@@ -23,6 +23,8 @@ def dashboard():
     hace_24h = ahora_utc - timedelta(days=1)
     # Definimos el umbral de "Peligro" (vencidos hace más de 350 días, casi el año)
     proximos_a_borrar = ahora_utc - timedelta(days=350)
+    # Variable para el filtro de Jinja2
+    fecha_limite_riesgo = proximos_a_borrar.strftime('%Y-%m-%d')
 
     # 3. Inicialización del diccionario de estadísticas
     stats = {
@@ -37,7 +39,6 @@ def dashboard():
     # 4. Procesamiento de cada usuario para calcular métricas
     for u in users:
         # --- Lógica de Roles ---
-        # Si el rol es 1 (Admin) o 2 (Dueño)
         if u['role'] > 0:
             stats['admins'] += 1
         
@@ -45,7 +46,6 @@ def dashboard():
         if u['subscription_end']:
             try:
                 # Convertimos el string de la BD a objeto datetime con zona horaria UTC
-                # Tomamos los primeros 19 caracteres para evitar microsegundos si existen
                 fecha_fin = datetime.strptime(str(u['subscription_end'])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
                 
                 if fecha_fin > ahora_utc:
@@ -59,28 +59,24 @@ def dashboard():
             except (ValueError, TypeError):
                 stats['vencidos'] += 1
         else:
-            # Si no tiene fecha, lo contamos como vencido o sin plan
             stats['vencidos'] += 1
 
         # --- Lógica de Actividad (Last Login) ---
         if u['last_login']:
             try:
-                # Convertimos la fecha del último login
                 fecha_login = datetime.strptime(str(u['last_login'])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
-                # Si entró en las últimas 24 horas
                 if fecha_login > hace_24h:
                     stats['online_hoy'] += 1
             except (ValueError, TypeError):
                 pass
 
-    # 5. Renderizar la plantilla pasando el rol actual para control de interfaz
+    # 5. Renderizar la plantilla (FUERA DEL FOR y con los paréntesis corregidos)
     return render_template('admin.html', 
                            users=users, 
                            now=ahora_utc, 
                            stats=stats, 
-                           my_role=session.get('role')),
+                           my_role=session.get('role'),
                            limite_riesgo=fecha_limite_riesgo)
-
 
 # --- ACCIONES PROTEGIDAS (SOLO DUEÑO - ROL 2) ---
 
