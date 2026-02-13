@@ -199,3 +199,95 @@ def gestionar_invitaciones():
         return redirect(url_for('admin.dashboard'))
     finally:
         conn.close()
+
+@invitaciones_bp.route('/admin/editar-invitacion/<int:id>', methods=['GET', 'POST'])
+@admin_required
+def editar_invitacion(id):
+    conn = get_db_connection()
+    
+    if request.method == 'POST':
+        try:
+            slug = request.form.get('slug')
+            musica_id = request.form.get('musica_id')
+            estilo_fuente = request.form.get('estilo_fuente')
+            color_fondo = request.form.get('color_fondo')
+            fecha_evento = request.form.get('fecha_evento')
+            vigencia = request.form.get('vigencia')
+            
+            # 1. Datos del cliente
+            datos_cliente = {
+                "novios": request.form.get('nombres_novios'),
+                "frase": request.form.get('frase'),
+                "maps_misa": request.form.get('maps_misa'),
+                "maps_fiesta": request.form.get('maps_fiesta'),
+                "cuenta_bancaria": request.form.get('cuenta_bancaria'),
+                "telefono_rsvp": request.form.get('telefono_rsvp')
+            }
+            
+            # 2. Mesas de regalos
+            nombres_tiendas = request.form.getlist('nombre_tienda[]')
+            links_tiendas = request.form.getlist('link_tienda[]')
+            mesas_regalos = [{'nombre': n, 'url': l} for n, l in zip(nombres_tiendas, links_tiendas) if n and l]
+            
+            orden_items = request.form.getlist('orden_items[]')
+
+            # 3. Traemos los datos viejos para no perder fotos si no suben nuevas
+            inv_old = conn.execute("SELECT foto_portada_url, fotos_json, url_fondo FROM invitaciones WHERE id=?", (id,)).fetchone()
+
+            # 4. Procesar Fotos (Solo se sube si eligen un archivo nuevo)
+            foto_portada = request.files.get('foto_portada')
+            url_portada = upload_to_cloudflare(foto_portada, folder=f"invitaciones/{slug}") if foto_portada and foto_portada.filename != '' else inv_old['foto_portada_url']
+
+            img_fondo = request.files.get('imagen_fondo')
+            url_fondo = upload_to_cloudflare(img_fondo, folder=f"invitaciones/{slug}/bg") if img_fondo and img_fondo.filename != '' else inv_old['url_fondo']
+
+            fotos_galeria = request.files.getlist('fotos_galeria')
+            urls_galeria = []
+            for f in fotos_galeria:
+                if f.filename != '':
+                    urls_galeria.append(upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria"))
+            
+            # Si no subieron fotos nuevas para galería, dejamos las que ya estaban
+            if not urls_galeria:
+                import json
+                urls_galeria = json.loads(inv_old['fotos_json']) if inv_old['fotos_json'] else []
+
+            # 5. ACTUALIZAR EN BASE DE DATOS
+            conn.execute("""
+                UPDATE invitaciones SET 
+                slug=?, config_json=?, musica_id=?, fecha_evento=?, vigencia=?, datos_cliente_json=?, 
+                fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?
+                WHERE id=?
+            """, (
+                slug, json.dumps(orden_items), musica_id or None, fecha_evento, vigencia,
+                json.dumps(datos_cliente), json.dumps(urls_galeria), url_portada,
+                estilo_fuente, color_fondo, url_fondo, json.dumps(mesas_regalos), id
+            ))
+            conn.commit()
+            flash("¡Invitación actualizada exitosamente! ✏️", "success")
+            return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
+            
+        except Exception as e:
+            conn.rollback()
+            flash(f"Error al actualizar: {str(e)}", "danger")
+
+    # --- MÉTODO GET: PREPARAR DATOS PARA EL FORMULARIO ---
+    inv = conn.execute("SELECT * FROM invitaciones WHERE id = ?", (id,)).fetchone()
+    canciones = conn.execute("SELECT * FROM lista_musica WHERE activa = 1").fetchall()
+    conn.close()
+
+    if not inv:
+        flash("Invitación no encontrada.", "danger")
+        return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
+
+    import json
+    datos = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
+    mesas = json.loads(inv['mesas_regalos_json']) if inv['mesas_regalos_json'] else []
+    
+    # Renderizamos la misma plantilla, pero le pasamos los datos para rellenar
+    return render_template('invitaciones/crear.html', 
+                           inv=inv, 
+                           datos=datos, 
+                           mesas=mesas, 
+                           canciones=canciones, 
+                           edit_mode=True)
