@@ -1,0 +1,137 @@
+{% extends "layout.html" %}
+
+{% block title %}Gestión de Invitaciones | SianEffects{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-envelope-open-text text-primary me-2"></i>Mis Invitaciones
+        </h4>
+        <small class="text-muted">Administra los micro-sitios de eventos y bodas</small>
+    </div>
+    <div>
+        <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}" class="btn btn-dark rounded-pill px-4 shadow-sm">
+            <i class="fas fa-plus-circle me-2"></i>Crear Nueva
+        </a>
+    </div>
+</div>
+
+<div class="card border-0 shadow-sm rounded-4">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-4 py-3">Evento / Novios</th>
+                        <th>URL (Slug)</th>
+                        <th>Fecha Evento</th>
+                        <th>Vigencia</th>
+                        <th>Estado</th>
+                        <th class="text-end pe-4">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for inv in invitaciones %}
+                    <tr>
+                        <td class="ps-4 py-3">
+                            <div class="fw-bold text-dark">{{ inv['datos_cliente']['novios'] }}</div>
+                            <small class="text-muted">Estilo: <span class="text-capitalize">{{ inv['estilo_fuente']
+                                    }}</span></small>
+                        </td>
+
+                        <td>
+                            <span class="badge bg-light text-dark border border-secondary font-monospace">
+                                /invitacion/{{ inv['slug'] }}
+                            </span>
+                            <button onclick="copiarLink('{{ request.host_url }}invitacion/{{ inv['slug'] }}')"
+                                class="btn btn-sm btn-link text-primary p-0 ms-1" title="Copiar Enlace">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </td>
+
+                        <td>
+                            <div class="fw-bold text-dark">
+                                {% if inv['fecha_evento'] %}
+                                {{ inv['fecha_evento'][:10] }} <small class="text-muted">{{ inv['fecha_evento'][11:16]
+                                    }}</small>
+                                {% else %}
+                                <span class="text-muted">-</span>
+                                {% endif %}
+                            </div>
+                        </td>
+
+                        <td>
+                            <small class="fw-bold text-muted">{{ inv['vigencia'] }}</small>
+                        </td>
+
+                        <td>
+                            {% if inv['vigencia'] >= hoy %}
+                            <span class="badge bg-success rounded-pill px-3 py-2"><i
+                                    class="fas fa-check-circle me-1"></i>Activa</span>
+                            {% else %}
+                            <span class="badge bg-danger rounded-pill px-3 py-2"><i
+                                    class="fas fa-times-circle me-1"></i>Vencida</span>
+                            {% endif %}
+                        </td>
+
+                        <td class="text-end pe-4">
+                            <div class="dropdown">
+                                <button class="btn btn-light btn-sm rounded-circle shadow-sm" type="button"
+                                    data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end border-0 shadow rounded-4">
+                                    <li>
+                                        <a class="dropdown-item py-2"
+                                            href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv['slug']) }}"
+                                            target="_blank">
+                                            <i class="fas fa-external-link-alt text-primary me-2"></i> Ver Sitio
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item py-2" href="#">
+                                            <i class="fas fa-edit text-warning me-2"></i> Editar (Próximamente)
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item py-2 text-danger" href="#">
+                                            <i class="fas fa-trash-alt me-2"></i> Eliminar
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6" class="text-center py-5">
+                            <div class="text-muted mb-3"><i class="fas fa-folder-open fa-3x"></i></div>
+                            <h5 class="fw-bold text-dark">Aún no hay invitaciones</h5>
+                            <p class="text-muted small">Crea tu primer micro-sitio para empezar a administrarlo desde
+                                aquí.</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Función elegante para copiar al portapapeles
+    function copiarLink(url) {
+        navigator.clipboard.writeText(url).then(function () {
+            alert('¡Enlace copiado al portapapeles!\n\nListo para enviar por WhatsApp: ' + url);
+        }).catch(function (err) {
+            console.error('Error al copiar: ', err);
+            alert('No se pudo copiar el enlace automáticamente.');
+        });
+    }
+</script>
+{% endblock %}

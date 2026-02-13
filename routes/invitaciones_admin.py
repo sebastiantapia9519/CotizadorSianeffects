@@ -1,6 +1,7 @@
 import json
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from helpers import admin_required
+from datetime import datetime
 from db import get_db_connection  # Usamos tu conexión principal
 from services.cloudflare_service import upload_to_cloudflare # Importamos el servicio de subida
 
@@ -167,3 +168,34 @@ def ver_invitacion(slug):
 @invitaciones_bp.app_template_filter('from_json')
 def from_json(value):
     return json.loads(value)
+
+# --- RUTA 4: PANEL DE GESTIÓN (DASHBOARD) ---
+@invitaciones_bp.route('/admin/invitaciones')
+@admin_required
+def gestionar_invitaciones():
+    conn = get_db_connection()
+    try:
+        # Traemos todas las invitaciones, las más recientes primero
+        invs_db = conn.execute("SELECT * FROM invitaciones ORDER BY id DESC").fetchall()
+        
+        # Lista para guardar las invitaciones ya procesadas
+        invitaciones = []
+        for inv in invs_db:
+            inv_dict = dict(inv) # Convertimos el Row de SQLite a Diccionario
+            try:
+                # Extraemos los nombres de los novios del JSON
+                inv_dict['datos_cliente'] = json.loads(inv['datos_cliente_json'])
+            except:
+                inv_dict['datos_cliente'] = {"novios": "Sin Nombre"}
+            
+            invitaciones.append(inv_dict)
+            
+        # Fecha de hoy para calcular si el link sigue activo o ya venció
+        hoy = datetime.now().strftime('%Y-%m-%d')
+        
+        return render_template('invitaciones/gestionar.html', invitaciones=invitaciones, hoy=hoy)
+    except Exception as e:
+        flash(f"Error cargando el panel: {str(e)}", "danger")
+        return redirect(url_for('admin.dashboard'))
+    finally:
+        conn.close()
