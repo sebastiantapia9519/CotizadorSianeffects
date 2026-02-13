@@ -19,12 +19,20 @@ def dashboard():
     conn.close()
     
     # 2. Configuración de tiempos (Consistencia UTC)
+    #--- LÓGICA DE TIEMPOS LOCALES (MÉXICO) ---
     ahora_utc = now_utc()
-    hace_24h = ahora_utc - timedelta(days=1)
-    # Definimos el umbral de "Peligro" (vencidos hace más de 350 días, casi el año)
-    proximos_a_borrar = ahora_utc - timedelta(days=350)
-    # Variable para el filtro de Jinja2
-    fecha_limite_riesgo = proximos_a_borrar.strftime('%Y-%m-%d')
+    # Convertimos el "ahora" UTC a tu hora local
+    ahora_local = utc_to_local(ahora_utc)
+    
+    # 24 horas atrás en tu tiempo local
+    hace_24h_local = ahora_local - timedelta(days=1)
+    
+    # Formateamos para el HTML (comparación de strings)
+    hace_24h_str = hace_24h_local.strftime('%Y-%m-%d %H:%M')
+    hoy_str = ahora_local.strftime('%Y-%m-%d')
+    
+    # Fecha límite de riesgo (350 días atrás)
+    fecha_limite_riesgo = (ahora_local - timedelta(days=350)).strftime('%Y-%m-%d')
 
     # 3. Inicialización del diccionario de estadísticas
     stats = {
@@ -73,7 +81,7 @@ def dashboard():
     # 5. Renderizar la plantilla (FUERA DEL FOR y con los paréntesis corregidos)
     return render_template('admin.html', 
                            users=users, 
-                           now=ahora_utc, 
+                           now=ahora_local, 
                            stats=stats, 
                            my_role=session.get('role'),
                            limite_riesgo=fecha_limite_riesgo)
