@@ -114,3 +114,36 @@ def api_subir_musica():
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
+
+# --- RUTA 3: VISTA PÚBLICA DE LA INVITACIÓN ---
+@invitaciones_bp.route('/invitacion/<slug>')
+def ver_invitacion(slug):
+    conn = get_db_connection()
+    try:
+        # 1. Buscar la invitación por Slug
+        inv = conn.execute("""
+            SELECT i.*, m.url_cloudflare as musica_url 
+            FROM invitaciones i
+            LEFT JOIN lista_musica m ON i.musica_id = m.id
+            WHERE i.slug = ?
+        """, (slug,)).fetchone()
+        
+        if not inv:
+            return "<h1>404 - Invitación no encontrada 😢</h1>", 404
+
+        # 2. Convertir los textos JSON a objetos de Python reales
+        import json
+        config = json.loads(inv['config_json'])        # El orden de los bloques
+        datos = json.loads(inv['datos_cliente_json'])  # Nombres, mapas, etc
+        fotos = json.loads(inv['fotos_json'])          # Lista de URLs de fotos
+        
+        # 3. Renderizar la plantilla mágica
+        return render_template('invitaciones/base_boda.html', 
+                               inv=inv, 
+                               config=config, 
+                               datos=datos, 
+                               fotos=fotos)
+    except Exception as e:
+        return f"Error cargando invitación: {str(e)}", 500
+    finally:
+        conn.close()
