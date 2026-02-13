@@ -1,111 +1,91 @@
 import json
-from flask import jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from helpers import admin_required
+from db import get_db_connection  # Usamos tu conexión principal
+from services.cloudflare_service import upload_to_cloudflare # Importamos el servicio de subida
 
+# Definimos el Blueprint
+invitaciones_bp = Blueprint('invitaciones_admin', __name__)
+
+# --- RUTA 1: CONSTRUCTOR DE INVITACIONES ---
 @invitaciones_bp.route('/admin/nueva-invitacion', methods=['GET', 'POST'])
-def crear_invitacion():
-    if request.method == 'POST':
-        # 1. Recibimos los datos básicos
-        slug = request.form.get('slug')
-        musica_id = request.form.get('musica_id')
-        
-        # 2. Guardamos el orden de los ítems (JSON)
-        # Esto te permite decir: "primero el countdown, luego mapa, luego galería"
-        orden_items = request.form.getlist('orden[]') 
-        
-        # 3. Subimos fotos a Cloudflare y guardamos URLs
-        fotos = request.files.getlist('fotos')
-        urls_fotos = [upload_to_cloudflare(f) for f in fotos]
-        
-        # 4. Guardamos en la base de datos independiente
-        # ... lógica de db.execute ...
-        
-        return "¡Invitación creada con éxito!"
-    
-    # Aquí traeríamos tus 5 canciones activas para el dropdown
-    canciones = db.execute("SELECT * FROM lista_musica WHERE activa = 1").fetchall()
-    return render_template('invitaciones/editor.html', canciones=canciones)
-
-@invitaciones_bp.route('/admin/musica', methods=['GET', 'POST'])
 @admin_required
-def gestionar_musica():
-    conn = get_invitaciones_db() # Tu nueva conexión a invitaciones.db
+def crear_invitacion():
+    conn = get_db_connection()
+    
     if request.method == 'POST':
-        nombre = request.form.get('nombre')
-        archivo = request.files.get('archivo')
-        
-        if archivo:
-            url_audio = upload_to_cloudflare(archivo, folder="musica")
-            conn.execute("INSERT INTO lista_musica (nombre_cancion, url_cloudflare) VALUES (?, ?)",
-                         (nombre, url_audio))
-            conn.commit()
-            flash("Canción añadida con éxito", "success")
+        try:
+            # 1. Datos del formulario
+            slug = request.form.get('slug')
+            musica_id = request.form.get('musica_id')
+            fecha_evento = request.form.get('fecha_evento')
+            vigencia = request.form.get('vigencia')
             
-    canciones = conn.execute("SELECT * FROM lista_musica").fetchall()
-    conn.close()
-    return render_template('invitaciones/musica.html', canciones=canciones)
+            # 2. Datos del cliente (JSON)
+            datos_cliente = {
+                "novios": request.form.get('nombres_novios'),
+                "frase": request.form.get('frase'),
+                "maps_misa": request.form.get('maps_misa'),
+                "maps_fiesta": request.form.get('maps_fiesta'),
+                "cuenta_bancaria": request.form.get('cuenta_bancaria'),
+                "telefono_rsvp": request.form.get('telefono_rsvp')
+            }
+            
+            # 3. Orden de ítems (JSON)
+            orden_items = request.form.getlist('orden_items[]')
+            
+            # 4. Manejo de fotos (Subida a Cloudflare)
+            fotos = request.files.getlist('fotos')
+            urls_fotos = []
+            
+            for f in fotos:
+                if f.filename != '':
+                    # Subimos a carpeta específica del evento
+                    url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}")
+                    urls_fotos.append(url)
 
-import json
+            # 5. Guardar en la Base de Datos Principal
+            conn.execute("""
+                INSERT INTO invitaciones 
+                (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, fotos_json) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (
+                slug, 
+                json.dumps(orden_items), 
+                musica_id or None, # Si viene vacío, guarda NULL
+                fecha_evento, 
+                vigencia, 
+                json.dumps(datos_cliente), 
+                json.dumps(urls_fotos)
+            ))
+            conn.commit()
+            flash(f"¡Invitación para {datos_cliente['novios']} creada con éxito!", "success")
+            
+            # Redirigir a la misma página (o a una lista si la creamos después)
+            return redirect(url_for('invitaciones_admin.crear_invitacion'))
+            
+        except Exception as e:
+            conn.rollback()
+            flash(f"Error al crear invitación: {str(e)}", "danger")
+        finally:
+            conn.close()
 
-@invitaciones_bp.route('/admin/nueva-invitacion', methods=['GET', 'POST'])
-@admin_required
-def crear_invitacion():
-    conn = get_invitaciones_db()
-    
-    if request.method == 'POST':
-        # Datos del formulario
-        slug = request.form.get('slug')
-        musica_id = request.form.get('musica_id')
-        fecha_evento = request.form.get('fecha_evento')
-        vigencia = request.form.get('vigencia')
-        
-        # Datos del cliente (JSON)
-        datos_cliente = {
-            "novios": request.form.get('nombres_novios'),
-            "frase": request.form.get('frase'),
-            "maps_misa": request.form.get('maps_misa'),
-            "maps_fiesta": request.form.get('maps_fiesta'),
-            "cuenta_bancaria": request.form.get('cuenta_bancaria')
-        }
-        
-        # Orden de ítems (Ej: ["countdown", "galeria", "mapas"])
-        orden_items = request.form.getlist('orden_items[]')
-        
-        # Manejo de fotos
-        fotos = request.files.getlist('fotos')
-        urls_fotos = []
-        for f in fotos:
-            if f.filename != '':
-                url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}")
-                urls_fotos.append(url)
-
-        # INSERT en la base de datos
-        conn.execute("""
-            INSERT INTO invitaciones 
-            (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, fotos_json) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (
-            slug, 
-            json.dumps(orden_items), 
-            musica_id, 
-            fecha_evento, 
-            vigencia, 
-            json.dumps(datos_cliente), 
-            json.dumps(urls_fotos)
-        ))
-        conn.commit()
+    # GET: Mostrar el formulario con las canciones cargadas
+    try:
+        canciones = conn.execute("SELECT * FROM lista_musica WHERE activa = 1").fetchall()
+    except:
+        canciones = [] # Por si la tabla estuviera vacía o error
+    finally:
         conn.close()
-        flash(f"Invitación {slug} creada correctamente", "success")
-        return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
-
-    canciones = conn.execute("SELECT * FROM lista_musica WHERE activa = 1").fetchall()
-    conn.close()
+        
     return render_template('invitaciones/crear.html', canciones=canciones)
 
 
+# --- RUTA 2: API PARA SUBIR MÚSICA (POPUP) ---
 @invitaciones_bp.route('/admin/api/subir-musica', methods=['POST'])
 @admin_required
 def api_subir_musica():
-    conn = get_invitaciones_db()
+    conn = get_db_connection()
     
     nombre = request.form.get('nombre')
     archivo = request.files.get('archivo')
@@ -114,17 +94,16 @@ def api_subir_musica():
         return jsonify({'error': 'No se envió archivo'}), 400
 
     try:
-        # Subimos a Cloudflare
+        # 1. Subimos a Cloudflare (carpeta musica)
         url_audio = upload_to_cloudflare(archivo, folder="musica")
         
-        # Guardamos en DB
+        # 2. Guardamos en DB Principal
         cursor = conn.cursor()
         cursor.execute("INSERT INTO lista_musica (nombre_cancion, url_cloudflare) VALUES (?, ?)", (nombre, url_audio))
         nuevo_id = cursor.lastrowid
         conn.commit()
-        conn.close()
         
-        # Devolvemos los datos de la nueva canción para actualizar el Select
+        # 3. Devolvemos éxito al Frontend
         return jsonify({
             'success': True,
             'id': nuevo_id,
@@ -133,3 +112,5 @@ def api_subir_musica():
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
