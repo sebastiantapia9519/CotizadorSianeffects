@@ -291,3 +291,21 @@ def editar_invitacion(id):
                            mesas=mesas, 
                            canciones=canciones, 
                            edit_mode=True)
+
+# --- RUTA 5: ELIMINAR INVITACIÓN ---
+@invitaciones_bp.route('/admin/eliminar-invitacion/<int:id>', methods=['POST'])
+@admin_required
+def eliminar_invitacion(id):
+    conn = get_db_connection()
+    try:
+        # Borramos el registro de la base de datos
+        conn.execute("DELETE FROM invitaciones WHERE id = ?", (id,))
+        conn.commit()
+        flash("Invitación eliminada correctamente 🗑️", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error al eliminar: {str(e)}", "danger")
+    finally:
+        conn.close()
+        
+    return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
