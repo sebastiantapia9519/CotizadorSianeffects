@@ -312,7 +312,11 @@ def init_db():
         vigencia DATETIME,          -- Hasta cuándo funciona el link
         datos_cliente_json TEXT,     -- Nombres, Maps, Cuenta bancaria, etc.
         fotos_json TEXT,            -- URLs de las 5 fotos en Cloudflare
-        FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
+        FOREIGN KEY(musica_id) REFERENCES lista_musica(id),
+        color_fondo TEXT DEFAULT '#ffffff',
+        url_fondo TEXT,
+        foto_portada_url TEXT,
+        mesas_regalos_json TEXT
     );
     """)
 

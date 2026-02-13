@@ -15,13 +15,17 @@ def crear_invitacion():
     
     if request.method == 'POST':
         try:
-            # 1. Datos del formulario
             slug = request.form.get('slug')
             musica_id = request.form.get('musica_id')
-            fecha_evento = request.form.get('fecha_evento')
-            vigencia = request.form.get('vigencia')
             
-            # 2. Datos del cliente (JSON)
+            # --- PROCESAR LINKS DE TIENDAS ---
+            nombres_tiendas = request.form.getlist('nombre_tienda[]')
+            links_tiendas = request.form.getlist('link_tienda[]')
+            mesas_regalos = []
+            for nombre, link in zip(nombres_tiendas, links_tiendas):
+                if nombre and link:
+                    mesas_regalos.append({'nombre': nombre, 'url': link})
+
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
                 "frase": request.form.get('frase'),
@@ -31,42 +35,54 @@ def crear_invitacion():
                 "telefono_rsvp": request.form.get('telefono_rsvp')
             }
             
-            # 3. Orden de ítems (JSON)
-            orden_items = request.form.getlist('orden_items[]')
-            
-            # 4. Manejo de fotos (Subida a Cloudflare)
-            fotos = request.files.getlist('fotos')
-            urls_fotos = []
-            
-            for f in fotos:
-                if f.filename != '':
-                    # Subimos a carpeta específica del evento
-                    url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}")
-                    urls_fotos.append(url)
+            # --- SUBIDA DE IMÁGENES ---
+            # 1. Portada (Individual)
+            foto_portada = request.files.get('foto_portada')
+            url_portada = None
+            if foto_portada:
+                url_portada = upload_to_cloudflare(foto_portada, folder=f"invitaciones/{slug}")
 
-            # 5. Guardar en la Base de Datos Principal
+            # 2. Fondo (Opcional)
+            img_fondo = request.files.get('imagen_fondo')
+            url_fondo = None
+            if img_fondo:
+                url_fondo = upload_to_cloudflare(img_fondo, folder=f"invitaciones/{slug}/bg")
+
+            # 3. Galería (Múltiple)
+            fotos_galeria = request.files.getlist('fotos_galeria')
+            urls_galeria = []
+            for f in fotos_galeria:
+                if f.filename != '':
+                    url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria")
+                    urls_galeria.append(url)
+
+            # --- INSERT ---
             conn.execute("""
                 INSERT INTO invitaciones 
-                (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, fotos_json) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
+                 fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 slug, 
-                json.dumps(orden_items), 
-                musica_id or None, # Si viene vacío, guarda NULL
-                fecha_evento, 
-                vigencia, 
+                json.dumps(request.form.getlist('orden_items[]')), 
+                musica_id or None, 
+                request.form.get('fecha_evento'), 
+                request.form.get('vigencia'), 
                 json.dumps(datos_cliente), 
-                json.dumps(urls_fotos)
+                json.dumps(urls_galeria),
+                url_portada,
+                request.form.get('estilo_fuente'),
+                request.form.get('color_fondo'),
+                url_fondo,
+                json.dumps(mesas_regalos)
             ))
             conn.commit()
-            flash(f"¡Invitación para {datos_cliente['novios']} creada con éxito!", "success")
-            
-            # Redirigir a la misma página (o a una lista si la creamos después)
+            flash("Invitación Premium Creada ✨", "success")
             return redirect(url_for('invitaciones_admin.crear_invitacion'))
             
         except Exception as e:
             conn.rollback()
-            flash(f"Error al crear invitación: {str(e)}", "danger")
+            flash(f"Error: {str(e)}", "danger")
         finally:
             conn.close()
 
@@ -147,3 +163,7 @@ def ver_invitacion(slug):
         return f"Error cargando invitación: {str(e)}", 500
     finally:
         conn.close()
+
+@invitaciones_bp.app_template_filter('from_json')
+def from_json(value):
+    return json.loads(value)
