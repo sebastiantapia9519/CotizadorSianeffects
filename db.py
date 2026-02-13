@@ -288,5 +288,33 @@ def init_db():
     )
     """)
 
+
+    # SECCION DE INVITACIONES
+
+    #-- Tabla para tus 5 canciones gestionables
+    conn.execute("""
+    CREATE TABLE lista_musica (
+        id INTEGER PRIMARY KEY,
+        nombre_cancion TEXT,
+        url_cloudflare TEXT,
+        activa BOOLEAN DEFAULT 1
+    );
+    """)
+
+#-- Tabla principal de la invitación
+    conn.execute("""
+    CREATE TABLE invitaciones (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        slug TEXT UNIQUE,           -- Ejemplo: 'boda-sebastian-y-atlas'
+        config_json TEXT,           -- Aquí guardamos el ORDEN de los items [1, 5, 2...]
+        musica_id INTEGER,          -- Cuál de tus 5 canciones suena
+        fecha_evento DATETIME,
+        vigencia DATETIME,          -- Hasta cuándo funciona el link
+        datos_cliente_json TEXT,     -- Nombres, Maps, Cuenta bancaria, etc.
+        fotos_json TEXT,            -- URLs de las 5 fotos en Cloudflare
+        FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
+    );
+    """)
+
     conn.commit()
     conn.close()

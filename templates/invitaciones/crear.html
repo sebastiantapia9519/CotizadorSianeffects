@@ -1,0 +1,265 @@
+{% extends "layout.html" %}
+
+{% block title %}Nueva Invitación | SianEffects{% endblock %}
+
+{% block extra_css %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+
+<style>
+    .builder-container {
+        background-color: #f8f9fa;
+        min-height: 100vh;
+    }
+
+    /* Estilo de los items arrastrables */
+    .draggable-item {
+        cursor: grab;
+        border: 1px solid #e9ecef;
+        background: white;
+        transition: all 0.2s;
+        border-left: 4px solid #0d6efd;
+        /* Azul por defecto */
+    }
+
+    .draggable-item:active {
+        cursor: grabbing;
+        transform: scale(1.02);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .draggable-item.ghost {
+        background-color: #e9ecef;
+        border: 2px dashed #adb5bd;
+        opacity: 0.5;
+    }
+
+    .handle {
+        color: #adb5bd;
+        cursor: grab;
+    }
+
+    /* Colores para identificar secciones */
+    .border-hero {
+        border-left-color: #6610f2;
+    }
+
+    .border-mapa {
+        border-left-color: #dc3545;
+    }
+
+    .border-regalo {
+        border-left-color: #198754;
+    }
+
+    .border-galeria {
+        border-left-color: #fd7e14;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="builder-container p-4">
+    <form action="{{ url_for('invitaciones_admin.crear_invitacion') }}" method="POST" enctype="multipart/form-data">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h3 class="fw-bold"><i class="fas fa-magic text-primary me-2"></i>Constructor de Invitaciones</h3>
+            <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                <i class="fas fa-save me-2"></i>Publicar Invitación
+            </button>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-lg-4">
+                <div class="card shadow-sm border-0 sticky-top" style="top: 20px; z-index: 1;">
+                    <div class="card-header bg-white fw-bold py-3">⚙️ Configuración General</div>
+                    <div class="card-body">
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">URL Personalizada (Slug)</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light">sianeffects.com/</span>
+                                <input type="text" name="slug" id="slugInput" class="form-control fw-bold"
+                                    placeholder="ana-y-beto" required>
+                            </div>
+                            <div class="form-text small">Sin espacios ni acentos.</div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Canción de Fondo</label>
+                            <select name="musica_id" class="form-select">
+                                <option value="" selected>Sin música (Silencio)</option>
+                                {% for c in canciones %}
+                                <option value="{{ c['id'] }}">🎵 {{ c['nombre_cancion'] }}</option>
+                                {% endfor %}
+                            </select>
+                            <a href="{{ url_for('invitaciones_admin.gestionar_musica') }}"
+                                class="small text-decoration-none mt-1 d-block">+ Subir nueva canción</a>
+                        </div>
+
+                        <div class="row g-2 mb-3">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Fecha Evento</label>
+                                <input type="datetime-local" name="fecha_evento" class="form-control" required>
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Vigencia Link</label>
+                                <input type="date" name="vigencia" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Galería (Máx 5 fotos)</label>
+                            <input type="file" name="fotos" class="form-control" multiple accept="image/*">
+                            <div class="form-text small">Sube las fotos de los novios aquí.</div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="alert alert-info border-0 shadow-sm mb-3">
+                    <i class="fas fa-info-circle me-2"></i>Arrastra los bloques para cambiar el orden en que aparecen en
+                    la web.
+                </div>
+
+                <div id="sortable-list" class="d-flex flex-column gap-3">
+
+                    <div class="card draggable-item border-hero shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="fw-bold text-primary"><i class="fas fa-image me-2"></i>1. Portada / Héroe
+                                </div>
+                                <i class="fas fa-grip-lines handle fa-lg"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="hero">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <input type="text" name="nombres_novios" class="form-control form-control-sm"
+                                        placeholder="Nombres (Ej: Ana & Beto)" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" name="frase" class="form-control form-control-sm"
+                                        placeholder="Frase (Ej: ¡Nos casamos!)">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item border-warning shadow-sm">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="fw-bold text-warning"><i class="fas fa-stopwatch me-2"></i>2. Cuenta
+                                    Regresiva</div>
+                                <i class="fas fa-grip-lines handle fa-lg"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="countdown">
+                            <small class="text-muted">Se configura automáticamente con la "Fecha Evento".</small>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item border-mapa shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="fw-bold text-danger"><i class="fas fa-map-marked-alt me-2"></i>3.
+                                    Ubicaciones</div>
+                                <i class="fas fa-grip-lines handle fa-lg"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="mapas">
+                            <div class="mb-2">
+                                <input type="text" name="maps_misa" class="form-control form-control-sm"
+                                    placeholder="Link Google Maps: Ceremonia/Misa">
+                            </div>
+                            <div>
+                                <input type="text" name="maps_fiesta" class="form-control form-control-sm"
+                                    placeholder="Link Google Maps: Recepción/Fiesta">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item border-secondary shadow-sm">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="fw-bold text-secondary"><i class="fas fa-list-ul me-2"></i>4. Itinerario
+                                    (Timeline)</div>
+                                <i class="fas fa-grip-lines handle fa-lg"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="timeline">
+                            <small class="text-muted">Muestra iconos de Ceremonia -> Banquete -> Fiesta.</small>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item border-regalo shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="fw-bold text-success"><i class="fas fa-gift me-2"></i>5. Mesa de Regalos /
+                                    Banco</div>
+                                <i class="fas fa-grip-lines handle fa-lg"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="regalos">
+                            <textarea name="cuenta_bancaria" class="form-control form-control-sm" rows="2"
+                                placeholder="Datos bancarios o Frase de 'Lluvia de Sobres'"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item border-galeria shadow-sm">
+                        <div class="card-body py-3">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div class="fw-bold" style="color: #fd7e14;"><i class="fas fa-images me-2"></i>6.
+                                    Galería de Fotos</div>
+                                <i class="fas fa-grip-lines handle fa-lg"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="galeria">
+                            <small class="text-muted">Usa las fotos subidas en Configuración General.</small>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item border-dark shadow-sm">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <div class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>7. Confirmación
+                                    (RSVP)</div>
+                                <i class="fas fa-grip-lines handle fa-lg"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="rsvp">
+                            <input type="text" name="telefono_rsvp" class="form-control form-control-sm"
+                                placeholder="Teléfono para recibir confirmaciones (5281...)">
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // Inicializar SortableJS para el arrastrar y soltar
+    var el = document.getElementById('sortable-list');
+    var sortable = Sortable.create(el, {
+        animation: 150,
+        handle: '.handle', // Solo se puede arrastrar desde el icono
+        ghostClass: 'ghost' // Clase visual mientras se arrastra
+    });
+
+    // Auto-generar Slug al escribir nombres
+    const nombresInput = document.querySelector('input[name="nombres_novios"]');
+    const slugInput = document.getElementById('slugInput');
+
+    nombresInput.addEventListener('input', function () {
+        // Convierte "Ana & Beto" a "ana-y-beto" automáticamente
+        const val = this.value
+            .toLowerCase()
+            .replace(/&/g, 'y')
+            .replace(/\s+/g, '-')
+            .replace(/[^\w\-]+/g, '');
+
+        // Solo autocompleta si el slug está vacío o parece autogenerado
+        if (slugInput.value === '' || slugInput.value.includes(val.substring(0, 3))) {
+            slugInput.value = 'boda-' + val;
+        }
+    });
+</script>
+{% endblock %}
