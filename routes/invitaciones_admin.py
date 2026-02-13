@@ -1,4 +1,5 @@
 import json
+from flask import jsonify
 
 @invitaciones_bp.route('/admin/nueva-invitacion', methods=['GET', 'POST'])
 def crear_invitacion():
@@ -99,3 +100,36 @@ def crear_invitacion():
     canciones = conn.execute("SELECT * FROM lista_musica WHERE activa = 1").fetchall()
     conn.close()
     return render_template('invitaciones/crear.html', canciones=canciones)
+
+
+@invitaciones_bp.route('/admin/api/subir-musica', methods=['POST'])
+@admin_required
+def api_subir_musica():
+    conn = get_invitaciones_db()
+    
+    nombre = request.form.get('nombre')
+    archivo = request.files.get('archivo')
+    
+    if not archivo:
+        return jsonify({'error': 'No se envió archivo'}), 400
+
+    try:
+        # Subimos a Cloudflare
+        url_audio = upload_to_cloudflare(archivo, folder="musica")
+        
+        # Guardamos en DB
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO lista_musica (nombre_cancion, url_cloudflare) VALUES (?, ?)", (nombre, url_audio))
+        nuevo_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        # Devolvemos los datos de la nueva canción para actualizar el Select
+        return jsonify({
+            'success': True,
+            'id': nuevo_id,
+            'nombre': nombre
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500

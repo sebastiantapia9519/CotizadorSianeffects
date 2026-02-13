@@ -86,15 +86,104 @@
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Canción de Fondo</label>
-                            <select name="musica_id" class="form-select">
-                                <option value="" selected>Sin música (Silencio)</option>
-                                {% for c in canciones %}
-                                <option value="{{ c['id'] }}">🎵 {{ c['nombre_cancion'] }}</option>
-                                {% endfor %}
-                            </select>
-                            <a href="{{ url_for('invitaciones_admin.gestionar_musica') }}"
-                                class="small text-decoration-none mt-1 d-block">+ Subir nueva canción</a>
+                            <div class="d-flex gap-2">
+                                <select name="musica_id" id="selectMusica" class="form-select">
+                                    <option value="" selected>Sin música (Silencio)</option>
+                                    {% for c in canciones %}
+                                    <option value="{{ c['id'] }}">🎵 {{ c['nombre_cancion'] }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#modalMusica">
+                                    <i class="fas fa-plus"></i>
+                                </button>
+                            </div>
                         </div>
+
+                        <div class="modal fade" id="modalMusica" tabindex="-1">
+                            <div class="modal-dialog modal-sm modal-dialog-centered">
+                                <div class="modal-content border-0 shadow">
+                                    <div class="modal-header border-0 pb-0">
+                                        <h6 class="modal-title fw-bold">Nueva Canción</h6>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <form id="formMusica">
+                                            <div class="mb-2">
+                                                <input type="text" id="nombreCancion"
+                                                    class="form-control form-control-sm"
+                                                    placeholder="Nombre (Ej: Ed Sheeran - Perfect)" required>
+                                            </div>
+                                            <div class="mb-3">
+                                                <input type="file" id="archivoCancion"
+                                                    class="form-control form-control-sm" accept="audio/mp3, audio/mpeg"
+                                                    required>
+                                            </div>
+                                            <button type="submit" id="btnSubirMusica"
+                                                class="btn btn-primary btn-sm w-100 rounded-pill">
+                                                <i class="fas fa-cloud-upload-alt me-1"></i> Subir Canción
+                                            </button>
+                                        </form>
+                                        <div id="loadingMusica" class="text-center mt-2 d-none">
+                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            </div>
+                                            <small class="text-muted ms-2">Subiendo a la nube...</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <script>
+                            document.getElementById('formMusica').addEventListener('submit', async function (e) {
+                                e.preventDefault();
+
+                                // Preparar interfaz
+                                const btn = document.getElementById('btnSubirMusica');
+                                const loading = document.getElementById('loadingMusica');
+                                btn.classList.add('d-none');
+                                loading.classList.remove('d-none');
+
+                                // Preparar datos
+                                const formData = new FormData();
+                                formData.append('nombre', document.getElementById('nombreCancion').value);
+                                formData.append('archivo', document.getElementById('archivoCancion').files[0]);
+
+                                try {
+                                    // Enviar a la API
+                                    const response = await fetch("{{ url_for('invitaciones_admin.api_subir_musica') }}", {
+                                        method: 'POST',
+                                        body: formData
+                                    });
+
+                                    const data = await response.json();
+
+                                    if (data.success) {
+                                        // 1. Agregar la nueva opción al Select
+                                        const select = document.getElementById('selectMusica');
+                                        const option = new Option('🎵 ' + data.nombre, data.id);
+                                        select.add(option);
+
+                                        // 2. Seleccionarla automáticamente
+                                        select.value = data.id;
+
+                                        // 3. Cerrar el modal y limpiar
+                                        bootstrap.Modal.getInstance(document.getElementById('modalMusica')).hide();
+                                        document.getElementById('formMusica').reset();
+                                        alert('¡Canción lista y seleccionada!');
+                                    } else {
+                                        alert('Error: ' + data.error);
+                                    }
+                                } catch (error) {
+                                    console.error('Error:', error);
+                                    alert('Ocurrió un error al subir el archivo.');
+                                } finally {
+                                    // Restaurar botones
+                                    btn.classList.remove('d-none');
+                                    loading.classList.add('d-none');
+                                }
+                            });
+                        </script>
 
                         <div class="row g-2 mb-3">
                             <div class="col-6">
