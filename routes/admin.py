@@ -78,9 +78,10 @@ def dashboard():
                            users=users, 
                            now=ahora_utc, 
                            stats=stats, 
-                           my_role=session.get('role'))
+                           my_role=session.get('role')),
+                           limite_riesgo=fecha_limite_riesgo)
 
-                           
+
 # --- ACCIONES PROTEGIDAS (SOLO DUEÑO - ROL 2) ---
 
 @admin_bp.route('/admin/renovar/<int:user_id>/<int:meses>')
