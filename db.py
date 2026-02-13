@@ -311,12 +311,14 @@ def init_db():
         fecha_evento DATETIME,
         vigencia DATETIME,          -- Hasta cuándo funciona el link
         datos_cliente_json TEXT,     -- Nombres, Maps, Cuenta bancaria, etc.
-        fotos_json TEXT,            -- URLs de las 5 fotos en Cloudflare
-        FOREIGN KEY(musica_id) REFERENCES lista_musica(id),
-        color_fondo TEXT DEFAULT '#ffffff',
-        url_fondo TEXT,
+        fotos_json TEXT,
         foto_portada_url TEXT,
-        mesas_regalos_json TEXT
+        estilo_fuente TEXT DEFAULT 'clasico',
+        color_fondo TEXT DEFAULT '#fdfbf7',
+        url_fondo TEXT,
+        mesas_regalos_json TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );
     """)
 
