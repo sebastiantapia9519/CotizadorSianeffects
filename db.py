@@ -293,7 +293,7 @@ def init_db():
 
     #-- Tabla para tus 5 canciones gestionables
     conn.execute("""
-    CREATE TABLE lista_musica (
+    CREATE TABLE IF NOT EXISTS lista_musica (
         id INTEGER PRIMARY KEY,
         nombre_cancion TEXT,
         url_cloudflare TEXT,
@@ -303,7 +303,7 @@ def init_db():
 
 #-- Tabla principal de la invitación
     conn.execute("""
-    CREATE TABLE invitaciones (
+    CREATE TABLE IF NOT EXISTS invitaciones (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         slug TEXT UNIQUE,           -- Ejemplo: 'boda-sebastian-y-atlas'
         config_json TEXT,           -- Aquí guardamos el ORDEN de los items [1, 5, 2...]
