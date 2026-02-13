@@ -227,10 +227,12 @@
             </div>
             <div class="col-md-3">
                 <select id="roleFilter" class="form-select" onchange="filtrarTabla()">
-                    <option value="all">Todos los Roles</option>
+                    <option value="all">Todos los Registros</option>
                     <option value="DUEÑO">👑 Dueños</option>
                     <option value="Admin">🛡️ Admins</option>
                     <option value="Usuario">👤 Usuarios</option>
+                    <option value="ONLINE_HOY">⚡ Vistos Hoy</option>
+                    <option value="EN_RIESGO">⚠️ En Riesgo</option>
                 </select>
             </div>
             <div class="col-md-3">
@@ -270,7 +272,9 @@
                     {% set sub_end = u['subscription_end']|string if u['subscription_end'] else '2000-01-01' %}
                     {% set is_active = sub_end[:19] > now|string %}
 
-                    <tr>
+                    <tr data-role="{{ 'DUEÑO' if u['role'] == 2 else 'Admin' if u['role'] == 1 else 'Usuario' }}"
+                        data-online="{{ 'true' if u['last_login'] and u['last_login'][:10] == now.strftime('%Y-%m-%d') else 'false' }}"
+                        data-riesgo="{{ 'true' if u['role'] == 0 and u['subscription_end'] and u['subscription_end'][:10] < (now - timedelta(days=350))|string else 'false' }}">
                         <td class="ps-4 py-3">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="avatar-circle">
@@ -470,17 +474,31 @@
     // --- FILTROS Y ORDENAMIENTO (JS PURO) ---
     function filtrarTabla() {
         const input = document.getElementById('searchInput').value.toLowerCase();
-        const role = document.getElementById('roleFilter').value;
+        const filterValue = document.getElementById('roleFilter').value;
         const rows = document.querySelectorAll('tbody tr');
         let visibles = 0;
 
         rows.forEach(row => {
             const textoUsuario = row.cells[0].innerText.toLowerCase();
-            const textoRol = row.cells[1].innerText;
-            const matchText = textoUsuario.includes(input);
-            const matchRole = role === 'all' || textoRol.includes(role);
+            const role = row.getAttribute('data-role');
+            const isOnline = row.getAttribute('data-online') === 'true';
+            const isRiesgo = row.getAttribute('data-riesgo') === 'true';
 
-            if (matchText && matchRole) {
+            const matchText = textoUsuario.includes(input);
+            let matchFilter = false;
+
+            // Lógica de filtrado inteligente
+            if (filterValue === 'all') {
+                matchFilter = true;
+            } else if (filterValue === 'ONLINE_HOY') {
+                matchFilter = isOnline;
+            } else if (filterValue === 'EN_RIESGO') {
+                matchFilter = isRiesgo;
+            } else {
+                matchFilter = (role === filterValue);
+            }
+
+            if (matchText && matchFilter) {
                 row.style.display = '';
                 visibles++;
             } else {
