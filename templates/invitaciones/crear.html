@@ -1,5 +1,5 @@
 {% extends "layout.html" %}
-{% block title %}Nueva Invitación Premium{% endblock %}
+{% block title %}{{ 'Editar' if edit_mode else 'Nueva' }} Invitación Premium{% endblock %}
 
 {% block extra_css %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
@@ -19,28 +19,27 @@
         cursor: grabbing;
         transform: scale(1.01);
     }
-
-    .font-preview {
-        font-size: 1.2rem;
-        display: block;
-        margin-top: 5px;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="builder-container p-4">
-    <form action="{{ url_for('invitaciones_admin.crear_invitacion') }}" method="POST" enctype="multipart/form-data">
+    <form
+        action="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) if edit_mode else url_for('invitaciones_admin.crear_invitacion') }}"
+        method="POST" enctype="multipart/form-data">
 
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="fw-bold"><i class="fas fa-plus-circle text-primary me-2"></i>Crear Nueva Invitación</h3>
+            <h3 class="fw-bold">
+                <i class="fas fa-{{ 'edit text-warning' if edit_mode else 'plus-circle text-primary' }} me-2"></i>
+                {{ 'Editar Invitación' if edit_mode else 'Crear Nueva Invitación' }}
+            </h3>
             <div>
                 <a href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}"
                     class="btn btn-outline-secondary rounded-pill px-3 me-2">
                     <i class="fas fa-arrow-left me-1"></i> Cancelar
                 </a>
                 <button type="submit" class="btn btn-dark rounded-pill px-4 shadow">
-                    <i class="fas fa-save me-2"></i>Guardar Invitación
+                    <i class="fas fa-save me-2"></i>{{ 'Guardar Cambios' if edit_mode else 'Publicar Sitio' }}
                 </button>
             </div>
         </div>
@@ -56,29 +55,37 @@
                             <div class="input-group">
                                 <span class="input-group-text bg-light">sianeffects.com/</span>
                                 <input type="text" name="slug" id="slugInput" class="form-control fw-bold"
-                                    placeholder="ana-y-beto" required>
+                                    placeholder="ana-y-beto" value="{{ inv['slug'] if inv else '' }}" required
+                                    {{ 'readonly' if edit_mode else '' }}>
                             </div>
+                            {% if edit_mode %}<small class="text-danger">La URL no se puede cambiar para no romper los
+                                links ya enviados.</small>{% endif %}
                         </div>
 
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Tipografía</label>
                             <select name="estilo_fuente" class="form-select">
-                                <option value="clasico">Clásico (Playfair + Lato)</option>
-                                <option value="romantico">Romántico (Great Vibes + Montserrat)</option>
-                                <option value="moderno">Moderno (Oswald + Roboto)</option>
-                                <option value="minimal">Minimalista (Cinzel + Raleway)</option>
-                                <option value="botanico">Botánico (Cormorant + Proza Libre)</option>
+                                <option value="clasico" {% if inv and inv['estilo_fuente']=='clasico' %}selected{% endif
+                                    %}>Clásico (Playfair + Lato)</option>
+                                <option value="romantico" {% if inv and inv['estilo_fuente']=='romantico' %}selected{%
+                                    endif %}>Romántico (Great Vibes + Montserrat)</option>
+                                <option value="moderno" {% if inv and inv['estilo_fuente']=='moderno' %}selected{% endif
+                                    %}>Moderno (Oswald + Roboto)</option>
+                                <option value="minimal" {% if inv and inv['estilo_fuente']=='minimal' %}selected{% endif
+                                    %}>Minimalista (Cinzel + Raleway)</option>
+                                <option value="botanico" {% if inv and inv['estilo_fuente']=='botanico' %}selected{%
+                                    endif %}>Botánico (Cormorant + Proza Libre)</option>
                             </select>
                         </div>
 
                         <div class="row g-2 mb-3">
                             <div class="col-4">
-                                <label class="form-label small fw-bold text-muted">Color Fondo</label>
+                                <label class="form-label small fw-bold text-muted">Fondo</label>
                                 <input type="color" name="color_fondo" class="form-control form-control-color w-100"
-                                    value="#fdfbf7">
+                                    value="{{ inv['color_fondo'] if inv else '#fdfbf7' }}">
                             </div>
                             <div class="col-8">
-                                <label class="form-label small fw-bold text-muted">O Imagen de Fondo</label>
+                                <label class="form-label small fw-bold text-muted">O Img. Fondo (Opcional)</label>
                                 <input type="file" name="imagen_fondo" class="form-control form-control-sm"
                                     accept="image/*">
                             </div>
@@ -88,9 +95,11 @@
                             <label class="form-label small fw-bold text-muted">Música de Fondo</label>
                             <div class="d-flex gap-2">
                                 <select name="musica_id" id="selectMusica" class="form-select">
-                                    <option value="" selected>Sin música</option>
+                                    <option value="" {% if not inv or not inv['musica_id'] %}selected{% endif %}>Sin
+                                        música</option>
                                     {% for c in canciones %}
-                                    <option value="{{ c['id'] }}">🎵 {{ c['nombre_cancion'] }}</option>
+                                    <option value="{{ c['id'] }}" {% if inv and inv['musica_id']==c['id'] %}selected{%
+                                        endif %}>🎵 {{ c['nombre_cancion'] }}</option>
                                     {% endfor %}
                                 </select>
                                 <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
@@ -101,11 +110,13 @@
                         <div class="row g-2 mb-3">
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-muted">Día Evento</label>
-                                <input type="datetime-local" name="fecha_evento" class="form-control" required>
+                                <input type="datetime-local" name="fecha_evento" class="form-control"
+                                    value="{{ inv['fecha_evento'] if inv else '' }}" required>
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-muted">Vigencia</label>
-                                <input type="date" name="vigencia" class="form-control" required>
+                                <input type="date" name="vigencia" class="form-control"
+                                    value="{{ inv['vigencia'] if inv else '' }}" required>
                             </div>
                         </div>
                     </div>
@@ -115,7 +126,7 @@
             <div class="col-lg-8">
                 <div id="sortable-list" class="d-flex flex-column gap-3">
 
-                    <div class="card draggable-item shadow-sm">
+                    <div class="card draggable-item shadow-sm" data-bloque="hero">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
                                 <div class="fw-bold text-primary"><i class="fas fa-image me-2"></i>1. Portada Principal
@@ -126,18 +137,28 @@
                             <div class="row g-2">
                                 <div class="col-md-6">
                                     <input type="text" name="nombres_novios" class="form-control form-control-sm"
-                                        placeholder="Nombres (Ej: Ana & Beto)" required>
+                                        placeholder="Nombres (Ej: Ana & Beto)"
+                                        value="{{ datos.get('novios', '') if datos else '' }}" required>
                                 </div>
                                 <div class="col-md-6">
+                                    <input type="text" name="frase" class="form-control form-control-sm"
+                                        placeholder="Frase (Ej: ¡Nos casamos!)"
+                                        value="{{ datos.get('frase', '') if datos else '' }}">
+                                </div>
+                                <div class="col-12 mt-2">
+                                    <label class="small text-muted">Foto Portada:</label>
                                     <input type="file" name="foto_portada" class="form-control form-control-sm"
-                                        accept="image/*" required>
-                                    <div class="form-text small">Foto vertical de alta calidad.</div>
+                                        accept="image/*" {% if not edit_mode %}required{% endif %}>
+                                    {% if edit_mode and inv['foto_portada_url'] %}
+                                    <small class="text-success"><i class="fas fa-check"></i> Ya tiene foto. Sube otra
+                                        solo si quieres cambiarla.</small>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card draggable-item shadow-sm border-warning">
+                    <div class="card draggable-item shadow-sm border-warning" data-bloque="countdown">
                         <div class="card-body py-2 d-flex justify-content-between">
                             <span class="fw-bold text-warning"><i class="fas fa-clock me-2"></i>2. Countdown</span>
                             <i class="fas fa-grip-lines text-muted handle"></i>
@@ -145,7 +166,7 @@
                         </div>
                     </div>
 
-                    <div class="card draggable-item shadow-sm border-danger">
+                    <div class="card draggable-item shadow-sm border-danger" data-bloque="mapas">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="fw-bold text-danger"><i class="fas fa-map-marker-alt me-2"></i>3.
@@ -155,40 +176,56 @@
                             <input type="hidden" name="orden_items[]" value="mapas">
                             <div class="row g-2">
                                 <div class="col-6"><input type="text" name="maps_misa"
-                                        class="form-control form-control-sm" placeholder="Link Maps Ceremonia"></div>
+                                        class="form-control form-control-sm" placeholder="Link Maps Ceremonia"
+                                        value="{{ datos.get('maps_misa', '') if datos else '' }}"></div>
                                 <div class="col-6"><input type="text" name="maps_fiesta"
-                                        class="form-control form-control-sm" placeholder="Link Maps Fiesta"></div>
+                                        class="form-control form-control-sm" placeholder="Link Maps Fiesta"
+                                        value="{{ datos.get('maps_fiesta', '') if datos else '' }}"></div>
                             </div>
                         </div>
                     </div>
 
-                    <div class="card draggable-item shadow-sm border-success">
+                    <div class="card draggable-item shadow-sm border-success" data-bloque="regalos">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-success"><i class="fas fa-gift me-2"></i>4. Mesa de Regalos /
-                                    Links</span>
+                                <span class="fw-bold text-success"><i class="fas fa-gift me-2"></i>4. Mesa de
+                                    Regalos</span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="regalos">
 
                             <textarea name="cuenta_bancaria" class="form-control form-control-sm mb-2" rows="2"
-                                placeholder="Frase o CLABE interbancaria..."></textarea>
+                                placeholder="Frase o CLABE interbancaria...">{{ datos.get('cuenta_bancaria', '') if datos else '' }}</textarea>
 
-                            <label class="small fw-bold text-muted">Botones Externos (Opcional)</label>
+                            <label class="small fw-bold text-muted">Botones de Tiendas (Links)</label>
                             <div id="container-links">
+                                {% if edit_mode and mesas %}
+                                {% for mesa in mesas %}
+                                <div class="input-group input-group-sm mb-1">
+                                    <input type="text" name="nombre_tienda[]" class="form-control"
+                                        value="{{ mesa.nombre }}">
+                                    <input type="text" name="link_tienda[]" class="form-control" value="{{ mesa.url }}">
+                                    <button type="button" class="btn btn-outline-danger"
+                                        onclick="this.parentElement.remove()">X</button>
+                                </div>
+                                {% endfor %}
+                                {% else %}
                                 <div class="input-group input-group-sm mb-1">
                                     <input type="text" name="nombre_tienda[]" class="form-control"
                                         placeholder="Nombre (Ej: Liverpool)">
                                     <input type="text" name="link_tienda[]" class="form-control"
                                         placeholder="URL (https://...)">
+                                    <button type="button" class="btn btn-outline-danger"
+                                        onclick="this.parentElement.remove()">X</button>
                                 </div>
+                                {% endif %}
                             </div>
                             <button type="button" class="btn btn-light btn-sm w-100 border mt-1"
                                 onclick="agregarLink()">+ Agregar otro botón</button>
                         </div>
                     </div>
 
-                    <div class="card draggable-item shadow-sm border-info">
+                    <div class="card draggable-item shadow-sm border-info" data-bloque="galeria">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
                                 <span class="fw-bold text-info"><i class="fas fa-images me-2"></i>5. Galería
@@ -198,26 +235,32 @@
                             <input type="hidden" name="orden_items[]" value="galeria">
                             <input type="file" name="fotos_galeria" class="form-control form-control-sm" multiple
                                 accept="image/*">
-                            <div class="form-text small">Sube varias fotos para que el invitado deslice.</div>
+                            {% if edit_mode %}
+                            <small class="text-success"><i class="fas fa-check"></i> Las fotos anteriores están
+                                guardadas. Sube nuevas solo si quieres reemplazarlas.</small>
+                            {% endif %}
                         </div>
                     </div>
 
-                    <div class="card draggable-item shadow-sm">
+                    <div class="card draggable-item shadow-sm" data-bloque="timeline">
                         <div class="card-body py-2 d-flex justify-content-between">
                             <span class="fw-bold text-secondary"><i class="fas fa-list me-2"></i>6. Itinerario</span>
                             <i class="fas fa-grip-lines text-muted handle"></i>
                             <input type="hidden" name="orden_items[]" value="timeline">
                         </div>
                     </div>
-                    <div class="card draggable-item shadow-sm border-dark">
+
+                    <div class="card draggable-item shadow-sm border-dark" data-bloque="rsvp">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>7. RSVP</span>
+                                <span class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>7. RSVP
+                                    (Asistencia)</span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="rsvp">
                             <input type="text" name="telefono_rsvp" class="form-control form-control-sm"
-                                placeholder="Teléfono (52...)">
+                                placeholder="Teléfono para confirmar (52...)"
+                                value="{{ datos.get('telefono_rsvp', '') if datos else '' }}">
                         </div>
                     </div>
 
@@ -227,32 +270,96 @@
     </form>
 </div>
 
+<div class="modal fade" id="modalMusica" tabindex="-1">
+    <div class="modal-dialog modal-sm modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold">Nueva Canción</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formMusica">
+                    <div class="mb-2"><input type="text" id="nombreCancion" class="form-control form-control-sm"
+                            placeholder="Nombre (Ej: Ed Sheeran)" required></div>
+                    <div class="mb-3"><input type="file" id="archivoCancion" class="form-control form-control-sm"
+                            accept="audio/*" required></div>
+                    <button type="submit" id="btnSubirMusica" class="btn btn-primary btn-sm w-100 rounded-pill"><i
+                            class="fas fa-cloud-upload-alt me-1"></i> Subir</button>
+                </form>
+                <div id="loadingMusica" class="text-center mt-2 d-none">
+                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div><small
+                        class="text-muted ms-2">Subiendo...</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // Sortable
+    // Sortable JS
     var el = document.getElementById('sortable-list');
     var sortable = Sortable.create(el, { animation: 150, handle: '.handle' });
 
-    // Agregar Links de Tiendas
+    // JS MAGIA: Restaurar el orden guardado si estamos editando
+    document.addEventListener("DOMContentLoaded", function () {
+        {% if edit_mode and inv['config_json'] %}
+        try {
+            const savedOrder = {{ inv['config_json'] | safe
+        }};
+    const list = document.getElementById('sortable-list');
+    const items = Array.from(list.children);
+
+    // Reordenamos las cajitas según el JSON guardado
+    savedOrder.forEach(bloqueId => {
+        const item = items.find(el => el.getAttribute('data-bloque') === bloqueId);
+        if (item) {
+            list.appendChild(item); // Lo mueve a su posición correcta
+        }
+    });
+        } catch (e) { console.error("Error reordenando items:", e); }
+    {% endif %}
+    });
+
     function agregarLink() {
         const div = document.createElement('div');
         div.className = 'input-group input-group-sm mb-1';
-        div.innerHTML = `
-            <input type="text" name="nombre_tienda[]" class="form-control" placeholder="Nombre (Ej: Amazon)">
-            <input type="text" name="link_tienda[]" class="form-control" placeholder="URL">
-            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-        `;
+        div.innerHTML = `<input type="text" name="nombre_tienda[]" class="form-control" placeholder="Nombre"><input type="text" name="link_tienda[]" class="form-control" placeholder="URL"><button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>`;
         document.getElementById('container-links').appendChild(div);
     }
 
-    // Auto-slug (el mismo script de antes)
     const nombresInput = document.querySelector('input[name="nombres_novios"]');
     const slugInput = document.getElementById('slugInput');
     nombresInput.addEventListener('input', function () {
-        const val = this.value.toLowerCase().replace(/&/g, 'y').replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
-        if (slugInput.value === '' || slugInput.value.includes(val.substring(0, 3))) { slugInput.value = 'boda-' + val; }
+        if (!slugInput.readOnly) {
+            const val = this.value.toLowerCase().replace(/&/g, 'y').replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
+            if (slugInput.value === '' || slugInput.value.includes(val.substring(0, 3))) { slugInput.value = 'boda-' + val; }
+        }
+    });
+
+    // Envío del form modal de música
+    document.getElementById('formMusica').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubirMusica');
+        const loading = document.getElementById('loadingMusica');
+        btn.classList.add('d-none'); loading.classList.remove('d-none');
+        const formData = new FormData();
+        formData.append('nombre', document.getElementById('nombreCancion').value);
+        formData.append('archivo', document.getElementById('archivoCancion').files[0]);
+        try {
+            const response = await fetch("{{ url_for('invitaciones_admin.api_subir_musica') }}", { method: 'POST', body: formData });
+            const data = await response.json();
+            if (data.success) {
+                const select = document.getElementById('selectMusica');
+                select.add(new Option('🎵 ' + data.nombre, data.id));
+                select.value = data.id;
+                bootstrap.Modal.getInstance(document.getElementById('modalMusica')).hide();
+                document.getElementById('formMusica').reset();
+            } else { alert('Error: ' + data.error); }
+        } catch (error) { alert('Ocurrió un error al subir.'); } finally {
+            btn.classList.remove('d-none'); loading.classList.add('d-none');
+        }
     });
 </script>
 {% endblock %}
