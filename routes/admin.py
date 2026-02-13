@@ -12,80 +12,80 @@ admin_bp = Blueprint('admin', __name__)
 @admin_bp.route('/admin')
 @admin_required
 def dashboard():
-    # 1. Obtener datos básicos de la base de datos
+    # 1. Datos de la base de datos
     conn = get_db_connection()
-    # Traemos todos los usuarios ordenados por fecha de creación (más recientes primero)
     users = conn.execute('SELECT * FROM usuarios ORDER BY created_at DESC').fetchall()
     conn.close()
     
-    # 2. Configuración de tiempos (Consistencia UTC)
-    #--- LÓGICA DE TIEMPOS LOCALES (MÉXICO) ---
+    # 2. Configuración de tiempos LOCALES (Tu hora de Monterrey/CDMX)
     ahora_utc = now_utc()
-    # Convertimos el "ahora" UTC a tu hora local
-    ahora_local = utc_to_local(ahora_utc)
+    ahora_local = utc_to_local(ahora_utc) # Requiere importar utc_to_local
     
-    # 24 horas atrás en tu tiempo local
+    # Definimos la ventana de 24 horas en tu tiempo local
     hace_24h_local = ahora_local - timedelta(days=1)
     
-    # Formateamos para el HTML (comparación de strings)
+    # Formateamos para las etiquetas del HTML
     hace_24h_str = hace_24h_local.strftime('%Y-%m-%d %H:%M')
-    hoy_str = ahora_local.strftime('%Y-%m-%d')
     
-    # Fecha límite de riesgo (350 días atrás)
-    fecha_limite_riesgo = (ahora_local - timedelta(days=350)).strftime('%Y-%m-%d')
+    # Umbral de riesgo (350 días atrás)
+    proximos_a_borrar_local = ahora_local - timedelta(days=350)
+    fecha_limite_riesgo = proximos_a_borrar_local.strftime('%Y-%m-%d')
 
-    # 3. Inicialización del diccionario de estadísticas
+    # 3. Estadísticas
     stats = {
         'total': len(users),
         'activos': 0,
         'vencidos': 0,
         'admins': 0,
-        'online_hoy': 0,      # Usuarios que iniciaron sesión en las últimas 24h
-        'en_riesgo': 0        # Cuentas a punto de cumplir 12 meses para borrado
+        'online_hoy': 0,
+        'en_riesgo': 0
     }
 
-    # 4. Procesamiento de cada usuario para calcular métricas
+    # 4. Procesamiento
     for u in users:
-        # --- Lógica de Roles ---
         if u['role'] > 0:
             stats['admins'] += 1
         
-        # --- Lógica de Suscripción ---
+        # Lógica de Suscripción
         if u['subscription_end']:
             try:
-                # Convertimos el string de la BD a objeto datetime con zona horaria UTC
-                fecha_fin = datetime.strptime(str(u['subscription_end'])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                # Convertimos fecha de DB a objeto local para comparar
+                f_utc = datetime.strptime(str(u['subscription_end'])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                f_local = utc_to_local(f_utc)
                 
-                if fecha_fin > ahora_utc:
+                if f_local > ahora_local:
                     stats['activos'] += 1
                 else:
                     stats['vencidos'] += 1
-                    
-                    # REGLA DE BORRADO: Si es usuario normal (role 0) y su fecha es menor al umbral de 350 días
-                    if u['role'] == 0 and fecha_fin < proximos_a_borrar:
+                    # Riesgo de borrado (12 meses)
+                    if u['role'] == 0 and f_local < proximos_a_borrar_local:
                         stats['en_riesgo'] += 1
-            except (ValueError, TypeError):
+            except:
                 stats['vencidos'] += 1
         else:
             stats['vencidos'] += 1
 
-        # --- Lógica de Actividad (Last Login) ---
+        # Lógica de Actividad (Last Login) - AQUÍ ESTABA EL ERROR
         if u['last_login']:
             try:
-                fecha_login = datetime.strptime(str(u['last_login'])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
-                if fecha_login > hace_24h:
+                log_utc = datetime.strptime(str(u['last_login'])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                log_local = utc_to_local(log_utc)
+                # Comparamos contra la variable correcta: hace_24h_local
+                if log_local > hace_24h_local:
                     stats['online_hoy'] += 1
-            except (ValueError, TypeError):
+            except:
                 pass
 
-    # 5. Renderizar la plantilla (FUERA DEL FOR y con los paréntesis corregidos)
+    # 5. Envío a la plantilla
     return render_template('admin.html', 
                            users=users, 
-                           now=ahora_local, 
+                           now=ahora_local, # El badge superior ahora dirá tu fecha (12/02/2026)
                            stats=stats, 
                            my_role=session.get('role'),
+                           hace_24h_str=hace_24h_str,
                            limite_riesgo=fecha_limite_riesgo)
 
+                           
 # --- ACCIONES PROTEGIDAS (SOLO DUEÑO - ROL 2) ---
 
 @admin_bp.route('/admin/renovar/<int:user_id>/<int:meses>')
