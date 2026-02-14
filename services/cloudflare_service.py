@@ -36,3 +36,41 @@ def upload_to_cloudflare(file, folder="invitaciones"):
     
     # Retornamos la URL pública lista para usarse
     return f"{PUBLIC_URL}/{filename}"
+
+
+#ELIMINAR MEDIA DE INVITACIONES
+def delete_from_cloudflare(url_publica):
+    """
+    Recibe la URL pública completa (ej. https://pub-d954.../invitaciones/boda/foto.jpg)
+    Extrae la ruta del archivo y lo elimina del bucket R2.
+    """
+    if not url_publica:
+        return False
+        
+    # El prefijo es tu URL pública más una diagonal
+    prefix = PUBLIC_URL + "/"
+    
+    # Verificamos que la URL realmente pertenezca a nuestro R2
+    if url_publica.startswith(prefix):
+        # Extraemos solo el nombre del archivo (ej. invitaciones/boda/foto.jpg)
+        file_key = url_publica[len(prefix):]
+        
+        try:
+            s3 = boto3.client(
+                service_name='s3',
+                endpoint_url=ENDPOINT_URL,
+                aws_access_key_id=ACCESS_KEY,
+                aws_secret_access_key=SECRET_KEY,
+                region_name='auto',
+                config=Config(signature_version='s3v4')
+            )
+            
+            # Comando de eliminación de S3/R2
+            s3.delete_object(Bucket=BUCKET_NAME, Key=file_key)
+            return True
+            
+        except Exception as e:
+            print(f"Error al borrar {file_key} de R2: {e}")
+            return False
+            
+    return False

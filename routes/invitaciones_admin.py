@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from helpers import admin_required
 from datetime import datetime
 from db import get_db_connection  # Usamos tu conexión principal
-from services.cloudflare_service import upload_to_cloudflare # Importamos el servicio de subida
+from services.cloudflare_service import upload_to_cloudflare, delete_from_cloudflare
 
 # Definimos el Blueprint
 invitaciones_bp = Blueprint('invitaciones_admin', __name__)
@@ -292,16 +292,37 @@ def editar_invitacion(id):
                            canciones=canciones, 
                            edit_mode=True)
 
-# --- RUTA 5: ELIMINAR INVITACIÓN ---
+# --- RUTA 5: ELIMINAR INVITACIÓN (Y SUS ARCHIVOS EN R2) ---
 @invitaciones_bp.route('/admin/eliminar-invitacion/<int:id>', methods=['POST'])
 @admin_required
 def eliminar_invitacion(id):
     conn = get_db_connection()
     try:
-        # Borramos el registro de la base de datos
+        # 1. Buscamos la invitación ANTES de borrarla para saber qué fotos tiene
+        inv = conn.execute("SELECT foto_portada_url, url_fondo, fotos_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        
+        if inv:
+            # 2. Borrar Foto de Portada de R2
+            if inv['foto_portada_url']:
+                delete_from_cloudflare(inv['foto_portada_url'])
+            
+            # 3. Borrar Imagen de Fondo de R2
+            if inv['url_fondo']:
+                delete_from_cloudflare(inv['url_fondo'])
+                
+            # 4. Borrar todas las fotos de la Galería de R2
+            if inv['fotos_json']:
+                import json
+                fotos_galeria = json.loads(inv['fotos_json'])
+                for foto_url in fotos_galeria:
+                    delete_from_cloudflare(foto_url)
+
+        # 5. Finalmente, borramos el registro de la Base de Datos
         conn.execute("DELETE FROM invitaciones WHERE id = ?", (id,))
         conn.commit()
-        flash("Invitación eliminada correctamente 🗑️", "success")
+        
+        flash("Invitación y archivos multimedia eliminados correctamente 🧹", "success")
+        
     except Exception as e:
         conn.rollback()
         flash(f"Error al eliminar: {str(e)}", "danger")
