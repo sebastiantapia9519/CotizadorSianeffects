@@ -1,4 +1,5 @@
 import json
+import re
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from helpers import admin_required
 from datetime import datetime
@@ -16,7 +17,11 @@ def crear_invitacion():
     
     if request.method == 'POST':
         try:
-            slug = request.form.get('slug')
+            # 1. Datos Básicos y Limpieza de Slug
+            raw_slug = request.form.get('slug', '').strip()
+            # Esto convierte "  Boda Ana & Beto!  " en "boda-ana-y-beto"
+            slug = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
+            
             musica_id = request.form.get('musica_id')
             
             # --- PROCESAR LINKS DE TIENDAS ---
@@ -207,7 +212,10 @@ def editar_invitacion(id):
     
     if request.method == 'POST':
         try:
-            slug = request.form.get('slug')
+            # Limpieza de Slug
+            raw_slug = request.form.get('slug', '').strip()
+            slug = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
+
             musica_id = request.form.get('musica_id')
             estilo_fuente = request.form.get('estilo_fuente')
             color_fondo = request.form.get('color_fondo')
@@ -249,7 +257,6 @@ def editar_invitacion(id):
             
             # Si no subieron fotos nuevas para galería, dejamos las que ya estaban
             if not urls_galeria:
-                import json
                 urls_galeria = json.loads(inv_old['fotos_json']) if inv_old['fotos_json'] else []
 
             # 5. ACTUALIZAR EN BASE DE DATOS
