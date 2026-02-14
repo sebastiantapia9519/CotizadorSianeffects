@@ -51,7 +51,8 @@ def crear_invitacion():
                 "maps_fiesta": request.form.get('maps_fiesta'),
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
-                "info_transporte": request.form.get('info_transporte') # Nuevo texto de transporte
+                "info_transporte": request.form.get('info_transporte'),
+                "itinerario": itinerario
             }
             
             # --- SUBIDA DE IMÁGENES ---
@@ -192,6 +193,27 @@ def ver_invitacion(slug):
 def from_json(value):
     return json.loads(value)
 
+# --- FILTROS INTELIGENTES PARA DISEÑO AUTOMÁTICO ---
+@invitaciones_bp.app_template_filter('color_contraste')
+def color_contraste(hex_color):
+    """Calcula si el fondo es claro u oscuro y devuelve el color de texto ideal."""
+    if not hex_color: return '#333333'
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) != 6: return '#333333'
+    r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    luminance = (0.299*r + 0.587*g + 0.114*b)
+    return '#fdfbf7' if luminance < 140 else '#333333' # Blanco para oscuro, Gris oscuro para claro
+
+@invitaciones_bp.app_template_filter('fondo_tarjeta')
+def fondo_tarjeta(hex_color):
+    """Devuelve un fondo de tarjeta translúcido que contraste con el fondo general."""
+    if not hex_color: return 'rgba(255, 255, 255, 0.7)'
+    hex_color = hex_color.lstrip('#')
+    if len(hex_color) != 6: return 'rgba(255, 255, 255, 0.7)'
+    r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
+    luminance = (0.299*r + 0.587*g + 0.114*b)
+    return 'rgba(0, 0, 0, 0.4)' if luminance < 140 else 'rgba(255, 255, 255, 0.7)'
+
 
 # --- RUTA 4: PANEL DE GESTIÓN (DASHBOARD) ---
 @invitaciones_bp.route('/admin/invitaciones')
@@ -255,7 +277,8 @@ def editar_invitacion(id):
                 "maps_fiesta": request.form.get('maps_fiesta'),
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
-                "info_transporte": request.form.get('info_transporte')
+                "info_transporte": request.form.get('info_transporte'),
+                "itinerario": itinerario
             }
             
             # 2. Mesas de regalos
