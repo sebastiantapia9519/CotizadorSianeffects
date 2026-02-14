@@ -19,10 +19,14 @@ def crear_invitacion():
         try:
             # 1. Datos Básicos y Limpieza de Slug
             raw_slug = request.form.get('slug', '').strip()
-            # Esto convierte "  Boda Ana & Beto!  " en "boda-ana-y-beto"
+            # Esto convierte "  Boda Diana & Sebastian!  " en "boda-diana-y-sebastian"
             slug = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
             
             musica_id = request.form.get('musica_id')
+            
+            # --- NUEVOS CAMPOS ---
+            dress_code = request.form.get('dress_code')
+            album_url = request.form.get('album_url')
             
             # --- PROCESAR LINKS DE TIENDAS ---
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -32,13 +36,22 @@ def crear_invitacion():
                 if nombre and link:
                     mesas_regalos.append({'nombre': nombre, 'url': link})
 
+            # --- PROCESAR LINKS DE HOTELES (NUEVO) ---
+            nombres_hoteles = request.form.getlist('nombre_hotel[]')
+            links_hoteles = request.form.getlist('link_hotel[]')
+            hoteles_sugeridos = []
+            for nombre, link in zip(nombres_hoteles, links_hoteles):
+                if nombre and link:
+                    hoteles_sugeridos.append({'nombre': nombre, 'url': link})
+
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
                 "frase": request.form.get('frase'),
                 "maps_misa": request.form.get('maps_misa'),
                 "maps_fiesta": request.form.get('maps_fiesta'),
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
-                "telefono_rsvp": request.form.get('telefono_rsvp')
+                "telefono_rsvp": request.form.get('telefono_rsvp'),
+                "info_transporte": request.form.get('info_transporte') # Nuevo texto de transporte
             }
             
             # --- SUBIDA DE IMÁGENES ---
@@ -66,8 +79,9 @@ def crear_invitacion():
             conn.execute("""
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
-                 fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
+                 dress_code, hospedaje_json, album_url) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 slug, 
                 json.dumps(request.form.getlist('orden_items[]')), 
@@ -80,7 +94,10 @@ def crear_invitacion():
                 request.form.get('estilo_fuente'),
                 request.form.get('color_fondo'),
                 url_fondo,
-                json.dumps(mesas_regalos)
+                json.dumps(mesas_regalos),
+                dress_code,
+                json.dumps(hoteles_sugeridos),
+                album_url
             ))
             conn.commit()
             flash("Invitación Premium Creada ✨", "success")
@@ -137,6 +154,7 @@ def api_subir_musica():
     finally:
         conn.close()
 
+
 # --- RUTA 3: VISTA PÚBLICA DE LA INVITACIÓN ---
 @invitaciones_bp.route('/invitacion/<slug>')
 def ver_invitacion(slug):
@@ -154,7 +172,6 @@ def ver_invitacion(slug):
             return "<h1>404 - Invitación no encontrada 😢</h1>", 404
 
         # 2. Convertir los textos JSON a objetos de Python reales
-        import json
         config = json.loads(inv['config_json'])        # El orden de los bloques
         datos = json.loads(inv['datos_cliente_json'])  # Nombres, mapas, etc
         fotos = json.loads(inv['fotos_json'])          # Lista de URLs de fotos
@@ -170,9 +187,11 @@ def ver_invitacion(slug):
     finally:
         conn.close()
 
+
 @invitaciones_bp.app_template_filter('from_json')
 def from_json(value):
     return json.loads(value)
+
 
 # --- RUTA 4: PANEL DE GESTIÓN (DASHBOARD) ---
 @invitaciones_bp.route('/admin/invitaciones')
@@ -205,6 +224,8 @@ def gestionar_invitaciones():
     finally:
         conn.close()
 
+
+# --- RUTA 5: EDITAR INVITACIÓN ---
 @invitaciones_bp.route('/admin/editar-invitacion/<int:id>', methods=['GET', 'POST'])
 @admin_required
 def editar_invitacion(id):
@@ -222,6 +243,10 @@ def editar_invitacion(id):
             fecha_evento = request.form.get('fecha_evento')
             vigencia = request.form.get('vigencia')
             
+            # --- NUEVOS CAMPOS ---
+            dress_code = request.form.get('dress_code')
+            album_url = request.form.get('album_url')
+
             # 1. Datos del cliente
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
@@ -229,7 +254,8 @@ def editar_invitacion(id):
                 "maps_misa": request.form.get('maps_misa'),
                 "maps_fiesta": request.form.get('maps_fiesta'),
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
-                "telefono_rsvp": request.form.get('telefono_rsvp')
+                "telefono_rsvp": request.form.get('telefono_rsvp'),
+                "info_transporte": request.form.get('info_transporte')
             }
             
             # 2. Mesas de regalos
@@ -237,12 +263,17 @@ def editar_invitacion(id):
             links_tiendas = request.form.getlist('link_tienda[]')
             mesas_regalos = [{'nombre': n, 'url': l} for n, l in zip(nombres_tiendas, links_tiendas) if n and l]
             
+            # 3. Hoteles (NUEVO)
+            nombres_hoteles = request.form.getlist('nombre_hotel[]')
+            links_hoteles = request.form.getlist('link_hotel[]')
+            hoteles_sugeridos = [{'nombre': n, 'url': l} for n, l in zip(nombres_hoteles, links_hoteles) if n and l]
+
             orden_items = request.form.getlist('orden_items[]')
 
-            # 3. Traemos los datos viejos para no perder fotos si no suben nuevas
+            # 4. Traemos los datos viejos para no perder fotos si no suben nuevas
             inv_old = conn.execute("SELECT foto_portada_url, fotos_json, url_fondo FROM invitaciones WHERE id=?", (id,)).fetchone()
 
-            # 4. Procesar Fotos (Solo se sube si eligen un archivo nuevo)
+            # 5. Procesar Fotos (Solo se sube si eligen un archivo nuevo)
             foto_portada = request.files.get('foto_portada')
             url_portada = upload_to_cloudflare(foto_portada, folder=f"invitaciones/{slug}") if foto_portada and foto_portada.filename != '' else inv_old['foto_portada_url']
 
@@ -259,16 +290,18 @@ def editar_invitacion(id):
             if not urls_galeria:
                 urls_galeria = json.loads(inv_old['fotos_json']) if inv_old['fotos_json'] else []
 
-            # 5. ACTUALIZAR EN BASE DE DATOS
+            # 6. ACTUALIZAR EN BASE DE DATOS
             conn.execute("""
                 UPDATE invitaciones SET 
                 slug=?, config_json=?, musica_id=?, fecha_evento=?, vigencia=?, datos_cliente_json=?, 
-                fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?
+                fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?,
+                dress_code=?, hospedaje_json=?, album_url=?
                 WHERE id=?
             """, (
                 slug, json.dumps(orden_items), musica_id or None, fecha_evento, vigencia,
                 json.dumps(datos_cliente), json.dumps(urls_galeria), url_portada,
-                estilo_fuente, color_fondo, url_fondo, json.dumps(mesas_regalos), id
+                estilo_fuente, color_fondo, url_fondo, json.dumps(mesas_regalos),
+                dress_code, json.dumps(hoteles_sugeridos), album_url, id
             ))
             conn.commit()
             flash("¡Invitación actualizada exitosamente! ✏️", "success")
@@ -287,19 +320,21 @@ def editar_invitacion(id):
         flash("Invitación no encontrada.", "danger")
         return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
 
-    import json
     datos = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
     mesas = json.loads(inv['mesas_regalos_json']) if inv['mesas_regalos_json'] else []
+    hoteles = json.loads(inv['hospedaje_json']) if inv['hospedaje_json'] else []
     
     # Renderizamos la misma plantilla, pero le pasamos los datos para rellenar
     return render_template('invitaciones/crear.html', 
                            inv=inv, 
                            datos=datos, 
-                           mesas=mesas, 
+                           mesas=mesas,
+                           hoteles=hoteles,
                            canciones=canciones, 
                            edit_mode=True)
 
-# --- RUTA 5: ELIMINAR INVITACIÓN (Y SUS ARCHIVOS EN R2) ---
+
+# --- RUTA 6: ELIMINAR INVITACIÓN (Y SUS ARCHIVOS EN R2) ---
 @invitaciones_bp.route('/admin/eliminar-invitacion/<int:id>', methods=['POST'])
 @admin_required
 def eliminar_invitacion(id):
@@ -319,7 +354,6 @@ def eliminar_invitacion(id):
                 
             # 4. Borrar todas las fotos de la Galería de R2
             if inv['fotos_json']:
-                import json
                 fotos_galeria = json.loads(inv['fotos_json'])
                 for foto_url in fotos_galeria:
                     delete_from_cloudflare(foto_url)

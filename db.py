@@ -318,6 +318,9 @@ def init_db():
         url_fondo TEXT,
         mesas_regalos_json TEXT,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        dress_code TEXT,
+        hospedaje_json TEXT,
+        album_url TEXT,
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );
     """)
