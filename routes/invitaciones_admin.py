@@ -44,6 +44,18 @@ def crear_invitacion():
                 if nombre and link:
                     hoteles_sugeridos.append({'nombre': nombre, 'url': link})
 
+            # --- 1. PROCESAR ITINERARIO (Asegúrate que estas líneas estén ANTES de datos_cliente) ---
+            horas_it = request.form.getlist('hora_itinerario[]')
+            acts_it = request.form.getlist('actividad_itinerario[]')
+            iconos_it = request.form.getlist('icono_itinerario[]')
+            
+            # Aquí es donde se define la variable 'itinerario'
+            itinerario = []
+            for h, a, i in zip(horas_it, acts_it, iconos_it):
+                if h and a:
+                    itinerario.append({'hora': h, 'actividad': a, 'icono': i})
+
+            # --- 2. AHORA SÍ, CREAR EL DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
                 "frase": request.form.get('frase'),
@@ -52,7 +64,7 @@ def crear_invitacion():
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
                 "info_transporte": request.form.get('info_transporte'),
-                "itinerario": itinerario
+                "itinerario": itinerario  # <--- Ahora la variable ya existe
             }
             
             # --- SUBIDA DE IMÁGENES ---
@@ -269,7 +281,18 @@ def editar_invitacion(id):
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url')
 
-            # 1. Datos del cliente
+            # --- 1. PROCESAR ITINERARIO (Asegúrate que estas líneas estén ANTES de datos_cliente) ---
+            horas_it = request.form.getlist('hora_itinerario[]')
+            acts_it = request.form.getlist('actividad_itinerario[]')
+            iconos_it = request.form.getlist('icono_itinerario[]')
+            
+            # Aquí es donde se define la variable 'itinerario'
+            itinerario = []
+            for h, a, i in zip(horas_it, acts_it, iconos_it):
+                if h and a:
+                    itinerario.append({'hora': h, 'actividad': a, 'icono': i})
+
+            # --- 2. AHORA SÍ, CREAR EL DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
                 "frase": request.form.get('frase'),
@@ -278,7 +301,7 @@ def editar_invitacion(id):
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
                 "info_transporte": request.form.get('info_transporte'),
-                "itinerario": itinerario
+                "itinerario": itinerario  # <--- Ahora la variable ya existe
             }
             
             # 2. Mesas de regalos
