@@ -404,30 +404,29 @@
                                         <h6 class="dropdown-header">ZONA DE PELIGRO</h6>
                                     </li>
 
-                                    {% if u['role'] == 0 %}
-                                    <li>
+                                    {% if u['role'] <= 1 %} <li>
                                         <a class="dropdown-item text-dark"
                                             href="{{ url_for('admin.impersonate', user_id=u['id']) }}">
                                             <i
                                                 class="fas fa-user-secret text-dark bg-dark bg-opacity-10 rounded p-1"></i>
                                             Entrar como usuario
                                         </a>
-                                    </li>
-                                    {% endif %}
+                                        </li>
+                                        {% endif %}
 
-                                    {% if u['id'] != session['user_id'] %}
-                                    <li>
-                                        <form action="{{ url_for('admin.delete_user') }}" method="POST"
-                                            onsubmit="return confirm('⚠️ ¿ESTÁS SEGURO?\n\nSe borrará TODO: Ventas, Inventario, Configuración.\nEsta acción NO se puede deshacer.');">
-                                            <input type="hidden" name="user_id" value="{{ u['id'] }}">
-                                            <button type="submit" class="dropdown-item text-danger">
-                                                <i
-                                                    class="fas fa-trash-alt text-danger bg-danger bg-opacity-10 rounded p-1"></i>
-                                                Eliminar Cuenta
-                                            </button>
-                                        </form>
-                                    </li>
-                                    {% endif %}
+                                        {% if u['id'] != session['user_id'] %}
+                                        <li>
+                                            <form action="{{ url_for('admin.delete_user') }}" method="POST"
+                                                onsubmit="return confirm('⚠️ ¿ESTÁS SEGURO?\n\nSe borrará TODO: Ventas, Inventario, Configuración.\nEsta acción NO se puede deshacer.');">
+                                                <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                                                <button type="submit" class="dropdown-item text-danger">
+                                                    <i
+                                                        class="fas fa-trash-alt text-danger bg-danger bg-opacity-10 rounded p-1"></i>
+                                                    Eliminar Cuenta
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
 
                                 </ul>
                             </div>
