@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Boda de {{ datos['novios'] }}</title>
 
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css" />
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
@@ -310,26 +310,31 @@
 
         /* CARRUSEL SWIPER */
         .swiper {
-            width: 100%;
-            padding-top: 20px;
-            padding-bottom: 50px;
+            width: 280px;
+            /* Ancho estricto necesario para el modo cards */
+            height: 380px;
+            /* Alto estricto necesario para el modo cards */
+            margin-top: 20px;
+            margin-bottom: 50px;
+            padding: 10px;
         }
 
         .swiper-slide {
-            background-position: center;
-            background-size: cover;
-            width: 80%;
-            max-width: 320px;
-            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 18px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            background-color: var(--card-bg);
+            overflow: hidden;
         }
 
         .swiper-slide img {
             display: block;
             width: 100%;
-            aspect-ratio: 3 / 4;
+            height: 100%;
+            /* Aquí el 100% sí funciona porque .swiper ya tiene alto */
             object-fit: cover;
-            border-radius: 15px;
         }
 
         /* TIMELINE DINÁMICO */
@@ -630,7 +635,7 @@
         </footer>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
 
     <script>
@@ -651,15 +656,11 @@
             // 3. ¡AQUÍ ES LA MAGIA! Iniciamos Swiper y AOS un instante DESPUÉS de que ya es visible
             setTimeout(() => {
                 var swiper = new Swiper(".mySwiper", {
-                    effect: "slide",
-                    grabCursor: true,
-                    centeredSlides: true,
-                    slidesPerView: "auto",
-                    spaceBetween: 20, // Añadí un pequeño espacio para que no se encimen las fotos
-                    loop: true,
-                    autoplay: { delay: 3000, disableOnInteraction: false },
-                    observer: true,
+                    effect: "cards",  // Usamos el efecto apilado de tarjetas
+                    grabCursor: true, // Para que salga la manita
+                    observer: true,   // Seguros de vida contra contenedores ocultos
                     observeParents: true,
+                    // Nota: En modo 'cards', no se recomiendan 'loop' ni 'slidesPerView'
                 });
 
                 AOS.init({ duration: 1200, once: true });
