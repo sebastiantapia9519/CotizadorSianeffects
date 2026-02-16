@@ -641,7 +641,44 @@ def privacidad():
 def plan_vencido():
     return render_template('plan_vencido.html')
 
+# --- API PARA CARGAR UNA VENTA/COTIZACIÓN EXISTENTE EN EL EDITOR ---
+@main_bp.route('/api/get_cotizacion/<int:id>')
+@login_required
+def get_cotizacion(id):
+    conn = get_db()
+    try:
+        # 1. Traer datos generales de la venta
+        venta = conn.execute("SELECT * FROM ventas WHERE id=? AND user_id=?", (id, session['user_id'])).fetchone()
+        if not venta:
+            return jsonify({'error': 'Cotización no encontrada'}), 404
 
+        # 2. Traer los productos detallados del carrito
+        items_db = conn.execute("SELECT * FROM venta_detalles WHERE venta_id=?", (id,)).fetchall()
+        
+        items = []
+        for it in items_db:
+            items.append({
+                'concepto': it['concepto'],
+                'cantidad': it['cantidad'],
+                'precio_unitario': it['precio_unitario'],
+                'costo_unitario': it['costo_unitario'],
+                'subtotal': it['subtotal'],
+                'composicion': it['composicion'] # Esto ya viene como string JSON de la BD
+            })
+
+        return jsonify({
+            'success': True,
+            'id': venta['id'],
+            'cliente': venta['cliente'],
+            'descuento': venta['descuento_porcentaje'],
+            'tax_percent': venta['tax_engine'].replace('IVA ', '').replace('%', '') if venta['tax_engine'] != 'none' else 0,
+            'items': items
+        })
+    except Exception as e:
+        print(f"Error cargando cotización {id}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        conn.close()
 
 # --- RUTA DE AYUDA Y DOCUMENTACIÓN ---
 @main_bp.route('/ayuda')

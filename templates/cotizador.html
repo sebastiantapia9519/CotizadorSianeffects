@@ -736,7 +736,7 @@
             taxRow.style.display = 'none';
         }
 
-        const totalFinal = baseImponible + impuestosMonto;
+        const totalFinal = Math.ceil(baseImponible + impuestosMonto);
 
         document.getElementById('labelSubtotal').innerText = formatMoney(subtotalCarrito);
         document.getElementById('labelDescuento').innerText = '-' + formatMoney(descuentoMonto);
@@ -1015,6 +1015,42 @@
             extraerCoordenadas(document.getElementById('inputMapsLink'));
         } catch (err) { }
     }
+
+    // --- FUNCION PARA CARGAR UNA VENTA ANTERIOR AL CARRITO ---
+function cargarCotizacion(id) {
+    fetch('/api/get_cotizacion/' + id)
+        .then(r => r.json())
+        .then(data => {
+            if (data.error) return alert(data.error);
+
+            // 1. Limpiamos el estado actual
+            carrito = [];
+            limpiarCalculadora();
+            
+            // 2. Cargamos los datos generales
+            document.getElementById('ventaIdEdicion').value = data.id;
+            document.getElementById('nombreCliente').value = data.cliente;
+            document.getElementById('inputDescuento').value = data.descuento;
+            document.getElementById('sliderDescuento').value = data.descuento;
+
+            // 3. Reconstruimos el carrito
+            data.items.forEach(item => {
+                carrito.push({
+                    concepto: item.concepto,
+                    precio_unitario: item.precio_unitario,
+                    costo_unitario: item.costo_unitario,
+                    cantidad: item.cantidad,
+                    subtotal: item.subtotal,
+                    composicion: JSON.parse(item.composicion) // Convertimos el string a objeto
+                });
+            });
+
+            // 4. Actualizamos la vista
+            renderizarCarrito();
+            alert("¡Cotización cargada con éxito! Puedes editarla y guardar los cambios.");
+        })
+        .catch(e => alert("Error de conexión al cargar datos."));
+}
 
     function solicitarCotizacion(tipo) {
         const loader = document.getElementById('loaderEnvio');
