@@ -452,6 +452,7 @@ def ver_fotos_invitados(id):
     finally:
         conn.close()
 
+
 @invitaciones_bp.route('/admin/descargar-rollo/<int:id>')
 @admin_required
 def descargar_rollo_zip(id):
@@ -461,32 +462,36 @@ def descargar_rollo_zip(id):
         fotos = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (id,)).fetchall()
 
         if not fotos:
-            flash("No hay fotos en la base de datos.", "warning")
+            flash("No hay fotos para descargar.", "warning")
             return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
 
         memory_file = io.BytesIO()
-        # Forzamos User-Agent y desactivamos verificación SSL temporalmente para descartar bloqueo de red
-        headers = {'User-Agent': 'Mozilla/5.0'}
-        
         fotos_añadidas = 0
         
+        # Usamos el cliente s3_client que ya tienes configurado con tus llaves
+        from routes.invitaciones_publicas import s3_client, BUCKET_NAME
+
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             for i, foto in enumerate(fotos):
                 try:
-                    # Intentamos descargar la foto (verify=False por si es un tema de certificados en el servidor)
-                    respuesta = requests.get(foto['url'], headers=headers, timeout=15, verify=False)
+                    # EXTRAEMOS EL NOMBRE DEL ARCHIVO DE LA URL
+                    # Tu URL es: https://...dev/bodas/boda_4/rollo_invitados/foto_123.jpg
+                    # Necesitamos solo: bodas/boda_4/rollo_invitados/foto_123.jpg
+                    key = foto['url'].split('.dev/')[-1]
                     
-                    if respuesta.status_code == 200 and len(respuesta.content) > 0:
-                        zf.writestr(f"foto_{i+1}.jpg", respuesta.content)
+                    # DESCARGAMOS DIRECTO DE R2 USANDO BOTO3 (No usa requests)
+                    objeto_s3 = s3_client.get_object(Bucket=BUCKET_NAME, Key=key)
+                    contenido = objeto_s3['Body'].read()
+                    
+                    if contenido:
+                        zf.writestr(f"foto_{i+1}.jpg", contenido)
                         fotos_añadidas += 1
-                    else:
-                        print(f"Error en foto {i}: Status {respuesta.status_code}")
                 except Exception as e:
-                    print(f"Error de conexión en foto {i}: {e}")
+                    print(f"Error con boto3 en foto {i}: {e}")
                     continue
 
         if fotos_añadidas == 0:
-            flash("El servidor no pudo descargar ninguna foto de R2. Revisa los logs.", "danger")
+            flash("No se pudo extraer ninguna imagen del almacenamiento.", "danger")
             return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
 
         memory_file.seek(0)
@@ -498,7 +503,7 @@ def descargar_rollo_zip(id):
         )
 
     except Exception as e:
-        flash(f"Error crítico: {str(e)}", "danger")
+        flash(f"Error: {str(e)}", "danger")
         return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
     finally:
         conn.close()
