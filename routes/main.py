@@ -154,6 +154,10 @@ def guardar_venta():
         usar_inventario = config['inventario_activo'] if config else 0
 
         venta_id = data.get('id')
+        print("DEBUG guardar_venta → data recibida:", data)
+        print("DEBUG guardar_venta → venta_id:", venta_id)
+
+
         cliente = data.get('cliente', 'Cliente General')
         items = data.get('items', [])
         subtotal = data.get('subtotal', 0)
@@ -278,6 +282,10 @@ def guardar_venta():
 def actualizar_venta():
     data = request.get_json()
     venta_id = data.get('id')
+
+    print("DEBUG guardar_venta → data recibida:", data)
+    print("DEBUG guardar_venta → venta_id:", venta_id)
+
     abono = float(data.get('abono', 0))
     
     conn = get_db()
