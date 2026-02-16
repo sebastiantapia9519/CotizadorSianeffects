@@ -904,10 +904,15 @@
                 estado: estado,
                 pago_inicial: pago_inicial
             })
-        }).then(res => res.json()).then(data => {
+        }).then(data => {
             if (data.success) {
+
+                sessionStorage.removeItem('recarga_id');
+                document.getElementById('ventaIdEdicion').value = '';
+
                 if (ventanaTicket) ventanaTicket.location.href = '/ticket/' + data.ticket_id;
                 else window.location.href = '/ticket/' + data.ticket_id;
+
                 setTimeout(() => window.location.reload(), 1000);
             } else {
                 if (ventanaTicket) ventanaTicket.close();
@@ -1026,46 +1031,53 @@
     }
 
     // --- FUNCION PARA CARGAR UNA VENTA ANTERIOR AL CARRITO ---
-function cargarCotizacion(id) {
-    console.log("Iniciando carga de cotización ID:", id); // Esto nos dirá que sí despertó
-    fetch('/api/get_cotizacion/' + id)
-        .then(r => r.json())
-        .then(data => {
-            if (data.error) {
-                console.error("Error del servidor:", data.error);
-                return alert(data.error);
-            }
+    function cargarCotizacion(id) {
+        console.log("Iniciando carga de cotización ID:", id); // Esto nos dirá que sí despertó
+        fetch('/api/get_cotizacion/' + id)
+            .then(r => r.json())
+            .then(data => {
+                if (data.error) {
+                    console.error("Error del servidor:", data.error);
+                    return alert(data.error);
+                }
 
-            // 1. Limpiamos el carrito actual
-            carrito = [];
-            
-            // 2. Cargamos los datos generales en el panel derecho
-            document.getElementById('ventaIdEdicion').value = data.id;
-            document.getElementById('nombreCliente').value = data.cliente;
-            document.getElementById('inputDescuento').value = data.descuento;
-            document.getElementById('sliderDescuento').value = data.descuento;
+                // 1. Limpiamos el carrito actual
+                carrito = [];
 
-            // 3. Reconstruimos el carrito con los productos guardados
-            data.items.forEach(item => {
-                carrito.push({
-                    concepto: item.concepto,
-                    precio_unitario: parseFloat(item.precio_unitario),
-                    costo_unitario: parseFloat(item.costo_unitario),
-                    cantidad: parseFloat(item.cantidad),
-                    subtotal: parseFloat(item.subtotal),
-                    composicion: JSON.parse(item.composicion)
+                // 2. Cargamos los datos generales en el panel derecho
+                document.getElementById('ventaIdEdicion').value = data.id;
+                // 🔥 ACTIVAMOS MODO EDICIÓN
+                sessionStorage.setItem('recarga_id', data.id);
+
+                // Cambiamos el texto del botón para que el usuario sepa
+                document.querySelectorAll("button[onclick^='finalizarCompra']").forEach(btn => {
+                    btn.innerHTML = btn.innerHTML.replace('Solo Cotizar', 'Actualizar Cotización');
                 });
-            });
+                document.getElementById('nombreCliente').value = data.cliente;
+                document.getElementById('inputDescuento').value = data.descuento;
+                document.getElementById('sliderDescuento').value = data.descuento;
 
-            // 4. Renderizamos y recalculamos totales
-            renderizarCarrito();
-            console.log("Cotización cargada exitosamente");
-        })
-        .catch(e => {
-            console.error("Error de conexión:", e);
-            alert("Error de conexión al cargar datos.");
-        });
-}
+                // 3. Reconstruimos el carrito con los productos guardados
+                data.items.forEach(item => {
+                    carrito.push({
+                        concepto: item.concepto,
+                        precio_unitario: parseFloat(item.precio_unitario),
+                        costo_unitario: parseFloat(item.costo_unitario),
+                        cantidad: parseFloat(item.cantidad),
+                        subtotal: parseFloat(item.subtotal),
+                        composicion: JSON.parse(item.composicion)
+                    });
+                });
+
+                // 4. Renderizamos y recalculamos totales
+                renderizarCarrito();
+                console.log("Cotización cargada exitosamente");
+            })
+            .catch(e => {
+                console.error("Error de conexión:", e);
+                alert("Error de conexión al cargar datos.");
+            });
+    }
 
     function solicitarCotizacion(tipo) {
         const loader = document.getElementById('loaderEnvio');
@@ -1118,91 +1130,91 @@ function cargarCotizacion(id) {
 
     // Detectar si venimos del historial para cargar una cotización
     document.addEventListener('DOMContentLoaded', () => {
-    // 1. Verificar si hay un ID en la URL para cargar
-    const urlParams = new URLSearchParams(window.location.search);
-    const idACargar = urlParams.get('cargar_cotizacion');
-    
-    if (idACargar) {
-        // Ejecutamos la carga inmediata
-        cargarCotizacion(idACargar);
-    }
-    
-    // 2. Siempre agregar al menos una fila vacía al iniciar para que no se vea pelón
-    if (document.querySelectorAll('.item-row').length === 0) {
-        agregarFila();
-    }
-});
+        // 1. Verificar si hay un ID en la URL para cargar
+        const urlParams = new URLSearchParams(window.location.search);
+        const idACargar = urlParams.get('cargar_cotizacion');
 
-
-function cargarRecetaDesdeCarrito(index) {
-    const item = carrito[index];
-    if (!item || !item.composicion || typeof item.composicion === 'string') {
-        alert("Este producto no tiene receta.");
-        return;
-    }
-
-    // Limpia receta actual
-    limpiarMateriales();
-    document.getElementById('costosExtra').value = 0;
-    document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
-
-    document.getElementById('nombreProductoActual').value = item.concepto;
-    document.getElementById('cantidadParaCarrito').value = item.cantidad;
-
-    item.composicion.forEach(c => {
-        if (c.tipo === 'material') {
-            agregarFila(c.id, c.cantidad);
+        if (idACargar) {
+            // Ejecutamos la carga inmediata
+            cargarCotizacion(idACargar);
         }
 
-        if (c.tipo === 'maquinaria') {
-            const chk = document.querySelector(`.check-maquinaria-input[data-id="${c.id}"]`);
-            if (chk) chk.checked = true;
+        // 2. Siempre agregar al menos una fila vacía al iniciar para que no se vea pelón
+        if (document.querySelectorAll('.item-row').length === 0) {
+            agregarFila();
         }
     });
 
-    setTimeout(calcularTotal, 150);
-}
 
-
-document.addEventListener("DOMContentLoaded", () => {
-    const items = sessionStorage.getItem('recarga_cotizacion');
-
-    if (!items) return;
-
-    try {
-        const data = JSON.parse(items);
-
-        carrito = [];
-        data.forEach(i => carrito.push(i));
-
-        renderizarCarrito();
-
-        // Cliente
-        const cliente = sessionStorage.getItem('recarga_cliente');
-        if (cliente) {
-            document.getElementById('cliente').value = cliente;
+    function cargarRecetaDesdeCarrito(index) {
+        const item = carrito[index];
+        if (!item || !item.composicion || typeof item.composicion === 'string') {
+            alert("Este producto no tiene receta.");
+            return;
         }
 
-        // Impuestos
-        if (sessionStorage.getItem('recarga_tax_active') === 'true') {
-            document.getElementById('checkImpuestos').checked = true;
-            document.getElementById('taxPercent').value =
-                sessionStorage.getItem('recarga_tax_percent') || 0;
-        }
+        // Limpia receta actual
+        limpiarMateriales();
+        document.getElementById('costosExtra').value = 0;
+        document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
-        calcularTotal();
+        document.getElementById('nombreProductoActual').value = item.concepto;
+        document.getElementById('cantidadParaCarrito').value = item.cantidad;
 
-        // Limpieza (MUY importante)
-        sessionStorage.removeItem('recarga_cotizacion');
-        sessionStorage.removeItem('recarga_cliente');
-        sessionStorage.removeItem('recarga_id');
-        sessionStorage.removeItem('recarga_tax_percent');
-        sessionStorage.removeItem('recarga_tax_active');
+        item.composicion.forEach(c => {
+            if (c.tipo === 'material') {
+                agregarFila(c.id, c.cantidad);
+            }
 
-    } catch (e) {
-        console.error("Error cargando recarga:", e);
+            if (c.tipo === 'maquinaria') {
+                const chk = document.querySelector(`.check-maquinaria-input[data-id="${c.id}"]`);
+                if (chk) chk.checked = true;
+            }
+        });
+
+        setTimeout(calcularTotal, 150);
     }
-});
+
+
+    document.addEventListener("DOMContentLoaded", () => {
+        const items = sessionStorage.getItem('recarga_cotizacion');
+
+        if (!items) return;
+
+        try {
+            const data = JSON.parse(items);
+
+            carrito = [];
+            data.forEach(i => carrito.push(i));
+
+            renderizarCarrito();
+
+            // Cliente
+            const cliente = sessionStorage.getItem('recarga_cliente');
+            if (cliente) {
+                document.getElementById('cliente').value = cliente;
+            }
+
+            // Impuestos
+            if (sessionStorage.getItem('recarga_tax_active') === 'true') {
+                document.getElementById('checkImpuestos').checked = true;
+                document.getElementById('taxPercent').value =
+                    sessionStorage.getItem('recarga_tax_percent') || 0;
+            }
+
+            calcularTotal();
+
+            // Limpieza (MUY importante)
+            sessionStorage.removeItem('recarga_cotizacion');
+            sessionStorage.removeItem('recarga_cliente');
+            sessionStorage.removeItem('recarga_id');
+            sessionStorage.removeItem('recarga_tax_percent');
+            sessionStorage.removeItem('recarga_tax_active');
+
+        } catch (e) {
+            console.error("Error cargando recarga:", e);
+        }
+    });
 
 
 </script>
