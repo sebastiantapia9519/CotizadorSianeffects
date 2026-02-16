@@ -32,6 +32,7 @@ def crear_invitacion():
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url')
             camara_premium = 1 if 'camara_premium' in request.form else 0
+            color_acentos = request.form.get('color_acentos', '#D4AF37')
             
             # --- PROCESAR LINKS DE TIENDAS ---
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -98,8 +99,8 @@ def crear_invitacion():
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
                  fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
-                 dress_code, hospedaje_json, album_url, camara_premium) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 dress_code, hospedaje_json, album_url, camara_premium,color_acentos) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 slug, 
                 json.dumps(request.form.getlist('orden_items[]')), 
@@ -287,6 +288,8 @@ def editar_invitacion(id):
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url')
             camara_premium = 1 if 'camara_premium' in request.form else 0
+            color_acentos = request.form.get('color_acentos', '#D4AF37')
+            
 
             # --- 1. PROCESAR ITINERARIO (Asegúrate que estas líneas estén ANTES de datos_cliente) ---
             horas_it = request.form.getlist('hora_itinerario[]')
@@ -348,7 +351,7 @@ def editar_invitacion(id):
                 UPDATE invitaciones SET 
                 slug=?, config_json=?, musica_id=?, fecha_evento=?, vigencia=?, datos_cliente_json=?, 
                 fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?,
-                dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?
+                dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?
                 WHERE id=?
             """, (
                 slug, json.dumps(orden_items), musica_id or None, fecha_evento, vigencia,

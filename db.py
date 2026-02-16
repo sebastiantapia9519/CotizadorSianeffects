@@ -322,6 +322,7 @@ def init_db():
         dress_code TEXT,
         hospedaje_json TEXT,
         album_url TEXT,
+        color_acentos TEXT DEFAULT '#D4AF37',
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );
     """)
