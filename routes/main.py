@@ -153,7 +153,7 @@ def guardar_venta():
         config = cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=?', (session['user_id'],)).fetchone()
         usar_inventario = config['inventario_activo'] if config else 0
 
-        venta_id = data.get('id')
+        venta_id = data.get('id') or data.get('venta_id')
         print("DEBUG guardar_venta → data recibida:", data)
         print("DEBUG guardar_venta → venta_id:", venta_id)
 
