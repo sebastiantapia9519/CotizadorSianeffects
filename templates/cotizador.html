@@ -1197,22 +1197,33 @@
 
             renderizarCarrito();
 
-            // Cliente
+            // 1. SOLUCIÓN: Asignar el ID de edición para que Python sepa que es UPDATE
+            const recargaId = sessionStorage.getItem('recarga_id');
+            if (recargaId) {
+                document.getElementById('ventaIdEdicion').value = recargaId;
+
+                // Opcional: Cambiar visualmente los botones para confirmar que estás editando
+                document.querySelectorAll("button[onclick^='finalizarCompra']").forEach(btn => {
+                    btn.innerHTML = btn.innerHTML.replace('Solo Cotizar', 'Actualizar Cotización');
+                });
+            }
+
+            // 2. SOLUCIÓN: El ID correcto del input es 'nombreCliente'
             const cliente = sessionStorage.getItem('recarga_cliente');
             if (cliente) {
-                document.getElementById('cliente').value = cliente;
+                document.getElementById('nombreCliente').value = cliente;
             }
 
             // Impuestos
             if (sessionStorage.getItem('recarga_tax_active') === 'true') {
-                document.getElementById('checkImpuestos').checked = true;
+                document.getElementById('taxSwitch').checked = true;
                 document.getElementById('taxPercent').value =
                     sessionStorage.getItem('recarga_tax_percent') || 0;
             }
 
             calcularTotal();
 
-            // Limpieza (MUY importante)
+            // Limpieza (MUY importante para no tener cotizaciones atoradas)
             sessionStorage.removeItem('recarga_cotizacion');
             sessionStorage.removeItem('recarga_cliente');
             sessionStorage.removeItem('recarga_id');
