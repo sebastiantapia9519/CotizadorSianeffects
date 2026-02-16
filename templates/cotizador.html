@@ -817,7 +817,11 @@
                 tb.innerHTML += `
                 <tr>
                     <td class="ps-3">
-                        <small class="fw-bold">${i.concepto}</small>
+                        <small class="fw-bold" style="cursor:pointer"
+                        onclick="cargarRecetaDesdeCarrito(${x})"
+                        title="Editar receta">
+                        ${i.concepto}
+                        </small>
                         ${i.composicion && i.composicion.length > 0 && typeof i.composicion !== 'string' ? '<br><span class="badge bg-light text-secondary border" style="font-size:0.6rem">Con Receta</span>' : ''}
                     </td>
                     <td class="text-center small">${i.cantidad}</td>
@@ -1128,5 +1132,36 @@ function cargarCotizacion(id) {
         agregarFila();
     }
 });
+
+
+function cargarRecetaDesdeCarrito(index) {
+    const item = carrito[index];
+    if (!item || !item.composicion || typeof item.composicion === 'string') {
+        alert("Este producto no tiene receta.");
+        return;
+    }
+
+    // Limpia receta actual
+    limpiarMateriales();
+    document.getElementById('costosExtra').value = 0;
+    document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
+
+    document.getElementById('nombreProductoActual').value = item.concepto;
+    document.getElementById('cantidadParaCarrito').value = item.cantidad;
+
+    item.composicion.forEach(c => {
+        if (c.tipo === 'material') {
+            agregarFila(c.id, c.cantidad);
+        }
+
+        if (c.tipo === 'maquinaria') {
+            const chk = document.querySelector(`.check-maquinaria-input[data-id="${c.id}"]`);
+            if (chk) chk.checked = true;
+        }
+    });
+
+    setTimeout(calcularTotal, 150);
+}
+
 </script>
 {% endblock %}
