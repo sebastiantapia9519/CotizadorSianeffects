@@ -186,6 +186,8 @@ def guardar_venta():
         fecha_actual = now_utc()
         fecha_vencimiento = (now_utc() + timedelta(days=7)).isoformat()
 
+        print("VENTA_ID RECIBIDA:", venta_id)
+
         if venta_id:
             cursor.execute('''
                 UPDATE ventas 
