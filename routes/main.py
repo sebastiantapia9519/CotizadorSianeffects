@@ -148,6 +148,7 @@ def guardar_venta():
     data = request.get_json()
     conn = get_db() 
     cursor = conn.cursor()
+    print("DATA RECIBIDA:", data)
     
     try:
         config = cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=?', (session['user_id'],)).fetchone()
@@ -234,6 +235,8 @@ def guardar_venta():
                 float(item['subtotal']),
                 item.get('composicion', '[]')
             ))
+
+            print("VENTA_ID ANTES IF:", venta_id, type(venta_id))
 
             if usar_inventario and not data.get('id'): 
                 try:
