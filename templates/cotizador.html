@@ -27,6 +27,8 @@
         padding: 8px 20px;
         margin-right: 5px;
         transition: all 0.2s;
+        display: flex;
+        align-items: center;
     }
 
     .nav-tabs .nav-link.active {
@@ -742,6 +744,10 @@
         document.getElementById('labelDescuento').innerText = '-' + formatMoney(descuentoMonto);
         document.getElementById('taxAmountDisplay').innerText = '+' + formatMoney(impuestosMonto);
         document.getElementById('totalTicket').innerText = formatMoney(totalFinal);
+
+        // Actualizamos también el total en el modal de cobro si existe
+        const modalTotal = document.getElementById('modalTotalPago');
+        if (modalTotal) modalTotal.innerText = formatMoney(totalFinal);
     }
 
     function formatMoney(amount) {
@@ -1099,5 +1105,25 @@ function cargarCotizacion(id) {
     }
 
     document.addEventListener('DOMContentLoaded', () => agregarFila());
+
+    // Detectar si venimos del historial para cargar una cotización
+    document.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const idACargar = urlParams.get('cargar_cotizacion');
+    
+    if (idACargar) {
+        // Llamamos a la función que te pasé anteriormente
+        if (typeof cargarCotizacion === "function") {
+            cargarCotizacion(idACargar);
+        } else {
+            console.error("La función cargarCotizacion no está definida.");
+        }
+    }
+    
+    // Si no hay nada que cargar, solo agrega la primera fila vacía
+    if (!idACargar && document.querySelectorAll('.item-row').length === 0) {
+        agregarFila();
+    }
+    });
 </script>
 {% endblock %}
