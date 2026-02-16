@@ -1023,38 +1023,44 @@
 
     // --- FUNCION PARA CARGAR UNA VENTA ANTERIOR AL CARRITO ---
 function cargarCotizacion(id) {
+    console.log("Iniciando carga de cotización ID:", id); // Esto nos dirá que sí despertó
     fetch('/api/get_cotizacion/' + id)
         .then(r => r.json())
         .then(data => {
-            if (data.error) return alert(data.error);
+            if (data.error) {
+                console.error("Error del servidor:", data.error);
+                return alert(data.error);
+            }
 
-            // 1. Limpiamos el estado actual
+            // 1. Limpiamos el carrito actual
             carrito = [];
-            limpiarCalculadora();
             
-            // 2. Cargamos los datos generales
+            // 2. Cargamos los datos generales en el panel derecho
             document.getElementById('ventaIdEdicion').value = data.id;
             document.getElementById('nombreCliente').value = data.cliente;
             document.getElementById('inputDescuento').value = data.descuento;
             document.getElementById('sliderDescuento').value = data.descuento;
 
-            // 3. Reconstruimos el carrito
+            // 3. Reconstruimos el carrito con los productos guardados
             data.items.forEach(item => {
                 carrito.push({
                     concepto: item.concepto,
-                    precio_unitario: item.precio_unitario,
-                    costo_unitario: item.costo_unitario,
-                    cantidad: item.cantidad,
-                    subtotal: item.subtotal,
-                    composicion: JSON.parse(item.composicion) // Convertimos el string a objeto
+                    precio_unitario: parseFloat(item.precio_unitario),
+                    costo_unitario: parseFloat(item.costo_unitario),
+                    cantidad: parseFloat(item.cantidad),
+                    subtotal: parseFloat(item.subtotal),
+                    composicion: JSON.parse(item.composicion)
                 });
             });
 
-            // 4. Actualizamos la vista
+            // 4. Renderizamos y recalculamos totales
             renderizarCarrito();
-            alert("¡Cotización cargada con éxito! Puedes editarla y guardar los cambios.");
+            console.log("Cotización cargada exitosamente");
         })
-        .catch(e => alert("Error de conexión al cargar datos."));
+        .catch(e => {
+            console.error("Error de conexión:", e);
+            alert("Error de conexión al cargar datos.");
+        });
 }
 
     function solicitarCotizacion(tipo) {
