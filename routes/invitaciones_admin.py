@@ -99,7 +99,7 @@ def crear_invitacion():
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
                  fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
-                 dress_code, hospedaje_json, album_url, camara_premium,color_acentos) 
+                 dress_code, hospedaje_json, album_url, camara_premium, color_acentos) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 slug, 
@@ -117,7 +117,8 @@ def crear_invitacion():
                 dress_code,
                 json.dumps(hoteles_sugeridos),
                 album_url,
-                camara_premium  # <--- NUEVO
+                camara_premium,
+                color_acentos 
             ))
             conn.commit()
             flash("Invitación Premium Creada ✨", "success")
@@ -354,10 +355,24 @@ def editar_invitacion(id):
                 dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?
                 WHERE id=?
             """, (
-                slug, json.dumps(orden_items), musica_id or None, fecha_evento, vigencia,
-                json.dumps(datos_cliente), json.dumps(urls_galeria), url_portada,
-                estilo_fuente, color_fondo, url_fondo, json.dumps(mesas_regalos),
-                dress_code, json.dumps(hoteles_sugeridos), album_url, camara_premium, id  # <--- NUEVO
+                slug, 
+                json.dumps(orden_items), 
+                musica_id or None, 
+                fecha_evento, 
+                vigencia,
+                json.dumps(datos_cliente), 
+                json.dumps(urls_galeria), 
+                url_portada,
+                estilo_fuente, 
+                color_fondo, 
+                url_fondo, 
+                json.dumps(mesas_regalos),
+                dress_code, 
+                json.dumps(hoteles_sugeridos), 
+                album_url, 
+                camara_premium,
+                color_acentos, 
+                id             
             ))
             conn.commit()
             flash("¡Invitación actualizada exitosamente! ✏️", "success")
