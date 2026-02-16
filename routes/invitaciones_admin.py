@@ -27,6 +27,7 @@ def crear_invitacion():
             # --- NUEVOS CAMPOS ---
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url')
+            camara_premium = 1 if 'camara_premium' in request.form else 0
             
             # --- PROCESAR LINKS DE TIENDAS ---
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -64,7 +65,7 @@ def crear_invitacion():
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
                 "info_transporte": request.form.get('info_transporte'),
-                "itinerario": itinerario  # <--- Ahora la variable ya existe
+                "itinerario": itinerario  
             }
             
             # --- SUBIDA DE IMÁGENES ---
@@ -93,8 +94,8 @@ def crear_invitacion():
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
                  fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
-                 dress_code, hospedaje_json, album_url) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 dress_code, hospedaje_json, album_url, camara_premium) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 slug, 
                 json.dumps(request.form.getlist('orden_items[]')), 
@@ -110,7 +111,8 @@ def crear_invitacion():
                 json.dumps(mesas_regalos),
                 dress_code,
                 json.dumps(hoteles_sugeridos),
-                album_url
+                album_url,
+                camara_premium  # <--- NUEVO
             ))
             conn.commit()
             flash("Invitación Premium Creada ✨", "success")
@@ -280,6 +282,7 @@ def editar_invitacion(id):
             # --- NUEVOS CAMPOS ---
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url')
+            camara_premium = 1 if 'camara_premium' in request.form else 0
 
             # --- 1. PROCESAR ITINERARIO (Asegúrate que estas líneas estén ANTES de datos_cliente) ---
             horas_it = request.form.getlist('hora_itinerario[]')
@@ -341,13 +344,13 @@ def editar_invitacion(id):
                 UPDATE invitaciones SET 
                 slug=?, config_json=?, musica_id=?, fecha_evento=?, vigencia=?, datos_cliente_json=?, 
                 fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?,
-                dress_code=?, hospedaje_json=?, album_url=?
+                dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?
                 WHERE id=?
             """, (
                 slug, json.dumps(orden_items), musica_id or None, fecha_evento, vigencia,
                 json.dumps(datos_cliente), json.dumps(urls_galeria), url_portada,
                 estilo_fuente, color_fondo, url_fondo, json.dumps(mesas_regalos),
-                dress_code, json.dumps(hoteles_sugeridos), album_url, id
+                dress_code, json.dumps(hoteles_sugeridos), album_url, camara_premium, id  # <--- NUEVO
             ))
             conn.commit()
             flash("¡Invitación actualizada exitosamente! ✏️", "success")

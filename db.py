@@ -325,6 +325,15 @@ def init_db():
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );
     """)
-
+#-- Tabla principal de la invitación
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS fotos_invitados (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    invitacion_id INTEGER NOT NULL,
+    url TEXT NOT NULL,
+    camara_premium BOOLEAN DEFAULT 0,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
     conn.commit()
     conn.close()

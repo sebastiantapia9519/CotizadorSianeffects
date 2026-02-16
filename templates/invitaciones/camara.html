@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Cámara de Invitados</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            width: 100%;
+            background-color: #111;
+            color: white;
+            font-family: 'Courier New', Courier, monospace;
+            /* Toque vintage */
+            overflow: hidden;
+        }
+
+        /* Contenedor del video (Visor de la cámara) */
+        .visor-container {
+            position: relative;
+            width: 100%;
+            height: 75vh;
+            background: #000;
+            overflow: hidden;
+            border-bottom: 2px solid #333;
+        }
+
+        #videoElement {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            /* Para que llene la pantalla sin deformarse */
+        }
+
+        /* Efecto de Flash Blanco */
+        #flashEffect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.1s ease-out;
+            z-index: 10;
+        }
+
+        /* Interfaz Inferior */
+        .controls {
+            height: 25vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            background: #1a1a1a;
+        }
+
+        .counter {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #ffcc00;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #ffcc00;
+        }
+
+        /* Botón de Disparo */
+        .btn-capture {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            background-color: #eee;
+            border: 4px solid #fff;
+            outline: 3px solid #ff4757;
+            /* Un toque de rojo SianEffects */
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.1s;
+        }
+
+        .btn-capture:active {
+            transform: scale(0.9);
+        }
+
+        /* Pantalla de Fin */
+        #pantallaFin {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #111;
+            z-index: 100;
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 20px;
+        }
+
+        #pantallaFin i {
+            color: #ffcc00;
+            font-size: 4rem;
+            margin-bottom: 20px;
+        }
+
+        .loader {
+            display: none;
+            color: #ffcc00;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="pantallaCamara">
+        <div class="visor-container">
+            <video id="videoElement" autoplay playsinline></video>
+            <div id="flashEffect"></div>
+        </div>
+
+        <div class="controls">
+            <div class="counter"><span id="fotosTomadas">0</span> / 5</div>
+            <button class="btn-capture" id="btnDisparar" onclick="tomarFoto()"></button>
+            <div class="loader" id="loaderSubiendo"><i class="fas fa-spinner fa-spin me-2"></i> Revelando rollo...</div>
+        </div>
+    </div>
+
+    <div id="pantallaFin">
+        <i class="fas fa-camera-retro"></i>
+        <h2>¡Rollo Terminado!</h2>
+        <p>Gracias por capturar estos momentos. Los novios revelarán las fotos muy pronto.</p>
+    </div>
+
+    <canvas id="canvasElement" style="display:none;"></canvas>
+
+    <script>
+        const video = document.getElementById('videoElement');
+        const canvas = document.getElementById('canvasElement');
+        const ctx = canvas.getContext('2d');
+        const INVITACION_ID = "{{ inv_id }}"; // Recibimos el ID de la boda desde Python
+        const LIMITE_FOTOS = 5;
+
+        // Revisar localStorage para saber cuántas lleva
+        let fotosActuales = parseInt(localStorage.getItem(`rollo_${INVITACION_ID}`)) || 0;
+        document.getElementById('fotosTomadas').innerText = fotosActuales;
+
+        // Iniciar Cámara
+        async function iniciarCamara() {
+            if (fotosActuales >= LIMITE_FOTOS) {
+                mostrarPantallaFin();
+                return;
+            }
+
+            try {
+                // facingMode: "environment" fuerza a usar la cámara trasera del celular
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: "environment" },
+                    audio: false
+                });
+                video.srcObject = stream;
+            } catch (err) {
+                alert("Necesitamos acceso a la cámara para usar el rollo virtual 📷");
+                console.error(err);
+            }
+        }
+
+        function tomarFoto() {
+            if (fotosActuales >= LIMITE_FOTOS) return;
+
+            // 1. Efecto de Flash
+            const flash = document.getElementById('flashEffect');
+            flash.style.opacity = '1';
+            setTimeout(() => { flash.style.opacity = '0'; }, 150);
+
+            // 2. Bloquear botón temporalmente
+            const btn = document.getElementById('btnDisparar');
+            const loader = document.getElementById('loaderSubiendo');
+            btn.style.display = 'none';
+            loader.style.display = 'block';
+
+            // 3. Capturar frame del video al Canvas
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // 4. Convertir a Base64 (JPG calidad 80%)
+            const fotoBase64 = canvas.toDataURL('image/jpeg', 0.8);
+
+            // 5. Enviar a Python
+            fetch(`/api/upload_rollo/${INVITACION_ID}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ imagen: fotoBase64 })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        fotosActuales++;
+                        localStorage.setItem(`rollo_${INVITACION_ID}`, fotosActuales);
+                        document.getElementById('fotosTomadas').innerText = fotosActuales;
+
+                        if (fotosActuales >= LIMITE_FOTOS) {
+                            detenerCamara();
+                            mostrarPantallaFin();
+                        }
+                    } else {
+                        alert("Uy, el rollo se atascó. Intenta de nuevo.");
+                    }
+                })
+                .catch(err => {
+                    alert("Error de conexión al enviar la foto.");
+                })
+                .finally(() => {
+                    // Restaurar botón si aún le quedan fotos
+                    if (fotosActuales < LIMITE_FOTOS) {
+                        btn.style.display = 'block';
+                        loader.style.display = 'none';
+                    }
+                });
+        }
+
+        function mostrarPantallaFin() {
+            document.getElementById('pantallaCamara').style.display = 'none';
+            document.getElementById('pantallaFin').style.display = 'flex';
+        }
+
+        function detenerCamara() {
+            if (video.srcObject) {
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        }
+
+        // Arrancar al cargar la página
+        window.addEventListener('load', iniciarCamara);
+    </script>
+</body>
+
+</html>
