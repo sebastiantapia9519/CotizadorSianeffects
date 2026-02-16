@@ -34,7 +34,7 @@ s3_client = boto3.client(
 def abrir_camara(invitacion_id):
     # Aquí simplemente mostramos el HTML de la cámara al invitado
     # Le pasamos el ID para que sepa a qué boda subir las fotos
-    return render_template('camara.html', inv_id=invitacion_id)
+    return render_template('invitaciones/camara.html', inv_id=invitacion_id)
 
 @invitaciones_publicas_bp.route('/api/upload_rollo/<int:invitacion_id>', methods=['POST'])
 def upload_rollo(invitacion_id):
