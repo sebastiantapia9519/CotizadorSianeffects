@@ -1,5 +1,9 @@
 import json
 import re
+import io
+import zipfile
+import requests
+from flask import send_file
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from helpers import admin_required
 from datetime import datetime
@@ -420,3 +424,75 @@ def eliminar_invitacion(id):
         conn.close()
         
     return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
+
+@invitaciones_bp.route('/admin/ver-fotos/<int:id>')
+@admin_required
+def ver_fotos_invitados(id):
+    conn = get_db_connection()
+    try:
+        # 1. Traemos los datos de la boda para el título
+        inv = conn.execute("SELECT slug, datos_cliente_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        datos = json.loads(inv['datos_cliente_json'])
+        
+        # 2. Traemos todas las fotos de los invitados para esta boda
+        fotos = conn.execute("""
+            SELECT * FROM fotos_invitados 
+            WHERE invitacion_id = ? 
+            ORDER BY fecha_creacion DESC
+        """, (id,)).fetchall()
+        
+        return render_template('invitaciones/galeria_admin.html', 
+                               inv=inv, 
+                               datos=datos, 
+                               fotos=fotos,
+                               inv_id=id)
+    except Exception as e:
+        flash(f"Error al cargar la galería: {str(e)}", "danger")
+        return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
+    finally:
+        conn.close()
+
+@invitaciones_bp.route('/admin/descargar-rollo/<int:id>')
+@admin_required
+def descargar_rollo_zip(id):
+    conn = get_db_connection()
+    try:
+        # 1. Obtener datos para el nombre del archivo
+        inv = conn.execute("SELECT slug FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        nombre_zip = f"fotos_{inv['slug']}.zip"
+
+        # 2. Obtener todas las URLs de las fotos
+        fotos = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (id,)).fetchall()
+
+        if not fotos:
+            flash("No hay fotos para descargar aún.", "warning")
+            return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
+
+        # 3. Crear el archivo ZIP en memoria (RAM)
+        memory_file = io.BytesIO()
+        with zipfile.ZipFile(memory_file, 'w') as zf:
+            for i, foto in enumerate(fotos):
+                try:
+                    # Descargamos cada foto de R2
+                    respuesta = requests.get(foto['url'], timeout=10)
+                    if respuesta.status_code == 200:
+                        # La metemos al ZIP con un nombre numerado
+                        zf.writestr(f"foto_{i+1}.jpg", respuesta.content)
+                except Exception as e:
+                    print(f"Error al descargar foto {foto['url']}: {e}")
+                    continue
+
+        # 4. Preparar el archivo para enviarlo
+        memory_file.seek(0)
+        return send_file(
+            memory_file,
+            mimetype='application/zip',
+            as_attachment=True,
+            download_name=nombre_zip
+        )
+
+    except Exception as e:
+        flash(f"Error al generar el ZIP: {str(e)}", "danger")
+        return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
+    finally:
+        conn.close()
