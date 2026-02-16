@@ -470,20 +470,28 @@ def descargar_rollo_zip(id):
 
         # 3. Crear el archivo ZIP en memoria (RAM)
         memory_file = io.BytesIO()
-        with zipfile.ZipFile(memory_file, 'w') as zf:
+        
+        # Agregamos un User-Agent para que R2 no nos rechace la conexión
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+
+        with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             for i, foto in enumerate(fotos):
                 try:
-                    # Descargamos cada foto de R2
-                    respuesta = requests.get(foto['url'], timeout=10)
+                    # Descargamos cada foto de tu R2
+                    respuesta = requests.get(foto['url'], headers=headers, timeout=15)
+                    
                     if respuesta.status_code == 200:
-                        # La metemos al ZIP con un nombre numerado
-                        zf.writestr(f"foto_{i+1}.jpg", respuesta.content)
+                        # Forzamos un nombre único con extensión .jpg
+                        filename = f"foto_boda_{i+1}.jpg"
+                        zf.writestr(filename, respuesta.content)
+                        print(f"Añadida al ZIP: {filename}") # Esto saldrá en tus logs de PythonAnywhere
                 except Exception as e:
-                    print(f"Error al descargar foto {foto['url']}: {e}")
+                    print(f"Error descargando {foto['url']}: {e}")
                     continue
 
-        # 4. Preparar el archivo para enviarlo
+        # ¡Súper importante! Mover el puntero al inicio después de cerrar el ZipFile
         memory_file.seek(0)
+        
         return send_file(
             memory_file,
             mimetype='application/zip',
@@ -492,6 +500,7 @@ def descargar_rollo_zip(id):
         )
 
     except Exception as e:
+        print(f"ERROR CRÍTICO GENERANDO ZIP: {e}")
         flash(f"Error al generar el ZIP: {str(e)}", "danger")
         return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
     finally:
