@@ -464,11 +464,12 @@ def configuracion():
 
         elif action == 'update_business':
             margen = request.form['margen']
-            empresa = request.form['nombre_empresa'] # Este es el dato clave
+            empresa = request.form['nombre_empresa']
             slogan = request.form['slogan']
             website = request.form['website']
             
             inventario_activo = 1 if request.form.get('inventario_activo') else 0
+            ticket_bw = 1 if request.form.get('ticket_bw') else 0
 
             # PASO 1: Actualizar la tabla USUARIOS (Fuente de la verdad del nombre)
             conn.execute('UPDATE usuarios SET company_name=? WHERE id=?', (empresa, uid))
@@ -479,14 +480,14 @@ def configuracion():
             if config_existente:
                 conn.execute('''
                     UPDATE configuracion
-                    SET margen_ganancia=?, nombre_empresa=?, slogan=?, website=?, inventario_activo=?
+                    SET margen_ganancia=?, nombre_empresa=?, slogan=?, website=?, inventario_activo=?, ticket_bw=? 
                     WHERE user_id=?
-                ''', (margen, empresa, slogan, website, inventario_activo, uid))
+                ''', (margen, empresa, slogan, website, inventario_activo, ticket_bw, uid))
             else:
                 conn.execute('''
-                    INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa, slogan, website, inventario_activo)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (uid, margen, empresa, slogan, website, inventario_activo))
+                    INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa, slogan, website, inventario_activo, ticket_bw)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (uid, margen, empresa, slogan, website, inventario_activo, ticket_bw))
 
             
             flash('Datos del negocio guardados correctamente.', 'success')

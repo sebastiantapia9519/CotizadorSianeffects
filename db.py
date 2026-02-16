@@ -45,7 +45,7 @@ def init_db():
     """)
 
     # =========================
-    # 2. CONFIGURACIÓN (CON CAMPO INVENTARIO)
+    # 2. CONFIGURACIÓN
     # =========================
     conn.execute("""
     CREATE TABLE IF NOT EXISTS configuracion (
@@ -55,7 +55,8 @@ def init_db():
         nombre_empresa TEXT DEFAULT 'Mi Negocio',
         slogan TEXT DEFAULT 'Servicios Creativos',
         website TEXT DEFAULT '',
-        inventario_activo BOOLEAN DEFAULT 0  -- <--- NUEVO CAMPO (Feature Flag)
+        inventario_activo BOOLEAN DEFAULT 0,
+        ticket_bw BOOLEAN DEFAULT 0
     )
     """)
 

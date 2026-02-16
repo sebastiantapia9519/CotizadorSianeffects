@@ -77,6 +77,28 @@
         color: #999;
         margin-top: 15px;
     }
+
+    /* Estilo para convertir tickets a blanco y negro */
+    .ticket-bw,
+    .ticket-bw .tp-type,
+    .ticket-bw .tp-table th {
+        border-color: #333 !important;
+        color: #000 !important;
+    }
+
+    .ticket-bw .tp-brand h4 {
+        color: #000 !important;
+    }
+
+    .ticket-bw .tp-brand p,
+    .ticket-bw p[style*="color"] {
+        color: #555 !important;
+    }
+
+    .ticket-bw .tp-type {
+        background: #333 !important;
+        color: #fff !important;
+    }
 </style>
 {% endblock %}
 
@@ -169,12 +191,32 @@
                                                         realices ventas.
                                                     </small>
                                                 </div>
-
                                                 <div class="form-check form-switch fs-4 m-0 d-flex align-items-center">
                                                     <input class="form-check-input m-0" type="checkbox"
                                                         id="checkInventario" name="inventario_activo" {% if
                                                         config['inventario_activo'] %}checked{% endif %}
                                                         style="cursor: pointer;">
+                                                </div>
+                                            </div>
+
+                                            <hr class="my-3 text-muted opacity-25">
+
+                                            <div class="d-flex justify-content-between align-items-center gap-3">
+                                                <div>
+                                                    <label class="fw-bold text-dark mb-1 d-block" for="checkTicketBW"
+                                                        style="cursor: pointer;">
+                                                        Ticket en Blanco y Negro
+                                                    </label>
+                                                    <small class="text-muted d-block" style="line-height: 1.4;">
+                                                        Imprime o comparte tus tickets en escala de grises. Ideal para
+                                                        ahorrar tinta a color o dar un estilo minimalista.
+                                                    </small>
+                                                </div>
+                                                <div class="form-check form-switch fs-4 m-0 d-flex align-items-center">
+                                                    <input class="form-check-input m-0" type="checkbox"
+                                                        id="checkTicketBW" name="ticket_bw" {% if config['ticket_bw']
+                                                        %}checked{% endif %} style="cursor: pointer;"
+                                                        onchange="actualizarVistaPrevia()">
                                                 </div>
                                             </div>
                                         </div>
@@ -684,6 +726,15 @@
         document.getElementById('prevFecha').innerText = new Date().toLocaleDateString();
 
         const modal = new bootstrap.Modal(document.getElementById('modalPreview'));
+
+        // Aplicar filtro Blanco y Negro si está activado
+        const isBW = document.getElementById('checkTicketBW').checked;
+        const previewEl = document.querySelector('.ticket-preview');
+        if (isBW) {
+            previewEl.classList.add('ticket-bw');
+        } else {
+            previewEl.classList.remove('ticket-bw');
+        }
         modal.show();
     }
 
