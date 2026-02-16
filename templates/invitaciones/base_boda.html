@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,118 +12,400 @@
 
     <style>
         /* 1. FUENTES DINÁMICAS (¡Ojo, no separar las llaves de los porcentajes!) */
-        {% if inv['estilo_fuente'] == 'clasico' %}
-            @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-            :root { --font-title: 'Playfair Display', serif; --font-body: 'Lato', sans-serif; --color-oro: #D4AF37; }
-        {% elif inv['estilo_fuente'] == 'romantico' %}
-            @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
-            :root { --font-title: 'Great Vibes', cursive; --font-body: 'Montserrat', sans-serif; --color-oro: #d48b9b; }
-        {% elif inv['estilo_fuente'] == 'moderno' %}
-            @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
-            :root { --font-title: 'Oswald', sans-serif; --font-body: 'Roboto', sans-serif; --color-oro: #a89f91; }
-        {% elif inv['estilo_fuente'] == 'minimal' %}
-            @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
-            :root { --font-title: 'Cinzel', serif; --font-body: 'Raleway', sans-serif; --color-oro: #8c8c8c; }
-        {% elif inv['estilo_fuente'] == 'botanico' %}
-            @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
-            :root { --font-title: 'Cormorant', serif; --font-body: 'Proza Libre', sans-serif; --color-oro: #8f9779; }
-        {% else %}
-            @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-            :root { --font-title: 'Playfair Display', serif; --font-body: 'Lato', sans-serif; --color-oro: #D4AF37; }
-        {% endif %}
+            {
+            % if inv['estilo_fuente']=='clasico' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --font-title: 'Playfair Display', serif;
+            --font-body: 'Lato', sans-serif;
+            --color-oro: #D4AF37;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='romantico' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
+
+        :root {
+            --font-title: 'Great Vibes', cursive;
+            --font-body: 'Montserrat', sans-serif;
+            --color-oro: #d48b9b;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='moderno' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
+
+        :root {
+            --font-title: 'Oswald', sans-serif;
+            --font-body: 'Roboto', sans-serif;
+            --color-oro: #a89f91;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='minimal' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
+
+        :root {
+            --font-title: 'Cinzel', serif;
+            --font-body: 'Raleway', sans-serif;
+            --color-oro: #8c8c8c;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='botanico' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
+
+        :root {
+            --font-title: 'Cormorant', serif;
+            --font-body: 'Proza Libre', sans-serif;
+            --color-oro: #8f9779;
+        }
+
+            {
+            % else %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --font-title: 'Playfair Display', serif;
+            --font-body: 'Lato', sans-serif;
+            --color-oro: #D4AF37;
+        }
+
+            {
+            % endif %
+        }
 
         /* 2. VARIABLES INTELIGENTES DE COLOR */
         :root {
-            --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
-            --text-color: {{ inv['color_fondo']|color_contraste }};
-            --card-bg: {{ inv['color_fondo']|fondo_tarjeta }};
+            --bg-color: {
+                    {
+                    inv['color_fondo']|default('#fdfbf7')
+                }
+            }
+
+            ;
+
+            --text-color: {
+                    {
+                    inv['color_fondo']|color_contraste
+                }
+            }
+
+            ;
+
+            --card-bg: {
+                    {
+                    inv['color_fondo']|fondo_tarjeta
+                }
+            }
+
+            ;
         }
 
         body {
             font-family: var(--font-body);
             background-color: var(--bg-color);
             color: var(--text-color);
-            {% if inv['url_fondo'] %}
-            background-image: url('{{ inv['url_fondo'] }}'); background-size: cover; background-attachment: fixed; background-position: center;
-            {% endif %}
-            margin: 0; overflow-x: hidden;
+
+                {
+                % if inv['url_fondo'] %
+            }
+
+            background-image: url('{{ inv[' url_fondo'] }}');
+            background-size: cover;
+            background-attachment: fixed;
+            background-position: center;
+
+                {
+                % endif %
+            }
+
+            margin: 0;
+            overflow-x: hidden;
         }
 
-        h1, h2, h3 { font-family: var(--font-title); font-weight: normal; margin: 0; }
+        h1,
+        h2,
+        h3 {
+            font-family: var(--font-title);
+            font-weight: normal;
+            margin: 0;
+        }
 
         /* PANTALLA BIENVENIDA */
         #welcome-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: var(--bg-color); z-index: 9999;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             transition: opacity 0.8s ease, visibility 0.8s ease;
         }
 
-        .btn-entrar, .btn-boda {
-            padding: 12px 30px; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px;
-            background: transparent; color: var(--text-color); border: 1px solid var(--color-oro);
-            cursor: pointer; transition: all 0.3s; text-decoration: none; display: inline-block; border-radius: 30px;
+        .btn-entrar,
+        .btn-boda {
+            padding: 12px 30px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: transparent;
+            color: var(--text-color);
+            border: 1px solid var(--color-oro);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            border-radius: 30px;
         }
 
-        .btn-entrar:hover, .btn-boda:hover { background: var(--color-oro); color: var(--bg-color); border-color: var(--color-oro); }
+        .btn-entrar:hover,
+        .btn-boda:hover {
+            background: var(--color-oro);
+            color: var(--bg-color);
+            border-color: var(--color-oro);
+        }
 
         .music-btn {
-            position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px;
-            background: var(--color-oro); border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            color: var(--bg-color); z-index: 1000; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5); animation: pulse 2s infinite;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--color-oro);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--bg-color);
+            z-index: 1000;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            animation: pulse 2s infinite;
         }
 
         /* SECCIONES Y CONTADORES */
-        section { padding: 80px 20px; text-align: center; max-width: 800px; margin: 0 auto; }
-
-        .countdown-box { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
-        .time-unit {
-            text-align: center; background: var(--card-bg); padding: 15px; border-radius: 10px;
-            min-width: 70px; border: 1px solid rgba(150, 150, 150, 0.2);
+        section {
+            padding: 80px 20px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
         }
-        .time-number { font-size: 2rem; font-family: var(--font-title); color: var(--color-oro); }
-        .time-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; opacity: 0.7; }
+
+        .countdown-box {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .time-unit {
+            text-align: center;
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 10px;
+            min-width: 70px;
+            border: 1px solid rgba(150, 150, 150, 0.2);
+        }
+
+        .time-number {
+            font-size: 2rem;
+            font-family: var(--font-title);
+            color: var(--color-oro);
+        }
+
+        .time-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 5px;
+            opacity: 0.7;
+        }
 
         /* TARJETAS PREMIUM (Regalos, Hospedaje) */
-        .premium-container { display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 0 auto; }
+        .premium-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
         .premium-card {
-            background: var(--card-bg); border: 1px solid rgba(150, 150, 150, 0.2); border-radius: 12px; padding: 20px;
-            display: flex; align-items: center; gap: 20px; transition: transform 0.2s; text-align: left; backdrop-filter: blur(5px);
+            background: var(--card-bg);
+            border: 1px solid rgba(150, 150, 150, 0.2);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            transition: transform 0.2s;
+            text-align: left;
+            backdrop-filter: blur(5px);
         }
-        .premium-card:hover { transform: translateY(-3px); border-color: var(--color-oro); }
+
+        .premium-card:hover {
+            transform: translateY(-3px);
+            border-color: var(--color-oro);
+        }
+
         .premium-icon {
-            width: 50px; height: 50px; background: rgba(150, 150, 150, 0.1); border-radius: 8px;
-            display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--color-oro);
+            width: 50px;
+            height: 50px;
+            background: rgba(150, 150, 150, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--color-oro);
         }
-        .premium-info { flex: 1; }
-        .premium-title { font-family: var(--font-title); font-weight: bold; margin-bottom: 5px; font-size: 1.2rem; }
+
+        .premium-info {
+            flex: 1;
+        }
+
+        .premium-title {
+            font-family: var(--font-title);
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.2rem;
+        }
+
         .btn-card {
-            background: rgba(150, 150, 150, 0.1); color: var(--text-color); border: none; padding: 6px 15px;
-            border-radius: 20px; font-size: 0.8rem; text-decoration: none; display: inline-block; transition: background 0.3s; margin-top: 5px;
+            background: rgba(150, 150, 150, 0.1);
+            color: var(--text-color);
+            border: none;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+            transition: background 0.3s;
+            margin-top: 5px;
         }
-        .btn-card:hover { background: var(--color-oro); color: var(--bg-color); }
+
+        .btn-card:hover {
+            background: var(--color-oro);
+            color: var(--bg-color);
+        }
 
         /* CARRUSEL SWIPER */
-        .swiper { width: 100%; padding-top: 20px; padding-bottom: 50px; }
-        .swiper-slide { background-position: center; background-size: cover; width: 80%; max-width: 320px; height: 450px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); }
-        .swiper-slide img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: 15px; }
+        .swiper {
+            width: 100%;
+            padding-top: 20px;
+            padding-bottom: 50px;
+        }
+
+        .swiper-slide {
+            background-position: center;
+            background-size: cover;
+            width: 80%;
+            max-width: 320px;
+            height: 450px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .swiper-slide img {
+            display: block;
+            width: 100%;
+            aspect-ratio: 4 / 5;
+            object-fit: cover;
+            border-radius: 15px;
+        }
 
         /* TIMELINE DINÁMICO */
-        .timeline { position: relative; max-width: 400px; margin: 0 auto; padding: 20px 0; }
-        .timeline::before { content: ''; position: absolute; top: 0; left: 90px; height: 100%; width: 1px; background: rgba(150, 150, 150, 0.3); }
-        .timeline-item { display: flex; align-items: center; margin-bottom: 30px; position: relative; }
-        .timeline-time { width: 70px; text-align: right; font-style: italic; font-size: 0.9rem; color: var(--color-oro); }
-        .timeline-dot { width: 10px; height: 10px; background: var(--color-oro); border-radius: 50%; margin: 0 15px; z-index: 1; box-shadow: 0 0 10px var(--color-oro); }
-        .timeline-content { flex: 1; text-align: left; font-weight: 500; display: flex; align-items: center; gap: 10px; }
+        .timeline {
+            position: relative;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
 
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 90px;
+            height: 100%;
+            width: 1px;
+            background: rgba(150, 150, 150, 0.3);
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .timeline-time {
+            width: 70px;
+            text-align: right;
+            font-style: italic;
+            font-size: 0.9rem;
+            color: var(--color-oro);
+        }
+
+        .timeline-dot {
+            width: 10px;
+            height: 10px;
+            background: var(--color-oro);
+            border-radius: 50%;
+            margin: 0 15px;
+            z-index: 1;
+            box-shadow: 0 0 10px var(--color-oro);
+        }
+
+        .timeline-content {
+            flex: 1;
+            text-align: left;
+            font-weight: 500;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
     </style>
 </head>
 
 <body>
 
     <div id="welcome-screen">
-        <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-oro);">Nuestra Boda</p>
+        <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-oro);">Nuestra Boda
+        </p>
         <h1 style="font-size: 4rem; margin: 15px 0; text-align: center;">{{ datos['novios'] }}</h1>
         <button class="btn-entrar mt-4" onclick="entrarSitio()">Abrir Invitación</button>
     </div>
@@ -137,179 +420,209 @@
     <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">
         {% for item in config %}
 
-            {% if item == 'hero' %}
-            <section style="height: 100vh; max-width: 100%; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
-                <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
+        {% if item == 'hero' %}
+        <section
+            style="height: 100vh; max-width: 100%; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
+            <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
                             background-image: url('{{ inv['foto_portada_url'] if inv['foto_portada_url'] else (fotos[0] if fotos else '') }}'); 
                             background-size: cover; background-position: center; filter: brightness(0.6);"></div>
-                <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #fdfbf7;" data-aos="zoom-in" data-aos-duration="1500">
-                    <p style="text-transform: uppercase; letter-spacing: 5px; font-size: 0.9rem; color: var(--color-oro);">¡Nos Casamos!</p>
-                    <h1 style="font-size: clamp(3.5rem, 10vw, 6rem); margin: 10px 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">{{ datos['novios'] }}</h1>
-                    <p style="font-size: 1.3rem; font-style: italic; opacity: 0.9;">{{ datos['frase'] }}</p>
-                </div>
-            </section>
+            <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #fdfbf7;"
+                data-aos="zoom-in" data-aos-duration="1500">
+                <p style="text-transform: uppercase; letter-spacing: 5px; font-size: 0.9rem; color: var(--color-oro);">
+                    ¡Nos Casamos!</p>
+                <h1
+                    style="font-size: clamp(3.5rem, 10vw, 6rem); margin: 10px 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">
+                    {{ datos['novios'] }}</h1>
+                <p style="font-size: 1.3rem; font-style: italic; opacity: 0.9;">{{ datos['frase'] }}</p>
+            </div>
+        </section>
 
-            {% elif item == 'countdown' %}
-            <section data-aos="fade-up">
-                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 30px;">Faltan</h2>
-                <div class="countdown-box" id="contador">
-                    <div class="time-unit"><div class="time-number" id="dias">00</div><div class="time-label">Días</div></div>
-                    <div class="time-unit"><div class="time-number" id="horas">00</div><div class="time-label">Hr</div></div>
-                    <div class="time-unit"><div class="time-number" id="minutos">00</div><div class="time-label">Min</div></div>
-                    <div class="time-unit"><div class="time-number" id="segundos">00</div><div class="time-label">Seg</div></div>
+        {% elif item == 'countdown' %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 30px;">Faltan</h2>
+            <div class="countdown-box" id="contador">
+                <div class="time-unit">
+                    <div class="time-number" id="dias">00</div>
+                    <div class="time-label">Días</div>
                 </div>
-            </section>
+                <div class="time-unit">
+                    <div class="time-number" id="horas">00</div>
+                    <div class="time-label">Hr</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-number" id="minutos">00</div>
+                    <div class="time-label">Min</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-number" id="segundos">00</div>
+                    <div class="time-label">Seg</div>
+                </div>
+            </div>
+        </section>
 
-            {% elif item == 'mapas' %}
-            <section data-aos="fade-up">
-                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Ubicaciones</h2>
-                <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
-                    {% if datos['maps_misa'] %}
-                    <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
-                        <i class="fas fa-church fa-2x mb-2" style="color: var(--color-oro);"></i>
-                        <h3 style="margin-bottom: 15px;">Ceremonia</h3>
-                        <a href="{{ datos['maps_misa'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
+        {% elif item == 'mapas' %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Ubicaciones</h2>
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+                {% if datos['maps_misa'] %}
+                <div class="premium-card"
+                    style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                    <i class="fas fa-church fa-2x mb-2" style="color: var(--color-oro);"></i>
+                    <h3 style="margin-bottom: 15px;">Ceremonia</h3>
+                    <a href="{{ datos['maps_misa'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
+                </div>
+                {% endif %}
+                {% if datos['maps_fiesta'] %}
+                <div class="premium-card"
+                    style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                    <i class="fas fa-glass-cheers fa-2x mb-2" style="color: var(--color-oro);"></i>
+                    <h3 style="margin-bottom: 15px;">Recepción</h3>
+                    <a href="{{ datos['maps_fiesta'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        {% elif item == 'dresscode' and inv['dress_code'] %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 20px;">Código de Vestimenta</h2>
+            <div style="font-size: 3rem; color: var(--color-oro); margin-bottom: 15px;">
+                <i class="fas fa-user-tie me-3"></i><i class="fas fa-female"></i>
+            </div>
+            <h3 style="text-transform: uppercase; letter-spacing: 3px; font-family: var(--font-body);">{{
+                inv['dress_code'] }}</h3>
+            <p style="opacity: 0.7; margin-top: 15px; font-style: italic;">
+                {% if inv['dress_code'] == 'Formal' %}Traje oscuro y vestido largo o midi.
+                {% elif inv['dress_code'] == 'Etiqueta' %}Rigurosa etiqueta. Gala y elegancia absoluta.
+                {% elif inv['dress_code'] == 'Coctel' %}Traje sin corbata y vestido de cóctel.
+                {% elif inv['dress_code'] == 'Guayabera' %}Guayabera de lino y vestido fluido. Colores claros.
+                {% endif %}
+            </p>
+        </section>
+
+        {% elif item == 'regalos' %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Mesa de Regalos <i
+                    class="fas fa-gift ms-2"></i></h2>
+            <p class="mb-5" style="font-style: italic; opacity: 0.7;">El mejor regalo que nos pueden dar es contar con
+                su presencia</p>
+
+            <div class="premium-container">
+                {% if datos['cuenta_bancaria'] %}
+                <div class="premium-card">
+                    <div class="premium-icon"><i class="fas fa-envelope-open-text"></i></div>
+                    <div class="premium-info">
+                        <div class="premium-title">Lluvia de Sobres</div>
+                        <p
+                            style="white-space: pre-line; margin: 0; font-family: monospace; color: var(--color-oro); font-size: 1.1rem;">
+                            {{ datos['cuenta_bancaria'] }}</p>
                     </div>
-                    {% endif %}
-                    {% if datos['maps_fiesta'] %}
-                    <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
-                        <i class="fas fa-glass-cheers fa-2x mb-2" style="color: var(--color-oro);"></i>
-                        <h3 style="margin-bottom: 15px;">Recepción</h3>
-                        <a href="{{ datos['maps_fiesta'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
-                    </div>
-                    {% endif %}
-                </div>
-            </section>
-
-            {% elif item == 'dresscode' and inv['dress_code'] %}
-            <section data-aos="fade-up">
-                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 20px;">Código de Vestimenta</h2>
-                <div style="font-size: 3rem; color: var(--color-oro); margin-bottom: 15px;">
-                    <i class="fas fa-user-tie me-3"></i><i class="fas fa-female"></i>
-                </div>
-                <h3 style="text-transform: uppercase; letter-spacing: 3px; font-family: var(--font-body);">{{ inv['dress_code'] }}</h3>
-                <p style="opacity: 0.7; margin-top: 15px; font-style: italic;">
-                    {% if inv['dress_code'] == 'Formal' %}Traje oscuro y vestido largo o midi.
-                    {% elif inv['dress_code'] == 'Etiqueta' %}Rigurosa etiqueta. Gala y elegancia absoluta.
-                    {% elif inv['dress_code'] == 'Coctel' %}Traje sin corbata y vestido de cóctel.
-                    {% elif inv['dress_code'] == 'Guayabera' %}Guayabera de lino y vestido fluido. Colores claros.
-                    {% endif %}
-                </p>
-            </section>
-
-            {% elif item == 'regalos' %}
-            <section data-aos="fade-up">
-                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Mesa de Regalos <i class="fas fa-gift ms-2"></i></h2>
-                <p class="mb-5" style="font-style: italic; opacity: 0.7;">El mejor regalo que nos pueden dar es contar con su presencia</p>
-
-                <div class="premium-container">
-                    {% if datos['cuenta_bancaria'] %}
-                    <div class="premium-card">
-                        <div class="premium-icon"><i class="fas fa-envelope-open-text"></i></div>
-                        <div class="premium-info">
-                            <div class="premium-title">Lluvia de Sobres</div>
-                            <p style="white-space: pre-line; margin: 0; font-family: monospace; color: var(--color-oro); font-size: 1.1rem;">{{ datos['cuenta_bancaria'] }}</p>
-                        </div>
-                    </div>
-                    {% endif %}
-
-                    {% if inv['mesas_regalos_json'] and inv['mesas_regalos_json'] != 'null' %}
-                        {% set tiendas = inv['mesas_regalos_json']|from_json %}
-                        {% for tienda in tiendas %}
-                        <div class="premium-card">
-                            <div class="premium-icon">
-                                {% if 'liverpool' in tienda.nombre.lower() %}<i class="fas fa-shopping-bag"></i>
-                                {% elif 'amazon' in tienda.nombre.lower() %}<i class="fab fa-amazon"></i>
-                                {% else %}<i class="fas fa-store"></i>{% endif %}
-                            </div>
-                            <div class="premium-info">
-                                <div class="premium-title">{{ tienda.nombre }}</div>
-                                <a href="{{ tienda.url }}" target="_blank" class="btn-card">Ver mesa de regalos</a>
-                            </div>
-                        </div>
-                        {% endfor %}
-                    {% endif %}
-                </div>
-            </section>
-
-            {% elif item == 'hospedaje' %}
-            <section data-aos="fade-up">
-                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Hospedaje y Transporte</h2>
-
-                {% if datos['info_transporte'] %}
-                <div class="premium-card mb-4" style="text-align: center; flex-direction: column;">
-                    <i class="fas fa-bus-alt fa-2x mb-2" style="color: var(--color-oro);"></i>
-                    <p style="white-space: pre-line; margin: 0;">{{ datos['info_transporte'] }}</p>
                 </div>
                 {% endif %}
 
-                {% if inv['hospedaje_json'] and inv['hospedaje_json'] != 'null' %}
-                    <div class="premium-container">
-                        {% set hoteles = inv['hospedaje_json']|from_json %}
-                        {% for hotel in hoteles %}
-                        <div class="premium-card">
-                            <div class="premium-icon"><i class="fas fa-bed"></i></div>
-                            <div class="premium-info">
-                                <div class="premium-title">{{ hotel.nombre }}</div>
-                                <a href="{{ hotel.url }}" target="_blank" class="btn-card"><i class="fas fa-link me-1"></i> Ver opciones</a>
-                            </div>
-                        </div>
-                        {% endfor %}
+                {% if inv['mesas_regalos_json'] and inv['mesas_regalos_json'] != 'null' %}
+                {% set tiendas = inv['mesas_regalos_json']|from_json %}
+                {% for tienda in tiendas %}
+                <div class="premium-card">
+                    <div class="premium-icon">
+                        {% if 'liverpool' in tienda.nombre.lower() %}<i class="fas fa-shopping-bag"></i>
+                        {% elif 'amazon' in tienda.nombre.lower() %}<i class="fab fa-amazon"></i>
+                        {% else %}<i class="fas fa-store"></i>{% endif %}
                     </div>
+                    <div class="premium-info">
+                        <div class="premium-title">{{ tienda.nombre }}</div>
+                        <a href="{{ tienda.url }}" target="_blank" class="btn-card">Ver mesa de regalos</a>
+                    </div>
+                </div>
+                {% endfor %}
                 {% endif %}
-            </section>
+            </div>
+        </section>
 
-            {% elif item == 'album' and inv['album_url'] %}
-            <section data-aos="fade-up">
-                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 15px;">Captura el Momento</h2>
-                <p class="mb-4" style="opacity: 0.8;">Ayúdanos a documentar este día tan especial. Sube las fotos y videos que tomes a nuestro álbum compartido.</p>
+        {% elif item == 'hospedaje' %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Hospedaje y Transporte</h2>
 
-                <div class="premium-card" style="flex-direction: column; text-align: center; justify-content: center; padding: 40px;">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ inv['album_url'] }}" alt="QR Álbum" style="border-radius: 10px; border: 5px solid white; margin-bottom: 15px;">
-                    <a href="{{ inv['album_url'] }}" target="_blank" class="btn-boda"><i class="fas fa-camera-retro me-2"></i> Abrir Álbum en el Celular</a>
-                </div>
-            </section>
+            {% if datos['info_transporte'] %}
+            <div class="premium-card mb-4" style="text-align: center; flex-direction: column;">
+                <i class="fas fa-bus-alt fa-2x mb-2" style="color: var(--color-oro);"></i>
+                <p style="white-space: pre-line; margin: 0;">{{ datos['info_transporte'] }}</p>
+            </div>
+            {% endif %}
 
-            {% elif item == 'galeria' and fotos %}
-            <section data-aos="fade-up" style="max-width: 100%; overflow: hidden;">
-                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Nuestra Historia</h2>
-                <p class="mb-4" style="opacity: 0.7;">Desliza para ver más</p>
-                <div class="swiper mySwiper">
-                    <div class="swiper-wrapper">
-                        {% for foto in fotos %}
-                        <div class="swiper-slide"><img src="{{ foto }}" alt="Foto Novios"></div>
-                        {% endfor %}
+            {% if inv['hospedaje_json'] and inv['hospedaje_json'] != 'null' %}
+            <div class="premium-container">
+                {% set hoteles = inv['hospedaje_json']|from_json %}
+                {% for hotel in hoteles %}
+                <div class="premium-card">
+                    <div class="premium-icon"><i class="fas fa-bed"></i></div>
+                    <div class="premium-info">
+                        <div class="premium-title">{{ hotel.nombre }}</div>
+                        <a href="{{ hotel.url }}" target="_blank" class="btn-card"><i class="fas fa-link me-1"></i> Ver
+                            opciones</a>
                     </div>
                 </div>
-            </section>
+                {% endfor %}
+            </div>
+            {% endif %}
+        </section>
 
-            {% elif item == 'timeline' and datos.get('itinerario') %}
-            <section data-aos="fade-up">
-                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Itinerario</h2>
-                <div class="timeline">
-                    {% for act in datos['itinerario'] %}
-                    <div class="timeline-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 + 100 }}">
-                        <div class="timeline-time">{{ act.hora }}</div>
-                        <div class="timeline-dot"></div>
-                        <div class="timeline-content"><i class="{{ act.icono }} me-2" style="color: var(--color-oro);"></i> {{ act.actividad }}</div>
-                    </div>
+        {% elif item == 'album' and inv['album_url'] %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 15px;">Captura el Momento</h2>
+            <p class="mb-4" style="opacity: 0.8;">Ayúdanos a documentar este día tan especial. Sube las fotos y videos
+                que tomes a nuestro álbum compartido.</p>
+
+            <div class="premium-card"
+                style="flex-direction: column; text-align: center; justify-content: center; padding: 40px;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ inv['album_url'] }}"
+                    alt="QR Álbum" style="border-radius: 10px; border: 5px solid white; margin-bottom: 15px;">
+                <a href="{{ inv['album_url'] }}" target="_blank" class="btn-boda"><i
+                        class="fas fa-camera-retro me-2"></i> Abrir Álbum en el Celular</a>
+            </div>
+        </section>
+
+        {% elif item == 'galeria' and fotos %}
+        <section data-aos="fade-up" style="max-width: 100%; overflow: hidden;">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Nuestra Historia</h2>
+            <p class="mb-4" style="opacity: 0.7;">Desliza para ver más</p>
+            <div class="swiper mySwiper">
+                <div class="swiper-wrapper">
+                    {% for foto in fotos %}
+                    <div class="swiper-slide"><img src="{{ foto }}" alt="Foto Novios"></div>
                     {% endfor %}
                 </div>
-            </section>
+            </div>
+        </section>
 
-            {% elif item == 'rsvp' %}
-            <section data-aos="fade-up" style="padding-bottom: 100px;">
-                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 20px;">Asistencia</h2>
-                <p class="mb-4" style="opacity: 0.8;">Por favor confirma tu asistencia antes del evento.</p>
-                {% if datos['telefono_rsvp'] %}
-                <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia%20a%20la%20boda."
-                    target="_blank" class="btn-boda" style="background: #25D366; border-color: #25D366; color: white;">
-                    <i class="fab fa-whatsapp me-2"></i> Confirmar por WhatsApp
-                </a>
-                {% endif %}
-            </section>
+        {% elif item == 'timeline' and datos.get('itinerario') %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Itinerario</h2>
+            <div class="timeline">
+                {% for act in datos['itinerario'] %}
+                <div class="timeline-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 + 100 }}">
+                    <div class="timeline-time">{{ act.hora }}</div>
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content"><i class="{{ act.icono }} me-2" style="color: var(--color-oro);"></i>
+                        {{ act.actividad }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
 
+        {% elif item == 'rsvp' %}
+        <section data-aos="fade-up" style="padding-bottom: 100px;">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 20px;">Asistencia</h2>
+            <p class="mb-4" style="opacity: 0.8;">Por favor confirma tu asistencia antes del evento.</p>
+            {% if datos['telefono_rsvp'] %}
+            <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia%20a%20la%20boda."
+                target="_blank" class="btn-boda" style="background: #25D366; border-color: #25D366; color: white;">
+                <i class="fab fa-whatsapp me-2"></i> Confirmar por WhatsApp
+            </a>
             {% endif %}
+        </section>
+
+        {% endif %}
 
         {% endfor %}
 
@@ -353,6 +666,8 @@
         var swiper = new Swiper(".mySwiper", {
             effect: "cards", grabCursor: true, centeredSlides: true, slidesPerView: "auto", loop: true,
             autoplay: { delay: 3000, disableOnInteraction: false },
+            observer: true,
+            observeParents: true,
         });
 
         // Reloj Cuenta Regresiva
@@ -376,4 +691,5 @@
         }
     </script>
 </body>
+
 </html>
