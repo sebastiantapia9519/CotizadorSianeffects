@@ -387,13 +387,21 @@
                     data.items.forEach(item => {
                         let cant = item.cantidad % 1 === 0 ? Math.round(item.cantidad) : item.cantidad;
 
-                        // CÁLCULOS POR FILA
-                        let ventaTotalItem = item.subtotal;
-                        let costoTotalItem = item.costo_unitario * item.cantidad;
+                        // --- PROTECCIÓN PARA REGISTROS CON EL BUG VIEJO ---
+                        let ventaTotalItem = parseFloat(item.subtotal) || 0;
+                        let costoUnitarioBD = parseFloat(item.costo_unitario) || 0;
+                        let precioUnitarioBD = parseFloat(item.precio_unitario) || 0;
+
+                        // Si el precio unitario viene en 0, lo calculamos "al revés" (Importe / Cantidad)
+                        if (precioUnitarioBD === 0 && cant > 0) {
+                            precioUnitarioBD = ventaTotalItem / cant;
+                        }
+
+                        let costoTotalItem = costoUnitarioBD * cant;
                         let gananciaTotalItem = ventaTotalItem - costoTotalItem;
 
                         sumaCostos += costoTotalItem;
-                        sumaGanancias += gananciaTotalItem; // Sumamos la ganancia de esta fila
+                        sumaGanancias += gananciaTotalItem;
 
                         // Composición (Ingredientes)
                         let htmlIngredientes = '';
@@ -417,7 +425,7 @@
                                 <td class="text-center align-middle">${cant}</td>
                                 
                                 <td class="text-end text-muted align-middle small">
-                                    $${item.precio_unitario.toFixed(2)} unit.
+                                    $${precioUnitarioBD.toFixed(2)} unit.
                                 </td>
 
                                 <td class="text-end text-dark fw-bold align-middle">
