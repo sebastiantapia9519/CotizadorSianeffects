@@ -892,7 +892,9 @@
                     precio: i.precio_unitario,
                     costo: i.costo_unitario,
                     subtotal: i.subtotal,
-                    composicion: typeof i.composicion === 'string' ? i.composicion : JSON.stringify(i.composicion)
+                    composicion: typeof i.composicion === 'string'
+                        ? i.composicion
+                        : JSON.stringify(i.composicion)
                 })),
                 subtotal: subtotal,
                 descuento_porcentaje: desc_porcentaje,
@@ -904,317 +906,327 @@
                 estado: estado,
                 pago_inicial: pago_inicial
             })
-        }).then(data => {
-            if (data.success) {
-
-                sessionStorage.removeItem('recarga_id');
-                document.getElementById('ventaIdEdicion').value = '';
-
-                if (ventanaTicket) ventanaTicket.location.href = '/ticket/' + data.ticket_id;
-                else window.location.href = '/ticket/' + data.ticket_id;
-
-                setTimeout(() => window.location.reload(), 1000);
-            } else {
-                if (ventanaTicket) ventanaTicket.close();
-                alert("Error: " + data.error);
-            }
-        }).catch(err => {
-            if (ventanaTicket) ventanaTicket.close();
-            alert("Error de conexión.");
-        });
-    }
-
-    function mostrarGuardar() {
-        event.preventDefault();
-        document.getElementById('boxGuardar').classList.remove('d-none');
-    }
-
-    function guardarProductoDB() {
-        const nom = document.getElementById('nombreNuevoProducto').value.trim();
-        if (!nom) return alert("Escribe un nombre.");
-        const materiales = [];
-        const maquinaria = [];
-
-        document.querySelectorAll('.item-row').forEach(row => {
-            const s = row.querySelector('.material-select'); // Ojo aqui selector
-            const c = row.querySelector('.input-cantidad');
-            // Nota: En la version estable, material-select es clase
-            if (s && s.value > 0) materiales.push({ id: parseInt(s.value), cantidad: parseFloat(c.value) });
-        });
-
-        document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
-            maquinaria.push({ id: parseInt(c.getAttribute('data-id')) });
-        });
-
-        if (materiales.length === 0) return alert("Agrega al menos un material.");
-
-        fetch('/guardar_receta', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ nombre: nom, materiales: materiales, maquinaria: maquinaria })
         })
-            .then(async response => {
-                const data = await response.json();
-                if (!response.ok) return Promise.reject(data.error || response.statusText);
-                alert("¡Receta guardada!");
-                location.reload();
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+
+                    // 🔥 LIMPIAMOS MODO EDICIÓN
+                    sessionStorage.removeItem('recarga_id');
+                    document.getElementById('ventaIdEdicion').value = '';
+
+                    if (ventanaTicket) {
+                        ventanaTicket.location.href = '/ticket/' + data.ticket_id;
+                    } else {
+                        window.location.href = '/ticket/' + data.ticket_id;
+                    }
+
+                    setTimeout(() => window.location.reload(), 800);
+
+                } else {
+                    if (ventanaTicket) ventanaTicket.close();
+                    alert("Error: " + data.error);
+                }
             })
-            .catch(error => alert("Error: " + error));
-    }
+            .catch(err => {
+                if (ventanaTicket) ventanaTicket.close();
+                console.error(err);
+                alert("Error de conexión.");
+            });
 
-    function cargarProductoDB() {
-        const id = document.getElementById('selectCargarProducto').value;
-        if (!id) return;
-        limpiarMateriales();
-        document.getElementById('nombreProductoActual').value = '';
-        document.getElementById('cantidadParaCarrito').value = 1;
-        document.getElementById('costosExtra').value = 0;
-        document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
-        fetch('/api/receta/' + id).then(r => r.json()).then(d => {
-            if (d.error) return alert("Error: " + d.error);
-            document.getElementById('nombreProductoActual').value = d.nombre;
-            if (d.materiales && d.materiales.length > 0) {
-                d.materiales.forEach(i => agregarFila(i.id, i.cantidad));
+
+        function mostrarGuardar() {
+            event.preventDefault();
+            document.getElementById('boxGuardar').classList.remove('d-none');
+        }
+
+        function guardarProductoDB() {
+            const nom = document.getElementById('nombreNuevoProducto').value.trim();
+            if (!nom) return alert("Escribe un nombre.");
+            const materiales = [];
+            const maquinaria = [];
+
+            document.querySelectorAll('.item-row').forEach(row => {
+                const s = row.querySelector('.material-select'); // Ojo aqui selector
+                const c = row.querySelector('.input-cantidad');
+                // Nota: En la version estable, material-select es clase
+                if (s && s.value > 0) materiales.push({ id: parseInt(s.value), cantidad: parseFloat(c.value) });
+            });
+
+            document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
+                maquinaria.push({ id: parseInt(c.getAttribute('data-id')) });
+            });
+
+            if (materiales.length === 0) return alert("Agrega al menos un material.");
+
+            fetch('/guardar_receta', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nombre: nom, materiales: materiales, maquinaria: maquinaria })
+            })
+                .then(async response => {
+                    const data = await response.json();
+                    if (!response.ok) return Promise.reject(data.error || response.statusText);
+                    alert("¡Receta guardada!");
+                    location.reload();
+                })
+                .catch(error => alert("Error: " + error));
+        }
+
+        function cargarProductoDB() {
+            const id = document.getElementById('selectCargarProducto').value;
+            if (!id) return;
+            limpiarMateriales();
+            document.getElementById('nombreProductoActual').value = '';
+            document.getElementById('cantidadParaCarrito').value = 1;
+            document.getElementById('costosExtra').value = 0;
+            document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
+
+            fetch('/api/receta/' + id).then(r => r.json()).then(d => {
+                if (d.error) return alert("Error: " + d.error);
+                document.getElementById('nombreProductoActual').value = d.nombre;
+                if (d.materiales && d.materiales.length > 0) {
+                    d.materiales.forEach(i => agregarFila(i.id, i.cantidad));
+                } else {
+                    agregarFila();
+                }
+                if (d.maquinaria) {
+                    d.maquinaria.forEach(m => {
+                        const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
+                        if (c) c.checked = true;
+                    });
+                }
+                setTimeout(calcularTotal, 200);
+            });
+        }
+
+        function limpiarMateriales() { document.getElementById('listaMateriales').innerHTML = ''; }
+
+        // --- VARIABLES ENVIO ---
+        let costoEnvio = 0;
+        let infoEnvio = null;
+
+        function abrirModalEnvios() { new bootstrap.Modal(document.getElementById('modalEnvios')).show(); }
+        function limpiarEnvio() {
+            costoEnvio = 0;
+            infoEnvio = null;
+            document.getElementById('resumenEnvio').classList.add('d-none');
+            document.getElementById('btnTextoEnvio').innerText = "Cotizar";
+            calcularTotal();
+        }
+
+        function extraerCoordenadas(input) {
+            const url = input.value.trim();
+            if (!url) return;
+            const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+            const match = url.match(regex);
+            if (match) {
+                document.getElementById('latDestino').value = match[1];
+                document.getElementById('lngDestino').value = match[2];
+                input.classList.remove('is-invalid');
+                input.classList.add('is-valid');
+                return;
+            }
+            if (url.includes('goo.gl') || url.includes('maps.app')) {
+                alert("Usa el link largo de Maps.");
+                input.value = "";
+            }
+        }
+
+        async function pegarDelPortapapeles() {
+            try {
+                const text = await navigator.clipboard.readText();
+                document.getElementById('inputMapsLink').value = text;
+                extraerCoordenadas(document.getElementById('inputMapsLink'));
+            } catch (err) { }
+        }
+
+        // --- FUNCION PARA CARGAR UNA VENTA ANTERIOR AL CARRITO ---
+        function cargarCotizacion(id) {
+            console.log("Iniciando carga de cotización ID:", id); // Esto nos dirá que sí despertó
+            fetch('/api/get_cotizacion/' + id)
+                .then(r => r.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error("Error del servidor:", data.error);
+                        return alert(data.error);
+                    }
+
+                    // 1. Limpiamos el carrito actual
+                    carrito = [];
+
+                    // 2. Cargamos los datos generales en el panel derecho
+                    document.getElementById('ventaIdEdicion').value = data.id;
+                    // 🔥 ACTIVAMOS MODO EDICIÓN
+                    sessionStorage.setItem('recarga_id', data.id);
+
+                    // Cambiamos el texto del botón para que el usuario sepa
+                    document.querySelectorAll("button[onclick^='finalizarCompra']").forEach(btn => {
+                        btn.innerHTML = btn.innerHTML.replace('Solo Cotizar', 'Actualizar Cotización');
+                    });
+                    document.getElementById('nombreCliente').value = data.cliente;
+                    document.getElementById('inputDescuento').value = data.descuento;
+                    document.getElementById('sliderDescuento').value = data.descuento;
+
+                    // 3. Reconstruimos el carrito con los productos guardados
+                    data.items.forEach(item => {
+                        carrito.push({
+                            concepto: item.concepto,
+                            precio_unitario: parseFloat(item.precio_unitario),
+                            costo_unitario: parseFloat(item.costo_unitario),
+                            cantidad: parseFloat(item.cantidad),
+                            subtotal: parseFloat(item.subtotal),
+                            composicion: JSON.parse(item.composicion)
+                        });
+                    });
+
+                    // 4. Renderizamos y recalculamos totales
+                    renderizarCarrito();
+                    console.log("Cotización cargada exitosamente");
+                })
+                .catch(e => {
+                    console.error("Error de conexión:", e);
+                    alert("Error de conexión al cargar datos.");
+                });
+        }
+
+        function solicitarCotizacion(tipo) {
+            const loader = document.getElementById('loaderEnvio');
+            loader.classList.remove('d-none');
+            let payload = { tipo: tipo };
+
+            if (tipo === 'local') {
+                const lat = document.getElementById('latDestino').value;
+                const lng = document.getElementById('lngDestino').value;
+                if (!lat || !lng) { loader.classList.add('d-none'); return alert("Falta ubicación."); }
+                payload.lat = lat; payload.lng = lng;
             } else {
+                payload.peso = document.getElementById('envioPeso').value;
+                payload.largo = document.getElementById('envioLargo').value || 10;
+                payload.ancho = document.getElementById('envioAncho').value || 10;
+                payload.alto = document.getElementById('envioAlto').value || 10;
+                payload.estado = document.getElementById('estadoDestino').value;
+            }
+
+            fetch('/api/cotizar-envio', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            }).then(r => r.json()).then(data => {
+                loader.classList.add('d-none');
+                if (data.error) return alert(data.error);
+
+                // Cerrar modal y aplicar
+                const modalEl = document.getElementById('modalEnvios');
+                const modal = bootstrap.Modal.getInstance(modalEl);
+                modal.hide();
+
+                costoEnvio = parseFloat(data.costo_sugerido);
+                infoEnvio = data;
+                const resumen = document.getElementById('resumenEnvio');
+                resumen.classList.remove('d-none');
+
+                let desc = data.tipo === 'local' ? `Local (${data.distancia_km} km)` : `Nacional (${data.zona})`;
+                document.getElementById('descEnvio').innerText = desc;
+                document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
+                document.getElementById('btnTextoEnvio').innerText = "Cambiar";
+                calcularTotal();
+            }).catch(e => {
+                loader.classList.add('d-none');
+                alert("Error de conexión");
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => agregarFila());
+
+        // Detectar si venimos del historial para cargar una cotización
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Verificar si hay un ID en la URL para cargar
+            const urlParams = new URLSearchParams(window.location.search);
+            const idACargar = urlParams.get('cargar_cotizacion');
+
+            if (idACargar) {
+                // Ejecutamos la carga inmediata
+                cargarCotizacion(idACargar);
+            }
+
+            // 2. Siempre agregar al menos una fila vacía al iniciar para que no se vea pelón
+            if (document.querySelectorAll('.item-row').length === 0) {
                 agregarFila();
             }
-            if (d.maquinaria) {
-                d.maquinaria.forEach(m => {
-                    const c = document.querySelector(`.check-maquinaria-input[data-id="${m.id}"]`);
-                    if (c) c.checked = true;
-                });
-            }
-            setTimeout(calcularTotal, 200);
         });
-    }
 
-    function limpiarMateriales() { document.getElementById('listaMateriales').innerHTML = ''; }
 
-    // --- VARIABLES ENVIO ---
-    let costoEnvio = 0;
-    let infoEnvio = null;
+        function cargarRecetaDesdeCarrito(index) {
+            const item = carrito[index];
+            if (!item || !item.composicion || typeof item.composicion === 'string') {
+                alert("Este producto no tiene receta.");
+                return;
+            }
 
-    function abrirModalEnvios() { new bootstrap.Modal(document.getElementById('modalEnvios')).show(); }
-    function limpiarEnvio() {
-        costoEnvio = 0;
-        infoEnvio = null;
-        document.getElementById('resumenEnvio').classList.add('d-none');
-        document.getElementById('btnTextoEnvio').innerText = "Cotizar";
-        calcularTotal();
-    }
+            // Limpia receta actual
+            limpiarMateriales();
+            document.getElementById('costosExtra').value = 0;
+            document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
-    function extraerCoordenadas(input) {
-        const url = input.value.trim();
-        if (!url) return;
-        const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-        const match = url.match(regex);
-        if (match) {
-            document.getElementById('latDestino').value = match[1];
-            document.getElementById('lngDestino').value = match[2];
-            input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-            return;
-        }
-        if (url.includes('goo.gl') || url.includes('maps.app')) {
-            alert("Usa el link largo de Maps.");
-            input.value = "";
-        }
-    }
+            document.getElementById('nombreProductoActual').value = item.concepto;
+            document.getElementById('cantidadParaCarrito').value = item.cantidad;
 
-    async function pegarDelPortapapeles() {
-        try {
-            const text = await navigator.clipboard.readText();
-            document.getElementById('inputMapsLink').value = text;
-            extraerCoordenadas(document.getElementById('inputMapsLink'));
-        } catch (err) { }
-    }
-
-    // --- FUNCION PARA CARGAR UNA VENTA ANTERIOR AL CARRITO ---
-    function cargarCotizacion(id) {
-        console.log("Iniciando carga de cotización ID:", id); // Esto nos dirá que sí despertó
-        fetch('/api/get_cotizacion/' + id)
-            .then(r => r.json())
-            .then(data => {
-                if (data.error) {
-                    console.error("Error del servidor:", data.error);
-                    return alert(data.error);
+            item.composicion.forEach(c => {
+                if (c.tipo === 'material') {
+                    agregarFila(c.id, c.cantidad);
                 }
 
-                // 1. Limpiamos el carrito actual
-                carrito = [];
-
-                // 2. Cargamos los datos generales en el panel derecho
-                document.getElementById('ventaIdEdicion').value = data.id;
-                // 🔥 ACTIVAMOS MODO EDICIÓN
-                sessionStorage.setItem('recarga_id', data.id);
-
-                // Cambiamos el texto del botón para que el usuario sepa
-                document.querySelectorAll("button[onclick^='finalizarCompra']").forEach(btn => {
-                    btn.innerHTML = btn.innerHTML.replace('Solo Cotizar', 'Actualizar Cotización');
-                });
-                document.getElementById('nombreCliente').value = data.cliente;
-                document.getElementById('inputDescuento').value = data.descuento;
-                document.getElementById('sliderDescuento').value = data.descuento;
-
-                // 3. Reconstruimos el carrito con los productos guardados
-                data.items.forEach(item => {
-                    carrito.push({
-                        concepto: item.concepto,
-                        precio_unitario: parseFloat(item.precio_unitario),
-                        costo_unitario: parseFloat(item.costo_unitario),
-                        cantidad: parseFloat(item.cantidad),
-                        subtotal: parseFloat(item.subtotal),
-                        composicion: JSON.parse(item.composicion)
-                    });
-                });
-
-                // 4. Renderizamos y recalculamos totales
-                renderizarCarrito();
-                console.log("Cotización cargada exitosamente");
-            })
-            .catch(e => {
-                console.error("Error de conexión:", e);
-                alert("Error de conexión al cargar datos.");
+                if (c.tipo === 'maquinaria') {
+                    const chk = document.querySelector(`.check-maquinaria-input[data-id="${c.id}"]`);
+                    if (chk) chk.checked = true;
+                }
             });
-    }
 
-    function solicitarCotizacion(tipo) {
-        const loader = document.getElementById('loaderEnvio');
-        loader.classList.remove('d-none');
-        let payload = { tipo: tipo };
-
-        if (tipo === 'local') {
-            const lat = document.getElementById('latDestino').value;
-            const lng = document.getElementById('lngDestino').value;
-            if (!lat || !lng) { loader.classList.add('d-none'); return alert("Falta ubicación."); }
-            payload.lat = lat; payload.lng = lng;
-        } else {
-            payload.peso = document.getElementById('envioPeso').value;
-            payload.largo = document.getElementById('envioLargo').value || 10;
-            payload.ancho = document.getElementById('envioAncho').value || 10;
-            payload.alto = document.getElementById('envioAlto').value || 10;
-            payload.estado = document.getElementById('estadoDestino').value;
+            setTimeout(calcularTotal, 150);
         }
 
-        fetch('/api/cotizar-envio', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(r => r.json()).then(data => {
-            loader.classList.add('d-none');
-            if (data.error) return alert(data.error);
 
-            // Cerrar modal y aplicar
-            const modalEl = document.getElementById('modalEnvios');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
+        document.addEventListener("DOMContentLoaded", () => {
+            const items = sessionStorage.getItem('recarga_cotizacion');
 
-            costoEnvio = parseFloat(data.costo_sugerido);
-            infoEnvio = data;
-            const resumen = document.getElementById('resumenEnvio');
-            resumen.classList.remove('d-none');
+            if (!items) return;
 
-            let desc = data.tipo === 'local' ? `Local (${data.distancia_km} km)` : `Nacional (${data.zona})`;
-            document.getElementById('descEnvio').innerText = desc;
-            document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
-            document.getElementById('btnTextoEnvio').innerText = "Cambiar";
-            calcularTotal();
-        }).catch(e => {
-            loader.classList.add('d-none');
-            alert("Error de conexión");
-        });
-    }
+            try {
+                const data = JSON.parse(items);
 
-    document.addEventListener('DOMContentLoaded', () => agregarFila());
+                carrito = [];
+                data.forEach(i => carrito.push(i));
 
-    // Detectar si venimos del historial para cargar una cotización
-    document.addEventListener('DOMContentLoaded', () => {
-        // 1. Verificar si hay un ID en la URL para cargar
-        const urlParams = new URLSearchParams(window.location.search);
-        const idACargar = urlParams.get('cargar_cotizacion');
+                renderizarCarrito();
 
-        if (idACargar) {
-            // Ejecutamos la carga inmediata
-            cargarCotizacion(idACargar);
-        }
+                // Cliente
+                const cliente = sessionStorage.getItem('recarga_cliente');
+                if (cliente) {
+                    document.getElementById('cliente').value = cliente;
+                }
 
-        // 2. Siempre agregar al menos una fila vacía al iniciar para que no se vea pelón
-        if (document.querySelectorAll('.item-row').length === 0) {
-            agregarFila();
-        }
-    });
+                // Impuestos
+                if (sessionStorage.getItem('recarga_tax_active') === 'true') {
+                    document.getElementById('checkImpuestos').checked = true;
+                    document.getElementById('taxPercent').value =
+                        sessionStorage.getItem('recarga_tax_percent') || 0;
+                }
 
+                calcularTotal();
 
-    function cargarRecetaDesdeCarrito(index) {
-        const item = carrito[index];
-        if (!item || !item.composicion || typeof item.composicion === 'string') {
-            alert("Este producto no tiene receta.");
-            return;
-        }
+                // Limpieza (MUY importante)
+                sessionStorage.removeItem('recarga_cotizacion');
+                sessionStorage.removeItem('recarga_cliente');
+                sessionStorage.removeItem('recarga_id');
+                sessionStorage.removeItem('recarga_tax_percent');
+                sessionStorage.removeItem('recarga_tax_active');
 
-        // Limpia receta actual
-        limpiarMateriales();
-        document.getElementById('costosExtra').value = 0;
-        document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
-
-        document.getElementById('nombreProductoActual').value = item.concepto;
-        document.getElementById('cantidadParaCarrito').value = item.cantidad;
-
-        item.composicion.forEach(c => {
-            if (c.tipo === 'material') {
-                agregarFila(c.id, c.cantidad);
-            }
-
-            if (c.tipo === 'maquinaria') {
-                const chk = document.querySelector(`.check-maquinaria-input[data-id="${c.id}"]`);
-                if (chk) chk.checked = true;
+            } catch (e) {
+                console.error("Error cargando recarga:", e);
             }
         });
-
-        setTimeout(calcularTotal, 150);
-    }
-
-
-    document.addEventListener("DOMContentLoaded", () => {
-        const items = sessionStorage.getItem('recarga_cotizacion');
-
-        if (!items) return;
-
-        try {
-            const data = JSON.parse(items);
-
-            carrito = [];
-            data.forEach(i => carrito.push(i));
-
-            renderizarCarrito();
-
-            // Cliente
-            const cliente = sessionStorage.getItem('recarga_cliente');
-            if (cliente) {
-                document.getElementById('cliente').value = cliente;
-            }
-
-            // Impuestos
-            if (sessionStorage.getItem('recarga_tax_active') === 'true') {
-                document.getElementById('checkImpuestos').checked = true;
-                document.getElementById('taxPercent').value =
-                    sessionStorage.getItem('recarga_tax_percent') || 0;
-            }
-
-            calcularTotal();
-
-            // Limpieza (MUY importante)
-            sessionStorage.removeItem('recarga_cotizacion');
-            sessionStorage.removeItem('recarga_cliente');
-            sessionStorage.removeItem('recarga_id');
-            sessionStorage.removeItem('recarga_tax_percent');
-            sessionStorage.removeItem('recarga_tax_active');
-
-        } catch (e) {
-            console.error("Error cargando recarga:", e);
-        }
-    });
 
 
 </script>
