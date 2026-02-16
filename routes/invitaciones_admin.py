@@ -457,51 +457,48 @@ def ver_fotos_invitados(id):
 def descargar_rollo_zip(id):
     conn = get_db_connection()
     try:
-        # 1. Obtener datos para el nombre del archivo
         inv = conn.execute("SELECT slug FROM invitaciones WHERE id = ?", (id,)).fetchone()
-        nombre_zip = f"fotos_{inv['slug']}.zip"
-
-        # 2. Obtener todas las URLs de las fotos
         fotos = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (id,)).fetchall()
 
         if not fotos:
-            flash("No hay fotos para descargar aún.", "warning")
+            flash("No hay fotos en la base de datos.", "warning")
             return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
 
-        # 3. Crear el archivo ZIP en memoria (RAM)
         memory_file = io.BytesIO()
+        # Forzamos User-Agent y desactivamos verificación SSL temporalmente para descartar bloqueo de red
+        headers = {'User-Agent': 'Mozilla/5.0'}
         
-        # Agregamos un User-Agent para que R2 no nos rechace la conexión
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-
+        fotos_añadidas = 0
+        
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             for i, foto in enumerate(fotos):
                 try:
-                    # Descargamos cada foto de tu R2
-                    respuesta = requests.get(foto['url'], headers=headers, timeout=15)
+                    # Intentamos descargar la foto (verify=False por si es un tema de certificados en el servidor)
+                    respuesta = requests.get(foto['url'], headers=headers, timeout=15, verify=False)
                     
-                    if respuesta.status_code == 200:
-                        # Forzamos un nombre único con extensión .jpg
-                        filename = f"foto_boda_{i+1}.jpg"
-                        zf.writestr(filename, respuesta.content)
-                        print(f"Añadida al ZIP: {filename}") # Esto saldrá en tus logs de PythonAnywhere
+                    if respuesta.status_code == 200 and len(respuesta.content) > 0:
+                        zf.writestr(f"foto_{i+1}.jpg", respuesta.content)
+                        fotos_añadidas += 1
+                    else:
+                        print(f"Error en foto {i}: Status {respuesta.status_code}")
                 except Exception as e:
-                    print(f"Error descargando {foto['url']}: {e}")
+                    print(f"Error de conexión en foto {i}: {e}")
                     continue
 
-        # ¡Súper importante! Mover el puntero al inicio después de cerrar el ZipFile
+        if fotos_añadidas == 0:
+            flash("El servidor no pudo descargar ninguna foto de R2. Revisa los logs.", "danger")
+            return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
+
         memory_file.seek(0)
-        
         return send_file(
             memory_file,
             mimetype='application/zip',
             as_attachment=True,
-            download_name=nombre_zip
+            download_name=f"fotos_{inv['slug']}.zip"
         )
 
     except Exception as e:
-        print(f"ERROR CRÍTICO GENERANDO ZIP: {e}")
-        flash(f"Error al generar el ZIP: {str(e)}", "danger")
+        flash(f"Error crítico: {str(e)}", "danger")
         return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
     finally:
         conn.close()
