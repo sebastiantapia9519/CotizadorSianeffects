@@ -1114,22 +1114,19 @@ function cargarCotizacion(id) {
 
     // Detectar si venimos del historial para cargar una cotización
     document.addEventListener('DOMContentLoaded', () => {
+    // 1. Verificar si hay un ID en la URL para cargar
     const urlParams = new URLSearchParams(window.location.search);
     const idACargar = urlParams.get('cargar_cotizacion');
     
     if (idACargar) {
-        // Llamamos a la función que te pasé anteriormente
-        if (typeof cargarCotizacion === "function") {
-            cargarCotizacion(idACargar);
-        } else {
-            console.error("La función cargarCotizacion no está definida.");
-        }
+        // Ejecutamos la carga inmediata
+        cargarCotizacion(idACargar);
     }
     
-    // Si no hay nada que cargar, solo agrega la primera fila vacía
-    if (!idACargar && document.querySelectorAll('.item-row').length === 0) {
+    // 2. Siempre agregar al menos una fila vacía al iniciar para que no se vea pelón
+    if (document.querySelectorAll('.item-row').length === 0) {
         agregarFila();
     }
-    });
+});
 </script>
 {% endblock %}
