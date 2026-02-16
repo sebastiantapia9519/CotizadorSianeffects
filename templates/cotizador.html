@@ -1163,5 +1163,47 @@ function cargarRecetaDesdeCarrito(index) {
     setTimeout(calcularTotal, 150);
 }
 
+
+document.addEventListener("DOMContentLoaded", () => {
+    const items = sessionStorage.getItem('recarga_cotizacion');
+
+    if (!items) return;
+
+    try {
+        const data = JSON.parse(items);
+
+        carrito = [];
+        data.forEach(i => carrito.push(i));
+
+        renderizarCarrito();
+
+        // Cliente
+        const cliente = sessionStorage.getItem('recarga_cliente');
+        if (cliente) {
+            document.getElementById('cliente').value = cliente;
+        }
+
+        // Impuestos
+        if (sessionStorage.getItem('recarga_tax_active') === 'true') {
+            document.getElementById('checkImpuestos').checked = true;
+            document.getElementById('taxPercent').value =
+                sessionStorage.getItem('recarga_tax_percent') || 0;
+        }
+
+        calcularTotal();
+
+        // Limpieza (MUY importante)
+        sessionStorage.removeItem('recarga_cotizacion');
+        sessionStorage.removeItem('recarga_cliente');
+        sessionStorage.removeItem('recarga_id');
+        sessionStorage.removeItem('recarga_tax_percent');
+        sessionStorage.removeItem('recarga_tax_active');
+
+    } catch (e) {
+        console.error("Error cargando recarga:", e);
+    }
+});
+
+
 </script>
 {% endblock %}
