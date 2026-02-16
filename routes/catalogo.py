@@ -1,21 +1,23 @@
-import base64
-import io
-import uuid
-from flask import Blueprint, render_template, request, jsonify
+import random
+import string
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from db import get_db_connection as get_db
+from helpers import login_required
 import boto3
 from botocore.config import Config
+from werkzeug.utils import secure_filename
+from flask import request, jsonify 
 
-invitaciones_publicas_bp = Blueprint('invitaciones_publicas', __name__)
+catalogo_bp = Blueprint('catalogo', __name__)
 
-# =========================================================
-# CONFIGURACIÓN CLOUDFLARE R2
-# =========================================================
+# Tus llaves de Cloudflare (Paso 2)
 ACCESS_KEY = '5dad301112cb3db90de60278e5d4e101'
 SECRET_KEY = '8d6b5dc8d9b01a8196b9e1a7d3e425f600cefad5e189bf42f0264edde035ab70'
 ENDPOINT_URL = 'https://e063cc1ad223c0544aee7a03d9f0f9a6.r2.cloudflarestorage.com'
-BUCKET_NAME = 'sianeffectscatalogo' # Usamos tu mismo bucket
+BUCKET_NAME = 'sianeffectscatalogo'
+# La URL que te dio R2.dev en el Paso 3
 PUBLIC_URL = 'https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev'
+
 
 s3_client = boto3.client(
     service_name='s3',
@@ -26,58 +28,320 @@ s3_client = boto3.client(
     config=Config(signature_version='s3v4')
 )
 
-# =========================================================
-# RUTAS PÚBLICAS PARA LA CÁMARA DESECHABLE
-# =========================================================
-
-@invitaciones_publicas_bp.route('/rollo-invitados/<int:invitacion_id>')
-def abrir_camara(invitacion_id):
-    # Aquí simplemente mostramos el HTML de la cámara al invitado
-    # Le pasamos el ID para que sepa a qué boda subir las fotos
-    return render_template('camara.html', inv_id=invitacion_id)
-
-@invitaciones_publicas_bp.route('/api/upload_rollo/<int:invitacion_id>', methods=['POST'])
-def upload_rollo(invitacion_id):
-    try:
-        data = request.get_json()
-        imagen_b64 = data.get('imagen')
+@catalogo_bp.route('/subir-archivo', methods=['POST'])
+def subir_archivo():
+    file = request.files['file']
+    if file:
+        nombre_archivo = file.filename
+        # Subida a R2
+        s3_client.upload_fileobj(file, BUCKET_NAME, nombre_archivo)
         
-        if not imagen_b64:
-            return jsonify({'success': False, 'error': 'No se recibió ninguna imagen'}), 400
-
-        # 1. Limpiar el encabezado del base64 (data:image/jpeg;base64,....)
-        if ',' in imagen_b64:
-            imagen_b64 = imagen_b64.split(',')[1]
-
-        # 2. Convertir el texto Base64 a bytes (el archivo real)
-        img_bytes = base64.b64decode(imagen_b64)
-        
-        # 3. Crear un archivo en memoria (RAM) para que R2 lo pueda leer
-        archivo_memoria = io.BytesIO(img_bytes)
-        
-        # 4. Generar un nombre único y ordenado en carpetas
-        nombre_archivo = f"bodas/boda_{invitacion_id}/rollo_invitados/foto_{uuid.uuid4().hex[:8]}.jpg"
-        
-        # 5. Subir a Cloudflare R2 (indicando que es una imagen JPEG)
-        s3_client.upload_fileobj(
-            archivo_memoria, 
-            BUCKET_NAME, 
-            nombre_archivo,
-            ExtraArgs={'ContentType': 'image/jpeg'} # ¡Súper importante para que se vea en el navegador!
-        )
-        
-        # 6. Generar el link público final
+        # Generamos el link final para tu base de datos
         url_final = f"{PUBLIC_URL}/{nombre_archivo}"
+        return jsonify({"success": True, "url": url_final})
+    return jsonify({"success": False, "error": "No hay archivo"})
+
+
+
+
+# =========================================================
+# 1. GESTIÓN DE CATEGORÍAS (PANEL PRINCIPAL)
+# =========================================================
+@catalogo_bp.route('/admin/catalogo', methods=['GET', 'POST'])
+@login_required
+def admin_categorias():
+    conn = get_db()
+    
+    # --- CREAR NUEVA CATEGORÍA ---
+    if request.method == 'POST':
+        nombre = request.form['nombre']
+        orden = request.form.get('orden', 0)
         
-        # 7. (Opcional pero RECOMENDADO) Guardar el link en tu base de datos
-        conn = get_db()
-        # Asumiendo que crearás una tabla llamada 'fotos_invitados'
-        conn.execute('INSERT INTO fotos_invitados (invitacion_id, url) VALUES (?, ?)', (invitacion_id, url_final))
+        conn.execute('INSERT INTO categorias (nombre, orden) VALUES (?, ?)', (nombre, orden))
         conn.commit()
+        flash('Categoría creada con éxito.', 'success')
+        return redirect(url_for('catalogo.admin_categorias'))
+
+    # --- VER CATEGORÍAS EXISTENTES ---
+    categorias = conn.execute('SELECT * FROM categorias ORDER BY orden ASC, id DESC').fetchall()
+    conn.close()
+    
+    return render_template('catalogo/admin_categorias.html', categorias=categorias)
+# =========================================================
+# 2. GESTIÓN DE PRODUCTOS (DENTRO DE UNA CATEGORÍA)
+# =========================================================
+@catalogo_bp.route('/admin/catalogo/<int:cat_id>', methods=['GET', 'POST'])
+@login_required
+def admin_productos(cat_id):
+    conn = get_db()
+
+    # Obtener la categoría actual
+    categoria = conn.execute(
+        'SELECT * FROM categorias WHERE id = ?', (cat_id,)
+    ).fetchone()
+
+    # ==============================
+    # CREAR o EDITAR PRODUCTO
+    # ==============================
+    if request.method == 'POST':
+        producto_id = request.form.get('producto_id')
+
+        titulo = request.form['titulo']
+        descripcion = request.form['descripcion']
+        precio = request.form.get('precio', 0)
+        stock_status = 1 if request.form.get('en_stock') else 0
+
+        media_url = request.form.get('media_url', '').strip()
+        # Tomamos el tipo que dice el formulario, pero...
+        media_type = request.form.get('media_type')
+
+        # ... AQUI AGREGAMOS LA INTELIGENCIA:
+        # Si la URL tiene una extensión clara, forzamos el tipo correcto
+        # para evitar errores humanos.
+        if media_url:
+            ext = media_url.split('.')[-1].lower() # Obtiene lo que está después del último punto
+            
+            # Lista de extensiones comunes
+            if ext in ['mp3', 'wav', 'ogg', 'm4a']:
+                media_type = 'audio'
+            elif ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+                media_type = 'imagen' # Ojo: usa 'imagen' o 'image' según prefieras en tu BD. Tu código usaba 'imagen' en el HTML anterior.
+            elif ext in ['mp4', 'mov', 'avi', 'webm', 'mkv']:
+                media_type = 'video'
+
+        # EDITAR
+        if producto_id:
+            conn.execute('''
+                UPDATE catalogo_productos
+                SET titulo = ?, descripcion = ?, precio = ?, media_url = ?, media_type = ?, stock = ?
+                WHERE id = ?
+            ''', (titulo, descripcion, precio, media_url, media_type, stock_status, producto_id))
+            flash('Producto actualizado.', 'success')
+
+            conn.commit()
+            flash('Producto actualizado correctamente.', 'success')
+
+        # CREAR
+        else:
+            # (El resto de tu código de crear sigue igual...)
+            nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
+            prefix = nombre_limpio[:3].upper() if len(nombre_limpio) >= 2 else "PROD"
+
+            while True:
+                random_digits = ''.join(random.choices(string.digits, k=5))
+                sku_generado = f"{prefix}-{random_digits}"
+
+                existe = conn.execute(
+                    'SELECT id FROM catalogo_productos WHERE sku = ?',
+                    (sku_generado,)
+                ).fetchone()
+
+                if not existe:
+                    break
+
+            conn.execute('''
+                INSERT INTO catalogo_productos
+                (categoria_id, sku, titulo, descripcion, media_url, media_type, precio, stock)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (cat_id, sku_generado, titulo, descripcion, media_url, media_type, precio, stock_status))
+
+            conn.commit()
+            flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
+
+        return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
+    
+    # ==============================
+    # OBTENER PRODUCTOS
+    # ==============================
+    productos_db = conn.execute(
+        'SELECT * FROM catalogo_productos WHERE categoria_id = ? ORDER BY id DESC',
+        (cat_id,)
+    ).fetchall()
+    
+    conn.close()
+
+    # --- CORRECCIÓN: Convertir las filas a diccionarios para que funcione el JSON ---
+    productos = [dict(row) for row in productos_db] 
+
+    return render_template(
+        'catalogo/admin_productos.html',
+        categoria=categoria, # La categoría funciona bien como Row normal
+        productos=productos  # Los productos ahora son diccionarios y tojson funcionará
+    )
+
+# =========================================================
+# 3. INTERRUPTOR RÁPIDO (ON/OFF)
+# =========================================================
+@catalogo_bp.route('/api/catalogo/toggle', methods=['POST'])
+@login_required
+def toggle_status():
+    data = request.get_json()
+    tipo = data.get('tipo')
+    id_obj = data.get('id')
+    nuevo_estado = data.get('activo')
+    
+    conn = get_db()
+    tabla = 'categorias' if tipo == 'categoria' else 'catalogo_productos'
+    
+    try:
+        query = f'UPDATE {tabla} SET activo = ? WHERE id = ?'
+        conn.execute(query, (nuevo_estado, id_obj))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error toggle: {e}")
+        return jsonify({'success': False, 'error': str(e)})
+    finally:
+        conn.close()
+
+# =========================================================
+# 4. EDITAR CATEGORÍA
+# =========================================================
+@catalogo_bp.route('/admin/catalogo/editar_categoria', methods=['POST'])
+@login_required
+def editar_categoria():
+    conn = get_db()
+    cat_id = request.form['cat_id']
+    nombre = request.form['nombre']
+    orden = request.form.get('orden', 0)
+    
+    try:
+        conn.execute(
+            'UPDATE categorias SET nombre = ?, orden = ? WHERE id = ?',
+            (nombre, orden, cat_id)
+        )
+        conn.commit()
+        flash('Categoría actualizada correctamente.', 'success')
+    except Exception as e:
+        flash(f'Error al editar: {e}', 'error')
+    finally:
         conn.close()
         
-        return jsonify({'success': True, 'mensaje': '¡Foto revelada!', 'url': url_final})
+    return redirect(url_for('catalogo.admin_categorias'))
+
+# =========================================================
+# 5. ELIMINAR ITEMS
+# =========================================================
+@catalogo_bp.route('/admin/catalogo/delete/<tipo>/<int:id_obj>')
+@login_required
+def delete_item(tipo, id_obj):
+    conn = get_db()
+    
+    if tipo == 'categoria':
+        # Antes de borrar la categoría, podrías querer borrar los archivos de sus productos
+        # pero por simplicidad ahora solo borramos los registros
+        conn.execute('DELETE FROM catalogo_productos WHERE categoria_id = ?', (id_obj,))
+        conn.execute('DELETE FROM categorias WHERE id = ?', (id_obj,))
+        flash('Categoría eliminada.', 'warning')
+        dest, cat_arg = 'catalogo.admin_categorias', {}
+    else:
+        # 1. Obtenemos la URL del archivo antes de borrar el registro
+        prod = conn.execute(
+            'SELECT categoria_id, media_url FROM catalogo_productos WHERE id = ?', 
+            (id_obj,)
+        ).fetchone()
+
+        if prod:
+            cat_id = prod['categoria_id']
+            url_archivo = prod['media_url']
+            
+            # 2. Intentamos borrar el archivo de Cloudflare R2
+            try:
+                # Extraemos el nombre del archivo de la URL
+                # Ejemplo: https://pub-xxx.r2.dev/foto.jpg -> foto.jpg
+                nombre_archivo = url_archivo.split('/')[-1]
+                
+                s3_client.delete_object(Bucket=BUCKET_NAME, Key=nombre_archivo)
+                print(f"Archivo {nombre_archivo} eliminado de R2")
+            except Exception as e:
+                print(f"Error al borrar en R2: {e}")
+                # Opcional: podrías decidir no borrar de la DB si falla R2
+                # pero usualmente es mejor limpiar la DB de todos modos
+
+            # 3. Borramos el registro de la base de datos
+            conn.execute('DELETE FROM catalogo_productos WHERE id = ?', (id_obj,))
+            flash('Producto y archivo eliminados correctamente.', 'success')
+            dest, cat_arg = ('catalogo.admin_productos', {'cat_id': cat_id})
+        else:
+            flash('Producto no encontrado', 'error')
+            dest, cat_arg = 'catalogo.admin_categorias', {}
         
+    conn.commit()
+    conn.close()
+    return redirect(url_for(dest, **cat_arg))
+
+# =========================================================
+# 6. VISTA PÚBLICA (CLIENTES)
+# =========================================================
+@catalogo_bp.route('/catalogo')
+def ver_catalogo():
+    conn = get_db()
+    
+    # 1. Categorías activas
+    categorias = conn.execute(
+        'SELECT * FROM categorias WHERE activo = 1 ORDER BY orden ASC'
+    ).fetchall()
+    
+    catalogo_data = []
+    
+    for cat in categorias:
+        productos = conn.execute('''
+            SELECT * FROM catalogo_productos
+            WHERE categoria_id = ? AND activo = 1
+            ORDER BY orden ASC, id DESC
+        ''', (cat['id'],)).fetchall()
+        
+        if productos:
+            catalogo_data.append({
+                'info': dict(cat),
+                'productos': [dict(prod) for prod in productos]
+            })
+            
+    conn.close()
+    
+    return render_template(
+        'catalogo/galeria_sianeffects.html',
+        catalogo=catalogo_data
+    )
+
+@catalogo_bp.route('/upload-r2', methods=['POST'])
+def upload_r2():
+    file = request.files.get('file')
+    if not file:
+        return jsonify({"success": False, "error": "No file"}), 400
+
+    # Limpiamos el nombre del archivo para evitar espacios o caracteres raros
+    filename = secure_filename(file.filename) 
+    
+    try:
+        s3_client.upload_fileobj(
+            file,
+            BUCKET_NAME,
+            filename,
+            ExtraArgs={'ContentType': file.content_type}
+        )
+        # Construye la URL usando tu subdominio r2.dev o dominio personalizado
+        url_final = f"{PUBLIC_URL}/{filename}"
+        
+        return jsonify({"success": True, "url": url_final})
     except Exception as e:
-        print(f"Error procesando foto del rollo: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+        
+@catalogo_bp.route('/api/catalogo/update-stock', methods=['POST'])
+@login_required
+def update_stock():
+    data = request.get_json()
+    prod_id = data.get('id')
+    nuevo_stock = data.get('stock') # 1 o 0
+    
+    conn = get_db()
+    try:
+        conn.execute('UPDATE catalogo_productos SET stock = ? WHERE id = ?', (nuevo_stock, prod_id))
+        conn.commit()
+        return jsonify({'success': True})
+    except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
