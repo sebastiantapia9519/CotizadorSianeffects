@@ -223,8 +223,8 @@ def guardar_venta():
                 venta_id,
                 item['concepto'],
                 float(item['cantidad']),
-                float(item['precio']),
-                float(item.get('costo', 0)),
+                float(item.get('precio_unitario', 0)),
+                float(item.get('costo_unitario', 0)),
                 float(item['subtotal']),
                 item.get('composicion', '[]')
             ))
@@ -259,6 +259,8 @@ def guardar_venta():
                                 ))
                 except Exception as e:
                     print(f"Error descontando inventario: {e}")
+                    print("DATA RECIBIDA:", data)
+
 
         conn.commit()
         return jsonify({'success': True, 'ticket_id': venta_id})
