@@ -583,3 +583,34 @@ def ver_invitacion(slug):
         return f"Error: {str(e)}", 500
     finally:
         conn.close()
+
+
+# --- RUTA PARA GESTIONAR PASES E INVITADOS ---
+@invitaciones_bp.route('/admin/invitacion/<int:id>/invitados', methods=['GET', 'POST'])
+@admin_required
+def gestionar_pases(id):
+    conn = get_db_connection()
+    
+    if request.method == 'POST':
+        nombre_familia = request.form.get('nombre_familia')
+        pases = request.form.get('pases_totales', 2)
+        # Generamos un código único corto para el QR/Link (ej: 8F3A1B2C)
+        codigo_unico = str(uuid.uuid4())[:8].upper()
+        
+        try:
+            conn.execute("""
+                INSERT INTO pases_invitados (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique)
+                VALUES (?, ?, ?, ?)
+            """, (id, nombre_familia, pases, codigo_unico))
+            conn.commit()
+            flash(f"Pase para {nombre_familia} generado con éxito.", "success")
+        except Exception as e:
+            flash(f"Error al crear el pase: {str(e)}", "danger")
+
+    # Obtenemos los datos necesarios para la vista
+    inv = conn.execute("SELECT slug, id FROM invitaciones WHERE id = ?", (id,)).fetchone()
+    invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY id DESC", (id,)).fetchall()
+    conn.close()
+    
+    # Asegúrate de crear el archivo 'invitaciones/pases_admin.html' que te pasé antes
+    return render_template('invitaciones/pases_admin.html', inv=inv, invitados=invitados)
