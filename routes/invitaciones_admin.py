@@ -423,17 +423,27 @@ def eliminar_invitacion(id):
             if inv['url_fondo']:
                 delete_from_cloudflare(inv['url_fondo'])
                 
-            # 4. Borrar todas las fotos de la Galería de R2
+            # 4. Borrar todas las fotos de la Galería (las que subiste tú como admin)
             if inv['fotos_json']:
                 fotos_galeria = json.loads(inv['fotos_json'])
                 for foto_url in fotos_galeria:
                     delete_from_cloudflare(foto_url)
 
-        # 5. Finalmente, borramos el registro de la Base de Datos
+            # --- NUEVO: 4.5. Borrar las fotos subidas por los INVITADOS (El Rollo Digital) ---
+            fotos_invitados = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (id,)).fetchall()
+            for foto in fotos_invitados:
+                if foto['url']:
+                    delete_from_cloudflare(foto['url'])
+            
+            # (Opcional) Borrar los registros de la tabla fotos_invitados explícitamente 
+            # Aunque si tienes ON DELETE CASCADE en tu DB, se borrarían solos al borrar la invitación.
+            conn.execute("DELETE FROM fotos_invitados WHERE invitacion_id = ?", (id,))
+
+        # 5. Finalmente, borramos el registro de la Invitación
         conn.execute("DELETE FROM invitaciones WHERE id = ?", (id,))
         conn.commit()
         
-        flash("Invitación y archivos multimedia eliminados correctamente 🧹", "success")
+        flash("Invitación, galería y fotos de invitados eliminadas correctamente 🧹", "success")
         
     except Exception as e:
         conn.rollback()

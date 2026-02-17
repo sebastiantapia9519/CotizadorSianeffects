@@ -1,22 +1,25 @@
 import random
 import string
+import os
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
 from db import get_db_connection as get_db
 from helpers import login_required
 import boto3
 from botocore.config import Config
 from werkzeug.utils import secure_filename
-from flask import request, jsonify 
+from dotenv import load_dotenv
+
+# Carga las variables del archivo .env
+load_dotenv()  #
 
 catalogo_bp = Blueprint('catalogo', __name__)
 
-# Tus llaves de Cloudflare (Paso 2)
-ACCESS_KEY = '5dad301112cb3db90de60278e5d4e101'
-SECRET_KEY = '8d6b5dc8d9b01a8196b9e1a7d3e425f600cefad5e189bf42f0264edde035ab70'
-ENDPOINT_URL = 'https://e063cc1ad223c0544aee7a03d9f0f9a6.r2.cloudflarestorage.com'
-BUCKET_NAME = 'sianeffectscatalogo'
-# La URL que te dio R2.dev en el Paso 3
-PUBLIC_URL = 'https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev'
+# Configuración protegida desde el entorno
+ACCESS_KEY = os.getenv('R2_ACCESS_KEY')
+SECRET_KEY = os.getenv('R2_SECRET_KEY')
+ENDPOINT_URL = os.getenv('R2_ENDPOINT_URL')
+BUCKET_NAME = os.getenv('R2_BUCKET_NAME')
+PUBLIC_URL = os.getenv('R2_PUBLIC_URL')
 
 
 s3_client = boto3.client(

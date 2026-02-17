@@ -1,12 +1,19 @@
 import boto3
+import os
 from botocore.client import Config
+from dotenv import load_dotenv
 
-# --- CONFIGURACIÓN DE CLOUDFLARE R2 (Copiada de tu catálogo) ---
-ACCESS_KEY = '5dad301112cb3db90de60278e5d4e101'
-SECRET_KEY = '8d6b5dc8d9b01a8196b9e1a7d3e425f600cefad5e189bf42f0264edde035ab70'
-ENDPOINT_URL = 'https://e063cc1ad223c0544aee7a03d9f0f9a6.r2.cloudflarestorage.com'
-BUCKET_NAME = 'sianeffectscatalogo'
-PUBLIC_URL = 'https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev'
+# Carga las variables del archivo .env
+load_dotenv()
+
+# --- CONFIGURACIÓN PROTEGIDA ---
+# os.getenv busca el nombre exacto que pusiste en tu archivo .env
+ACCESS_KEY = os.getenv('R2_ACCESS_KEY')
+SECRET_KEY = os.getenv('R2_SECRET_KEY')
+ENDPOINT_URL = os.getenv('R2_ENDPOINT_URL')
+BUCKET_NAME = os.getenv('R2_BUCKET_NAME')
+PUBLIC_URL = os.getenv('R2_PUBLIC_URL')
+
 
 def upload_to_cloudflare(file, folder="invitaciones"):
     # Inicializamos el cliente igual que en tu catálogo
