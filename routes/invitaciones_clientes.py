@@ -1,6 +1,7 @@
 import json
 import io
 import zipfile
+import uuid
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
 from db import get_db_connection
 from routes.invitaciones_publicas import s3_client, BUCKET_NAME
