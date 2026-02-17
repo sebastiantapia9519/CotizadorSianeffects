@@ -177,6 +177,7 @@ from routes.catalogo import catalogo_bp
 from routes.shipping import shipping_bp
 from routes.invitaciones_admin import invitaciones_bp
 from routes.invitaciones_publicas import invitaciones_publicas_bp
+from routes.invitaciones_clientes import clientes_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
@@ -187,6 +188,7 @@ app.register_blueprint(catalogo_bp)
 app.register_blueprint(shipping_bp)
 app.register_blueprint(invitaciones_bp)
 app.register_blueprint(invitaciones_publicas_bp)
+app.register_blueprint(clientes_bp)
 
 # =========================
 # ANTI-CACHÉ
