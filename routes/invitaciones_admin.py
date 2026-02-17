@@ -3,6 +3,8 @@ import re
 import io
 import uuid
 import zipfile
+import string
+import random
 import requests
 from flask import send_file
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
@@ -31,6 +33,11 @@ PLANTILLAS_CONFIG = {
     }
 }
 
+# --- FUNCIÓN HELPER PARA GENERAR CÓDIGO ---
+def generar_codigo_cliente():
+    suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+    return f"SIA-{suffix}"
+
 # --- RUTA 1: CONSTRUCTOR DE INVITACIONES ---
 @invitaciones_bp.route('/admin/nueva-invitacion', methods=['GET', 'POST'])
 @admin_required
@@ -41,7 +48,6 @@ def crear_invitacion():
         try:
             # 1. Datos Básicos y Limpieza de Slug
             raw_slug = request.form.get('slug', '').strip()
-            # Esto convierte "  Boda Diana & Sebastian!  " en "boda-diana-y-sebastian"
             slug = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
             
             musica_id = request.form.get('musica_id')
@@ -75,18 +81,17 @@ def crear_invitacion():
                 if nombre and link:
                     hoteles_sugeridos.append({'nombre': nombre, 'url': link})
 
-            # --- 1. PROCESAR ITINERARIO (Asegúrate que estas líneas estén ANTES de datos_cliente) ---
+            # --- 1. PROCESAR ITINERARIO ---
             horas_it = request.form.getlist('hora_itinerario[]')
             acts_it = request.form.getlist('actividad_itinerario[]')
             iconos_it = request.form.getlist('icono_itinerario[]')
             
-            # Aquí es donde se define la variable 'itinerario'
             itinerario = []
             for h, a, i in zip(horas_it, acts_it, iconos_it):
                 if h and a:
                     itinerario.append({'hora': h, 'actividad': a, 'icono': i})
 
-            # --- 2. AHORA SÍ, CREAR EL DICCIONARIO DATOS_CLIENTE ---
+            # --- 2. DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
                 "frase": request.form.get('frase'),
@@ -99,19 +104,16 @@ def crear_invitacion():
             }
             
             # --- SUBIDA DE IMÁGENES ---
-            # 1. Portada (Individual)
             foto_portada = request.files.get('foto_portada')
             url_portada = None
             if foto_portada:
                 url_portada = upload_to_cloudflare(foto_portada, folder=f"invitaciones/{slug}")
 
-            # 2. Fondo (Opcional)
             img_fondo = request.files.get('imagen_fondo')
             url_fondo = None
             if img_fondo:
                 url_fondo = upload_to_cloudflare(img_fondo, folder=f"invitaciones/{slug}/bg")
 
-            # 3. Galería (Múltiple)
             fotos_galeria = request.files.getlist('fotos_galeria')
             urls_galeria = []
             for f in fotos_galeria:
@@ -119,7 +121,7 @@ def crear_invitacion():
                     url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria")
                     urls_galeria.append(url)
 
-            # --- INSERT  ---
+            # --- INSERT ---
             conn.execute("""
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
@@ -132,7 +134,7 @@ def crear_invitacion():
                 request.form.get('fecha_evento'), request.form.get('vigencia'), json.dumps(datos_cliente), 
                 json.dumps(urls_galeria), url_portada, request.form.get('estilo_fuente'), request.form.get('color_fondo'), 
                 url_fondo, json.dumps(mesas_regalos), dress_code, json.dumps(hoteles_sugeridos), album_url, 
-                camara_premium, tiene_modulo_invitados, codigo_cliente, color_acentos, # <--- AQUI
+                camara_premium, tiene_modulo_invitados, codigo_cliente, color_acentos,
                 padres_novia, padres_novio, padrinos, frase_final, template_id
             ))
             conn.commit()
@@ -149,7 +151,7 @@ def crear_invitacion():
     try:
         canciones = conn.execute("SELECT * FROM lista_musica WHERE activa = 1").fetchall()
     except:
-        canciones = [] # Por si la tabla estuviera vacía o error
+        canciones = [] 
     finally:
         conn.close()
         
@@ -169,16 +171,12 @@ def api_subir_musica():
         return jsonify({'error': 'No se envió archivo'}), 400
 
     try:
-        # 1. Subimos a Cloudflare (carpeta musica)
         url_audio = upload_to_cloudflare(archivo, folder="musica")
-        
-        # 2. Guardamos en DB Principal
         cursor = conn.cursor()
         cursor.execute("INSERT INTO lista_musica (nombre_cancion, url_cloudflare) VALUES (?, ?)", (nombre, url_audio))
         nuevo_id = cursor.lastrowid
         conn.commit()
         
-        # 3. Devolvemos éxito al Frontend
         return jsonify({
             'success': True,
             'id': nuevo_id,
@@ -198,17 +196,15 @@ def from_json(value):
 # --- FILTROS INTELIGENTES PARA DISEÑO AUTOMÁTICO ---
 @invitaciones_bp.app_template_filter('color_contraste')
 def color_contraste(hex_color):
-    """Calcula si el fondo es claro u oscuro y devuelve el color de texto ideal."""
     if not hex_color: return '#333333'
     hex_color = hex_color.lstrip('#')
     if len(hex_color) != 6: return '#333333'
     r, g, b = tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
     luminance = (0.299*r + 0.587*g + 0.114*b)
-    return '#fdfbf7' if luminance < 140 else '#333333' # Blanco para oscuro, Gris oscuro para claro
+    return '#fdfbf7' if luminance < 140 else '#333333'
 
 @invitaciones_bp.app_template_filter('fondo_tarjeta')
 def fondo_tarjeta(hex_color):
-    """Devuelve un fondo de tarjeta translúcido que contraste con el fondo general."""
     if not hex_color: return 'rgba(255, 255, 255, 0.7)'
     hex_color = hex_color.lstrip('#')
     if len(hex_color) != 6: return 'rgba(255, 255, 255, 0.7)'
@@ -223,22 +219,18 @@ def fondo_tarjeta(hex_color):
 def gestionar_invitaciones():
     conn = get_db_connection()
     try:
-        # Traemos todas las invitaciones, las más recientes primero
         invs_db = conn.execute("SELECT * FROM invitaciones ORDER BY id DESC").fetchall()
         
-        # Lista para guardar las invitaciones ya procesadas
         invitaciones = []
         for inv in invs_db:
-            inv_dict = dict(inv) # Convertimos el Row de SQLite a Diccionario
+            inv_dict = dict(inv) 
             try:
-                # Extraemos los nombres de los novios del JSON
                 inv_dict['datos_cliente'] = json.loads(inv['datos_cliente_json'])
             except:
                 inv_dict['datos_cliente'] = {"novios": "Sin Nombre"}
             
             invitaciones.append(inv_dict)
             
-        # Fecha de hoy para calcular si el link sigue activo o ya venció
         hoy = datetime.now().strftime('%Y-%m-%d')
         
         return render_template('invitaciones/gestionar.html', invitaciones=invitaciones, hoy=hoy)
@@ -279,24 +271,25 @@ def editar_invitacion(id):
             template_id = request.form.get('template_id')
             tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
             
-            # Si no tenía código de cliente generado previamente, se lo generamos ahora
-            codigo_cliente = inv_old['codigo_acceso_cliente']
-            if not codigo_cliente:
-                suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
-                codigo_cliente = f"SIA-{suffix}"
+            # OJO AQUI ESTA LA CORRECCIÓN: Primero traemos inv_old
+            inv_old = conn.execute("SELECT foto_portada_url, fotos_json, url_fondo, codigo_acceso_cliente FROM invitaciones WHERE id=?", (id,)).fetchone()
 
-            # --- 1. PROCESAR ITINERARIO (Asegúrate que estas líneas estén ANTES de datos_cliente) ---
+            # Ahora sí verificamos el código del cliente
+            codigo_cliente = inv_old['codigo_acceso_cliente'] if inv_old else None
+            if not codigo_cliente:
+                codigo_cliente = generar_codigo_cliente()
+
+            # --- PROCESAR ITINERARIO ---
             horas_it = request.form.getlist('hora_itinerario[]')
             acts_it = request.form.getlist('actividad_itinerario[]')
             iconos_it = request.form.getlist('icono_itinerario[]')
             
-            # Aquí es donde se define la variable 'itinerario'
             itinerario = []
             for h, a, i in zip(horas_it, acts_it, iconos_it):
                 if h and a:
                     itinerario.append({'hora': h, 'actividad': a, 'icono': i})
 
-            # --- 2. AHORA SÍ, CREAR EL DICCIONARIO DATOS_CLIENTE ---
+            # --- CREAR EL DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
                 "frase": request.form.get('frase'),
@@ -305,39 +298,21 @@ def editar_invitacion(id):
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
                 "info_transporte": request.form.get('info_transporte'),
-                "itinerario": itinerario  # <--- Ahora la variable ya existe
+                "itinerario": itinerario
             }
             
-            # 2. Mesas de regalos
+            # Mesas de regalos y Hoteles
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
             links_tiendas = request.form.getlist('link_tienda[]')
             mesas_regalos = [{'nombre': n, 'url': l} for n, l in zip(nombres_tiendas, links_tiendas) if n and l]
             
-            # 3. Hoteles (NUEVO)
             nombres_hoteles = request.form.getlist('nombre_hotel[]')
             links_hoteles = request.form.getlist('link_hotel[]')
             hoteles_sugeridos = [{'nombre': n, 'url': l} for n, l in zip(nombres_hoteles, links_hoteles) if n and l]
 
             orden_items = request.form.getlist('orden_items[]')
 
-            # 4. Traemos los datos viejos para no perder fotos si no suben nuevas
-            # OJO: Aquí le decimos a SQLite que también traiga el codigo_acceso_cliente
-            inv_old = conn.execute("SELECT foto_portada_url, fotos_json, url_fondo, codigo_acceso_cliente FROM invitaciones WHERE id=?", (id,)).fetchone()
-
-            # --- AHORA SÍ LEEMOS LOS SWITCHES Y EL CÓDIGO (Ya existe inv_old) ---
-            camara_premium = 1 if 'camara_premium' in request.form else 0
-            tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
-            
-            # Verificamos si ya tenía un código generado, si no, le creamos uno
-            codigo_cliente = inv_old['codigo_acceso_cliente'] if inv_old else None
-            
-            if not codigo_cliente:
-                import string
-                import random
-                suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
-                codigo_cliente = f"SIA-{suffix}"
-
-            # 5. Procesar Fotos (Solo se sube si eligen un archivo nuevo)
+            # Procesar Fotos 
             foto_portada = request.files.get('foto_portada')
             url_portada = upload_to_cloudflare(foto_portada, folder=f"invitaciones/{slug}") if foto_portada and foto_portada.filename != '' else inv_old['foto_portada_url']
 
@@ -350,11 +325,10 @@ def editar_invitacion(id):
                 if f.filename != '':
                     urls_galeria.append(upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria"))
             
-            # Si no subieron fotos nuevas para galería, dejamos las que ya estaban
             if not urls_galeria:
                 urls_galeria = json.loads(inv_old['fotos_json']) if inv_old['fotos_json'] else []
 
-            # 6. ACTUALIZAR EN BASE DE DATOS
+            # ACTUALIZAR EN BASE DE DATOS
             conn.execute("""
                 UPDATE invitaciones SET 
                 slug=?, config_json=?, musica_id=?, fecha_evento=?, vigencia=?, datos_cliente_json=?, 
@@ -398,7 +372,7 @@ def editar_invitacion(id):
             conn.rollback()
             flash(f"Error al actualizar: {str(e)}", "danger")
 
-    # --- MÉTODO GET: PREPARAR DATOS PARA EL FORMULARIO ---
+    # --- MÉTODO GET ---
     inv = conn.execute("SELECT * FROM invitaciones WHERE id = ?", (id,)).fetchone()
     canciones = conn.execute("SELECT * FROM lista_musica WHERE activa = 1").fetchall()
     conn.close()
@@ -411,7 +385,6 @@ def editar_invitacion(id):
     mesas = json.loads(inv['mesas_regalos_json']) if inv['mesas_regalos_json'] else []
     hoteles = json.loads(inv['hospedaje_json']) if inv['hospedaje_json'] else []
     
-    # Renderizamos la misma plantilla, pero le pasamos los datos para rellenar
     return render_template('invitaciones/crear.html', 
                            inv=inv, 
                            datos=datos, 
@@ -421,45 +394,37 @@ def editar_invitacion(id):
                            edit_mode=True)
 
 
-# --- RUTA 6: ELIMINAR INVITACIÓN (Y SUS ARCHIVOS EN R2) ---
+# --- RUTA 6: ELIMINAR INVITACIÓN ---
 @invitaciones_bp.route('/admin/eliminar-invitacion/<int:id>', methods=['POST'])
 @admin_required
 def eliminar_invitacion(id):
     conn = get_db_connection()
     try:
-        # 1. Buscamos la invitación ANTES de borrarla para saber qué fotos tiene
         inv = conn.execute("SELECT foto_portada_url, url_fondo, fotos_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
         
         if inv:
-            # 2. Borrar Foto de Portada de R2
             if inv['foto_portada_url']:
                 delete_from_cloudflare(inv['foto_portada_url'])
             
-            # 3. Borrar Imagen de Fondo de R2
             if inv['url_fondo']:
                 delete_from_cloudflare(inv['url_fondo'])
                 
-            # 4. Borrar todas las fotos de la Galería (las que subiste tú como admin)
             if inv['fotos_json']:
                 fotos_galeria = json.loads(inv['fotos_json'])
                 for foto_url in fotos_galeria:
                     delete_from_cloudflare(foto_url)
 
-            # --- NUEVO: 4.5. Borrar las fotos subidas por los INVITADOS (El Rollo Digital) ---
             fotos_invitados = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (id,)).fetchall()
             for foto in fotos_invitados:
                 if foto['url']:
                     delete_from_cloudflare(foto['url'])
             
-            # (Opcional) Borrar los registros de la tabla fotos_invitados explícitamente 
-            # Aunque si tienes ON DELETE CASCADE en tu DB, se borrarían solos al borrar la invitación.
             conn.execute("DELETE FROM fotos_invitados WHERE invitacion_id = ?", (id,))
 
-        # 5. Finalmente, borramos el registro de la Invitación
         conn.execute("DELETE FROM invitaciones WHERE id = ?", (id,))
         conn.commit()
         
-        flash("Invitación, galería y fotos de invitados eliminadas correctamente 🧹", "success")
+        flash("Invitación, galería y fotos eliminadas correctamente 🧹", "success")
         
     except Exception as e:
         conn.rollback()
@@ -469,16 +434,15 @@ def eliminar_invitacion(id):
         
     return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
 
+
 @invitaciones_bp.route('/admin/ver-fotos/<int:id>')
 @admin_required
 def ver_fotos_invitados(id):
     conn = get_db_connection()
     try:
-        # 1. Traemos los datos de la boda para el título
         inv = conn.execute("SELECT slug, datos_cliente_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
         datos = json.loads(inv['datos_cliente_json'])
         
-        # 2. Traemos todas las fotos de los invitados para esta boda
         fotos = conn.execute("""
             SELECT * FROM fotos_invitados 
             WHERE invitacion_id = ? 
@@ -512,18 +476,12 @@ def descargar_rollo_zip(id):
         memory_file = io.BytesIO()
         fotos_añadidas = 0
         
-        # Usamos el cliente s3_client que ya tienes configurado con tus llaves
         from routes.invitaciones_publicas import s3_client, BUCKET_NAME
 
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             for i, foto in enumerate(fotos):
                 try:
-                    # EXTRAEMOS EL NOMBRE DEL ARCHIVO DE LA URL
-                    # Tu URL es: https://...dev/bodas/boda_4/rollo_invitados/foto_123.jpg
-                    # Necesitamos solo: bodas/boda_4/rollo_invitados/foto_123.jpg
                     key = foto['url'].split('.dev/')[-1]
-                    
-                    # DESCARGAMOS DIRECTO DE R2 USANDO BOTO3 (No usa requests)
                     objeto_s3 = s3_client.get_object(Bucket=BUCKET_NAME, Key=key)
                     contenido = objeto_s3['Body'].read()
                     
@@ -535,7 +493,7 @@ def descargar_rollo_zip(id):
                     continue
 
         if fotos_añadidas == 0:
-            flash("No se pudo extraer ninguna imagen del almacenamiento.", "danger")
+            flash("No se pudo extraer ninguna imagen.", "danger")
             return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
 
         memory_file.seek(0)
@@ -552,11 +510,11 @@ def descargar_rollo_zip(id):
     finally:
         conn.close()
 
+
 @invitaciones_bp.route('/invitacion/<slug>')
 def ver_invitacion(slug):
     conn = get_db_connection()
     try:
-        # 1. Buscar la invitación por Slug
         inv = conn.execute("""
             SELECT i.*, m.url_cloudflare as musica_url 
             FROM invitaciones i
@@ -567,8 +525,7 @@ def ver_invitacion(slug):
         if not inv:
             return "<h1>404 - Invitación no encontrada 😢</h1>", 404
 
-        # --- NUEVO: Lógica para detectar el pase personalizado ---
-        codigo_pase = request.args.get('pass') # Lee el ?pass=ABC1234 de la URL
+        codigo_pase = request.args.get('pass') 
         datos_pase = None
         if codigo_pase:
             datos_pase = conn.execute("""
@@ -576,18 +533,16 @@ def ver_invitacion(slug):
                 WHERE invitacion_id = ? AND codigo_qr_unique = ?
             """, (inv['id'], codigo_pase)).fetchone()
 
-        # 2. Convertir JSONs
         config = json.loads(inv['config_json'])
         datos = json.loads(inv['datos_cliente_json'])
         fotos = json.loads(inv['fotos_json'])
         
-        # 3. Renderizar pasando 'datos_pase'
         return render_template('invitaciones/base_boda.html', 
                                inv=inv, 
                                config=config, 
                                datos=datos, 
                                fotos=fotos,
-                               datos_pase=datos_pase) # <--- Variable clave
+                               datos_pase=datos_pase) 
     except Exception as e:
         return f"Error: {str(e)}", 500
     finally:
@@ -605,25 +560,22 @@ def gestionar_pases(id):
         pases = request.form.get('pases_totales', 2)
         telefono = request.form.get('telefono')
 
-        # Generamos un código único corto para el QR/Link (ej: 8F3A1B2C)
         codigo_unico = str(uuid.uuid4())[:8].upper()
         
         try:
             conn.execute("""
                 INSERT INTO pases_invitados (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique, telefono)
                 VALUES (?, ?, ?, ?, ?)
-            """, (id, nombre_familia, pases, codigo_unico, telefono)) # <--- INSERTAR TELÉFONO
+            """, (id, nombre_familia, pases, codigo_unico, telefono)) 
             conn.commit()
             flash(f"Pase para {nombre_familia} generado con éxito.", "success")
         except Exception as e:
             flash(f"Error: {str(e)}", "danger")
 
-    # Obtenemos los datos necesarios para la vista
     inv = conn.execute("SELECT slug, id, codigo_acceso_cliente FROM invitaciones WHERE id = ?", (id,)).fetchone()
     invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY id DESC", (id,)).fetchall()
     conn.close()
     
-    # Asegúrate de crear el archivo 'invitaciones/pases_admin.html' que te pasé antes
     return render_template('invitaciones/pases_admin.html', inv=inv, invitados=invitados)
 
 @invitaciones_bp.route('/admin/invitacion/<int:inv_id>/eliminar-pase/<int:pase_id>', methods=['POST'])
@@ -631,7 +583,6 @@ def gestionar_pases(id):
 def eliminar_pase(inv_id, pase_id):
     conn = get_db_connection()
     try:
-        # Borramos el pase asegurándonos de que pertenezca a la invitación correcta
         conn.execute("DELETE FROM pases_invitados WHERE id = ? AND invitacion_id = ?", (pase_id, inv_id))
         conn.commit()
         flash("Pase de invitado eliminado correctamente 🗑️", "success")
@@ -641,5 +592,4 @@ def eliminar_pase(inv_id, pase_id):
     finally:
         conn.close()
         
-    # Redirigimos de vuelta a la misma página de gestión de pases
     return redirect(url_for('invitaciones_admin.gestionar_pases', id=inv_id))
