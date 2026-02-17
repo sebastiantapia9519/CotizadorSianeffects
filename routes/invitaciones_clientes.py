@@ -180,31 +180,3 @@ def logout_cliente():
     session.clear()
     return redirect(url_for('invitaciones_clientes.login_cliente'))
 
-@clientes_bp.route('/mi-evento/agregar-invitado', methods=['POST'])
-def agregar_invitado_cliente():
-    # Validamos que estén logueados
-    if 'cliente_inv_id' not in session:
-        return redirect(url_for('invitaciones_clientes.login_cliente'))
-        
-    inv_id = session['cliente_inv_id']
-    nombre_familia = request.form.get('nombre_familia')
-    pases = request.form.get('pases_totales', 2)
-    telefono = request.form.get('telefono')
-    
-    # Generamos el código único para este invitado nuevo
-    codigo_unico = str(uuid.uuid4())[:8].upper()
-    
-    conn = get_db_connection()
-    try:
-        conn.execute("""
-            INSERT INTO pases_invitados (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique, telefono)
-            VALUES (?, ?, ?, ?, ?)
-        """, (inv_id, nombre_familia, pases, codigo_unico, telefono))
-        conn.commit()
-        flash(f"¡{nombre_familia} se agregó a la lista con éxito!", "success")
-    except Exception as e:
-        flash("Hubo un error al agregar al invitado. Intenta de nuevo.", "danger")
-    finally:
-        conn.close()
-        
-    return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
