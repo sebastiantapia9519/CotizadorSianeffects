@@ -321,7 +321,21 @@ def editar_invitacion(id):
             orden_items = request.form.getlist('orden_items[]')
 
             # 4. Traemos los datos viejos para no perder fotos si no suben nuevas
-            inv_old = conn.execute("SELECT foto_portada_url, fotos_json, url_fondo FROM invitaciones WHERE id=?", (id,)).fetchone()
+            # OJO: Aquí le decimos a SQLite que también traiga el codigo_acceso_cliente
+            inv_old = conn.execute("SELECT foto_portada_url, fotos_json, url_fondo, codigo_acceso_cliente FROM invitaciones WHERE id=?", (id,)).fetchone()
+
+            # --- AHORA SÍ LEEMOS LOS SWITCHES Y EL CÓDIGO (Ya existe inv_old) ---
+            camara_premium = 1 if 'camara_premium' in request.form else 0
+            tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
+            
+            # Verificamos si ya tenía un código generado, si no, le creamos uno
+            codigo_cliente = inv_old['codigo_acceso_cliente'] if inv_old else None
+            
+            if not codigo_cliente:
+                import string
+                import random
+                suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+                codigo_cliente = f"SIA-{suffix}"
 
             # 5. Procesar Fotos (Solo se sube si eligen un archivo nuevo)
             foto_portada = request.files.get('foto_portada')
@@ -347,7 +361,7 @@ def editar_invitacion(id):
                 fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?,
                 dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?,
                 padres_novia=?, padres_novio=?, padrinos=?, frase_final=?, template_id=?,
-                tiene_modulo_invitados=?, codigo_acceso_cliente=? 
+                tiene_modulo_invitados=?, codigo_acceso_cliente=?
                 WHERE id=?
             """, (
                 slug, 
@@ -371,9 +385,9 @@ def editar_invitacion(id):
                 padres_novio,    
                 padrinos,        
                 frase_final,     
-                template_id,     
+                template_id,
                 tiene_modulo_invitados,
-                codigo_cliente,             
+                codigo_cliente,        
                 id               
             ))
             conn.commit()
