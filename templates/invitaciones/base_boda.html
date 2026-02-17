@@ -11,486 +11,116 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
     <style>
-        /* 1. FUENTES DINÁMICAS (¡Ojo, no separar las llaves de los porcentajes!) */
-            {
-            % if inv['estilo_fuente']=='clasico' %
-        }
-
+        /* 1. FUENTES DINÁMICAS */
+        {% if inv['estilo_fuente']=='clasico' %}
         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-
-        :root {
-            --font-title: 'Playfair Display', serif;
-            --font-body: 'Lato', sans-serif;
-            --color-oro: #D4AF37;
-        }
-
-            {
-            % elif inv['estilo_fuente']=='romantico' %
-        }
-
+        :root { --font-title: 'Playfair Display', serif; --font-body: 'Lato', sans-serif; }
+        {% elif inv['estilo_fuente']=='romantico' %}
         @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
-
-        :root {
-            --font-title: 'Great Vibes', cursive;
-            --font-body: 'Montserrat', sans-serif;
-            --color-oro: #d48b9b;
-        }
-
-            {
-            % elif inv['estilo_fuente']=='moderno' %
-        }
-
+        :root { --font-title: 'Great Vibes', cursive; --font-body: 'Montserrat', sans-serif; }
+        {% elif inv['estilo_fuente']=='moderno' %}
         @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
-
-        :root {
-            --font-title: 'Oswald', sans-serif;
-            --font-body: 'Roboto', sans-serif;
-            --color-oro: #a89f91;
-        }
-
-            {
-            % elif inv['estilo_fuente']=='minimal' %
-        }
-
+        :root { --font-title: 'Oswald', sans-serif; --font-body: 'Roboto', sans-serif; }
+        {% elif inv['estilo_fuente']=='minimal' %}
         @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
-
-        :root {
-            --font-title: 'Cinzel', serif;
-            --font-body: 'Raleway', sans-serif;
-            --color-oro: #8c8c8c;
-        }
-
-            {
-            % elif inv['estilo_fuente']=='botanico' %
-        }
-
+        :root { --font-title: 'Cinzel', serif; --font-body: 'Raleway', sans-serif; }
+        {% elif inv['estilo_fuente']=='botanico' %}
         @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
-
-        :root {
-            --font-title: 'Cormorant', serif;
-            --font-body: 'Proza Libre', sans-serif;
-            --color-oro: #8f9779;
-        }
-
-            {
-            % else %
-        }
-
+        :root { --font-title: 'Cormorant', serif; --font-body: 'Proza Libre', sans-serif; }
+        {% else %}
         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+        :root { --font-title: 'Playfair Display', serif; --font-body: 'Lato', sans-serif; }
+        {% endif %}
 
         :root {
-            --font-title: 'Playfair Display', serif;
-            --font-body: 'Lato', sans-serif;
-            --color-oro: #D4AF37;
-        }
-
-            {
-            % endif %
-        }
-
-        /* 2. VARIABLES INTELIGENTES DE COLOR */
-        :root {
-
-            /* Prioridad: 1. Color elegido en panel, 2. Color por estilo, 3. Dorado default */
-                {
-                % set color_pro=inv['color_acentos'] if inv['color_acentos'] else '#D4AF37' %
-            }
-
-            --color-oro: {
-                    {
-                    color_pro
-                }
-            }
-
-            ;
-
-            --bg-color: {
-                    {
-                    inv['color_fondo']|default('#fdfbf7')
-                }
-            }
-
-            ;
-
-            --text-color: {
-                    {
-                    inv['color_fondo']|color_contraste
-                }
-            }
-
-            ;
-
-            --card-bg: {
-                    {
-                    inv['color_fondo']|fondo_tarjeta
-                }
-            }
-
-            ;
+            {% set color_pro=inv['color_acentos'] if inv['color_acentos'] else '#D4AF37' %}
+            --color-oro: {{ color_pro }};
+            --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
+            --text-color: {{ inv['color_fondo']|color_contraste }};
+            --card-bg: {{ inv['color_fondo']|fondo_tarjeta }};
         }
 
         body {
             font-family: var(--font-body);
             background-color: var(--bg-color);
             color: var(--text-color);
-
-                {
-                % if inv['url_fondo'] %
-            }
-
-            background-image: url('{{ inv[' url_fondo'] }}');
-            background-size: cover;
-            background-attachment: fixed;
-            background-position: center;
-
-                {
-                % endif %
-            }
-
-            margin: 0;
-            overflow-x: hidden;
+            {% if inv['url_fondo'] %}
+            background-image: url('{{ inv['url_fondo'] }}');
+            background-size: cover; background-attachment: fixed; background-position: center;
+            {% endif %}
+            margin: 0; overflow-x: hidden;
         }
 
-        h1,
-        h2,
-        h3 {
-            font-family: var(--font-title);
-            font-weight: normal;
-            margin: 0;
-        }
+        h1, h2, h3 { font-family: var(--font-title); font-weight: normal; margin: 0; }
 
-        /* PANTALLA BIENVENIDA */
         #welcome-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg-color);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color); z-index: 9999;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
             transition: opacity 0.8s ease, visibility 0.8s ease;
         }
 
-        .btn-entrar,
-        .btn-boda {
-            padding: 12px 30px;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            background: transparent;
-            color: var(--text-color);
-            border: 1px solid var(--color-oro);
-            cursor: pointer;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-block;
-            border-radius: 30px;
+        .btn-entrar, .btn-boda {
+            padding: 12px 30px; font-size: 0.9rem; text-transform: uppercase;
+            letter-spacing: 2px; background: transparent; color: var(--text-color);
+            border: 1px solid var(--color-oro); cursor: pointer; transition: all 0.3s;
+            text-decoration: none; display: inline-block; border-radius: 30px;
         }
 
-        .btn-entrar:hover,
-        .btn-boda:hover {
-            background: var(--color-oro);
-            color: var(--bg-color);
-            border-color: var(--color-oro);
-        }
+        .btn-entrar:hover, .btn-boda:hover { background: var(--color-oro); color: var(--bg-color); border-color: var(--color-oro); }
 
         .music-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            background: var(--color-oro);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--bg-color);
-            z-index: 1000;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            position: fixed; bottom: 20px; right: 20px; width: 50px; height: 50px;
+            background: var(--color-oro); border-radius: 50%; display: flex;
+            align-items: center; justify-content: center; color: var(--bg-color);
+            z-index: 1000; cursor: pointer; box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
             animation: pulse 2s infinite;
         }
 
-        /* SECCIONES Y CONTADORES */
-        section {
-            padding: 80px 20px;
-            text-align: center;
-            max-width: 800px;
-            margin: 0 auto;
-        }
+        section { padding: 80px 20px; text-align: center; max-width: 800px; margin: 0 auto; }
 
-        .countdown-box {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
+        .countdown-box { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+        .time-unit { text-align: center; background: var(--card-bg); padding: 15px; border-radius: 10px; min-width: 70px; border: 1px solid rgba(150, 150, 150, 0.2); }
+        .time-number { font-size: 2rem; font-family: var(--font-title); color: var(--color-oro); }
+        .time-label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-top: 5px; opacity: 0.7; }
 
-        .time-unit {
-            text-align: center;
-            background: var(--card-bg);
-            padding: 15px;
-            border-radius: 10px;
-            min-width: 70px;
-            border: 1px solid rgba(150, 150, 150, 0.2);
-        }
+        .premium-container { display: flex; flex-direction: column; gap: 15px; max-width: 500px; margin: 0 auto; }
+        .premium-card { background: var(--card-bg); border: 1px solid rgba(150, 150, 150, 0.2); border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 20px; transition: transform 0.2s; text-align: left; backdrop-filter: blur(5px); }
+        .premium-card:hover { transform: translateY(-3px); border-color: var(--color-oro); }
+        .premium-icon { width: 50px; height: 50px; background: rgba(150, 150, 150, 0.1); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; color: var(--color-oro); }
+        .premium-info { flex: 1; }
+        .premium-title { font-family: var(--font-title); font-weight: bold; margin-bottom: 5px; font-size: 1.2rem; }
+        .btn-card { background: rgba(150, 150, 150, 0.1); color: var(--text-color); border: none; padding: 6px 15px; border-radius: 20px; font-size: 0.8rem; text-decoration: none; display: inline-block; transition: background 0.3s; margin-top: 5px; }
+        .btn-card:hover { background: var(--color-oro); color: var(--bg-color); }
 
-        .time-number {
-            font-size: 2rem;
-            font-family: var(--font-title);
-            color: var(--color-oro);
-        }
+        .swiper { width: 280px; height: 380px; margin-top: 20px; margin-bottom: 50px; padding: 10px; }
+        .swiper-slide { display: flex; align-items: center; justify-content: center; border-radius: 18px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3); background-color: var(--card-bg); overflow: hidden; }
+        .swiper-slide img { display: block; width: 100%; height: 100%; object-fit: cover; }
 
-        .time-label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 5px;
-            opacity: 0.7;
-        }
+        .timeline { position: relative; max-width: 400px; margin: 0 auto; padding: 20px 0; }
+        .timeline::before { content: ''; position: absolute; top: 0; left: 90px; height: 100%; width: 1px; background: rgba(150, 150, 150, 0.3); }
+        .timeline-item { display: flex; align-items: center; margin-bottom: 30px; position: relative; }
+        .timeline-time { width: 70px; text-align: right; font-style: italic; font-size: 0.9rem; color: var(--color-oro); }
+        .timeline-dot { width: 10px; height: 10px; background: var(--color-oro); border-radius: 50%; margin: 0 15px; z-index: 1; box-shadow: 0 0 10px var(--color-oro); }
+        .timeline-content { flex: 1; text-align: left; font-weight: 500; display: flex; align-items: center; gap: 10px; }
 
-        /* TARJETAS PREMIUM (Regalos, Hospedaje) */
-        .premium-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
 
-        .premium-card {
-            background: var(--card-bg);
-            border: 1px solid rgba(150, 150, 150, 0.2);
-            border-radius: 12px;
-            padding: 20px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            transition: transform 0.2s;
-            text-align: left;
-            backdrop-filter: blur(5px);
-        }
-
-        .premium-card:hover {
-            transform: translateY(-3px);
-            border-color: var(--color-oro);
-        }
-
-        .premium-icon {
-            width: 50px;
-            height: 50px;
-            background: rgba(150, 150, 150, 0.1);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: var(--color-oro);
-        }
-
-        .premium-info {
-            flex: 1;
-        }
-
-        .premium-title {
-            font-family: var(--font-title);
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 1.2rem;
-        }
-
-        .btn-card {
-            background: rgba(150, 150, 150, 0.1);
-            color: var(--text-color);
-            border: none;
-            padding: 6px 15px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            text-decoration: none;
-            display: inline-block;
-            transition: background 0.3s;
-            margin-top: 5px;
-        }
-
-        .btn-card:hover {
-            background: var(--color-oro);
-            color: var(--bg-color);
-        }
-
-        /* CARRUSEL SWIPER */
-        .swiper {
-            width: 280px;
-            /* Ancho estricto necesario para el modo cards */
-            height: 380px;
-            /* Alto estricto necesario para el modo cards */
-            margin-top: 20px;
-            margin-bottom: 50px;
-            padding: 10px;
-        }
-
-        .swiper-slide {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 18px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            background-color: var(--card-bg);
-            overflow: hidden;
-        }
-
-        .swiper-slide img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            /* Aquí el 100% sí funciona porque .swiper ya tiene alto */
-            object-fit: cover;
-        }
-
-        /* TIMELINE DINÁMICO */
-        .timeline {
-            position: relative;
-            max-width: 400px;
-            margin: 0 auto;
-            padding: 20px 0;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 90px;
-            height: 100%;
-            width: 1px;
-            background: rgba(150, 150, 150, 0.3);
-        }
-
-        .timeline-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 30px;
-            position: relative;
-        }
-
-        .timeline-time {
-            width: 70px;
-            text-align: right;
-            font-style: italic;
-            font-size: 0.9rem;
-            color: var(--color-oro);
-        }
-
-        .timeline-dot {
-            width: 10px;
-            height: 10px;
-            background: var(--color-oro);
-            border-radius: 50%;
-            margin: 0 15px;
-            z-index: 1;
-            box-shadow: 0 0 10px var(--color-oro);
-        }
-
-        .timeline-content {
-            flex: 1;
-            text-align: left;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.1);
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-        /* NUEVO ESTILO PARA EL PASE (SianEffects Premium Look) */
-        .ticket-container {
-            background: var(--card-bg);
-            border: 1px solid rgba(150, 150, 150, 0.2);
-            border-radius: 4px; /* Bordes menos redondeados para verse más elegante */
-            padding: 40px 20px;
-            max-width: 600px;
-            margin: 0 auto;
-            position: relative;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        }
-
-        .ticket-header {
-            font-family: var(--font-title);
-            font-size: 1.8rem;
-            margin-bottom: 30px;
-            border-bottom: 1px solid var(--color-oro);
-            display: inline-block;
-            padding-bottom: 5px;
-        }
-
-        .ticket-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            text-align: left;
-            margin-top: 20px;
-        }
-
-        /* Para que en móviles se vea una sola columna si es necesario */
-        @media (max-width: 480px) {
-            .ticket-grid { grid-template-columns: 1fr; text-align: center; }
-            .qr-side { order: -1; } /* QR arriba en móvil */
-        }
-
-        .ticket-label {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--color-oro);
-            margin-bottom: 4px;
-            display: block;
-            font-weight: bold;
-        }
-
-        .ticket-value {
-            font-family: var(--font-body);
-            font-size: 1.1rem;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .qr-container-modern {
-            background: white;
-            padding: 10px;
-            display: inline-block;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .status-badge {
-            font-size: 0.7rem;
-            padding: 4px 12px;
-            border-radius: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+        .ticket-container { background: var(--card-bg); border: 1px solid rgba(150, 150, 150, 0.2); border-radius: 4px; padding: 40px 20px; max-width: 600px; margin: 0 auto; position: relative; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+        .ticket-header { font-family: var(--font-title); font-size: 1.8rem; margin-bottom: 30px; border-bottom: 1px solid var(--color-oro); display: inline-block; padding-bottom: 5px; }
+        .ticket-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; text-align: left; margin-top: 20px; }
+        @media (max-width: 480px) { .ticket-grid { grid-template-columns: 1fr; text-align: center; } .qr-side { order: -1; } }
+        .ticket-label { font-size: 0.65rem; text-transform: uppercase; letter-spacing: 2px; color: var(--color-oro); margin-bottom: 4px; display: block; font-weight: bold; }
+        .ticket-value { font-family: var(--font-body); font-size: 1.1rem; margin-bottom: 15px; display: block; }
+        .qr-container-modern { background: white; padding: 10px; display: inline-block; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .status-badge { font-size: 0.7rem; padding: 4px 12px; border-radius: 20px; text-transform: uppercase; letter-spacing: 1px; }
     </style>
 </head>
 
 <body>
 
     <div id="welcome-screen">
-        <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-oro);">Nuestra Boda
-        </p>
+        <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-oro);">Nuestra Boda</p>
         <h1 style="font-size: 4rem; margin: 15px 0; text-align: center;">{{ datos['novios'] }}</h1>
         <button class="btn-entrar mt-4" onclick="entrarSitio()">Abrir Invitación</button>
     </div>
@@ -506,18 +136,13 @@
         {% for item in config %}
 
         {% if item == 'hero' %}
-        <section
-            style="height: 100vh; max-width: 100%; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
+        <section style="height: 100vh; max-width: 100%; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
                             background-image: url('{{ inv['foto_portada_url'] if inv['foto_portada_url'] else (fotos[0] if fotos else '') }}'); 
                             background-size: cover; background-position: center; filter: brightness(0.6);"></div>
-            <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #fdfbf7;"
-                data-aos="zoom-in" data-aos-duration="1500">
-                <p style="text-transform: uppercase; letter-spacing: 5px; font-size: 0.9rem; color: var(--color-oro);">
-                    ¡Nos Casamos!</p>
-                <h1
-                    style="font-size: clamp(3.5rem, 10vw, 6rem); margin: 10px 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">
-                    {{ datos['novios'] }}</h1>
+            <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #fdfbf7;" data-aos="zoom-in" data-aos-duration="1500">
+                <p style="text-transform: uppercase; letter-spacing: 5px; font-size: 0.9rem; color: var(--color-oro);">¡Nos Casamos!</p>
+                <h1 style="font-size: clamp(3.5rem, 10vw, 6rem); margin: 10px 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">{{ datos['novios'] }}</h1>
                 <p style="font-size: 1.3rem; font-style: italic; opacity: 0.9;">{{ datos['frase'] }}</p>
             </div>
         </section>
@@ -526,22 +151,10 @@
         <section data-aos="fade-up">
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 30px;">Faltan</h2>
             <div class="countdown-box" id="contador">
-                <div class="time-unit">
-                    <div class="time-number" id="dias">00</div>
-                    <div class="time-label">Días</div>
-                </div>
-                <div class="time-unit">
-                    <div class="time-number" id="horas">00</div>
-                    <div class="time-label">Hr</div>
-                </div>
-                <div class="time-unit">
-                    <div class="time-number" id="minutos">00</div>
-                    <div class="time-label">Min</div>
-                </div>
-                <div class="time-unit">
-                    <div class="time-number" id="segundos">00</div>
-                    <div class="time-label">Seg</div>
-                </div>
+                <div class="time-unit"><div class="time-number" id="dias">00</div><div class="time-label">Días</div></div>
+                <div class="time-unit"><div class="time-number" id="horas">00</div><div class="time-label">Hr</div></div>
+                <div class="time-unit"><div class="time-number" id="minutos">00</div><div class="time-label">Min</div></div>
+                <div class="time-unit"><div class="time-number" id="segundos">00</div><div class="time-label">Seg</div></div>
             </div>
         </section>
 
@@ -550,16 +163,14 @@
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Ubicaciones</h2>
             <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
                 {% if datos['maps_misa'] %}
-                <div class="premium-card"
-                    style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
                     <i class="fas fa-church fa-2x mb-2" style="color: var(--color-oro);"></i>
                     <h3 style="margin-bottom: 15px;">Ceremonia</h3>
                     <a href="{{ datos['maps_misa'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
                 </div>
                 {% endif %}
                 {% if datos['maps_fiesta'] %}
-                <div class="premium-card"
-                    style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
                     <i class="fas fa-glass-cheers fa-2x mb-2" style="color: var(--color-oro);"></i>
                     <h3 style="margin-bottom: 15px;">Recepción</h3>
                     <a href="{{ datos['maps_fiesta'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
@@ -571,11 +182,8 @@
         {% elif item == 'dresscode' and inv['dress_code'] %}
         <section data-aos="fade-up">
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 20px;">Código de Vestimenta</h2>
-            <div style="font-size: 3rem; color: var(--color-oro); margin-bottom: 15px;">
-                <i class="fas fa-user-tie me-3"></i><i class="fas fa-female"></i>
-            </div>
-            <h3 style="text-transform: uppercase; letter-spacing: 3px; font-family: var(--font-body);">{{
-                inv['dress_code'] }}</h3>
+            <div style="font-size: 3rem; color: var(--color-oro); margin-bottom: 15px;"><i class="fas fa-user-tie me-3"></i><i class="fas fa-female"></i></div>
+            <h3 style="text-transform: uppercase; letter-spacing: 3px; font-family: var(--font-body);">{{ inv['dress_code'] }}</h3>
             <p style="opacity: 0.7; margin-top: 15px; font-style: italic;">
                 {% if inv['dress_code'] == 'Formal' %}Traje oscuro y vestido largo o midi.
                 {% elif inv['dress_code'] == 'Etiqueta' %}Rigurosa etiqueta. Gala y elegancia absoluta.
@@ -587,24 +195,18 @@
 
         {% elif item == 'regalos' %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Mesa de Regalos <i
-                    class="fas fa-gift ms-2"></i></h2>
-            <p class="mb-5" style="font-style: italic; opacity: 0.7;">El mejor regalo que nos pueden dar es contar con
-                su presencia</p>
-
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Mesa de Regalos <i class="fas fa-gift ms-2"></i></h2>
+            <p class="mb-5" style="font-style: italic; opacity: 0.7;">El mejor regalo que nos pueden dar es contar con su presencia</p>
             <div class="premium-container">
                 {% if datos['cuenta_bancaria'] %}
                 <div class="premium-card">
                     <div class="premium-icon"><i class="fas fa-envelope-open-text"></i></div>
                     <div class="premium-info">
                         <div class="premium-title">Lluvia de Sobres</div>
-                        <p
-                            style="white-space: pre-line; margin: 0; font-family: monospace; color: var(--color-oro); font-size: 1.1rem;">
-                            {{ datos['cuenta_bancaria'] }}</p>
+                        <p style="white-space: pre-line; margin: 0; font-family: monospace; color: var(--color-oro); font-size: 1.1rem;">{{ datos['cuenta_bancaria'] }}</p>
                     </div>
                 </div>
                 {% endif %}
-
                 {% if inv['mesas_regalos_json'] and inv['mesas_regalos_json'] != 'null' %}
                 {% set tiendas = inv['mesas_regalos_json']|from_json %}
                 {% for tienda in tiendas %}
@@ -614,10 +216,7 @@
                         {% elif 'amazon' in tienda.nombre.lower() %}<i class="fab fa-amazon"></i>
                         {% else %}<i class="fas fa-store"></i>{% endif %}
                     </div>
-                    <div class="premium-info">
-                        <div class="premium-title">{{ tienda.nombre }}</div>
-                        <a href="{{ tienda.url }}" target="_blank" class="btn-card">Ver mesa de regalos</a>
-                    </div>
+                    <div class="premium-info"><div class="premium-title">{{ tienda.nombre }}</div><a href="{{ tienda.url }}" target="_blank" class="btn-card">Ver mesa de regalos</a></div>
                 </div>
                 {% endfor %}
                 {% endif %}
@@ -629,35 +228,19 @@
             <section data-aos="fade-up">
                 <div class="ticket-container">
                     <h2 class="ticket-header">Pase de Acceso</h2>
-            
                     <div style="margin-bottom: 30px;">
                         <span class="ticket-label">Invitado</span>
-                        <span class="ticket-value" style="font-size: 1.5rem; font-weight: bold;">
-                            {{ datos_pase['nombre_familia'] }}
-                        </span>
-                        </div>
-
+                        <span class="ticket-value" style="font-size: 1.5rem; font-weight: bold;">{{ datos_pase['nombre_familia'] }}</span>
+                    </div>
                     <div class="row align-items-center" style="display: flex; flex-wrap: wrap;">
                         <div class="col-md-5 mb-4 mb-md-0 qr-side" style="text-align: center;">
-                            <div class="qr-container-modern">
-                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ datos_pase['codigo_qr_unique'] }}"
-                                    alt="QR" style="width: 140px; height: 140px; display: block; margin: 0 auto;">
-                            </div>
-                            <p class="mt-2 mb-0" style="font-size: 0.7rem; opacity: 0.5; font-family: monospace;">
-                                ID: {{ datos_pase['codigo_qr_unique'] }}
-                            </p>
+                            <div class="qr-container-modern"><img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ datos_pase['codigo_qr_unique'] }}" alt="QR" style="width: 140px; height: 140px; display: block; margin: 0 auto;"></div>
+                            <p class="mt-2 mb-0" style="font-size: 0.7rem; opacity: 0.5; font-family: monospace;">ID: {{ datos_pase['codigo_qr_unique'] }}</p>
                         </div>
-
                         <div class="col-md-7" style="flex: 1; padding-left: 20px;">
                             <div class="ticket-grid">
-                                <div>
-                                    <span class="ticket-label">Personas</span>
-                                    <span class="ticket-value">{{ datos_pase['pases_totales'] }} Pases</span>
-                                </div>
-                                <div>
-                                    <span class="ticket-label">Mesa</span>
-                                    <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span>
-                                </div>
+                                <div><span class="ticket-label">Personas</span><span class="ticket-value">{{ datos_pase['pases_totales'] }} Pases</span></div>
+                                <div><span class="ticket-label">Mesa</span><span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span></div>
                                 <div style="grid-column: span 2;">
                                     <span class="ticket-label">Estado</span>
                                     {% if datos_pase['pases_usados'] >= datos_pase['pases_totales'] %}
@@ -667,107 +250,46 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            </div>
-                            </div>
-
+                        </div>
+                    </div>
                     {% if inv['tiene_modulo_invitados'] %}
                     <div style="margin-top: 40px; border-top: 1px dashed var(--color-oro); padding-top: 30px;">
                         <p class="mb-4" style="opacity: 0.8; font-weight: bold;">¿Confirmas tu asistencia?</p>
                         <div id="botones-rsvp" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                            <button class="btn-boda" style="background: var(--color-oro); color: var(--bg-color);"
-                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Confirmado')">
-                                <i class="fas fa-check me-2"></i> Sí, asistiré
-                            </button>
-                            <button class="btn-entrar" style="border-color: rgba(150,150,150,0.5); color: var(--text-color);"
-                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Declinado')">
-                                <i class="fas fa-times me-2"></i> No podré ir
-                            </button>
+                            <button class="btn-boda" style="background: var(--color-oro); color: var(--bg-color);" onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Confirmado')"><i class="fas fa-check me-2"></i> Sí, asistiré</button>
+                            <button class="btn-entrar" style="border-color: rgba(150,150,150,0.5); color: var(--text-color);" onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Declinado')"><i class="fas fa-times me-2"></i> No podré ir</button>
                         </div>
                     </div>
                     {% endif %}
-                    
-                    <p class="mt-4 mb-0" style="text-align: center; font-style: italic; font-size: 0.8rem; opacity: 0.6;">
-                        "Presenta este código digital al llegar a la recepción."
-                    </p>
-                    </div>
+                    <p class="mt-4 mb-0" style="text-align: center; font-style: italic; font-size: 0.8rem; opacity: 0.6;">"Presenta este código digital al llegar a la recepción."</p>
+                </div>
             </section>
             {% endif %}
-        
+
         {% elif item == 'protocolo' and (inv['padres_novia'] or inv['padres_novio']) %}
         <section data-aos="fade-up">
             <h2 style="font-size: 2.2rem; color: var(--color-oro); margin-bottom: 40px;">Nuestros Padres y Padrinos</h2>
             <div class="row g-4 justify-content-center" style="display: flex; flex-wrap: wrap;">
-                {% if inv['padres_novia'] %}
-                <div class="col-md-6" style="flex: 1; min-width: 250px;">
-                    <div class="p-3">
-                        <i class="fas fa-heart text-danger mb-2"></i>
-                        <h4 class="mb-1">{{ inv['padres_novia'] }}</h4>
-                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padres de la Novia</small>
-                    </div>
-                </div>
-                {% endif %}
-                {% if inv['padres_novio'] %}
-                <div class="col-md-6" style="flex: 1; min-width: 250px;">
-                    <div class="p-3">
-                        <i class="fas fa-heart text-danger mb-2"></i>
-                        <h4 class="mb-1">{{ inv['padres_novio'] }}</h4>
-                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padres del Novio</small>
-                    </div>
-                </div>
-                {% endif %}
-                {% if inv['padrinos'] %}
-                <div class="col-12 mt-4" style="width: 100%;">
-                    <div class="p-3 border-top" style="border-top: 1px solid rgba(150,150,150,0.2); padding-top: 20px;">
-                        <h4 class="mb-1">{{ inv['padrinos'] }}</h4>
-                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padrinos de Velación</small>
-                    </div>
-                </div>
-                {% endif %}
+                {% if inv['padres_novia'] %}<div class="col-md-6" style="flex: 1; min-width: 250px;"><div class="p-3"><i class="fas fa-heart text-danger mb-2"></i><h4 class="mb-1">{{ inv['padres_novia'] }}</h4><small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padres de la Novia</small></div></div>{% endif %}
+                {% if inv['padres_novio'] %}<div class="col-md-6" style="flex: 1; min-width: 250px;"><div class="p-3"><i class="fas fa-heart text-danger mb-2"></i><h4 class="mb-1">{{ inv['padres_novio'] }}</h4><small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padres del Novio</small></div></div>{% endif %}
+                {% if inv['padrinos'] %}<div class="col-12 mt-4" style="width: 100%;"><div class="p-3 border-top" style="border-top: 1px solid rgba(150,150,150,0.2); padding-top: 20px;"><h4 class="mb-1">{{ inv['padrinos'] }}</h4><small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padrinos de Velación</small></div></div>{% endif %}
             </div>
         </section>
 
         {% elif item == 'hospedaje' %}
         <section data-aos="fade-up">
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Hospedaje y Transporte</h2>
-
-            {% if datos['info_transporte'] %}
-            <div class="premium-card mb-4" style="text-align: center; flex-direction: column;">
-                <i class="fas fa-bus-alt fa-2x mb-2" style="color: var(--color-oro);"></i>
-                <p style="white-space: pre-line; margin: 0;">{{ datos['info_transporte'] }}</p>
-            </div>
-            {% endif %}
-
-            {% if inv['hospedaje_json'] and inv['hospedaje_json'] != 'null' %}
-            <div class="premium-container">
-                {% set hoteles = inv['hospedaje_json']|from_json %}
-                {% for hotel in hoteles %}
-                <div class="premium-card">
-                    <div class="premium-icon"><i class="fas fa-bed"></i></div>
-                    <div class="premium-info">
-                        <div class="premium-title">{{ hotel.nombre }}</div>
-                        <a href="{{ hotel.url }}" target="_blank" class="btn-card"><i class="fas fa-link me-1"></i> Ver
-                            opciones</a>
-                    </div>
-                </div>
-                {% endfor %}
-            </div>
-            {% endif %}
+            {% if datos['info_transporte'] %}<div class="premium-card mb-4" style="text-align: center; flex-direction: column;"><i class="fas fa-bus-alt fa-2x mb-2" style="color: var(--color-oro);"></i><p style="white-space: pre-line; margin: 0;">{{ datos['info_transporte'] }}</p></div>{% endif %}
+            {% if inv['hospedaje_json'] and inv['hospedaje_json'] != 'null' %}<div class="premium-container">{% set hoteles = inv['hospedaje_json']|from_json %}{% for hotel in hoteles %}<div class="premium-card"><div class="premium-icon"><i class="fas fa-bed"></i></div><div class="premium-info"><div class="premium-title">{{ hotel.nombre }}</div><a href="{{ hotel.url }}" target="_blank" class="btn-card"><i class="fas fa-link me-1"></i> Ver opciones</a></div></div>{% endfor %}</div>{% endif %}
         </section>
 
         {% elif item == 'album' and inv['camara_premium'] %}
         <section data-aos="fade-up">
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 15px;">Captura el Momento</h2>
-            <p class="mb-4" style="opacity: 0.8;">Ayúdanos a documentar este día tan especial. Te regalamos una cámara
-                desechable virtual con 5 fotos para nuestro rollo.</p>
-
-            <div class="premium-card"
-                style="flex-direction: column; text-align: center; justify-content: center; padding: 40px;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id'], _external=True) }}"
-                    alt="QR Cámara" style="border-radius: 10px; border: 5px solid white; margin-bottom: 15px;">
-
-                <a href="{{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id']) }}" class="btn-boda">
-                    <i class="fas fa-camera-retro me-2"></i> Usar Cámara Desechable
-                </a>
+            <p class="mb-4" style="opacity: 0.8;">Ayúdanos a documentar este día tan especial. Te regalamos una cámara desechable virtual con 5 fotos para nuestro rollo.</p>
+            <div class="premium-card" style="flex-direction: column; text-align: center; justify-content: center; padding: 40px;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id'], _external=True) }}" alt="QR Cámara" style="border-radius: 10px; border: 5px solid white; margin-bottom: 15px;">
+                <a href="{{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id']) }}" class="btn-boda"><i class="fas fa-camera-retro me-2"></i> Usar Cámara Desechable</a>
             </div>
         </section>
 
@@ -775,28 +297,13 @@
         <section data-aos="fade-up" style="max-width: 100%; overflow: hidden;">
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Nuestra Historia</h2>
             <p class="mb-4" style="opacity: 0.7;">Desliza para ver más</p>
-            <div class="swiper mySwiper">
-                <div class="swiper-wrapper">
-                    {% for foto in fotos %}
-                    <div class="swiper-slide"><img src="{{ foto }}" alt="Foto Novios"></div>
-                    {% endfor %}
-                </div>
-            </div>
+            <div class="swiper mySwiper"><div class="swiper-wrapper">{% for foto in fotos %}<div class="swiper-slide"><img src="{{ foto }}" alt="Foto Novios"></div>{% endfor %}</div></div>
         </section>
 
         {% elif item == 'timeline' and datos.get('itinerario') %}
         <section data-aos="fade-up">
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Itinerario</h2>
-            <div class="timeline">
-                {% for act in datos['itinerario'] %}
-                <div class="timeline-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 + 100 }}">
-                    <div class="timeline-time">{{ act.hora }}</div>
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-content"><i class="{{ act.icono }} me-2" style="color: var(--color-oro);"></i>
-                        {{ act.actividad }}</div>
-                </div>
-                {% endfor %}
-            </div>
+            <div class="timeline">{% for act in datos['itinerario'] %}<div class="timeline-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 + 100 }}"><div class="timeline-time">{{ act.hora }}</div><div class="timeline-dot"></div><div class="timeline-content"><i class="{{ act.icono }} me-2" style="color: var(--color-oro);"></i>{{ act.actividad }}</div></div>{% endfor %}</div>
         </section>
 
         {% elif item == 'rsvp' %}
@@ -811,100 +318,59 @@
                     </a>
                 {% endif %}
             </section>
-        {% endif %}
+            {% endif %}
 
         {% elif item == 'frase_final' and inv['frase_final'] %}
         <section data-aos="fade-up" class="text-center" style="padding: 100px 20px;">
             <img src="https://www.transparentpng.com/download/floral/floral-free-transparent-3.png"
                 style="width: 120px; opacity: 0.5; margin-bottom: 25px; filter: sepia(0.5) hue-rotate(10deg);">
             <div style="max-width: 600px; margin: 0 auto;">
-                <p class="fs-3"
-                    style="font-family: var(--font-title); color: var(--color-oro); font-style: italic; line-height: 1.4; margin-bottom: 30px;">
-                    "{{ inv['frase_final'] }}"
-                </p>
-                
-                <h3 style="font-size: 2.5rem; margin-bottom: 10px; color: var(--text-color);">
-                    {{ datos['novios'] }}
-                </h3>
-                
-                <p style="text-transform: uppercase; letter-spacing: 4px; font-size: 0.8rem; opacity: 0.6; font-weight: bold;">
-                    ¡Los esperamos para celebrar!
-                </p>
+                <p class="fs-3" style="font-family: var(--font-title); color: var(--color-oro); font-style: italic; line-height: 1.4; margin-bottom: 30px;">"{{ inv['frase_final'] }}"</p>
+                <h3 style="font-size: 2.5rem; margin-bottom: 10px; color: var(--text-color);">{{ datos['novios'] }}</h3>
+                <p style="text-transform: uppercase; letter-spacing: 4px; font-size: 0.8rem; opacity: 0.6; font-weight: bold;">¡Los esperamos para celebrar!</p>
             </div>
         </section>
-{% endif %}
+        {% endif %}
 
         {% endfor %}
 
-        <footer style="text-align: center; padding: 40px; font-size: 0.8rem; opacity: 0.5;">
-            Creado con ❤️ por SianEffects
-        </footer>
+        <footer style="text-align: center; padding: 40px; font-size: 0.8rem; opacity: 0.5;">Creado con ❤️ por SianEffects</footer>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <script>
-        // Efecto de entrada y Música
         function entrarSitio() {
             const welcome = document.getElementById('welcome-screen');
             const content = document.getElementById('main-content');
             const audio = document.getElementById('bgMusic');
-
-            // 1. Ocultamos la bienvenida
             welcome.style.opacity = '0';
             setTimeout(() => { welcome.style.visibility = 'hidden'; }, 800);
-
-            // 2. Mostramos el contenido principal
             content.style.visibility = 'visible';
             content.style.opacity = '1';
-
-            // 3. ¡AQUÍ ES LA MAGIA! Iniciamos Swiper y AOS un instante DESPUÉS de que ya es visible
             setTimeout(() => {
-                var swiper = new Swiper(".mySwiper", {
-                    effect: "cards",  // Usamos el efecto apilado de tarjetas
-                    grabCursor: true, // Para que salga la manita
-                    observer: true,   // Seguros de vida contra contenedores ocultos
-                    observeParents: true,
-                    // Nota: En modo 'cards', no se recomiendan 'loop' ni 'slidesPerView'
-                });
-
+                var swiper = new Swiper(".mySwiper", { effect: "cards", grabCursor: true, observer: true, observeParents: true, });
                 AOS.init({ duration: 1200, once: true });
             }, 200);
-
             if (audio) { audio.play().catch(e => console.log("Autoplay bloqueado")); }
         }
 
         function toggleMusic() {
             const audio = document.getElementById('bgMusic');
             const icon = document.getElementById('musicIcon');
-            if (audio.paused) {
-                audio.play(); icon.classList.remove('fa-volume-mute'); icon.classList.add('fa-volume-up');
-            } else {
-                audio.pause(); icon.classList.remove('fa-volume-up'); icon.classList.add('fa-volume-mute');
-            }
+            if (audio.paused) { audio.play(); icon.classList.remove('fa-volume-mute'); icon.classList.add('fa-volume-up'); }
+            else { audio.pause(); icon.classList.remove('fa-volume-up'); icon.classList.add('fa-volume-mute'); }
         }
 
-        // Carrusel de Fotos
-        var swiper = new Swiper(".mySwiper", {
-            effect: "cards", grabCursor: true,
-            centeredSlides: true,
-            loop: true,
-            observer: true,
-            observeParents: true,
-        });
-
-        // Reloj Cuenta Regresiva
         const fechaStr = "{{ inv['fecha_evento'] }}";
         if (fechaStr && fechaStr !== 'None') {
             const fechaEvento = new Date(fechaStr).getTime();
             const x = setInterval(function () {
                 const now = new Date().getTime();
                 const distance = fechaEvento - now;
-
                 if (distance < 0) {
                     clearInterval(x);
                     document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-oro);'>¡ES HOY!</h3>";
@@ -917,9 +383,7 @@
             }, 1000);
         }
 
-        // Función RSVP Premium (AJAX)
         function confirmarAsistencia(invitadoId, estado) {
-            // Reemplaza esta ruta con el endpoint real de tu backend
             fetch(`/api/invitados/${invitadoId}/confirmar`, {  
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -928,66 +392,22 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Ocultar botones y dejar mensaje fijo
-                    document.getElementById('botones-rsvp').innerHTML = `
-                        <p style="color: var(--color-oro); font-weight: bold; font-size: 1.2rem; margin-top: 15px;">
-                            <i class="fas fa-check-circle me-1"></i> ¡Asistencia ${estado.toLowerCase()} exitosamente!
-                        </p>`;
-
-                    // Efecto visual según la respuesta
+                    document.getElementById('botones-rsvp').innerHTML = `<p style="color: var(--color-oro); font-weight: bold; font-size: 1.2rem; margin-top: 15px;"><i class="fas fa-check-circle me-1"></i> ¡Asistencia ${estado.toLowerCase()} exitosamente!</p>`;
                     if (estado === 'Confirmado') {
-                        // Lluvia de confeti
-                        confetti({
-                            particleCount: 150,
-                            spread: 80,
-                            origin: { y: 0.6 },
-                            colors: ['#D4AF37', '#ffffff'] 
-                        });
-                        
-                        // SweetAlert romántico
-                        Swal.fire({
-                            title: '¡Qué emoción! 🤍',
-                            text: 'Gracias por confirmar. Nos hace inmensamente felices saber que compartirás este día tan especial con nosotros.',
-                            icon: 'success',
-                            confirmButtonColor: 'var(--color-oro)',
-                            confirmButtonText: '¡Nos vemos pronto!',
-                            background: 'var(--bg-color)',
-                            color: 'var(--text-color)'
-                        });
+                        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#D4AF37', '#ffffff'] });
+                        Swal.fire({ title: '¡Qué emoción! 🤍', text: 'Gracias por confirmar. Nos hace inmensamente felices saber que compartirás este día tan especial con nosotros.', icon: 'success', confirmButtonColor: 'var(--color-oro)', confirmButtonText: '¡Nos vemos pronto!', background: 'var(--bg-color)', color: 'var(--text-color)' });
                     } else {
-                        // SweetAlert de declinación
-                        Swal.fire({
-                            title: '¡Te extrañaremos! 🥺',
-                            text: 'Entendemos que no puedas acompañarnos, gracias por avisarnos con tiempo.',
-                            icon: 'info',
-                            confirmButtonColor: 'rgba(150,150,150,0.5)',
-                            confirmButtonText: 'Cerrar',
-                            background: 'var(--bg-color)',
-                            color: 'var(--text-color)'
-                        });
+                        Swal.fire({ title: '¡Te extrañaremos! 🥺', text: 'Entendemos que no puedas acompañarnos, gracias por avisarnos con tiempo.', icon: 'info', confirmButtonColor: 'rgba(150,150,150,0.5)', confirmButtonText: 'Cerrar', background: 'var(--bg-color)', color: 'var(--text-color)' });
                     }
                 } else {
-                    Swal.fire({
-                        title: 'Ups...', 
-                        text: 'Hubo un problema al guardar tu confirmación. Intenta de nuevo.', 
-                        icon: 'error',
-                        background: 'var(--bg-color)',
-                        color: 'var(--text-color)'
-                    });
+                    Swal.fire({ title: 'Ups...', text: 'Hubo un problema al guardar tu confirmación. Intenta de nuevo.', icon: 'error', background: 'var(--bg-color)', color: 'var(--text-color)' });
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                Swal.fire({
-                    title: 'Error de conexión', 
-                    text: 'No pudimos conectar con el servidor. Revisa tu internet.', 
-                    icon: 'error',
-                    background: 'var(--bg-color)',
-                    color: 'var(--text-color)'
-                });
+                Swal.fire({ title: 'Error de conexión', text: 'No pudimos conectar con el servidor. Revisa tu internet.', icon: 'error', background: 'var(--bg-color)', color: 'var(--text-color)' });
             });
         }
     </script>
 </body>
-
 </html>
