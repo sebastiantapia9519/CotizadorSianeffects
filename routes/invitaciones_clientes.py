@@ -83,12 +83,21 @@ def agregar_invitado_cliente():
         nombre_familia = request.form.get('nombre_familia')
         pases = request.form.get('pases_totales', 2)
         telefono = request.form.get('telefono')
+        # Capturamos la mesa del formulario, si viene vacío ponemos '0'
+        mesa = request.form.get('mesa') or '0' 
         codigo_unico = str(uuid.uuid4())[:8].upper()
         
-        conn.execute("INSERT INTO pases_invitados (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique, telefono) VALUES (?, ?, ?, ?, ?)", (inv_id, nombre_familia, pases, codigo_unico, telefono))
+        # Agregamos 'mesa' al INSERT
+        conn.execute("""
+            INSERT INTO pases_invitados 
+            (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique, telefono, mesa) 
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (inv_id, nombre_familia, pases, codigo_unico, telefono, mesa))
+        
         conn.commit()
         flash(f"¡{nombre_familia} se agregó a la lista!", "success")
     except Exception as e:
+        print(f"Error: {e}")
         flash("Error al agregar al invitado.", "danger")
     finally:
         conn.close()
@@ -109,20 +118,25 @@ def editar_invitado_cliente(pase_id):
         nombre_familia = request.form.get('nombre_familia')
         pases = request.form.get('pases_totales')
         telefono = request.form.get('telefono')
+        # Capturamos la mesa del formulario
+        mesa = request.form.get('mesa') or '0'
         
-        # IMPORTANTE: Validamos inv_id para que no puedan editar invitados de otra boda
+        # Agregamos 'mesa' al UPDATE
         conn.execute("""
-            UPDATE pases_invitados SET nombre_familia = ?, pases_totales = ?, telefono = ? 
+            UPDATE pases_invitados SET nombre_familia = ?, pases_totales = ?, telefono = ?, mesa = ? 
             WHERE id = ? AND invitacion_id = ?
-        """, (nombre_familia, pases, telefono, pase_id, inv_id))
+        """, (nombre_familia, pases, telefono, mesa, pase_id, inv_id))
+        
         conn.commit()
         flash(f"Datos de {nombre_familia} actualizados.", "success")
     except Exception as e:
+        print(f"Error: {e}")
         flash("Error al actualizar.", "danger")
     finally:
         conn.close()
     return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
+    
 # 3. ELIMINAR INVITADO (NUEVO)
 @clientes_bp.route('/mi-evento/eliminar-invitado/<int:pase_id>', methods=['POST'])
 def eliminar_invitado_cliente(pase_id):

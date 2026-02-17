@@ -110,3 +110,75 @@ def api_confirmar_asistencia(invitado_id):
     except Exception as e:
         print(f"Error al confirmar asistencia: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+# --- RUTA PARA EL CLIENTE (Dashboard) ---
+@invitaciones_publicas_bp.route('/recepcion/<slug>')
+@login_required # Asumiendo que usas flask_login
+def recepcion_cliente(slug):
+    conn = get_db()
+    # Verificamos que la boda sea del usuario actual
+    inv = conn.execute("SELECT id, slug FROM invitaciones WHERE slug = ? AND usuario_id = ?", 
+                       (slug, current_user.id)).fetchone()
+    conn.close()
+    
+    if not inv:
+        return "No tienes permiso para gestionar esta recepción", 403
+    
+    return render_template('invitaciones/scanner.html', inv=inv, modo="cliente")
+
+# --- RUTA PARA TI (Panel de Control Admin) ---
+@invitaciones_publicas_bp.route('/admin/scanner-global')
+@login_required
+def scanner_global():
+    if current_user.role != 'admin': # O como verifiques que eres tú
+        return "Acceso denegado", 403
+    
+    return render_template('invitaciones/scanner.html', inv=None, modo="admin")
+
+@invitaciones_publicas_bp.route('/api/validar-qr', methods=['POST'])
+def validar_qr():
+    data = request.get_json()
+    codigo = data.get('codigo')
+    invitacion_id = data.get('invitacion_id') # Puede ser None si es Admin
+
+    conn = get_db()
+    
+    if invitacion_id:
+        # Modo Cliente: Solo busca en SU boda
+        invitado = conn.execute("""
+            SELECT p.*, i.slug as boda_nombre 
+            FROM pases_invitados p
+            JOIN invitaciones i ON p.invitacion_id = i.id
+            WHERE p.codigo_qr_unique = ? AND p.invitacion_id = ?
+        """, (codigo, invitacion_id)).fetchone()
+    else:
+        # Modo Admin: Busca en TODO el sistema
+        invitado = conn.execute("""
+            SELECT p.*, i.slug as boda_nombre 
+            FROM pases_invitados p
+            JOIN invitaciones i ON p.invitacion_id = i.id
+            WHERE p.codigo_qr_unique = ?
+        """, (codigo,)).fetchone()
+
+    if not invitado:
+        return jsonify({'success': False, 'error': 'Código QR no válido'})
+
+    # Verificar si ya entró
+    if invitado['pases_usados'] >= invitado['pases_totales']:
+        return jsonify({
+            'success': False, 
+            'error': f"¡ALERTA! {invitado['nombre_familia']} ya ingresó. Evento: {invitado['boda_nombre']}"
+        })
+
+    # Registrar entrada
+    conn.execute("UPDATE pases_invitados SET pases_usados = pases_totales WHERE id = ?", (invitado['id'],))
+    conn.commit()
+    conn.close()
+
+    return jsonify({
+        'success': True,
+        'familia': invitado['nombre_familia'],
+        'pases': invitado['pases_totales'],
+        'mesa': invitado['mesa'] or 'Sin asignar',
+        'evento': invitado['boda_nombre']
+    })

@@ -5,10 +5,15 @@
 {% block content %}
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div>
-        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-envelope-open-text text-primary me-2"></i>Mis Invitaciones</h4>
+        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-envelope-open-text text-primary me-2"></i>Mis Invitaciones
+        </h4>
         <small class="text-muted">Administra los micro-sitios de eventos y bodas</small>
     </div>
-    <div>
+    <div class="d-flex gap-2">
+        <a href="{{ url_for('invitaciones_publicas.scanner_global') }}"
+            class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
+            <i class="fas fa-qrcode me-2"></i>Escáner Maestro
+        </a>
         <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}" class="btn btn-dark rounded-pill px-4 shadow-sm">
             <i class="fas fa-plus-circle me-2"></i>Crear Nueva
         </a>
@@ -34,7 +39,8 @@
                     <tr>
                         <td class="ps-4 py-3">
                             <div class="fw-bold text-dark">{{ inv['datos_cliente']['novios'] }}</div>
-                            <small class="text-muted">Estilo: <span class="text-capitalize">{{ inv['estilo_fuente'] }}</span></small>
+                            <small class="text-muted">Estilo: <span class="text-capitalize">{{ inv['estilo_fuente']
+                                    }}</span></small>
                         </td>
 
                         <td>
@@ -50,7 +56,8 @@
                         <td>
                             <div class="fw-bold text-dark">
                                 {% if inv['fecha_evento'] %}
-                                {{ inv['fecha_evento'][:10] }} <small class="text-muted">{{ inv['fecha_evento'][11:16] }}</small>
+                                {{ inv['fecha_evento'][:10] }} <small class="text-muted">{{ inv['fecha_evento'][11:16]
+                                    }}</small>
                                 {% else %}
                                 <span class="text-muted">-</span>
                                 {% endif %}
@@ -76,34 +83,44 @@
 
                         <td class="text-end pe-4">
                             <div class="dropdown">
-                                <button class="btn btn-light btn-sm rounded-circle" type="button" data-bs-toggle="dropdown">
+                                <button class="btn btn-light btn-sm rounded-circle" type="button"
+                                    data-bs-toggle="dropdown">
                                     <i class="fas fa-ellipsis-v"></i>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv['slug']) }}"
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv['slug']) }}"
                                             target="_blank">
                                             <i class="fas fa-external-link-alt me-2 text-primary"></i> Ver Sitio
                                         </a>
                                     </li>
-                                    
+
                                     {% if inv.get('tiene_modulo_invitados') %}
                                     <li>
                                         <button class="dropdown-item"
                                             onclick="alert('Código de acceso para los Novios: {{ inv.get('codigo_acceso_cliente', 'Aún no generado') }}')">
                                             <i class="fas fa-key me-2 text-dark"></i> Ver Código Novios
                                         </button>
-                                        </li>
-                                        <li>
-                                            <a class="dropdown-item" href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}">
-                                                <i class="fas fa-users me-2 text-info"></i> Gestionar Invitados
-                                            </a>
-                                        </li>
-                                        {% endif %}
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}">
+                                            <i class="fas fa-users me-2 text-info"></i> Gestionar Invitados
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv['slug']) }}">
+                                            <i class="fas fa-qrcode me-2 text-dark"></i> Escáner Recepción
+                                        </a>
+                                    </li>
+                                    {% endif %}
 
                                     {% if inv.get('camara_premium') %}
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv['id']) }}">
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv['id']) }}">
                                             <i class="fas fa-camera-retro me-2 text-success"></i> Ver Fotos Rollo
                                         </a>
                                     </li>
@@ -114,20 +131,23 @@
                                     </li>
 
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}">
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}">
                                             <i class="fas fa-edit me-2 text-warning"></i> Editar Boda
                                         </a>
                                     </li>
                                     <li>
-                                        <form action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}" method="POST"
+                                        <form
+                                            action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}"
+                                            method="POST"
                                             onsubmit="return confirm('¿Estás seguro? Se borrarán todas las fotos de R2 también.')">
                                             <button type="submit" class="dropdown-item text-danger">
                                                 <i class="fas fa-trash-alt me-2"></i> Eliminar
                                             </button>
                                         </form>
                                     </li>
-                                    </ul>
-                                    </div>
+                                </ul>
+                            </div>
                         </td>
                     </tr>
                     {% else %}
@@ -138,23 +158,9 @@
                         </td>
                     </tr>
                     {% endfor %}
-                    </tbody>
+                </tbody>
             </table>
         </div>
     </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script>
-    // Función elegante para copiar al portapapeles
-    function copiarLink(url) {
-        navigator.clipboard.writeText(url).then(function () {
-            alert('¡Enlace copiado al portapapeles!\n\nListo para enviar por WhatsApp: ' + url);
-        }).catch(function (err) {
-            console.error('Error al copiar: ', err);
-            alert('No se pudo copiar el enlace automáticamente.');
-        });
-    }
-</script>
 {% endblock %}

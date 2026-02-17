@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,64 +8,92 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
+
 <body class="bg-light">
-    
+
     <nav class="navbar navbar-light bg-white shadow-sm mb-4">
-        <div class="container d-flex justify-content-between">
+        <div class="container d-flex justify-content-between align-items-center">
             <span class="navbar-brand mb-0 h4 fw-bold" style="font-family: 'Playfair Display', serif;">
                 <i class="fas fa-ring text-warning me-2"></i>{{ nombre_evento }}
             </span>
-            <a href="{{ url_for('invitaciones_clientes.logout_cliente') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                Cerrar Sesión
-            </a>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv.slug) }}"
+                    class="btn btn-dark btn-sm rounded-pill px-3 shadow-sm">
+                    <i class="fas fa-qrcode me-1"></i> Abrir Escáner
+                </a>
+                <a href="{{ url_for('invitaciones_clientes.logout_cliente') }}"
+                    class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                    Cerrar Sesión
+                </a>
+            </div>
         </div>
     </nav>
 
     <div class="container pb-5">
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-                        {{ message }}
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                {% endfor %}
-            {% endif %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
         {% endwith %}
 
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4 bg-dark text-white">
+                    <div class="card-body d-flex align-items-center justify-content-between py-3 px-4">
+                        <div>
+                            <h6 class="mb-0 text-secondary text-uppercase small fw-bold">Invitados en el salón</h6>
+                            <h2 class="mb-0 fw-bold">{{ invitados | map(attribute='pases_usados') | sum }}</h2>
+                        </div>
+                        <i class="fas fa-door-open fa-2x opacity-50"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="row g-4">
-            
+
             {% if inv.camara_premium %}
             <div class="col-lg-{% if inv.tiene_modulo_invitados %}6{% else %}12{% endif %}">
                 <div class="card shadow-sm border-0 rounded-4 h-100">
-                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
-                        <h5 class="m-0 fw-bold text-dark"><i class="fas fa-camera-retro text-warning me-2"></i>Álbum de Invitados</h5>
+                    <div
+                        class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
+                        <h5 class="m-0 fw-bold text-dark"><i class="fas fa-camera-retro text-warning me-2"></i>Álbum de
+                            Invitados</h5>
                         {% if fotos %}
-                        <a href="{{ url_for('invitaciones_clientes.descargar_fotos_cliente') }}" class="btn btn-dark btn-sm rounded-pill shadow-sm">
+                        <a href="{{ url_for('invitaciones_clientes.descargar_fotos_cliente') }}"
+                            class="btn btn-dark btn-sm rounded-pill shadow-sm">
                             <i class="fas fa-download me-1"></i> Descargar Zip
                         </a>
                         {% endif %}
                     </div>
                     <div class="card-body bg-light rounded-bottom-4 border-top">
                         {% if fotos %}
-                            <div class="row g-2">
-                                {% for foto in fotos[:12] %} 
-                                <div class="col-4 col-md-3">
-                                    <img src="{{ foto.url }}" class="img-fluid rounded shadow-sm" style="aspect-ratio: 1; object-fit: cover; width: 100%;">
-                                </div>
-                                {% endfor %}
+                        <div class="row g-2">
+                            {% for foto in fotos[:12] %}
+                            <div class="col-4 col-md-3">
+                                <img src="{{ foto.url }}" class="img-fluid rounded shadow-sm"
+                                    style="aspect-ratio: 1; object-fit: cover; width: 100%;">
                             </div>
-                            {% if fotos|length > 12 %}
-                                <div class="text-center mt-3">
-                                    <span class="badge bg-secondary rounded-pill px-3">+ {{ fotos|length - 12 }} fotos adicionales listas para descargar</span>
-                                </div>
-                            {% endif %}
+                            {% endfor %}
+                        </div>
+                        {% if fotos|length > 12 %}
+                        <div class="text-center mt-3">
+                            <span class="badge bg-secondary rounded-pill px-3">+ {{ fotos|length - 12 }} fotos
+                                adicionales listas para descargar</span>
+                        </div>
+                        {% endif %}
                         {% else %}
-                            <div class="text-center py-5">
-                                <div class="mb-3"><i class="fas fa-images fa-3x text-muted opacity-50"></i></div>
-                                <h6 class="text-muted fw-bold">Aún no hay fotos</h6>
-                                <p class="small text-muted mb-0">Las fotos que tomen tus invitados con la cámara virtual aparecerán aquí.</p>
-                            </div>
+                        <div class="text-center py-5">
+                            <div class="mb-3"><i class="fas fa-images fa-3x text-muted opacity-50"></i></div>
+                            <h6 class="text-muted fw-bold">Aún no hay fotos</h6>
+                            <p class="small text-muted mb-0">Las fotos que tomen tus invitados con la cámara virtual
+                                aparecerán aquí.</p>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -78,14 +107,17 @@
                     <i class="fas fa-lock fa-2x me-3 text-warning"></i>
                     <div>
                         <h6 class="mb-0 fw-bold">Modo Lectura Activo</h6>
-                        <small>Tu plan incluye gestión completa por nuestro equipo. Si necesitas hacer un cambio, contáctanos.</small>
+                        <small>Tu plan incluye gestión completa por nuestro equipo. Si necesitas hacer un cambio,
+                            contáctanos.</small>
                     </div>
                 </div>
                 {% endif %}
 
                 <div class="card shadow-sm border-0 rounded-4 h-100">
-                    <div class="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
-                        <h5 class="m-0 fw-bold text-dark"><i class="fas fa-users text-primary me-2"></i>Lista de Asistencia</h5>
+                    <div
+                        class="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
+                        <h5 class="m-0 fw-bold text-dark"><i class="fas fa-users text-primary me-2"></i>Lista de
+                            Asistencia</h5>
                         {% if not inv.bloquear_edicion_invitados %}
                         <button class="btn btn-outline-primary btn-sm rounded-pill fw-bold" data-bs-toggle="modal"
                             data-bs-target="#modalAgregarInvitado">
@@ -96,12 +128,13 @@
                     <div class="card-body p-0">
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0">
-                                <thead class="bg-light text-muted small">
+                                <thead class="bg-light text-muted small text-uppercase">
                                     <tr>
                                         <th class="ps-4">Familia / Invitado</th>
+                                        <th class="text-center">Mesa</th>
+                                        <th class="text-center">Confirmación</th>
                                         <th class="text-center">Pases</th>
-                                        <th class="text-center">Confirmados</th>
-                                        
+                                        <th class="text-center">En Salón</th>
                                         {% if not inv.bloquear_edicion_invitados %}
                                         <th class="text-end pe-4">Acciones</th>
                                         {% endif %}
@@ -113,95 +146,116 @@
                                         <td class="ps-4 fw-bold text-dark">
                                             {{ invitado.nombre_familia }}
                                             {% if invitado.telefono %}
-                                            <br><small class="text-muted fw-normal"><i class="fab fa-whatsapp text-success"></i> {{ invitado.telefono }}</small>
+                                            <br><small class="text-muted fw-normal"><i
+                                                    class="fab fa-whatsapp text-success"></i> {{ invitado.telefono
+                                                }}</small>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark border">{{ invitado.mesa if
+                                                invitado.mesa else '0' }}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            {% if invitado.estado_asistencia == 'Confirmado' %}
+                                                <span class="badge bg-success rounded-pill"><i class="fas fa-check me-1"></i>Sí</span>
+                                            {% elif invitado.estado_asistencia == 'Declinado' %}
+                                                <span class="badge bg-danger rounded-pill"><i class="fas fa-times me-1"></i>No</span>
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark rounded-pill">Pendiente</span>
                                             {% endif %}
                                         </td>
                                         <td class="text-center">{{ invitado.pases_totales }}</td>
                                         <td class="text-center">
-                                            {% if invitado.pases_usados > 0 %}
-                                                <span class="badge bg-success rounded-pill">{{ invitado.pases_usados }} / {{ invitado.pases_totales }}</span>
+                                            {% if invitado.pases_usados >= invitado.pases_totales %}
+                                            <span class="text-success fw-bold small"><i class="fas fa-check-double me-1"></i>Listo</span>
+                                            {% elif invitado.pases_usados > 0 %}
+                                            <span class="badge bg-info rounded-pill">{{ invitado.pases_usados }} / {{ invitado.pases_totales }}</span>
                                             {% else %}
-                                                <span class="badge bg-secondary rounded-pill">0 / {{ invitado.pases_totales }}</span>
+                                            <span class="text-muted small">No llegó</span>
                                             {% endif %}
                                         </td>
-{% if not inv.bloquear_edicion_invitados %}
-<td class="text-end pe-4">
-    <button class="btn btn-sm btn-light text-primary rounded-circle" data-bs-toggle="modal"
-        data-bs-target="#modalEditar{{ invitado.id }}" title="Editar">
-        <i class="fas fa-edit"></i>
-    </button>
-    <form action="{{ url_for('invitaciones_clientes.eliminar_invitado_cliente', pase_id=invitado.id) }}" method="POST"
-        class="d-inline" onsubmit="return confirm('¿Eliminar a este invitado?');">
-        <button type="submit" class="btn btn-sm btn-light text-danger rounded-circle ms-1" title="Eliminar">
-            <i class="fas fa-trash"></i>
-        </button>
-    </form>
-</td>
-{% endif %}
+                                        {% if not inv.bloquear_edicion_invitados %}
+                                        <td class="text-end pe-4">
+                                            <button class="btn btn-sm btn-light text-primary rounded-circle"
+                                                data-bs-toggle="modal" data-bs-target="#modalEditar{{ invitado.id }}"
+                                                title="Editar">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <form
+                                                action="{{ url_for('invitaciones_clientes.eliminar_invitado_cliente', pase_id=invitado.id) }}"
+                                                method="POST" class="d-inline"
+                                                onsubmit="return confirm('¿Eliminar a este invitado?');">
+                                                <button type="submit"
+                                                    class="btn btn-sm btn-light text-danger rounded-circle ms-1"
+                                                    title="Eliminar">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                        {% endif %}
                                     </tr>
-{% if not inv.bloquear_edicion_invitados %}
-<div class="modal fade" id="modalEditar{{ invitado.id }}" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header border-bottom-0 pb-0">
-                <h5 class="modal-title fw-bold">Editar Invitado</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body pt-2 text-start">
-                <form action="{{ url_for('invitaciones_clientes.editar_invitado_cliente', pase_id=invitado.id) }}"
-                    method="POST">
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold">Nombre / Familia</label>
-                        <input type="text" name="nombre_familia" class="form-control bg-light border-0"
-                            value="{{ invitado.nombre_familia }}" required>
-                    </div>
-                    <div class="row g-3 mb-4">
-                        <div class="col-5">
-                            <label class="form-label small fw-bold">Pases Totales</label>
-                            <input type="number" name="pases_totales" class="form-control bg-light border-0"
-                                value="{{ invitado.pases_totales }}" min="1" required>
-                        </div>
-                        <div class="col-7">
-                            <label class="form-label small fw-bold">Teléfono</label>
-                            <div class="input-group">
-                                <span class="input-group-text border-0 bg-light"><i
-                                        class="fab fa-whatsapp text-success"></i></span>
-                                <input type="text" name="telefono" class="form-control bg-light border-0"
-                                    value="{{ invitado.telefono if invitado.telefono else '' }}">
-                            </div>
-                        </div>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill py-2">Guardar Cambios</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
 
+                                    {% if not inv.bloquear_edicion_invitados %}
+                                    <div class="modal fade" id="modalEditar{{ invitado.id }}" tabindex="-1"
+                                        aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content border-0 rounded-4 shadow">
+                                                <div class="modal-header border-bottom-0 pb-0">
+                                                    <h5 class="modal-title fw-bold">Editar Invitado</h5>
+                                                    <button type="button" class="btn-close"
+                                                        data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body pt-2 text-start">
+                                                    <form
+                                                        action="{{ url_for('invitaciones_clientes.editar_invitado_cliente', pase_id=invitado.id) }}"
+                                                        method="POST">
+                                                        <div class="mb-3">
+                                                            <label class="form-label small fw-bold">Nombre /
+                                                                Familia</label>
+                                                            <input type="text" name="nombre_familia"
+                                                                class="form-control bg-light border-0"
+                                                                value="{{ invitado.nombre_familia }}" required>
+                                                        </div>
+                                                        <div class="row g-3 mb-4">
+                                                            <div class="col-4">
+                                                                <label class="form-label small fw-bold">Pases</label>
+                                                                <input type="number" name="pases_totales"
+                                                                    class="form-control bg-light border-0"
+                                                                    value="{{ invitado.pases_totales }}" min="1"
+                                                                    required>
+                                                            </div>
+                                                            <div class="col-4">
+                                                                <label class="form-label small fw-bold"># Mesa</label>
+                                                                <input type="text" name="mesa"
+                                                                    class="form-control bg-light border-0"
+                                                                    value="{{ invitado.mesa if invitado.mesa else '0' }}">
+                                                            </div>
+                                                            <div class="col-4">
+                                                                <label class="form-label small fw-bold">Teléfono</label>
+                                                                <input type="text" name="telefono"
+                                                                    class="form-control bg-light border-0"
+                                                                    value="{{ invitado.telefono if invitado.telefono else '' }}">
+                                                            </div>
+                                                        </div>
+                                                        <button type="submit"
+                                                            class="btn btn-primary w-100 rounded-pill py-2">Guardar
+                                                            Cambios</button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% endif %}
                                     {% else %}
                                     <tr>
-                                        <td colspan="4" class="text-center py-5 text-muted">
-                                            <div class="mb-2"><i class="fas fa-clipboard-list fa-2x opacity-50"></i></div>
+                                        <td colspan="6" class="text-center py-5 text-muted">
+                                            <div class="mb-2"><i class="fas fa-clipboard-list fa-2x opacity-50"></i>
+                                            </div>
                                             No hay invitados registrados todavía.
                                         </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
-                                
-                                {% if invitados %}
-                                <tfoot class="table-light fw-bold text-dark border-top">
-                                    <tr>
-                                        <td class="ps-4">Resumen ({{ invitados|length }} familias)</td>
-                                        <td class="text-center">{{ invitados | map(attribute='pases_totales') | sum }} pases</td>
-                                        <td class="text-center">
-                                            <span class="badge bg-dark rounded-pill">{{ invitados | map(attribute='pases_usados') | sum }} / {{ invitados |
-                                                map(attribute='pases_totales') | sum }}</span>
-                                        </td>
-                                        {% if not inv.bloquear_edicion_invitados %}<td></td>{% endif %}
-                                    </tr>
-                                </tfoot>
-                                {% endif %}
                             </table>
                         </div>
                     </div>
@@ -211,51 +265,45 @@
 
         </div>
     </div>
-<div class="modal fade" id="modalAgregarInvitado" tabindex="-1" aria-labelledby="modalAgregarInvitadoLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header border-bottom-0 pb-0">
-                <h5 class="modal-title fw-bold" id="modalAgregarInvitadoLabel">Nuevo Invitado</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body pt-2">
-                <p class="small text-muted mb-4">Agrega a un nuevo invitado a tu lista. Nosotros generaremos su pase
-                    automático.</p>
-                <form action="{{ url_for('invitaciones_clientes.agregar_invitado_cliente') }}" method="POST">
-
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-dark">Nombre / Familia</label>
-                        <input type="text" name="nombre_familia" class="form-control bg-light border-0"
-                            placeholder="Ej: Familia Tapia Reyes" required>
-                    </div>
-
-                    <div class="row g-3 mb-4">
-                        <div class="col-5">
-                            <label class="form-label small fw-bold text-dark">Pases Asignados</label>
-                            <input type="number" name="pases_totales" class="form-control bg-light border-0" value="2"
-                                min="1" required>
+    <div class="modal fade" id="modalAgregarInvitado" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold">Nuevo Invitado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body pt-2">
+                    <form action="{{ url_for('invitaciones_clientes.agregar_invitado_cliente') }}" method="POST">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold">Nombre / Familia</label>
+                            <input type="text" name="nombre_familia" class="form-control bg-light border-0"
+                                placeholder="Ej: Familia Tapia Reyes" required>
                         </div>
-                        <div class="col-7">
-                            <label class="form-label small fw-bold text-dark">Teléfono (WhatsApp)</label>
-                            <div class="input-group">
-                                <span class="input-group-text border-0 bg-light"><i
-                                        class="fab fa-whatsapp text-success"></i></span>
+                        <div class="row g-3 mb-4">
+                            <div class="col-4">
+                                <label class="form-label small fw-bold">Pases</label>
+                                <input type="number" name="pases_totales" class="form-control bg-light border-0"
+                                    value="2" min="1" required>
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small fw-bold"># Mesa</label>
+                                <input type="text" name="mesa" class="form-control bg-light border-0" value="0">
+                            </div>
+                            <div class="col-4">
+                                <label class="form-label small fw-bold">WhatsApp</label>
                                 <input type="text" name="telefono" class="form-control bg-light border-0"
-                                    placeholder="Ej: 8123456789">
+                                    placeholder="81...">
                             </div>
                         </div>
-                    </div>
-
-                    <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 shadow-sm">
-                        Guardar en la Lista
-                    </button>
-                </form>
+                        <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 shadow-sm">Guardar en la
+                            Lista</button>
+                    </form>
+                </div>
             </div>
         </div>
     </div>
-</div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

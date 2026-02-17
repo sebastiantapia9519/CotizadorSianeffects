@@ -356,6 +356,7 @@ def init_db():
         codigo_qr_unique TEXT UNIQUE,
         mensaje_personalizado TEXT,
         telefono TEXT,
+        mesa TEXT DEFAULT '0',
         estado_asistencia TEXT DEFAULT 'Pendiente',
         FOREIGN KEY (invitacion_id) REFERENCES invitaciones(id)
     )
