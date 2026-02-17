@@ -625,54 +625,71 @@
         </section>
 
         {% elif item == 'pases' %}
-    {% if datos_pase %}
-    <section data-aos="fade-up">
-        <div class="ticket-container">
-            <h2 class="ticket-header">Pase de Acceso</h2>
-        
-            <div style="margin-bottom: 30px;">
-                <span class="ticket-label">Invitado</span>
-                <span class="ticket-value" style="font-size: 1.5rem; font-weight: bold;">{{ datos_pase['nombre_familia']
-                    }}</span>
-            </div>
+            {% if datos_pase %}
+            <section data-aos="fade-up">
+                <div class="ticket-container">
+                    <h2 class="ticket-header">Pase de Acceso</h2>
+            
+                    <div style="margin-bottom: 30px;">
+                        <span class="ticket-label">Invitado</span>
+                        <span class="ticket-value" style="font-size: 1.5rem; font-weight: bold;">
+                            {{ datos_pase['nombre_familia'] }}
+                        </span>
+                        </div>
 
-            <div class="row align-items-center" style="display: flex; flex-wrap: wrap;">
-                <div class="col-md-5 mb-4 mb-md-0 qr-side" style="text-align: center;">
-                    <div class="qr-container-modern">
-                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ datos_pase['codigo_qr_unique'] }}"
-                             alt="QR" style="width: 140px; height: 140px; display: block; margin: 0 auto;">
+                    <div class="row align-items-center" style="display: flex; flex-wrap: wrap;">
+                        <div class="col-md-5 mb-4 mb-md-0 qr-side" style="text-align: center;">
+                            <div class="qr-container-modern">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ datos_pase['codigo_qr_unique'] }}"
+                                    alt="QR" style="width: 140px; height: 140px; display: block; margin: 0 auto;">
+                            </div>
+                            <p class="mt-2 mb-0" style="font-size: 0.7rem; opacity: 0.5; font-family: monospace;">
+                                ID: {{ datos_pase['codigo_qr_unique'] }}
+                            </p>
+                        </div>
+
+                        <div class="col-md-7" style="flex: 1; padding-left: 20px;">
+                            <div class="ticket-grid">
+                                <div>
+                                    <span class="ticket-label">Personas</span>
+                                    <span class="ticket-value">{{ datos_pase['pases_totales'] }} Pases</span>
+                                </div>
+                                <div>
+                                    <span class="ticket-label">Mesa</span>
+                                    <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span>
+                                </div>
+                                <div style="grid-column: span 2;">
+                                    <span class="ticket-label">Estado</span>
+                                    {% if datos_pase['pases_usados'] >= datos_pase['pases_totales'] %}
+                                    <span class="status-badge" style="background: #ffcccc; color: #cc0000;">No válido para ingresar</span>
+                                    {% else %}
+                                    <span class="status-badge" style="background: #e1f5fe; color: #01579b;">Válido para ingresar</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            </div>
+                            </div>
+
+                    {% if inv['tiene_modulo_invitados'] %}
+                    <div style="margin-top: 40px; border-top: 1px dashed var(--color-oro); padding-top: 30px;">
+                        <p class="mb-4" style="opacity: 0.8; font-weight: bold;">¿Confirmas tu asistencia?</p>
+                        <div id="botones-rsvp" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                            <button class="btn-boda" style="background: var(--color-oro); color: var(--bg-color);"
+                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Confirmado')">
+                                <i class="fas fa-check me-2"></i> Sí, asistiré
+                            </button>
+                            <button class="btn-entrar" style="border-color: rgba(150,150,150,0.5); color: var(--text-color);"
+                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Declinado')">
+                                <i class="fas fa-times me-2"></i> No podré ir
+                            </button>
+                        </div>
                     </div>
-                    <p class="mt-2 mb-0" style="font-size: 0.7rem; opacity: 0.5; font-family: monospace;">
-                        ID: {{ datos_pase['codigo_qr_unique'] }}
+                    {% endif %}
+                    
+                    <p class="mt-4 mb-0" style="text-align: center; font-style: italic; font-size: 0.8rem; opacity: 0.6;">
+                        "Presenta este código digital al llegar a la recepción."
                     </p>
-                </div>
-
-                <div class="col-md-7" style="flex: 1; padding-left: 20px;">
-                    <div class="ticket-grid">
-                        <div>
-                            <span class="ticket-label">Personas</span>
-                            <span class="ticket-value">{{ datos_pase['pases_totales'] }} Pases</span>
-                        </div>
-                        <div>
-                            <span class="ticket-label">Mesa</span>
-                            <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span>
-                        </div>
-                        <div style="grid-column: span 2;">
-                            <span class="ticket-label">Estado</span>
-                            {% if datos_pase['pases_usados'] >= datos_pase['pases_totales'] %}
-                                <span class="status-badge" style="background: #ffcccc; color: #cc0000;">No válido para ingresar</span>
-                                {% else %}
-                                <span class="status-badge" style="background: #e1f5fe; color: #01579b;">Válido para ingresar</span>
-                                {% endif %}
-                                </div>
-                                </div>
-                </div>
-                </div>
-
-            <p class="mt-5 mb-0" style="text-align: center; font-style: italic; font-size: 0.9rem; opacity: 0.8;">
-                "Presenta este código digital al llegar a la recepción."
-            </p>
-            </div>
+                    </div>
             </section>
             {% endif %}
         
@@ -783,30 +800,18 @@
         </section>
 
         {% elif item == 'rsvp' %}
-        <section data-aos="fade-up" style="padding-bottom: 100px;" id="seccion-rsvp">
-            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 20px;">Confirmar Asistencia</h2>
-            
-            {% if inv['tiene_modulo_invitados'] and datos_pase %}
-                <p class="mb-4" style="opacity: 0.8;">Hola <strong>{{ datos_pase['nombre_familia'] }}</strong>, por favor confirma tu asistencia antes del evento.</p>
-                
-                <div id="botones-rsvp" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                    <button class="btn-boda" style="background: var(--color-oro); color: var(--bg-color);" onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Confirmado')">
-                        <i class="fas fa-check me-2"></i> Sí, ahí estaré
-                    </button>
-                    <button class="btn-entrar" style="border-color: rgba(150,150,150,0.5); color: var(--text-color);" onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Declinado')">
-                        <i class="fas fa-times me-2"></i> No podré asistir
-                    </button>
-                </div>
-            {% else %}
-                <p class="mb-4" style="opacity: 0.8;">Nos encantaría contar con tu presencia en este día tan especial.</p>
+            {% if not datos_pase %}
+            <section data-aos="fade-up" style="padding-bottom: 100px;">
+                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 20px;">Asistencia</h2>
+                <p class="mb-4" style="opacity: 0.8;">Nos encantaría contar con tu presencia.</p>
                 {% if datos['telefono_rsvp'] %}
-                    <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia%20a%20la%20boda%20de%20{{ datos['novios']|urlencode }}."
+                    <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia..."
                         target="_blank" class="btn-boda" style="background: #25D366; border-color: #25D366; color: white;">
                         <i class="fab fa-whatsapp me-2"></i> Confirmar por WhatsApp
                     </a>
                 {% endif %}
-            {% endif %}
-        </section>
+            </section>
+        {% endif %}
 
         {% elif item == 'frase_final' and inv['frase_final'] %}
         <section data-aos="fade-up" class="text-center">
