@@ -327,7 +327,7 @@ def init_db():
         padres_novio TEXT,
         padrinos TEXT,
         frase_final TEXT,
-        template_id TEXT DEFAULT 'clasico'
+        template_id TEXT DEFAULT 'clasico',
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );
     """)
