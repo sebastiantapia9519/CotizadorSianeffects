@@ -557,6 +557,73 @@
             </div>
         </section>
 
+        {% elif item == 'pases' %}
+        {% if datos_pase %}
+        <section data-aos="fade-up">
+            <div class="premium-card"
+                style="flex-direction: column; border: 2px solid var(--color-oro); background: var(--card-bg);">
+                <h2 style="font-size: 1.8rem; color: var(--color-oro);">Pase Personalizado</h2>
+                <p class="mb-0">¡Hola, <strong>{{ datos_pase['nombre_familia'] }}</strong>!</p>
+        
+                <div class="my-4 p-3 border rounded bg-white text-center shadow-sm" style="max-width: 250px; margin: 0 auto;">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ datos_pase['codigo_qr_unique'] }}"
+                        alt="QR de Acceso" style="width: 100%;">
+                    <p class="mt-2 mb-0 fw-bold small text-muted">{{ datos_pase['codigo_qr_unique'] }}</p>
+                </div>
+        
+                <div class="row w-100 text-center mb-3">
+                    <div class="col-6 border-end">
+                        <small class="d-block text-muted text-uppercase" style="font-size: 0.6rem;">Personas</small>
+                        <span class="fs-4 fw-bold">{{ datos_pase['pases_totales'] }}</span>
+                    </div>
+                    <div class="col-6">
+                        <small class="d-block text-muted text-uppercase" style="font-size: 0.6rem;">Estado</small>
+                        {% if datos_pase['pases_usados'] >= datos_pase['pases_totales'] %}
+                        <span class="badge bg-danger">Usado</span>
+                        {% else %}
+                        <span class="badge bg-success">Válido</span>
+                        {% endif %}
+                    </div>
+                </div>
+        
+                <p class="small italic opacity-07">Presenta este código al llegar a la recepción.</p>
+            </div>
+        </section>
+        {% endif %}
+        
+        {% elif item == 'protocolo' and (inv['padres_novia'] or inv['padres_novio']) %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.2rem; color: var(--color-oro); margin-bottom: 40px;">Nuestros Padres y Padrinos</h2>
+            <div class="row g-4 justify-content-center">
+                {% if inv['padres_novia'] %}
+                <div class="col-md-6">
+                    <div class="p-3">
+                        <i class="fas fa-heart text-danger mb-2"></i>
+                        <h4 class="mb-1">{{ inv['padres_novia'] }}</h4>
+                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padres de la Novia</small>
+                    </div>
+                </div>
+                {% endif %}
+                {% if inv['padres_novio'] %}
+                <div class="col-md-6">
+                    <div class="p-3">
+                        <i class="fas fa-heart text-danger mb-2"></i>
+                        <h4 class="mb-1">{{ inv['padres_novio'] }}</h4>
+                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padres del Novio</small>
+                    </div>
+                </div>
+                {% endif %}
+                {% if inv['padrinos'] %}
+                <div class="col-12 mt-4">
+                    <div class="p-3 border-top">
+                        <h4 class="mb-1">{{ inv['padrinos'] }}</h4>
+                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padrinos de Velación</small>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
         {% elif item == 'hospedaje' %}
         <section data-aos="fade-up">
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Hospedaje y Transporte</h2>

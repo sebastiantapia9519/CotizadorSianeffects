@@ -1,6 +1,7 @@
 import json
 import re
 import io
+import uuid
 import zipfile
 import requests
 from flask import send_file
@@ -572,5 +573,46 @@ def descargar_rollo_zip(id):
     except Exception as e:
         flash(f"Error: {str(e)}", "danger")
         return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
+    finally:
+        conn.close()
+
+@invitaciones_bp.route('/invitacion/<slug>')
+def ver_invitacion(slug):
+    conn = get_db_connection()
+    try:
+        # 1. Buscar la invitación por Slug
+        inv = conn.execute("""
+            SELECT i.*, m.url_cloudflare as musica_url 
+            FROM invitaciones i
+            LEFT JOIN lista_musica m ON i.musica_id = m.id
+            WHERE i.slug = ?
+        """, (slug,)).fetchone()
+        
+        if not inv:
+            return "<h1>404 - Invitación no encontrada 😢</h1>", 404
+
+        # --- NUEVO: Lógica para detectar el pase personalizado ---
+        codigo_pase = request.args.get('pass') # Lee el ?pass=ABC1234 de la URL
+        datos_pase = None
+        if codigo_pase:
+            datos_pase = conn.execute("""
+                SELECT * FROM pases_invitados 
+                WHERE invitacion_id = ? AND codigo_qr_unique = ?
+            """, (inv['id'], codigo_pase)).fetchone()
+
+        # 2. Convertir JSONs
+        config = json.loads(inv['config_json'])
+        datos = json.loads(inv['datos_cliente_json'])
+        fotos = json.loads(inv['fotos_json'])
+        
+        # 3. Renderizar pasando 'datos_pase'
+        return render_template('invitaciones/base_boda.html', 
+                               inv=inv, 
+                               config=config, 
+                               datos=datos, 
+                               fotos=fotos,
+                               datos_pase=datos_pase) # <--- Variable clave
+    except Exception as e:
+        return f"Error: {str(e)}", 500
     finally:
         conn.close()
