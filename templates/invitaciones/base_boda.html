@@ -416,6 +416,73 @@
                 transform: scale(1);
             }
         }
+        /* NUEVO ESTILO PARA EL PASE (SianEffects Premium Look) */
+.ticket-container {
+    background: var(--card-bg);
+    border: 1px solid rgba(150, 150, 150, 0.2);
+    border-radius: 4px; /* Bordes menos redondeados para verse más elegante */
+    padding: 40px 20px;
+    max-width: 600px;
+    margin: 0 auto;
+    position: relative;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+}
+
+.ticket-header {
+    font-family: var(--font-title);
+    font-size: 1.8rem;
+    margin-bottom: 30px;
+    border-bottom: 1px solid var(--color-oro);
+    display: inline-block;
+    padding-bottom: 5px;
+}
+
+.ticket-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    text-align: left;
+    margin-top: 20px;
+}
+
+/* Para que en móviles se vea una sola columna si es necesario */
+@media (max-width: 480px) {
+    .ticket-grid { grid-template-columns: 1fr; text-align: center; }
+    .qr-side { order: -1; } /* QR arriba en móvil */
+}
+
+.ticket-label {
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    color: var(--color-oro);
+    margin-bottom: 4px;
+    display: block;
+    font-weight: bold;
+}
+
+.ticket-value {
+    font-family: var(--font-body);
+    font-size: 1.1rem;
+    margin-bottom: 15px;
+    display: block;
+}
+
+.qr-container-modern {
+    background: white;
+    padding: 10px;
+    display: inline-block;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.status-badge {
+    font-size: 0.7rem;
+    padding: 4px 12px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
     </style>
 </head>
 
@@ -558,38 +625,56 @@
         </section>
 
         {% elif item == 'pases' %}
-        {% if datos_pase %}
-        <section data-aos="fade-up">
-            <div class="premium-card"
-                style="flex-direction: column; border: 2px solid var(--color-oro); background: var(--card-bg);">
-                <h2 style="font-size: 1.8rem; color: var(--color-oro);">Pase Personalizado</h2>
-                <p class="mb-0">¡Hola, <strong>{{ datos_pase['nombre_familia'] }}</strong>!</p>
+    {% if datos_pase %}
+    <section data-aos="fade-up">
+        <div class="ticket-container">
+            <h2 class="ticket-header">Pase de Acceso</h2>
         
-                <div class="my-4 p-3 border rounded bg-white text-center shadow-sm" style="max-width: 250px; margin: 0 auto;">
-                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ datos_pase['codigo_qr_unique'] }}"
-                        alt="QR de Acceso" style="width: 100%;">
-                    <p class="mt-2 mb-0 fw-bold small text-muted">{{ datos_pase['codigo_qr_unique'] }}</p>
-                </div>
-        
-                <div class="row w-100 text-center mb-3">
-                    <div class="col-6 border-end">
-                        <small class="d-block text-muted text-uppercase" style="font-size: 0.6rem;">Personas</small>
-                        <span class="fs-4 fw-bold">{{ datos_pase['pases_totales'] }}</span>
-                    </div>
-                    <div class="col-6">
-                        <small class="d-block text-muted text-uppercase" style="font-size: 0.6rem;">Estado</small>
-                        {% if datos_pase['pases_usados'] >= datos_pase['pases_totales'] %}
-                        <span class="badge bg-danger">Usado</span>
-                        {% else %}
-                        <span class="badge bg-success">Válido</span>
-                        {% endif %}
-                    </div>
-                </div>
-        
-                <p class="small italic opacity-07">Presenta este código al llegar a la recepción.</p>
+            <div style="margin-bottom: 30px;">
+                <span class="ticket-label">Invitado</span>
+                <span class="ticket-value" style="font-size: 1.5rem; font-weight: bold;">{{ datos_pase['nombre_familia']
+                    }}</span>
             </div>
-        </section>
-        {% endif %}
+
+            <div class="row align-items-center">
+                <div class="col-md-5 mb-4 mb-md-0">
+                    <div class="qr-container-modern">
+                        <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ datos_pase['codigo_qr_unique'] }}"
+                             alt="QR" style="width: 140px; height: 140px; display: block;">
+                    </div>
+                    <p class="mt-2 mb-0" style="font-size: 0.7rem; opacity: 0.5; font-family: monospace;">
+                        ID: {{ datos_pase['codigo_qr_unique'] }}
+                    </p>
+                </div>
+
+                <div class="col-md-7">
+                    <div class="ticket-grid">
+                        <div>
+                            <span class="ticket-label">Personas</span>
+                            <span class="ticket-value">{{ datos_pase['pases_totales'] }} Pases</span>
+                        </div>
+                        <div>
+                            <span class="ticket-label">Mesa</span>
+                            <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span>
+                        </div>
+                        <div style="grid-column: span 2;">
+                            <span class="ticket-label">Estado</span>
+                            {% if datos_pase['pases_usados'] >= datos_pase['pases_totales'] %}
+                                <span class="status-badge" style="background: #ffcccc; color: #cc0000;">No válido para ingresar</span>
+                                {% else %}
+                                <span class="status-badge" style="background: #e1f5fe; color: #01579b;">Válido para ingresar</span>
+                                {% endif %}
+                                </div>
+                                </div>
+                </div>
+                </div>
+
+            <p class="mt-5 mb-0" style="font-style: italic; font-size: 0.9rem; opacity: 0.8;">
+                "Presenta este código digital al llegar a la recepción."
+            </p>
+            </div>
+            </section>
+            {% endif %}
         
         {% elif item == 'protocolo' and (inv['padres_novia'] or inv['padres_novio']) %}
         <section data-aos="fade-up">
