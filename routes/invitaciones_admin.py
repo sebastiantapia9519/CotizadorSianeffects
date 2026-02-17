@@ -277,7 +277,13 @@ def editar_invitacion(id):
             padrinos = request.form.get('padrinos')
             frase_final = request.form.get('frase_final')
             template_id = request.form.get('template_id')
+            tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
             
+            # Si no tenía código de cliente generado previamente, se lo generamos ahora
+            codigo_cliente = inv_old['codigo_acceso_cliente']
+            if not codigo_cliente:
+                suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
+                codigo_cliente = f"SIA-{suffix}"
 
             # --- 1. PROCESAR ITINERARIO (Asegúrate que estas líneas estén ANTES de datos_cliente) ---
             horas_it = request.form.getlist('hora_itinerario[]')
@@ -340,7 +346,8 @@ def editar_invitacion(id):
                 slug=?, config_json=?, musica_id=?, fecha_evento=?, vigencia=?, datos_cliente_json=?, 
                 fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?,
                 dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?,
-                padres_novia=?, padres_novio=?, padrinos=?, frase_final=?, template_id=?
+                padres_novia=?, padres_novio=?, padrinos=?, frase_final=?, template_id=?,
+                tiene_modulo_invitados=?, codigo_acceso_cliente=? 
                 WHERE id=?
             """, (
                 slug, 
@@ -360,12 +367,14 @@ def editar_invitacion(id):
                 album_url, 
                 camara_premium,
                 color_acentos,
-                padres_novia,    # 18
-                padres_novio,    # 19
-                padrinos,        # 20
-                frase_final,     # 21
-                template_id,     # 22
-                id               # 23 (Para el WHERE)
+                padres_novia,    
+                padres_novio,    
+                padrinos,        
+                frase_final,     
+                template_id,     
+                tiene_modulo_invitados,
+                codigo_cliente,             
+                id               
             ))
             conn.commit()
             flash("¡Invitación actualizada exitosamente! ✏️", "success")
