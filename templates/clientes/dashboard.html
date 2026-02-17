@@ -75,7 +75,13 @@
             <div class="col-lg-{% if inv.camara_premium %}6{% else %}12{% endif %}">
                 <div class="card shadow-sm border-0 rounded-4 h-100">
                     <div class="card-header bg-white py-3 border-bottom-0">
-                        <h5 class="m-0 fw-bold text-dark"><i class="fas fa-users text-primary me-2"></i>Lista de Asistencia</h5>
+                        <div class="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
+                            <h5 class="m-0 fw-bold text-dark"><i class="fas fa-users text-primary me-2"></i>Lista de Asistencia</h5>
+                            <button class="btn btn-outline-primary btn-sm rounded-pill fw-bold" data-bs-toggle="modal"
+                                data-bs-target="#modalAgregarInvitado">
+                                <i class="fas fa-plus me-1"></i> Agregar
+                            </button>
+                            </div>
                     </div>
                     <div class="card-body p-0">
                         <div class="table-responsive">
@@ -118,6 +124,50 @@
 
         </div>
     </div>
+<div class="modal fade" id="modalAgregarInvitado" tabindex="-1" aria-labelledby="modalAgregarInvitadoLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom-0 pb-0">
+                <h5 class="modal-title fw-bold" id="modalAgregarInvitadoLabel">Nuevo Invitado</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-2">
+                <p class="small text-muted mb-4">Agrega a un nuevo invitado a tu lista. Nosotros generaremos su pase
+                    automático.</p>
+                <form action="{{ url_for('invitaciones_clientes.agregar_invitado_cliente') }}" method="POST">
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-dark">Nombre / Familia</label>
+                        <input type="text" name="nombre_familia" class="form-control bg-light border-0"
+                            placeholder="Ej: Familia Tapia Reyes" required>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-5">
+                            <label class="form-label small fw-bold text-dark">Pases Asignados</label>
+                            <input type="number" name="pases_totales" class="form-control bg-light border-0" value="2"
+                                min="1" required>
+                        </div>
+                        <div class="col-7">
+                            <label class="form-label small fw-bold text-dark">Teléfono (WhatsApp)</label>
+                            <div class="input-group">
+                                <span class="input-group-text border-0 bg-light"><i
+                                        class="fab fa-whatsapp text-success"></i></span>
+                                <input type="text" name="telefono" class="form-control bg-light border-0"
+                                    placeholder="Ej: 8123456789">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 shadow-sm">
+                        Guardar en la Lista
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
