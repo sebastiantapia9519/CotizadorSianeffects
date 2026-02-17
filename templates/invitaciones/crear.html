@@ -141,354 +141,349 @@
                                     value="{{ inv['vigencia'] if inv else '' }}" required>
                             </div>
                         </div>
-                        <div class="mt-4 p-3 border rounded"
-                            style="background-color: #f8f9fa; border-left: 4px solid #ffc107 !important;">
-                            <div class="form-check form-switch">
+                        <div class="mt-4 p-3 border rounded shadow-sm"
+                            style="background-color: #f8f9fa; border-left: 4px solid #0d6efd !important;">
+                        
+                            <div class="form-check form-switch mb-3">
                                 <input class="form-check-input" type="checkbox" role="switch" id="camaraPremium"
                                     name="camara_premium" value="1" {% if inv and inv['camara_premium'] %}checked{%
                                     endif %}>
                                 <label class="form-check-label fw-bold text-dark" for="camaraPremium">
-                                    <i class="fas fa-star text-warning me-1"></i> Cámara Desechable Premium
+                                    <i class="fas fa-camera-retro text-warning me-1"></i> Cámara Desechable
                                 </label>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">
+                                    Habilita la sección "Álbum" para que los invitados suban fotos.
+                                    </small>
+                                    </div>
+                            <div class="form-check form-switch mb-3 border-top pt-3">
+                                <input class="form-check-input" type="checkbox" role="switch" id="moduloInvitados" name="modulo_invitados" value="1"
+                                    {% if inv and inv['tiene_modulo_invitados'] %}checked{% endif %}>
+                                <label class="form-check-label fw-bold text-dark" for="moduloInvitados">
+                                    <i class="fas fa-users text-primary me-1"></i> Gestión de Invitados
+                                    </label>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">
+                                    Habilita el panel de confirmación de asistencia (RSVP).
+                                </small>
                             </div>
-                            <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">
-                                Si lo activas, la sección "Álbum" se transformará en una cámara virtual para los
-                                invitados.
-                            </small>
-                        </div>
-                        <div class="form-check form-switch mt-2">
-                            <input class="form-check-input" type="checkbox" id="moduloInvitados" name="modulo_invitados" value="1" {% if inv and
-                                inv['tiene_modulo_invitados'] %}checked{% endif %}>
-                            <label class="form-check-label fw-bold text-dark" for="moduloInvitados">
-                                <i class="fas fa-users text-primary me-1"></i> Módulo de Gestión de Invitados
-                            </label>
-                        </div>
-                        <div class="form-check form-switch mt-2">
-                            <input class="form-check-input border-secondary" type="checkbox" id="bloquearEdicion"
-                                name="bloquear_edicion_invitados" value="1" {% if inv and inv['bloquear_edicion_invitados'] %}checked{% endif
-                                %}>
-                            <label class="form-check-label fw-bold text-danger" for="bloquearEdicion">
-                                <i class="fas fa-lock me-1"></i> Bloquear edición para los novios
-                            </label>
-                            <small class="d-block text-muted" style="font-size: 0.75rem;">Si lo activas, los novios solo podrán VER la lista,
-                                pero no agregar/editar/borrar (Ideal si tú lo gestionas).</small>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-lg-8">
-                <div id="sortable-list" class="d-flex flex-column gap-3">
-
-                    <div class="card draggable-item shadow-sm" data-bloque="hero">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <div class="fw-bold text-primary"><i class="fas fa-image me-2"></i>1. Portada Principal
+                            <div class="form-check form-switch border-top pt-3">
+                                <input class="form-check-input border-secondary" type="checkbox" role="switch" id="bloquearEdicion"
+                                    name="bloquear_edicion_invitados" value="1" {% if inv and inv['bloquear_edicion_invitados'] %}checked{% endif
+                                    %}>
+                                <label class="form-check-label fw-bold text-danger" for="bloquearEdicion">
+                                    <i class="fas fa-lock me-1"></i> Bloquear edición a los novios
+                                    </label>
+                                <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">
+                                    Si lo activas, los novios solo podrán VER la lista, pero no podrán modificarla.
+                                </small>
                                 </div>
+
+                        </div>
+                        </div>
+                        </div>
+
+                <div class="col-lg-8">
+                    <div id="sortable-list" class="d-flex flex-column gap-3">
+
+                        <div class="card draggable-item shadow-sm" data-bloque="hero">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <div class="fw-bold text-primary"><i class="fas fa-image me-2"></i>1. Portada
+                                        Principal
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                    </div>
+                                    <input type="hidden" name="orden_items[]" value="hero">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <input type="text" name="nombres_novios" class="form-control form-control-sm"
+                                                placeholder="Nombres (Ej: Diana & Sebastián)" value="{{ datos.get('novios', '') if datos else '' }}"
+                                                required>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <input type="text" name="frase" class="form-control form-control-sm" placeholder="Frase (Ej: ¡Nos casamos!)"
+                                                value="{{ datos.get('frase', '') if datos else '' }}">
+                                        </div>
+                                        <div class="col-12 mt-2">
+                                            <input type="file" name="foto_portada" class="form-control form-control-sm" accept="image/*" {% if not edit_mode
+                                                %}required{% endif %}>
+                                        </div>
+                                    </div>
+                                    </div>
+                                    </div>
+
+                        <div class="card draggable-item shadow-sm border-warning" data-bloque="countdown">
+                            <div class="card-body py-2 d-flex justify-content-between">
+                                <span class="fw-bold text-warning"><i class="fas fa-clock me-2"></i>2. Countdown</span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
+                                <input type="hidden" name="orden_items[]" value="countdown">
                             </div>
-                            <input type="hidden" name="orden_items[]" value="hero">
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <input type="text" name="nombres_novios" class="form-control form-control-sm"
-                                        placeholder="Nombres (Ej: Diana & Sebastián)"
-                                        value="{{ datos.get('novios', '') if datos else '' }}" required>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-danger" data-bloque="mapas">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-danger"><i class="fas fa-map-marker-alt me-2"></i>3.
+                                        Ubicaciones</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
                                 </div>
-                                <div class="col-md-6">
-                                    <input type="text" name="frase" class="form-control form-control-sm"
-                                        placeholder="Frase (Ej: ¡Nos casamos!)"
-                                        value="{{ datos.get('frase', '') if datos else '' }}">
-                                </div>
-                                <div class="col-12 mt-2">
-                                    <input type="file" name="foto_portada" class="form-control form-control-sm"
-                                        accept="image/*" {% if not edit_mode %}required{% endif %}>
+                                <input type="hidden" name="orden_items[]" value="mapas">
+                                <div class="row g-2">
+                                    <div class="col-6"><input type="text" name="maps_misa" class="form-control form-control-sm"
+                                            placeholder="Link Maps Ceremonia" value="{{ datos.get('maps_misa', '') if datos else '' }}"></div>
+                                    <div class="col-6"><input type="text" name="maps_fiesta" class="form-control form-control-sm"
+                                            placeholder="Link Maps Fiesta" value="{{ datos.get('maps_fiesta', '') if datos else '' }}"></div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="card draggable-item shadow-sm border-warning" data-bloque="countdown">
-                        <div class="card-body py-2 d-flex justify-content-between">
-                            <span class="fw-bold text-warning"><i class="fas fa-clock me-2"></i>2. Countdown</span>
-                            <i class="fas fa-grip-lines text-muted handle"></i>
-                            <input type="hidden" name="orden_items[]" value="countdown">
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-danger" data-bloque="mapas">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-danger"><i class="fas fa-map-marker-alt me-2"></i>3.
-                                    Ubicaciones</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="mapas">
-                            <div class="row g-2">
-                                <div class="col-6"><input type="text" name="maps_misa"
-                                        class="form-control form-control-sm" placeholder="Link Maps Ceremonia"
-                                        value="{{ datos.get('maps_misa', '') if datos else '' }}"></div>
-                                <div class="col-6"><input type="text" name="maps_fiesta"
-                                        class="form-control form-control-sm" placeholder="Link Maps Fiesta"
-                                        value="{{ datos.get('maps_fiesta', '') if datos else '' }}"></div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-secondary" data-bloque="dresscode">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-secondary"><i class="fas fa-tshirt me-2"></i>4. Código de
-                                    Vestimenta</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="dresscode">
-                            <select name="dress_code" class="form-select form-select-sm">
-                                <option value="Formal" {% if inv and inv['dress_code']=='Formal' %}selected{% endif %}>
-                                    Formal (Traje y Vestido largo)</option>
-                                <option value="Etiqueta" {% if inv and inv['dress_code']=='Etiqueta' %}selected{% endif
-                                    %}>Rigurosa Etiqueta (Gala)</option>
-                                <option value="Coctel" {% if inv and inv['dress_code']=='Coctel' %}selected{% endif %}>
-                                    Cóctel (Traje sin corbata, Vestido corto)</option>
-                                <option value="Guayabera" {% if inv and inv['dress_code']=='Guayabera' %}selected{%
-                                    endif %}>Guayabera / Playa</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-success" data-bloque="regalos">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-success"><i class="fas fa-gift me-2"></i>5. Mesa de
-                                    Regalos</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="regalos">
-                            <textarea name="cuenta_bancaria" class="form-control form-control-sm mb-2" rows="2"
-                                placeholder="Frase o CLABE interbancaria...">{{ datos.get('cuenta_bancaria', '') if datos else '' }}</textarea>
-
-                            <label class="small fw-bold text-muted">Links a Tiendas</label>
-                            <div id="container-links">
-                                {% if edit_mode and mesas %}
-                                {% for mesa in mesas %}
-                                <div class="input-group input-group-sm mb-1"><input type="text" name="nombre_tienda[]"
-                                        class="form-control" value="{{ mesa.nombre }}"><input type="text"
-                                        name="link_tienda[]" class="form-control" value="{{ mesa.url }}"><button
-                                        type="button" class="btn btn-outline-danger"
-                                        onclick="this.parentElement.remove()">X</button></div>
-                                {% endfor %}
-                                {% else %}
-                                <div class="input-group input-group-sm mb-1"><input type="text" name="nombre_tienda[]"
-                                        class="form-control" placeholder="Nombre"><input type="text"
-                                        name="link_tienda[]" class="form-control" placeholder="URL"><button
-                                        type="button" class="btn btn-outline-danger"
-                                        onclick="this.parentElement.remove()">X</button></div>
-                                {% endif %}
-                            </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1"
-                                onclick="agregarInput('container-links', 'nombre_tienda[]', 'link_tienda[]')">+ Agregar
-                                tienda</button>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-primary" data-bloque="hospedaje">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-primary"><i class="fas fa-bed me-2"></i>6. Hospedaje y
-                                    Transporte</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="hospedaje">
-                            <textarea name="info_transporte" class="form-control form-control-sm mb-2" rows="2"
-                                placeholder="Información de transporte (Ej: Habrá un camión saliendo del hotel a las 4pm)">{{ datos.get('info_transporte', '') if datos else '' }}</textarea>
-
-                            <label class="small fw-bold text-muted">Hoteles Sugeridos / Airbnb</label>
-                            <div id="container-hoteles">
-                                {% if edit_mode and hoteles %}
-                                {% for hotel in hoteles %}
-                                <div class="input-group input-group-sm mb-1"><input type="text" name="nombre_hotel[]"
-                                        class="form-control" value="{{ hotel.nombre }}"><input type="text"
-                                        name="link_hotel[]" class="form-control" value="{{ hotel.url }}"><button
-                                        type="button" class="btn btn-outline-danger"
-                                        onclick="this.parentElement.remove()">X</button></div>
-                                {% endfor %}
-                                {% else %}
-                                <div class="input-group input-group-sm mb-1"><input type="text" name="nombre_hotel[]"
-                                        class="form-control" placeholder="Nombre (Ej: Hotel Fiesta Americana)"><input
-                                        type="text" name="link_hotel[]" class="form-control" placeholder="URL"><button
-                                        type="button" class="btn btn-outline-danger"
-                                        onclick="this.parentElement.remove()">X</button></div>
-                                {% endif %}
-                            </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1"
-                                onclick="agregarInput('container-hoteles', 'nombre_hotel[]', 'link_hotel[]')">+ Agregar
-                                hotel</button>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm" data-bloque="album">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark"><i class="fas fa-camera-retro me-2"></i>7. Álbum
-                                    Colaborativo (QR)</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="album">
-                            <input type="text" name="album_url" class="form-control form-control-sm"
-                                placeholder="Link de Google Drive, iCloud, etc."
-                                value="{{ inv['album_url'] if inv else '' }}">
-                            <small class="text-muted">El sistema generará un código QR automático con este link.</small>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-info" data-bloque="galeria">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-info"><i class="fas fa-images me-2"></i>8. Galería de
-                                    Fotos</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="galeria">
-                            <input type="file" name="fotos_galeria" class="form-control form-control-sm" multiple
-                                accept="image/*">
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm" data-bloque="timeline">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-secondary"><i class="fas fa-list me-2"></i>9.
-                                    Itinerario</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="timeline">
-
-                            <label class="small fw-bold text-muted">Actividades del Evento</label>
-                            <div id="container-itinerario">
-                                {% if edit_mode and datos.get('itinerario') %}
-                                {% for item in datos.get('itinerario') %}
-                                <div class="input-group input-group-sm mb-1">
-                                    <input type="time" name="hora_itinerario[]" class="form-control"
-                                        style="max-width: 100px;" value="{{ item.hora }}" required>
-                                    <input type="text" name="actividad_itinerario[]" class="form-control"
-                                        placeholder="Ej: Recepción" value="{{ item.actividad }}" required>
-                                    <select name="icono_itinerario[]" class="form-select"
-                                        style="max-width: 65px; padding:0 5px; text-align:center;">
-                                        <option value="fas fa-church" {% if item.icono=='fas fa-church' %}selected{%
-                                            endif %}>⛪</option>
-                                        <option value="fas fa-glass-cheers" {% if item.icono=='fas fa-glass-cheers'
-                                            %}selected{% endif %}>🥂</option>
-                                        <option value="fas fa-utensils" {% if item.icono=='fas fa-utensils' %}selected{%
-                                            endif %}>🍽️</option>
-                                        <option value="fas fa-music" {% if item.icono=='fas fa-music' %}selected{% endif
-                                            %}>🎵</option>
-                                        <option value="fas fa-camera-retro" {% if item.icono=='fas fa-camera-retro'
-                                            %}selected{% endif %}>📸</option>
-                                        <option value="fas fa-heart" {% if item.icono=='fas fa-heart' %}selected{% endif
-                                            %}>🤍</option>
+                        <div class="card draggable-item shadow-sm border-secondary" data-bloque="dresscode">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-secondary"><i class="fas fa-tshirt me-2"></i>4. Código de
+                                        Vestimenta</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="dresscode">
+                                <select name="dress_code" class="form-select form-select-sm">
+                                    <option value="Formal" {% if inv and inv['dress_code']=='Formal' %}selected{% endif %}>
+                                        Formal (Traje y Vestido largo)</option>
+                                    <option value="Etiqueta" {% if inv and inv['dress_code']=='Etiqueta' %}selected{% endif %}>Rigurosa Etiqueta (Gala)
+                                    </option>
+                                    <option value="Coctel" {% if inv and inv['dress_code']=='Coctel' %}selected{% endif %}>
+                                        Cóctel (Traje sin corbata, Vestido corto)</option>
+                                    <option value="Guayabera" {% if inv and inv['dress_code']=='Guayabera' %}selected{% endif %}>Guayabera / Playa</option>
                                     </select>
-                                    <button type="button" class="btn btn-outline-danger"
-                                        onclick="this.parentElement.remove()">X</button>
-                                </div>
-                                {% endfor %}
-                                {% else %}
-                                <div class="input-group input-group-sm mb-1">
-                                    <input type="time" name="hora_itinerario[]" class="form-control"
-                                        style="max-width: 100px;" required>
-                                    <input type="text" name="actividad_itinerario[]" class="form-control"
-                                        placeholder="Ej: Ceremonia" required>
-                                    <select name="icono_itinerario[]" class="form-select"
-                                        style="max-width: 65px; padding:0 5px; text-align:center;">
-                                        <option value="fas fa-church">⛪</option>
-                                        <option value="fas fa-glass-cheers">🥂</option>
-                                        <option value="fas fa-utensils">🍽️</option>
-                                        <option value="fas fa-music">🎵</option>
-                                        <option value="fas fa-camera-retro">📸</option>
-                                        <option value="fas fa-heart">🤍</option>
-                                    </select>
-                                </div>
-                                {% endif %}
-                            </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1"
-                                onclick="agregarItinerario()">+ Agregar actividad</button>
-                        </div>
-                    </div>
+                                    </div>
+                                    </div>
 
-                    <div class="card draggable-item shadow-sm border-dark" data-bloque="rsvp">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>10. RSVP
-                                    (Asistencia)</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="rsvp">
-                            <input type="text" name="telefono_rsvp" class="form-control form-control-sm"
-                                placeholder="Teléfono para confirmar (52...)"
-                                value="{{ datos.get('telefono_rsvp', '') if datos else '' }}">
-                        </div>
-                    </div>
-                    <div class="card draggable-item shadow-sm border-info" data-bloque="protocolo">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-info"><i class="fas fa-users me-2"></i>11. Protocolo Familiar</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="protocolo">
-                            <div class="row g-2">
-                                <div class="col-md-6">
-                                    <input type="text" name="padres_novia" class="form-control form-control-sm"
-                                        placeholder="Padres de la Novia" value="{{ inv['padres_novia'] if inv else '' }}">
+                        <div class="card draggable-item shadow-sm border-success" data-bloque="regalos">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-success"><i class="fas fa-gift me-2"></i>5. Mesa de
+                                        Regalos</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
                                 </div>
-                                <div class="col-md-6">
-                                    <input type="text" name="padres_novio" class="form-control form-control-sm"
-                                        placeholder="Padres del Novio" value="{{ inv['padres_novio'] if inv else '' }}">
-                                </div>
-                                <div class="col-12">
-                                    <input type="text" name="padrinos" class="form-control form-control-sm"
-                                        placeholder="Padrinos de Velación" value="{{ inv['padrinos'] if inv else '' }}">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="card draggable-item shadow-sm border-secondary" data-bloque="frase_final">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-secondary"><i class="fas fa-quote-right me-2"></i>12. Frase de Cierre</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="frase_final">
-                            <textarea name="frase_final" class="form-control form-control-sm" rows="2"
-                                placeholder="Ej: 'Que todas las noches sean de boda...'">{{ inv['frase_final'] if inv else '' }}</textarea>
-                        </div>
-                    </div>
-                    
-                    <div class="card draggable-item shadow-sm border-dark" data-bloque="pases">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>13. Pases de Invitados</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="pases">
-                            <div class="alert alert-light border py-2 mb-0">
-                                <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Este módulo mostrará al invitado sus pases
-                                    asignados y su código QR de acceso.</small>
-                                {% if edit_mode %}
-                                <div class="mt-2">
-                                    <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}"
-                                        class="btn btn-dark btn-sm rounded-pill w-100">
-                                        <i class="fas fa-user-plus me-1"></i> Gestionar Lista de Invitados
-                                    </a>
-                                </div>
-                                {% else %}
-                                <p class="small mt-1 text-danger">Debes publicar la invitación primero para gestionar invitados.</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
+                                <input type="hidden" name="orden_items[]" value="regalos">
+                                <textarea name="cuenta_bancaria" class="form-control form-control-sm mb-2" rows="2"
+                                    placeholder="Frase o CLABE interbancaria...">{{ datos.get('cuenta_bancaria', '') if datos else '' }}</textarea>
 
-                </div>
-            </div>
-        </div>
+                                <label class="small fw-bold text-muted">Links a Tiendas</label>
+                                <div id="container-links">
+                                    {% if edit_mode and mesas %}
+                                    {% for mesa in mesas %}
+                                    <div class="input-group input-group-sm mb-1"><input type="text" name="nombre_tienda[]" class="form-control"
+                                            value="{{ mesa.nombre }}"><input type="text" name="link_tienda[]" class="form-control"
+                                            value="{{ mesa.url }}"><button type="button" class="btn btn-outline-danger"
+                                            onclick="this.parentElement.remove()">X</button></div>
+                                    {% endfor %}
+                                    {% else %}
+                                    <div class="input-group input-group-sm mb-1"><input type="text" name="nombre_tienda[]" class="form-control"
+                                            placeholder="Nombre"><input type="text" name="link_tienda[]" class="form-control" placeholder="URL"><button
+                                            type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button></div>
+                                    {% endif %}
+                                    </div>
+                                    <button type="button" class="btn btn-light btn-sm w-100 border mt-1"
+                                    onclick="agregarInput('container-links', 'nombre_tienda[]', 'link_tienda[]')">+
+                                    Agregar
+                                    tienda</button>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-primary" data-bloque="hospedaje">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-primary"><i class="fas fa-bed me-2"></i>6. Hospedaje y
+                                        Transporte</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="hospedaje">
+                                <textarea name="info_transporte" class="form-control form-control-sm mb-2" rows="2"
+                                    placeholder="Información de transporte (Ej: Habrá un camión saliendo del hotel a las 4pm)">{{ datos.get('info_transporte', '') if datos else '' }}</textarea>
+
+                                <label class="small fw-bold text-muted">Hoteles Sugeridos / Airbnb</label>
+                                <div id="container-hoteles">
+                                    {% if edit_mode and hoteles %}
+                                    {% for hotel in hoteles %}
+                                    <div class="input-group input-group-sm mb-1"><input type="text" name="nombre_hotel[]" class="form-control"
+                                            value="{{ hotel.nombre }}"><input type="text" name="link_hotel[]" class="form-control"
+                                            value="{{ hotel.url }}"><button type="button" class="btn btn-outline-danger"
+                                            onclick="this.parentElement.remove()">X</button></div>
+                                    {% endfor %}
+                                    {% else %}
+                                    <div class="input-group input-group-sm mb-1"><input type="text" name="nombre_hotel[]" class="form-control"
+                                            placeholder="Nombre (Ej: Hotel Fiesta Americana)"><input type="text" name="link_hotel[]" class="form-control"
+                                            placeholder="URL"><button type="button" class="btn btn-outline-danger"
+                                            onclick="this.parentElement.remove()">X</button></div>
+                                    {% endif %}
+                                    </div>
+                                    <button type="button" class="btn btn-light btn-sm w-100 border mt-1"
+                                    onclick="agregarInput('container-hoteles', 'nombre_hotel[]', 'link_hotel[]')">+
+                                    Agregar
+                                    hotel</button>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm" data-bloque="album">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-dark"><i class="fas fa-camera-retro me-2"></i>7. Álbum
+                                        Colaborativo (QR)</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="album">
+                                <input type="text" name="album_url" class="form-control form-control-sm"
+                                    placeholder="Link de Google Drive, iCloud, etc." value="{{ inv['album_url'] if inv else '' }}">
+                                <small class="text-muted">El sistema generará un código QR automático con este
+                                    link.</small>
+                                </div>
+                                </div>
+
+                        <div class="card draggable-item shadow-sm border-info" data-bloque="galeria">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-info"><i class="fas fa-images me-2"></i>8. Galería de
+                                        Fotos</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="galeria">
+                                <input type="file" name="fotos_galeria" class="form-control form-control-sm" multiple accept="image/*">
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm" data-bloque="timeline">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-secondary"><i class="fas fa-list me-2"></i>9.
+                                        Itinerario</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="timeline">
+
+                                <label class="small fw-bold text-muted">Actividades del Evento</label>
+                                <div id="container-itinerario">
+                                    {% if edit_mode and datos.get('itinerario') %}
+                                    {% for item in datos.get('itinerario') %}
+                                    <div class="input-group input-group-sm mb-1">
+                                        <input type="time" name="hora_itinerario[]" class="form-control" style="max-width: 100px;"
+                                            value="{{ item.hora }}" required>
+                                        <input type="text" name="actividad_itinerario[]" class="form-control" placeholder="Ej: Recepción"
+                                            value="{{ item.actividad }}" required>
+                                        <select name="icono_itinerario[]" class="form-select"
+                                            style="max-width: 65px; padding:0 5px; text-align:center;">
+                                            <option value="fas fa-church" {% if item.icono=='fas fa-church' %}selected{% endif %}>⛪</option>
+                                            <option value="fas fa-glass-cheers" {% if item.icono=='fas fa-glass-cheers' %}selected{% endif %}>🥂
+                                            </option>
+                                            <option value="fas fa-utensils" {% if item.icono=='fas fa-utensils' %}selected{% endif %}>🍽️</option>
+                                            <option value="fas fa-music" {% if item.icono=='fas fa-music' %}selected{% endif %}>🎵</option>
+                                            <option value="fas fa-camera-retro" {% if item.icono=='fas fa-camera-retro' %}selected{% endif %}>📸</option>
+                                            <option value="fas fa-heart" {% if item.icono=='fas fa-heart' %}selected{% endif %}>🤍</option>
+                                            </select>
+                                            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
+                                            </div>
+                                            {% endfor %}
+                                            {% else %}
+                                            <div class="input-group input-group-sm mb-1">
+                                                <input type="time" name="hora_itinerario[]" class="form-control" style="max-width: 100px;" required>
+                                                <input type="text" name="actividad_itinerario[]" class="form-control" placeholder="Ej: Ceremonia" required>
+                                                <select name="icono_itinerario[]" class="form-select" style="max-width: 65px; padding:0 5px; text-align:center;">
+                                                    <option value="fas fa-church">⛪</option>
+                                                    <option value="fas fa-glass-cheers">🥂</option>
+                                                    <option value="fas fa-utensils">🍽️</option>
+                                                    <option value="fas fa-music">🎵</option>
+                                                    <option value="fas fa-camera-retro">📸</option>
+                                                    <option value="fas fa-heart">🤍</option>
+                                                </select>
+                                            </div>
+                                            {% endif %}
+                                            </div>
+                                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarItinerario()">+ Agregar
+                                                actividad</button>
+                                            </div>
+                                            </div>
+
+                        <div class="card draggable-item shadow-sm border-dark" data-bloque="rsvp">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>10. RSVP
+                                        (Asistencia)</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="rsvp">
+                                <input type="text" name="telefono_rsvp" class="form-control form-control-sm"
+                                    placeholder="Teléfono para confirmar (52...)" value="{{ datos.get('telefono_rsvp', '') if datos else '' }}">
+                            </div>
+                        </div>
+                        <div class="card draggable-item shadow-sm border-info" data-bloque="protocolo">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-info"><i class="fas fa-users me-2"></i>11. Protocolo
+                                        Familiar</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                    </div>
+                                    <input type="hidden" name="orden_items[]" value="protocolo">
+                                    <div class="row g-2">
+                                        <div class="col-md-6">
+                                            <input type="text" name="padres_novia" class="form-control form-control-sm"
+                                            placeholder="Padres de la Novia"
+                                            value="{{ inv['padres_novia'] if inv else '' }}">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <input type="text" name="padres_novio" class="form-control form-control-sm"
+                                            placeholder="Padres del Novio"
+                                            value="{{ inv['padres_novio'] if inv else '' }}">
+                                    </div>
+                                    <div class="col-12">
+                                        <input type="text" name="padrinos" class="form-control form-control-sm"
+                                            placeholder="Padrinos de Velación"
+                                            value="{{ inv['padrinos'] if inv else '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-secondary" data-bloque="frase_final">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-secondary"><i class="fas fa-quote-right me-2"></i>12.
+                                        Frase de Cierre</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                    </div>
+                                    <input type="hidden" name="orden_items[]" value="frase_final">
+                                    <textarea name="frase_final" class="form-control form-control-sm" rows="2"
+                                        placeholder="Ej: 'Que todas las noches sean de boda...'">{{ inv['frase_final'] if inv else '' }}</textarea>
+                                    </div>
+                                    </div>
+                                    
+                                    <div class="card draggable-item shadow-sm border-dark" data-bloque="pases">
+                                        <div class="card-body">
+                                            <div class="d-flex justify-content-between mb-2">
+                                    <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>13. Pases de
+                                        Invitados</span>
+                                    <i class="fas fa-grip-lines text-muted handle"></i>
+                                    </div>
+                                    <input type="hidden" name="orden_items[]" value="pases">
+                                    <div class="alert alert-light border py-2 mb-0">
+                                    <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Este módulo
+                                        mostrará al invitado sus pases
+                                        asignados y su código QR de acceso.</small>
+                                    {% if edit_mode %}
+                                    <div class="mt-2">
+                                        <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}"
+                                            class="btn btn-dark btn-sm rounded-pill w-100">
+                                            <i class="fas fa-user-plus me-1"></i> Gestionar Lista de Invitados
+                                        </a>
+                                    </div>
+                                    {% else %}
+                                    <p class="small mt-1 text-danger">Debes publicar la invitación primero para
+                                        gestionar invitados.</p>
+                                    {% endif %}
+                                    </div>
+                                    </div>
+                                    </div>
+
+                    </div>
+                    </div>
+                    </div>
     </form>
 </div>
 
