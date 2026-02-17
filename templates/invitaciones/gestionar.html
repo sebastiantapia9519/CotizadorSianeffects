@@ -31,112 +31,104 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for inv in invitaciones %}
-                    <tr>
-                        <td class="ps-4 py-3">
-                            <div class="fw-bold text-dark">{{ inv['datos_cliente']['novios'] }}</div>
-                            <small class="text-muted">Estilo: <span class="text-capitalize">{{ inv['estilo_fuente']
-                                    }}</span></small>
-                        </td>
+    {% for inv in invitaciones %}
+    <tr>
+        <td class="ps-4 py-3">
+            <div class="fw-bold text-dark">{{ inv['datos_cliente']['novios'] }}</div>
+            <small class="text-muted">Estilo: <span class="text-capitalize">{{ inv['estilo_fuente'] }}</span></small>
+            </td>
 
-                        <td>
-                            <span class="badge bg-light text-dark border border-secondary font-monospace">
-                                /invitacion/{{ inv['slug'] }}
-                            </span>
-                            <button onclick="copiarLink('{{ request.host_url }}invitacion/{{ inv['slug'] }}')"
-                                class="btn btn-sm btn-link text-primary p-0 ms-1" title="Copiar Enlace">
-                                <i class="far fa-copy"></i>
-                            </button>
-                        </td>
+        <td>
+            <span class="badge bg-light text-dark border border-secondary font-monospace">
+                /invitacion/{{ inv['slug'] }}
+            </span>
+            <button onclick="copiarLink('{{ request.host_url }}invitacion/{{ inv['slug'] }}')"
+                class="btn btn-sm btn-link text-primary p-0 ms-1" title="Copiar Enlace">
+                <i class="far fa-copy"></i>
+            </button>
+        </td>
 
-                        <td>
-                            <div class="fw-bold text-dark">
-                                {% if inv['fecha_evento'] %}
-                                {{ inv['fecha_evento'][:10] }} <small class="text-muted">{{ inv['fecha_evento'][11:16]
-                                    }}</small>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </div>
-                        </td>
+        <td>
+            <div class="fw-bold text-dark">
+                {% if inv['fecha_evento'] %}
+                {{ inv['fecha_evento'][:10] }} <small class="text-muted">{{ inv['fecha_evento'][11:16] }}</small>
+                {% else %}
+                <span class="text-muted">-</span>
+                {% endif %}
+                </div>
+                </td>
 
-                        <td>
-                            <small class="fw-bold text-muted">{{ inv['vigencia'] }}</small>
-                        </td>
+        <td>
+            <small class="fw-bold text-muted">{{ inv['vigencia'] }}</small>
+        </td>
 
-                        <td>
-                            {% if inv['vigencia'] >= hoy %}
-                        <td class="text-center">
-                            <span class="badge bg-success">Activa</span>
-                            {% if inv['camara_premium'] %}
-                            <i class="fas fa-star text-warning ms-1" title="Función Premium Activa"></i>
-                            {% endif %}
-                        </td>
-                        {% else %}
-                        <span class="badge bg-danger rounded-pill px-3 py-2"><i
-                                class="fas fa-times-circle me-1"></i>Vencida</span>
+        <td class="text-center">
+            {% if inv['vigencia'] >= hoy %}
+                <span class="badge bg-success">Activa</span>
+                {% if inv['camara_premium'] %}
+                <i class="fas fa-star text-warning ms-1" title="Función Premium Activa"></i>
+                {% endif %}
+            {% else %}
+                <span class="badge bg-danger rounded-pill px-3">
+                    <i class="fas fa-times-circle me-1"></i>Vencida
+                </span>
+                {% endif %}
+                </td>
+
+        <td class="text-end pe-4">
+            <div class="dropdown">
+                <button class="btn btn-light btn-sm rounded-circle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                    <li>
+                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv['slug']) }}" target="_blank">
+                            <i class="fas fa-external-link-alt me-2 text-primary"></i> Ver Sitio
+                        </a>
+                        </li>
+                    <li>
+                        <button class="dropdown-item"
+                            onclick="alert('Código de acceso para invitados: {{ inv.get('access_code', 'NO-GEN') }}')">
+                            <i class="fas fa-key me-2 text-dark"></i> Ver Código Invitados
+                        </button>
+                    </li>
+
+                    {% if inv['camara_premium'] %}
+                    <li>
+                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv['id']) }}">
+                            <i class="fas fa-camera-retro me-2 text-success"></i> Ver Fotos Rollo
+                        </a>
+                        </li>
                         {% endif %}
+                    <li>
+                        <hr class="dropdown-divider">
+                    </li>
+                    <li>
+                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}">
+                            <i class="fas fa-edit me-2 text-warning"></i> Editar Boda
+                        </a>
+                        </li>
+                        <li>
+                        <form action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}" method="POST"
+                            onsubmit="return confirm('¿Estás seguro?')">
+                            <button type="submit" class="dropdown-item text-danger">
+                                <i class="fas fa-trash-alt me-2"></i> Eliminar
+                            </button>
+                        </form>
+                        </li>
+                        </ul>
+                        </div>
                         </td>
-
-                        <td class="text-end pe-4">
-                            <div class="dropdown">
-                                <button class="btn btn-light btn-sm rounded-circle" type="button"
-                                    data-bs-toggle="dropdown">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                                    <li>
-                                        <a class="dropdown-item"
-                                            href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv['slug']) }}"
-                                            target="_blank">
-                                            <i class="fas fa-external-link-alt me-2 text-primary"></i> Ver Sitio
-                                        </a>
-                                    </li>
-
-                                    {% if inv['camara_premium'] %}
-                                    <li>
-                                        <a class="dropdown-item"
-                                            href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv['id']) }}">
-                                            <i class="fas fa-camera-retro me-2 text-success"></i> Ver Fotos Rollo
-                                        </a>
-                                    </li>
-                                    {% endif %}
-
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
-
-                                    <li>
-                                        <a class="dropdown-item"
-                                            href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}">
-                                            <i class="fas fa-edit me-2 text-warning"></i> Editar Boda
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <form
-                                            action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}"
-                                            method="POST"
-                                            onsubmit="return confirm('¿Estás seguro? Se borrarán todas las fotos de R2 también.')">
-                                            <button type="submit" class="dropdown-item text-danger">
-                                                <i class="fas fa-trash-alt me-2"></i> Eliminar
-                                            </button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center py-5">
-                            <div class="text-muted mb-3"><i class="fas fa-folder-open fa-3x"></i></div>
-                            <h5 class="fw-bold text-dark">Aún no hay invitaciones</h5>
-                            <p class="text-muted small">Crea tu primer micro-sitio para empezar a administrarlo desde
-                                aquí.</p>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5">
+                                <div class="text-muted mb-3"><i class="fas fa-folder-open fa-3x"></i></div>
+                                <h5 class="fw-bold text-dark">Aún no hay invitaciones</h5>
+        </td>
+        </tr>
+        {% endfor %}
+        </tbody>
             </table>
         </div>
     </div>
