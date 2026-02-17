@@ -81,3 +81,32 @@ def upload_rollo(invitacion_id):
     except Exception as e:
         print(f"Error procesando foto del rollo: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@invitaciones_publicas_bp.route('/api/invitados/<int:invitado_id>/confirmar', methods=['POST'])
+def api_confirmar_asistencia(invitado_id):
+    try:
+        # 1. Obtenemos la respuesta que mandó el JavaScript
+        data = request.get_json()
+        nuevo_estado = data.get('estado') 
+        
+        # Validamos que no nos manden basura
+        if nuevo_estado not in ['Confirmado', 'Declinado']:
+            return jsonify({'success': False, 'error': 'Estado no válido'}), 400
+
+        # 2. Conectamos a la base de datos
+        conn = get_db()
+        
+        # 3. Guardamos la respuesta en tu tabla pases_invitados
+        conn.execute(
+            "UPDATE pases_invitados SET estado_asistencia = ? WHERE id = ?",
+            (nuevo_estado, invitado_id)
+        )
+        conn.commit()
+        conn.close() # Siempre es buena práctica cerrar la conexión
+        
+        return jsonify({'success': True, 'mensaje': '¡Confirmación guardada con éxito!'})
+    
+    except Exception as e:
+        print(f"Error al confirmar asistencia: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
