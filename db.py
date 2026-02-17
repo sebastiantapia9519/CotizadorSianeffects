@@ -323,6 +323,11 @@ def init_db():
         hospedaje_json TEXT,
         album_url TEXT,
         color_acentos TEXT DEFAULT '#D4AF37',
+        padres_novia TEXT,
+        padres_novio TEXT,
+        padrinos TEXT,
+        frase_final TEXT,
+        template_id TEXT DEFAULT 'clasico'
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );
     """)
@@ -335,6 +340,19 @@ def init_db():
     camara_premium BOOLEAN DEFAULT 0,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
+    """)
+
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS pases_invitados (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invitacion_id INTEGER,
+        nombre_familia TEXT NOT NULL,
+        pases_totales INTEGER DEFAULT 2,
+        pases_usados INTEGER DEFAULT 0,
+        codigo_qr_unique TEXT UNIQUE,
+        mensaje_personalizado TEXT,
+        FOREIGN KEY (invitacion_id) REFERENCES invitaciones(id)
+    )
     """)
     conn.commit()
     conn.close()

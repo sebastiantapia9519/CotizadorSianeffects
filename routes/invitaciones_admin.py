@@ -13,6 +13,23 @@ from services.cloudflare_service import upload_to_cloudflare, delete_from_cloudf
 # Definimos el Blueprint
 invitaciones_bp = Blueprint('invitaciones_admin', __name__)
 
+PLANTILLAS_CONFIG = {
+    'rustico': {
+        'fuente_titulo': 'Cormorant',
+        'fuente_cuerpo': 'Proza Libre',
+        'color_acento': '#5d6d5a', # Verde Eucalipto
+        'color_fondo': '#f4f1ea',  # Crema Papel
+        'frase_default': "Hoy celebramos el amor que nos une..."
+    },
+    'romantico': {
+        'fuente_titulo': 'Great Vibes',
+        'fuente_cuerpo': 'Montserrat',
+        'color_acento': '#d48b9b', # Rosa Viejo
+        'color_fondo': '#fff9f9',
+        'frase_default': "Dos corazones, un mismo camino."
+    }
+}
+
 # --- RUTA 1: CONSTRUCTOR DE INVITACIONES ---
 @invitaciones_bp.route('/admin/nueva-invitacion', methods=['GET', 'POST'])
 @admin_required
@@ -33,6 +50,11 @@ def crear_invitacion():
             album_url = request.form.get('album_url')
             camara_premium = 1 if 'camara_premium' in request.form else 0
             color_acentos = request.form.get('color_acentos', '#D4AF37')
+            padres_novia = request.form.get('padres_novia')
+            padres_novio = request.form.get('padres_novio')
+            padrinos = request.form.get('padrinos')
+            frase_final = request.form.get('frase_final')
+            template_id = request.form.get('template_id')
             
             # --- PROCESAR LINKS DE TIENDAS ---
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -94,13 +116,14 @@ def crear_invitacion():
                     url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria")
                     urls_galeria.append(url)
 
-            # --- INSERT ---
+            # --- INSERT ACTUALIZADO ---
             conn.execute("""
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
-                 fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
-                 dress_code, hospedaje_json, album_url, camara_premium, color_acentos) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
+                dress_code, hospedaje_json, album_url, camara_premium, color_acentos,
+                padres_novia, padres_novio, padrinos, frase_final, template_id) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 slug, 
                 json.dumps(request.form.getlist('orden_items[]')), 
@@ -118,8 +141,13 @@ def crear_invitacion():
                 json.dumps(hoteles_sugeridos),
                 album_url,
                 camara_premium,
-                color_acentos 
-            ))
+                color_acentos,
+                padres_novia,    # 18
+                padres_novio,    # 19
+                padrinos,        # 20
+                frase_final,     # 21
+                template_id      # 22
+                ))
             conn.commit()
             flash("Invitación Premium Creada ✨", "success")
             return redirect(url_for('invitaciones_admin.crear_invitacion'))
@@ -290,6 +318,11 @@ def editar_invitacion(id):
             album_url = request.form.get('album_url')
             camara_premium = 1 if 'camara_premium' in request.form else 0
             color_acentos = request.form.get('color_acentos', '#D4AF37')
+            padres_novia = request.form.get('padres_novia')
+            padres_novio = request.form.get('padres_novio')
+            padrinos = request.form.get('padrinos')
+            frase_final = request.form.get('frase_final')
+            template_id = request.form.get('template_id')
             
 
             # --- 1. PROCESAR ITINERARIO (Asegúrate que estas líneas estén ANTES de datos_cliente) ---
@@ -352,7 +385,8 @@ def editar_invitacion(id):
                 UPDATE invitaciones SET 
                 slug=?, config_json=?, musica_id=?, fecha_evento=?, vigencia=?, datos_cliente_json=?, 
                 fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?,
-                dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?
+                dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?,
+                padres_novia=?, padres_novio=?, padrinos=?, frase_final=?, template_id=?
                 WHERE id=?
             """, (
                 slug, 
@@ -371,8 +405,13 @@ def editar_invitacion(id):
                 json.dumps(hoteles_sugeridos), 
                 album_url, 
                 camara_premium,
-                color_acentos, 
-                id             
+                color_acentos,
+                padres_novia,    # 18
+                padres_novio,    # 19
+                padrinos,        # 20
+                frase_final,     # 21
+                template_id,     # 22
+                id               # 23 (Para el WHERE)
             ))
             conn.commit()
             flash("¡Invitación actualizada exitosamente! ✏️", "success")

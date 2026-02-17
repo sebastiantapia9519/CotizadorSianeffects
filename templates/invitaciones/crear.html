@@ -78,6 +78,20 @@
                             </select>
                         </div>
 
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Ahorro de Tiempo: Plantilla</label>
+                            <select name="template_id" class="form-select border-primary" onchange="aplicarPlantilla(this.value)">
+                                <option value="clasico" {{ 'selected' if inv and inv['template_id']=='clasico' else '' }}>✨ Clásico (Dorado)
+                                </option>
+                                <option value="rustico" {{ 'selected' if inv and inv['template_id']=='rustico' else '' }}>🌿 Rústico (Eucalipto)
+                                </option>
+                                <option value="moderno" {{ 'selected' if inv and inv['template_id']=='moderno' else '' }}>🔳 Moderno (Minimal)
+                                </option>
+                                <option value="romantico" {{ 'selected' if inv and inv['template_id']=='romantico' else '' }}>🌸 Romántico
+                                    (Rosa)</option>
+                            </select>
+                        </div>
+
                         <div class="row g-2 mb-3">
                             <div class="row g-2 mb-3">
                                 <div class="col-6">
@@ -395,6 +409,64 @@
                                 value="{{ datos.get('telefono_rsvp', '') if datos else '' }}">
                         </div>
                     </div>
+                    <div class="card draggable-item shadow-sm border-info" data-bloque="protocolo">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold text-info"><i class="fas fa-users me-2"></i>11. Protocolo Familiar</span>
+                                <i class="fas fa-grip-lines text-muted handle"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="protocolo">
+                            <div class="row g-2">
+                                <div class="col-md-6">
+                                    <input type="text" name="padres_novia" class="form-control form-control-sm"
+                                        placeholder="Padres de la Novia" value="{{ inv['padres_novia'] if inv else '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <input type="text" name="padres_novio" class="form-control form-control-sm"
+                                        placeholder="Padres del Novio" value="{{ inv['padres_novio'] if inv else '' }}">
+                                </div>
+                                <div class="col-12">
+                                    <input type="text" name="padrinos" class="form-control form-control-sm"
+                                        placeholder="Padrinos de Velación" value="{{ inv['padrinos'] if inv else '' }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card draggable-item shadow-sm border-secondary" data-bloque="frase_final">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold text-secondary"><i class="fas fa-quote-right me-2"></i>12. Frase de Cierre</span>
+                                <i class="fas fa-grip-lines text-muted handle"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="frase_final">
+                            <textarea name="frase_final" class="form-control form-control-sm" rows="2"
+                                placeholder="Ej: 'Que todas las noches sean de boda...'">{{ inv['frase_final'] if inv else '' }}</textarea>
+                        </div>
+                    </div>
+                    
+                    <div class="card draggable-item shadow-sm border-dark" data-bloque="pases">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>13. Pases de Invitados</span>
+                                <i class="fas fa-grip-lines text-muted handle"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="pases">
+                            <div class="alert alert-light border py-2 mb-0">
+                                <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Este módulo mostrará al invitado sus pases
+                                    asignados y su código QR de acceso.</small>
+                                {% if edit_mode %}
+                                <div class="mt-2">
+                                    <a href="#" class="btn btn-dark btn-sm rounded-pill w-100">
+                                        <i class="fas fa-user-plus me-1"></i> Gestionar Lista de Invitados
+                                    </a>
+                                </div>
+                                {% else %}
+                                <p class="small mt-1 text-danger">Debes publicar la invitación primero para gestionar invitados.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
 
                 </div>
             </div>
@@ -506,5 +578,27 @@
             btn.classList.remove('d-none'); loading.classList.add('d-none');
         }
     });
+
+    function aplicarPlantilla(templateId) {
+        const presets = {
+            'rustico': { acento: '#5d6d5a', fondo: '#f4f1ea', fuente: 'botanico' },
+            'romantico': { acento: '#d48b9b', fondo: '#fff9f9', fuente: 'romantico' },
+            'moderno': { acento: '#2c3e50', fondo: '#ffffff', fuente: 'moderno' },
+            'clasico': { acento: '#D4AF37', fondo: '#fdfbf7', fuente: 'clasico' }
+        };
+
+        const config = presets[templateId];
+        if (config) {
+            // Ajustamos los inputs de color que ya tienes en el form
+            document.querySelector('input[name="color_acentos"]').value = config.acento;
+            document.querySelector('input[name="color_fondo"]').value = config.fondo;
+
+            // Ajustamos el selector de fuente
+            const selectFuente = document.querySelector('select[name="estilo_fuente"]');
+            if (selectFuente) selectFuente.value = config.fuente;
+
+            console.log(`Plantilla ${templateId} aplicada correctamente.`);
+        }
+    }
 </script>
 {% endblock %}
