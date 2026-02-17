@@ -98,10 +98,10 @@ def api_confirmar_asistencia(invitado_id):
 
 # --- RUTA PARA EL CLIENTE (Dashboard de Novios) ---
 @invitaciones_publicas_bp.route('/recepcion/<slug>')
-def recepcion_cliente(slug):
-    # Verificamos la sesión manual del cliente (la que creaste en invitaciones_clientes.py)
+def recepcion_boda(slug): # <--- Cambiamos el nombre aquí para que coincida con el dashboard
+    # Validamos la sesión manual del cliente
     if 'cliente_inv_id' not in session or session.get('cliente_slug') != slug:
-        return "<h1>Acceso Denegado</h1><p>Debes ingresar con tu código de evento.</p>", 403
+        return "<h1>Acceso Denegado</h1><p>Debes ingresar con tu código de evento para usar el escáner.</p>", 403
         
     conn = get_db()
     inv = conn.execute("SELECT id, slug FROM invitaciones WHERE slug = ?", (slug,)).fetchone()
@@ -110,14 +110,14 @@ def recepcion_cliente(slug):
     if not inv:
         return "Boda no encontrada", 404
     
-    return render_template('invitaciones/scanner.html', inv=inv, modo="cliente")
+    # IMPORTANTE: Pasamos el objeto 'inv' para que scanner.html sepa que es Modo Cliente
+    return render_template('invitaciones/scanner.html', inv=inv)
 
 # --- RUTA PARA TI (Administrador Maestro de SianEffects) ---
 @invitaciones_publicas_bp.route('/admin/scanner-global')
-@admin_required # Usamos tu decorador del cotizador para proteger esta ruta
-def scanner_global():
-    # Renderizamos el mismo template pero con inv=None para indicar modo global
-    return render_template('invitaciones/scanner.html', inv=None, modo="admin")
+@admin_required 
+def scanner_global(): # <--- Este nombre debe coincidir con url_for('invitaciones_publicas.scanner_global')
+    return render_template('invitaciones/scanner.html', inv=None)
 
 # --- API DE VALIDACIÓN QR ---
 @invitaciones_publicas_bp.route('/api/validar-qr', methods=['POST'])
