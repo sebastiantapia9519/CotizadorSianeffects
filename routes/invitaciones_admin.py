@@ -56,6 +56,8 @@ def crear_invitacion():
             padrinos = request.form.get('padrinos')
             frase_final = request.form.get('frase_final')
             template_id = request.form.get('template_id')
+            tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
+            codigo_cliente = generar_codigo_cliente() 
             
             # --- PROCESAR LINKS DE TIENDAS ---
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -117,38 +119,22 @@ def crear_invitacion():
                     url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria")
                     urls_galeria.append(url)
 
-            # --- INSERT ACTUALIZADO ---
+            # --- INSERT  ---
             conn.execute("""
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
                 fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
-                dress_code, hospedaje_json, album_url, camara_premium, color_acentos,
+                dress_code, hospedaje_json, album_url, camara_premium, tiene_modulo_invitados, codigo_acceso_cliente, color_acentos,
                 padres_novia, padres_novio, padrinos, frase_final, template_id) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                slug, 
-                json.dumps(request.form.getlist('orden_items[]')), 
-                musica_id or None, 
-                request.form.get('fecha_evento'), 
-                request.form.get('vigencia'), 
-                json.dumps(datos_cliente), 
-                json.dumps(urls_galeria),
-                url_portada,
-                request.form.get('estilo_fuente'),
-                request.form.get('color_fondo'),
-                url_fondo,
-                json.dumps(mesas_regalos),
-                dress_code,
-                json.dumps(hoteles_sugeridos),
-                album_url,
-                camara_premium,
-                color_acentos,
-                padres_novia,    # 18
-                padres_novio,    # 19
-                padrinos,        # 20
-                frase_final,     # 21
-                template_id      # 22
-                ))
+                slug, json.dumps(request.form.getlist('orden_items[]')), musica_id or None, 
+                request.form.get('fecha_evento'), request.form.get('vigencia'), json.dumps(datos_cliente), 
+                json.dumps(urls_galeria), url_portada, request.form.get('estilo_fuente'), request.form.get('color_fondo'), 
+                url_fondo, json.dumps(mesas_regalos), dress_code, json.dumps(hoteles_sugeridos), album_url, 
+                camara_premium, tiene_modulo_invitados, codigo_cliente, color_acentos, # <--- AQUI
+                padres_novia, padres_novio, padrinos, frase_final, template_id
+            ))
             conn.commit()
             flash("Invitación Premium Creada ✨", "success")
             return redirect(url_for('invitaciones_admin.crear_invitacion'))
@@ -594,23 +580,43 @@ def gestionar_pases(id):
     if request.method == 'POST':
         nombre_familia = request.form.get('nombre_familia')
         pases = request.form.get('pases_totales', 2)
+        telefono = request.form.get('telefono')
+
         # Generamos un código único corto para el QR/Link (ej: 8F3A1B2C)
         codigo_unico = str(uuid.uuid4())[:8].upper()
         
         try:
             conn.execute("""
-                INSERT INTO pases_invitados (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique)
-                VALUES (?, ?, ?, ?)
-            """, (id, nombre_familia, pases, codigo_unico))
+                INSERT INTO pases_invitados (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique, telefono)
+                VALUES (?, ?, ?, ?, ?)
+            """, (id, nombre_familia, pases, codigo_unico, telefono)) # <--- INSERTAR TELÉFONO
             conn.commit()
             flash(f"Pase para {nombre_familia} generado con éxito.", "success")
         except Exception as e:
-            flash(f"Error al crear el pase: {str(e)}", "danger")
+            flash(f"Error: {str(e)}", "danger")
 
     # Obtenemos los datos necesarios para la vista
-    inv = conn.execute("SELECT slug, id FROM invitaciones WHERE id = ?", (id,)).fetchone()
+    inv = conn.execute("SELECT slug, id, codigo_acceso_cliente FROM invitaciones WHERE id = ?", (id,)).fetchone()
     invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY id DESC", (id,)).fetchall()
     conn.close()
     
     # Asegúrate de crear el archivo 'invitaciones/pases_admin.html' que te pasé antes
     return render_template('invitaciones/pases_admin.html', inv=inv, invitados=invitados)
+
+@invitaciones_bp.route('/admin/invitacion/<int:inv_id>/eliminar-pase/<int:pase_id>', methods=['POST'])
+@admin_required
+def eliminar_pase(inv_id, pase_id):
+    conn = get_db_connection()
+    try:
+        # Borramos el pase asegurándonos de que pertenezca a la invitación correcta
+        conn.execute("DELETE FROM pases_invitados WHERE id = ? AND invitacion_id = ?", (pase_id, inv_id))
+        conn.commit()
+        flash("Pase de invitado eliminado correctamente 🗑️", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error al eliminar el pase: {str(e)}", "danger")
+    finally:
+        conn.close()
+        
+    # Redirigimos de vuelta a la misma página de gestión de pases
+    return redirect(url_for('invitaciones_admin.gestionar_pases', id=inv_id))

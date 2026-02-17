@@ -6,14 +6,31 @@
         <a href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}" class="btn btn-outline-secondary rounded-pill">Volver al Constructor</a>
     </div>
 
+    <div class="alert alert-info border-0 shadow-sm d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h6 class="mb-1 fw-bold"><i class="fas fa-key me-2"></i>Acceso para los Novios</h6>
+            <small>Comparte este código con los novios para que entren a su panel en /mi-evento:</small>
+        </div>
+        <span class="badge bg-dark fs-5 font-monospace px-3 py-2">
+            {{ inv['codigo_acceso_cliente'] if inv['codigo_acceso_cliente'] else 'No generado' }}
+        </span>
+    </div>
+
     <div class="card shadow-sm border-0 mb-4">
         <div class="card-body">
             <form class="row g-2 align-items-end" method="POST">
-                <div class="col-md-6">
-                    <label class="small fw-bold">Nombre de la Familia / Invitado</label>
-                    <input type="text" name="nombre_familia" class="form-control" placeholder="Ej. Familia Tapia Reyes" required>
+                <div class="col-md-4">
+                    <label class="small fw-bold">Familia / Invitado</label>
+                    <input type="text" name="nombre_familia" class="form-control" placeholder="Ej. Familia Tapia" required>
                 </div>
                 <div class="col-md-3">
+                    <label class="small fw-bold">Teléfono (WhatsApp)</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light border-end-0 px-2"><i class="fab fa-whatsapp text-success"></i></span>
+                        <input type="text" name="telefono" class="form-control border-start-0 ps-0" placeholder="Ej. 8112345678">
+                    </div>
+                    </div>
+                    <div class="col-md-2">
                     <label class="small fw-bold">N. de Pases</label>
                     <input type="number" name="pases_totales" class="form-control" value="2" min="1">
                 </div>
@@ -33,6 +50,7 @@
                         <th class="text-center">Pases</th>
                         <th class="text-center">Estado</th>
                         <th>Código / Link</th>
+                        <th class="text-center">WhatsApp</th>
                         <th class="text-end">Acciones</th>
                     </tr>
                 </thead>
@@ -51,11 +69,28 @@
                         <td>
                             <code class="text-primary">{{ invitado.codigo_qr_unique }}</code>
                         </td>
+                        <td class="text-center">
+                            {% if invitado.telefono %}
+                            <a href="https://api.whatsapp.com/send?phone=52{{ invitado.telefono }}&text=¡Hola {{ invitado.nombre_familia }}! Aquí tienes tu pase exclusivo para nuestra boda. Accede aquí: {{ request.host_url }}invitacion/{{ inv.slug }}?pass={{ invitado.codigo_qr_unique }}"
+                                target="_blank" class="btn btn-sm btn-success rounded-circle shadow-sm"
+                                title="Enviar a {{ invitado.telefono }}">
+                                <i class="fab fa-whatsapp"></i>
+                            </a>
+                            {% else %}
+                            <span class="text-muted small">-</span>
+                            {% endif %}
+                        </td>
                         <td class="text-end">
                             <button class="btn btn-sm btn-outline-primary" onclick="copiarLink('{{ inv.slug }}', '{{ invitado.codigo_qr_unique }}')">
-                                <i class="fas fa-copy"></i> Copiar Link
+                                <i class="fas fa-copy"></i>
                             </button>
-                            <button class="btn btn-sm btn-link text-danger"><i class="fas fa-trash"></i></button>
+                                <form action="{{ url_for('invitaciones_admin.eliminar_pase', inv_id=inv.id, pase_id=invitado.id) }}" method="POST"
+                                    class="d-inline"
+                                    onsubmit="return confirm('¿Estás seguro de que deseas eliminar este pase? El link dejará de funcionar para este invitado.');">
+                                    <button type="submit" class="btn btn-sm btn-link text-danger p-0 ms-2" title="Eliminar Pase">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
                         </td>
                     </tr>
                     {% endfor %}

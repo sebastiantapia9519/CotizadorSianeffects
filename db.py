@@ -323,11 +323,14 @@ def init_db():
         hospedaje_json TEXT,
         album_url TEXT,
         color_acentos TEXT DEFAULT '#D4AF37',
+        camara_premium BOOLEAN DEFAULT 0,
         padres_novia TEXT,
         padres_novio TEXT,
         padrinos TEXT,
         frase_final TEXT,
         template_id TEXT DEFAULT 'clasico',
+        tiene_modulo_invitados BOOLEAN DEFAULT 0,
+        codigo_acceso_cliente TEXT UNIQUE,
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );
     """)
@@ -351,6 +354,7 @@ def init_db():
         pases_usados INTEGER DEFAULT 0,
         codigo_qr_unique TEXT UNIQUE,
         mensaje_personalizado TEXT,
+        telefono TEXT,
         FOREIGN KEY (invitacion_id) REFERENCES invitaciones(id)
     )
     """)
