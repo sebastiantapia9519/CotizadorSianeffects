@@ -84,8 +84,9 @@ def init_db():
         precio_compra REAL,
         cantidad_paquete REAL,
         precio_unitario REAL,
-        stock_actual REAL DEFAULT 0,   -- <--- NUEVO
-        stock_minimo REAL DEFAULT 5    -- <--- NUEVO (Alerta)
+        unidad_medida,
+        stock_actual REAL DEFAULT 0,
+        stock_minimo REAL DEFAULT 5
     )
     """)
 

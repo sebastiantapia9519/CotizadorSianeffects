@@ -36,20 +36,16 @@
                         <h6 class="fw-bold text-dark mb-1 nombre-material text-truncate" title="{{ mat['nombre'] }}">{{
                             mat['nombre'] }}</h6>
 
-                        {% if mat['es_paquete'] %}
-                        <span class="badge bg-light text-secondary border" style="font-size: 0.65rem;">
-                            📦 Paquete {{ mat['cantidad_paquete']|int }}u.
+                        <span class="badge bg-light text-secondary border text-capitalize" style="font-size: 0.65rem;">
+                            <i class="fas fa-box-open me-1"></i>
+                            {{ mat['cantidad_paquete']|float|round(2) }} {{ mat['unidad_medida']|default('pieza') }}(s)
+                            por compra
                         </span>
-                        {% else %}
-                        <span class="badge bg-light text-secondary border" style="font-size: 0.65rem;">
-                            🔹 Unidad
-                        </span>
-                        {% endif %}
                     </div>
 
                     <div class="d-flex gap-1">
                         <button class="btn btn-light btn-sm text-primary rounded-circle border"
-                            onclick='editarMaterial({{ mat|tojson }})' title="Editar">
+                            onclick='editarMaterial({{ mat|tojson|safe }})' title="Editar">
                             <i class="fas fa-pen" style="font-size: 0.8rem;"></i>
                         </button>
 
@@ -62,13 +58,14 @@
                 </div>
 
                 <div class="row mt-3 align-items-end">
-                    <div class="col-6">
-                        <small class="text-muted fw-bold" style="font-size: 0.65rem;">COSTO UNITARIO</small>
+                    <div class="col-5">
+                        <small class="text-muted fw-bold" style="font-size: 0.65rem;">COSTO POR {{
+                            (mat['unidad_medida']|default('pieza'))|upper }}</small>
                         <div class="h5 fw-bold text-success mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
                     </div>
 
                     {% if config['inventario_activo'] %}
-                    <div class="col-6 text-end border-start ps-3">
+                    <div class="col-7 text-end border-start ps-3">
                         <small class="text-muted fw-bold" style="font-size: 0.65rem;">EN STOCK</small>
                         <div class="d-flex align-items-center justify-content-end gap-2">
                             {% if mat['stock_actual'] <= mat['stock_minimo'] %} <i
@@ -80,12 +77,13 @@
 
                                 <button
                                     class="btn btn-sm btn-outline-primary rounded-circle py-0 px-0 d-flex align-items-center justify-content-center shadow-sm"
-                                    style="width: 24px; height: 24px;" onclick='abrirModalStock({{ mat|tojson }})'
+                                    style="width: 24px; height: 24px;" onclick='abrirModalStock({{ mat|tojson|safe }})'
                                     title="Agregar Stock">
                                     <i class="fas fa-plus" style="font-size: 0.7rem;"></i>
                                 </button>
                         </div>
-                        <small class="text-muted" style="font-size: 0.65rem;">Unidades</small>
+                        <small class="text-muted text-capitalize" style="font-size: 0.65rem;">{{
+                            mat['unidad_medida']|default('piezas') }}</small>
                     </div>
                     {% endif %}
                 </div>
@@ -115,48 +113,47 @@
             <div class="modal-body">
                 <form action="{{ url_for('inventory.materiales') }}" method="POST" id="formMaterial">
                     <input type="hidden" name="id_actualizar" id="id_actualizar">
+                    <input type="hidden" name="tipo_entrada" value="paquete">
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Nombre del Material</label>
-                        <input type="text" name="nombre" id="nombre" class="form-control" required
-                            placeholder="Ej. Taza Blanca 11oz">
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted">Nombre del Insumo / Material</label>
+                        <input type="text" name="nombre" id="nombre" class="form-control form-control-lg" required
+                            placeholder="Ej. Taza Blanca 11oz, Harina, Vinil...">
                     </div>
 
                     <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">Tipo de Compra</label>
-                            <div class="form-check p-3 border rounded bg-light">
-                                <input class="form-check-input" type="radio" name="tipo_entrada" id="tipo_paquete"
-                                    value="paquete" checked onchange="toggleTipo()">
-                                <label class="form-check-label fw-bold" for="tipo_paquete">📦 Por Paquete</label>
-                            </div>
-                        </div>
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">&nbsp;</label>
-                            <div class="form-check p-3 border rounded bg-light">
-                                <input class="form-check-input" type="radio" name="tipo_entrada" id="tipo_unidad"
-                                    value="unidad" onchange="toggleTipo()">
-                                <label class="form-check-label fw-bold" for="tipo_unidad">🔹 Por Unidad</label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mb-3">
-                        <div class="col-6">
-                            <label class="form-label small fw-bold text-muted">Costo de Compra ($)</label>
+                        <div class="col-md-5">
+                            <label class="form-label small fw-bold text-muted">Costo Total ($)</label>
                             <input type="number" step="0.01" name="precio_compra" id="precio_compra"
-                                class="form-control" placeholder="0.00" required>
-                            <div class="form-text" style="font-size: 0.7rem;">Lo que te cuesta comprarlo.</div>
+                                class="form-control form-control-lg text-success fw-bold" placeholder="0.00" required>
                         </div>
-                        <div class="col-6" id="div_cantidad_paquete">
-                            <label class="form-label small fw-bold text-muted">Unidades por Paquete</label>
-                            <input type="number" step="1" name="cantidad_paquete" id="cantidad_paquete"
-                                class="form-control" placeholder="Ej. 100">
+                        <div class="col-md-7">
+                            <label class="form-label small fw-bold text-muted">¿Qué cantidad incluye este costo?</label>
+                            <div class="input-group input-group-lg">
+                                <input type="number" step="any" name="cantidad_paquete" id="cantidad_paquete" class="form-control fw-bold"
+                                    placeholder="Ej. 1, 900, 50..." required>
+                                <select name="unidad_medida" id="unidad_medida" class="form-select border-start-0 text-muted bg-light"
+                                    style="max-width: 130px; font-size: 0.9rem;">
+                                    <option value="pieza">Piezas (pza)</option>
+                                    <option value="g">Gramos (g)</option>
+                                    <option value="kg">Kilos (kg)</option>
+                                    <option value="ml">Mililitros (ml)</option>
+                                    <option value="l">Litros (l)</option>
+                                    <option value="cm">Centímetros (cm)</option>
+                                    <option value="m">Metros (m)</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-primary fw-bold rounded-pill py-2">Guardar
+                    <div class="form-text text-center mb-4 text-primary"
+                        style="font-size: 0.8rem; background: #eef2ff; padding: 10px; border-radius: 10px;">
+                        <i class="fas fa-lightbulb me-1"></i> <b>Ejemplo:</b> Si compras una bolsa de Harina de 900g por
+                        $25, pon Costo <b>$25</b> y Cantidad <b>900 Gramos</b>.
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-primary fw-bold rounded-pill py-3">Guardar
                             Material</button>
                     </div>
                 </form>
@@ -174,25 +171,26 @@
             </div>
             <div class="modal-body">
                 <input type="hidden" id="stock_id">
-
                 <p class="small text-muted mb-1">Material:</p>
                 <h6 class="fw-bold mb-3" id="stock_nombre"></h6>
 
                 <div class="mb-3">
-                    <label class="small fw-bold text-dark mb-1">¿Cuánto compraste?</label>
+                    <label class="small fw-bold text-dark mb-1">Compras que ingresan:</label>
                     <div class="input-group">
                         <input type="number" id="stock_cantidad" class="form-control fw-bold text-center" value="1"
                             min="0.1" step="any">
-                        <span class="input-group-text bg-light" id="stock_unidad_label">Paquetes</span>
+                        <span class="input-group-text bg-light" id="stock_unidad_label" style="font-size: 0.8rem;">Compras</span>
                     </div>
+                    <div class="form-text" style="font-size: 0.7rem;" id="stock_ayuda">Ej: "1" sumará los gramos/piezas
+                        que configuraste por defecto.</div>
                 </div>
 
                 <div class="mb-3">
                     <label class="small fw-bold text-muted mb-1">¿Cambió el costo? (Opcional)</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-light border-0">$</span>
-                        <input type="number" id="stock_nuevo_precio" class="form-control bg-light border-0"
-                            placeholder="Nuevo precio">
+                        <input type="number" step="0.01" id="stock_nuevo_precio" class="form-control bg-light border-0"
+                            placeholder="Nuevo precio total">
                     </div>
                 </div>
 
@@ -228,25 +226,12 @@
         else msg.classList.add('d-none');
     }
 
-    // --- LÓGICA DE UI ---
-    function toggleTipo() {
-        const esPaquete = document.getElementById('tipo_paquete').checked;
-        const divCant = document.getElementById('div_cantidad_paquete');
-        const inputCant = document.getElementById('cantidad_paquete');
-
-        if (esPaquete) {
-            divCant.style.display = 'block';
-            inputCant.value = '';
-        } else {
-            divCant.style.display = 'none';
-            inputCant.value = '1';
-        }
-    }
-
+    // --- LÓGICA DE UI MODAL PRINCIPAL ---
     function limpiarModal() {
         document.getElementById('formMaterial').reset();
         document.getElementById('id_actualizar').value = '';
-        toggleTipo();
+        document.getElementById('unidad_medida').value = 'pieza';
+        document.getElementById('cantidad_paquete').value = '1';
     }
 
     function editarMaterial(mat) {
@@ -254,12 +239,10 @@
         document.getElementById('id_actualizar').value = mat.id;
         document.getElementById('nombre').value = mat.nombre;
         document.getElementById('precio_compra').value = mat.precio_compra;
-        document.getElementById('cantidad_paquete').value = mat.cantidad_paquete;
+        document.getElementById('cantidad_paquete').value = mat.cantidad_paquete || 1;
 
-        if (mat.es_paquete) document.getElementById('tipo_paquete').checked = true;
-        else document.getElementById('tipo_unidad').checked = true;
+        // Si no tiene unidad guardada, por defecto es p                      document.getElementById('unidad_medida').value = mat            dad_m            a || 'pieza';
 
-        toggleTipo();
         modal.show();
     }
 
@@ -271,8 +254,8 @@
         document.getElementById('stock_id').value = mat.id;
         document.getElementById('stock_nombre').innerText = mat.nombre;
 
-        const label = mat.es_paquete ? `Paquetes (de ${parseInt(mat.cantidad_paquete)})` : "Unidades";
-        document.getElementById('stock_unidad_label').innerText = label;
+        const unidad = mat.unidad_medida || 'pieza';
+        document.getElementById('stock_ayuda').innerText = `1 compra ingresará ${parseFloat(mat.cantidad_paquete).toFixed(2)} ${unidad}(s) al stock.`;
 
         document.getElementById('stock_cantidad').value = 1;
         document.getElementById('stock_nuevo_precio').value = mat.precio_compra;
@@ -299,7 +282,6 @@
             .then(r => r.json())
             .then(data => {
                 if (data.success) {
-                    alert("✅ Inventario actualizado");
                     location.reload();
                 } else {
                     alert("Error: " + data.error);

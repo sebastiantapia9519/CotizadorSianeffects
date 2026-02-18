@@ -52,7 +52,8 @@ def materiales():
         try:
             id_actualizar = request.form.get('id_actualizar')
             nombre = request.form.get('nombre', '').strip()
-            tipo = request.form.get('tipo_entrada')
+            tipo = request.form.get('tipo_entrada', 'paquete')
+            unidad_medida = request.form.get('unidad_medida', 'pieza') # <-- Atrapamos la nueva unidad
             
             if id_actualizar:
                 duplicado = conn.execute(
@@ -83,24 +84,28 @@ def materiales():
                 precio_unitario = 0
 
             if id_actualizar:
+                # <-- Agregamos unidad_medida al UPDATE
                 conn.execute("""
                     UPDATE materiales 
-                    SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?
+                    SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?, unidad_medida=?
                     WHERE id=? AND user_id=?
-                """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, id_actualizar, session['user_id']))
+                """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, id_actualizar, session['user_id']))
             else:
+                # <-- Agregamos unidad_medida al INSERT
                 conn.execute("""
-                    INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                """, (session['user_id'], nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario))
+                    INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (session['user_id'], nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida))
             
             conn.commit()
-            conn.close()
+            
+            # --- REDIRECCIÓN AL INVENTARIO ---
             return redirect(url_for('inventory.materiales'))
             
         except Exception as e:
-            conn.close()
             return f"Error al guardar: {e}"
+        finally:
+            conn.close()
 
     # --- VER LISTA (GET) ---
     rows = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (session['user_id'],)).fetchall()
