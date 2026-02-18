@@ -192,7 +192,7 @@ def recetas():
             conn.close()
             return f"Error al actualizar: {e}"
 
-   try:
+    try:
         # 1. Consulta principal (ya no necesitamos traer p.items)
         query = """SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
                    FROM productos p 
@@ -224,7 +224,7 @@ def recetas():
     conn.close()
     return render_template('recetas.html', recetas=recetas_lista)
 
-    
+
 @inventory_bp.route('/guardar_receta', methods=['POST'])
 @login_required
 def guardar_receta():
