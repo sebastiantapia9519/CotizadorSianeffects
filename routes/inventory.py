@@ -193,7 +193,7 @@ def recetas():
             return f"Error al actualizar: {e}"
 
     try:
-        query = """SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales FROM productos p LEFT JOIN producto_detalles pd ON p.id=pd.producto_id WHERE p.user_id=? GROUP BY p.id"""
+        query = """SELECT p.id, p.nombre, p.items, COUNT(pd.id) as num_materiales FROM productos p LEFT JOIN producto_detalles pd ON p.id=pd.producto_id WHERE p.user_id=? GROUP BY p.id"""
         recetas = conn.execute(query, (session['user_id'],)).fetchall()
     except Exception:
         recetas = []
