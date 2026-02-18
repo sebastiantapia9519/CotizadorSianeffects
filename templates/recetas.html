@@ -238,22 +238,18 @@
         lista.innerHTML = '';
 
         try {
-            const items = JSON.parse(receta.items || '[]');
+            // Ahora leemos 'ingredientes_reales' que armamos en Python
+            const items = JSON.parse(receta.ingredientes_reales || '[]');
 
             if (items.length === 0) {
                 lista.innerHTML = '<li class="text-muted fst-italic text-center py-2">No hay ingredientes registrados.</li>';
             } else {
                 items.forEach(item => {
-                    // VAMOS A DEBUGEAR: Esto imprimirá en la consola qué trae exactamente tu JSON
-                    console.log("Insumo detectado:", item);
-
-                    // Buscamos el nombre en las llaves más comunes. Si no viene, mostramos el ID.
-                    const nombreInsumo = item.nombre || item.descripcion || item.material || item.name || `Material ID: ${item.id || '?'}`;
-
+                    // Como Python ya nos mandó 'item.nombre' y 'item.cantidad', solo lo imprimimos
                     lista.innerHTML += `
                     <li class="d-flex align-items-center mb-2 text-secondary" style="font-size: 0.9rem;">
                         <i class="fas fa-circle me-2" style="font-size: 0.35rem; color: var(--sian-teal);"></i>
-                        <span class="text-dark fw-bold me-1">${item.cantidad} x</span> ${nombreInsumo}
+                        <span class="text-dark fw-bold me-1">${item.cantidad} x</span> ${item.nombre}
                     </li>`;
                 });
             }

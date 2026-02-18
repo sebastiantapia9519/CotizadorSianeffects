@@ -192,15 +192,39 @@ def recetas():
             conn.close()
             return f"Error al actualizar: {e}"
 
-    try:
-        query = """SELECT p.id, p.nombre, p.items, COUNT(pd.id) as num_materiales FROM productos p LEFT JOIN producto_detalles pd ON p.id=pd.producto_id WHERE p.user_id=? GROUP BY p.id"""
-        recetas = conn.execute(query, (session['user_id'],)).fetchall()
-    except Exception:
-        recetas = []
+   try:
+        # 1. Consulta principal (ya no necesitamos traer p.items)
+        query = """SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
+                   FROM productos p 
+                   LEFT JOIN producto_detalles pd ON p.id=pd.producto_id 
+                   WHERE p.user_id=? 
+                   GROUP BY p.id"""
+        recetas_db = conn.execute(query, (session['user_id'],)).fetchall()
+        
+        recetas_lista = []
+        for r in recetas_db:
+            receta_dict = dict(r)
+            
+            # 2. Buscamos los nombres reales cruzando detalles con la tabla materiales
+            detalles = conn.execute("""
+                SELECT m.nombre, pd.cantidad 
+                FROM producto_detalles pd
+                JOIN materiales m ON pd.material_id = m.id
+                WHERE pd.producto_id = ?
+            """, (receta_dict['id'],)).fetchall()
+            
+            # 3. Empaquetamos el resultado en un nuevo JSON llamado 'ingredientes_reales'
+            receta_dict['ingredientes_reales'] = json.dumps([dict(d) for d in detalles])
+            recetas_lista.append(receta_dict)
+            
+    except Exception as e:
+        print(f"Error al cargar recetas: {e}")
+        recetas_lista = []
+        
     conn.close()
-    recetas_lista = [dict(row) for row in recetas]
     return render_template('recetas.html', recetas=recetas_lista)
 
+    
 @inventory_bp.route('/guardar_receta', methods=['POST'])
 @login_required
 def guardar_receta():
