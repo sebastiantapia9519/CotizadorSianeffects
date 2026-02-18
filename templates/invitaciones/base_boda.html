@@ -529,49 +529,42 @@
 }
 
 
-/* Tooltip Premium SianEffects - Efecto Cristal / Editorial */
-        .tooltip-wrapper {
+/* Tooltip Premium Unificado (Mayúsculas Elegantes) */
+        .tooltip-sian {
             position: absolute;
-            top: -70px; /* Un poco más de aire */
+            bottom: calc(100% + 15px); /* Siempre se coloca arribita del elemento */
             left: 50%;
-            transform: translateX(-50%);
-            z-index: 10;
-            filter: drop-shadow(0 6px 12px rgba(0,0,0,0.1)); /* Sombra más suave y expandida */
-        }
-
-        .tooltip-click {
-            background: rgba(255, 255, 255, 0.85); /* Blanco translúcido */
-            backdrop-filter: blur(8px); /* Magia: Efecto cristal difuminando el fondo */
-            -webkit-backdrop-filter: blur(8px); /* Soporte para Safari/iPhone */
-            color: #b8912d !important; /* Dorado elegante */
+            background: #ffffff;
+            color: #b8912d !important; /* Dorado fijo */
             padding: 8px 24px;
             border-radius: 30px;
-            border: 1px solid rgba(212, 175, 55, 0.3); /* Borde de hilo de oro súper sutil */
-            font-size: 0.75rem; /* Letra un poco más pequeña pero... */
+            font-family: var(--font-body), sans-serif; /* Usamos la fuente limpia, se lee mejor en mayúsculas */
+            font-size: 0.8rem; /* Letra un poco más pequeña... */
+            font-weight: bold;
             text-transform: uppercase; /* ...en mayúsculas */
-            letter-spacing: 3px; /* ...y muy espaciada (Look de marca de lujo) */
-            font-weight: 700;
-            font-family: var(--font-body), sans-serif; /* Usamos la fuente limpia en vez de la cursiva para que lea mejor en mayúsculas */
-            position: relative;
-            animation: float-premium 3s ease-in-out infinite;
+            letter-spacing: 3px; /* ...y con este espaciado elegante */
             white-space: nowrap;
+            pointer-events: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.08); /* Sombra suave */
+            border: 1px solid rgba(212, 175, 55, 0.3); /* Borde dorado sutil para que destaque en fondo blanco */
+            animation: float-tooltip 2s infinite ease-in-out;
+            z-index: 10;
         }
 
-        .tooltip-click::after {
+        .tooltip-sian::after {
             content: '';
             position: absolute;
-            bottom: -6px;
+            top: 100%; /* El pico va hacia abajo */
             left: 50%;
             transform: translateX(-50%);
             border-width: 6px 6px 0;
             border-style: solid;
-            border-color: rgba(255, 255, 255, 0.9) transparent transparent transparent; 
+            border-color: #ffffff transparent transparent transparent;
         }
 
-        /* Animación más sofisticada: flota y respira (zoom microscópico) */
-        @keyframes float-premium {
-            0%, 100% { transform: translateY(0) scale(1); }
-            50% { transform: translateY(-5px) scale(1.02); }
+        @keyframes float-tooltip {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-6px); }
         }
 
         /* Contenedor animado de Pulso (Para las iniciales gigantes) */
@@ -677,18 +670,14 @@
             <div class="sobre-solapa" id="solapa-sobre"></div>
         
             <div class="sello-cera" onclick="entrarSitio('sobre')">
-                <div class="tooltip-wrapper">
-                    <div class="tooltip-click">Click Aquí</div>
-                </div>
+                <div class="tooltip-sian">Click Aquí</div>
                 <span>{{ datos.get('iniciales') or 'S&A' }}</span>
             </div>
         </div>
 
         {% elif inv['estilo_apertura'] == 'iniciales' %}
-        <div class="pulso-apertura" onclick="entrarSitio('iniciales')">
-            <div class="tooltip-wrapper" style="position: relative; top: 0; margin-bottom: 10px;">
-                <div class="tooltip-click">Click Aquí</div>
-            </div>
+        <div class="pulso-apertura" onclick="entrarSitio('iniciales')" style="position: relative;">
+            <div class="tooltip-sian">Click Aquí</div>
             <h1 class="iniciales-gigantes">{{ datos.get('iniciales') or 'S&A' }}</h1>
         </div>
 
