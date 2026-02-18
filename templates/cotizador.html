@@ -127,9 +127,10 @@
 <input type="hidden" id="ventaIdEdicion" value="">
 
 <select id="masterSelect" class="d-none">
-    <option value="0" data-precio="0">-- Seleccionar --</option>
+    <option value="0" data-precio="0" data-unidad="pza">-- Seleccionar --</option>
     {% for mat in materiales %}
-    <option value="{{ mat['id'] }}" data-precio="{{ mat['precio_unitario'] }}">{{ mat['nombre'] }}</option>
+    <option value="{{ mat['id'] }}" data-precio="{{ mat['precio_unitario'] }}"
+        data-unidad="{{ mat['unidad_medida']|default('pieza') }}">{{ mat['nombre'] }}</option>
     {% endfor %}
 </select>
 
@@ -638,7 +639,9 @@
         </div>
         <div class="col-4 col-md-2">
             <label class="small text-muted d-md-none fw-bold">Cant.</label>
-            <input type="number" class="form-control form-control-sm text-center input-cantidad" value="${cantidad}" oninput="calcularFila(this)">
+            <div                     nput-group input-group-sm">
+                <input typ                    r" class="form-control text-cent                        tidad" value="${cantidad}" oninput="calcularFila(this)">                             <span class="input-group-text bg-light text-muted px-1 label-unidad" style="fon                    0.7                 font-weight: 600;">pza</span>
+            </div>
         </div>
         <div class="col-4 col-md-2">
             <label class="small text-muted d-md-none fw-bold">Total</label>
@@ -668,7 +671,17 @@
         const row = sel.closest('.item-row');
         const opcion = sel.options[sel.selectedIndex];
         const precio = parseFloat(opcion.getAttribute('data-precio')) || 0;
+        const unidad = opcion.getAttribute('data-unidad') || 'pieza'; // <-- Leemos la unidad de BD
+        
         row.querySelector('.input-precio').value = precio.toFixed(2);
+        
+        // Actualizamos el textito al lado del input de cantidad
+        const labelUnidad = row.querySelector('.label-unidad');
+        if (labelUnidad) {
+            // Si es 'pieza', lo abreviamos a 'pza' para que no estorbe visualmente
+            labelUnidad.innerText = unidad === 'pieza' ? 'pza' : unidad;
+        }
+        
         calcularFila(sel);
     }
 
