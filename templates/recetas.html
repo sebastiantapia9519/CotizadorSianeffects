@@ -233,25 +233,27 @@
         }
     }
     function verDetallesReceta(receta) {
-        // Ponemos el nombre de la receta como título secundario
         document.getElementById('detallesNombreReceta').textContent = receta.nombre;
         const lista = document.getElementById('listaIngredientes');
-        lista.innerHTML = ''; // Limpiamos la lista anterior
+        lista.innerHTML = '';
 
         try {
-            // La base de datos nos regresa 'items' como un string JSON
             const items = JSON.parse(receta.items || '[]');
 
             if (items.length === 0) {
                 lista.innerHTML = '<li class="text-muted fst-italic text-center py-2">No hay ingredientes registrados.</li>';
             } else {
-                // Recorremos los ingredientes y armamos la lista con el mismo estilo de tu imagen de "Cliente General"
                 items.forEach(item => {
-                    // Suponiendo que tu JSON guarda 'cantidad' y 'nombre' del material
+                    // VAMOS A DEBUGEAR: Esto imprimirá en la consola qué trae exactamente tu JSON
+                    console.log("Insumo detectado:", item);
+
+                    // Buscamos el nombre en las llaves más comunes. Si no viene, mostramos el ID.
+                    const nombreInsumo = item.nombre || item.descripcion || item.material || item.name || `Material ID: ${item.id || '?'}`;
+
                     lista.innerHTML += `
                     <li class="d-flex align-items-center mb-2 text-secondary" style="font-size: 0.9rem;">
                         <i class="fas fa-circle me-2" style="font-size: 0.35rem; color: var(--sian-teal);"></i>
-                        <span class="text-dark fw-bold me-1">${item.cantidad} x</span> ${item.nombre}
+                        <span class="text-dark fw-bold me-1">${item.cantidad} x</span> ${nombreInsumo}
                     </li>`;
                 });
             }
@@ -260,7 +262,6 @@
             lista.innerHTML = '<li class="text-danger">No se pudieron cargar los detalles.</li>';
         }
 
-        // Mostramos el modal
         new bootstrap.Modal(document.getElementById('modalDetallesReceta')).show();
     }
 
