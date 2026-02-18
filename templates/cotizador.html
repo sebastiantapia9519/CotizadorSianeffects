@@ -970,9 +970,16 @@
             .catch(error => alert("Error: " + error));
     }
 
-    function cargarProductoDB() {
-        const id = document.getElementById('selectCargarProducto').value;
+    function cargarProductoDB(idOpcional = null) {
+        // Toma el ID que pasamos por la URL, o si no hay, toma el del Select
+        const id = idOpcional || document.getElementById('selectCargarProducto').value;
         if (!id) return;
+
+        // Si venimos de la URL, actualizamos el Select visualmente para que coincida
+        if (idOpcional) {
+            document.getElementById('selectCargarProducto').value = idOpcional;
+        }
+
         limpiarMateriales();
         document.getElementById('nombreProductoActual').value = '';
         document.getElementById('cantidadParaCarrito').value = 1;
@@ -1137,19 +1144,24 @@
     document.addEventListener('DOMContentLoaded', () => agregarFila());
 
     // Detectar si venimos del historial para cargar una cotización
+    // Detectar si venimos del historial o de recetas para cargar datos
     document.addEventListener('DOMContentLoaded', () => {
-        // 1. Verificar si hay un ID en la URL para cargar
         const urlParams = new URLSearchParams(window.location.search);
-        const idACargar = urlParams.get('cargar_cotizacion');
+        
+        const idCotizacion = urlParams.get('cargar_cotizacion');
+        const idReceta = urlParams.get('cargar_receta');
 
-        if (idACargar) {
-            // Ejecutamos la carga inmediata
-            cargarCotizacion(idACargar);
-        }
-
-        // 2. Siempre agregar al menos una fila vacía al iniciar para que no se vea pelón
-        if (document.querySelectorAll('.item-row').length === 0) {
-            agregarFila();
+        if (idCotizacion) {
+            // Venimos del Historial de Ventas
+            cargarCotizacion(idCotizacion);
+        } else if (idReceta) {
+            // Venimos del Catálogo de Recetas ¡Aquí lo procesamos!
+            cargarProductoDB(idReceta);
+        } else {
+            // No traemos nada en la URL, agregamos la fila vacía por defecto
+            if (document.querySelectorAll('.item-row').length === 0) {
+                agregarFila();
+            }
         }
     });
 
