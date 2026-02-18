@@ -332,6 +332,7 @@ def init_db():
         bloquear_edicion_invitados BOOLEAN DEFAULT 0,
         template_id TEXT DEFAULT 'clasico',
         tiene_modulo_invitados BOOLEAN DEFAULT 0,
+        estilo_apertura TEXT DEFAULT 'simple',
         codigo_acceso_cliente TEXT UNIQUE,
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );

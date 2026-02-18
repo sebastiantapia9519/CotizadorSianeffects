@@ -65,6 +65,7 @@ def crear_invitacion():
             tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
             codigo_cliente = generar_codigo_cliente() 
             bloquear_edicion = 1 if 'bloquear_edicion_invitados' in request.form else 0
+            estilo_apertura = request.form.get('estilo_apertura', 'simple')
             
             # --- PROCESAR LINKS DE TIENDAS ---
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -95,6 +96,7 @@ def crear_invitacion():
             # --- 2. DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
+                "iniciales": request.form.get('iniciales'),
                 "frase": request.form.get('frase'),
                 "maps_misa": request.form.get('maps_misa'),
                 "maps_fiesta": request.form.get('maps_fiesta'),
@@ -122,21 +124,22 @@ def crear_invitacion():
                     url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria")
                     urls_galeria.append(url)
 
-            # --- INSERT ---
+
+           # --- INSERT ---
             conn.execute("""
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
                 fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
                 dress_code, hospedaje_json, album_url, camara_premium, tiene_modulo_invitados, codigo_acceso_cliente, color_acentos,
-                padres_novia, padres_novio, padrinos, frase_final, bloquear_edicion_invitados,template_id) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                padres_novia, padres_novio, padrinos, frase_final, bloquear_edicion_invitados, template_id, estilo_apertura) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 slug, json.dumps(request.form.getlist('orden_items[]')), musica_id or None, 
                 request.form.get('fecha_evento'), request.form.get('vigencia'), json.dumps(datos_cliente), 
                 json.dumps(urls_galeria), url_portada, request.form.get('estilo_fuente'), request.form.get('color_fondo'), 
                 url_fondo, json.dumps(mesas_regalos), dress_code, json.dumps(hoteles_sugeridos), album_url, 
                 camara_premium, tiene_modulo_invitados, codigo_cliente, color_acentos,
-                padres_novia, padres_novio, padrinos, frase_final, bloquear_edicion ,template_id
+                padres_novia, padres_novio, padrinos, frase_final, bloquear_edicion, template_id, estilo_apertura
             ))
             conn.commit()
             flash("Invitación Premium Creada ✨", "success")
@@ -272,6 +275,7 @@ def editar_invitacion(id):
             template_id = request.form.get('template_id')
             tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
             bloquear_edicion = 1 if 'bloquear_edicion_invitados' in request.form else 0
+            estilo_apertura = request.form.get('estilo_apertura', 'simple')
             
             # OJO AQUI ESTA LA CORRECCIÓN: Primero traemos inv_old
             inv_old = conn.execute("SELECT foto_portada_url, fotos_json, url_fondo, codigo_acceso_cliente FROM invitaciones WHERE id=?", (id,)).fetchone()
@@ -294,6 +298,7 @@ def editar_invitacion(id):
             # --- CREAR EL DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
+                "iniciales": request.form.get('iniciales'),
                 "frase": request.form.get('frase'),
                 "maps_misa": request.form.get('maps_misa'),
                 "maps_fiesta": request.form.get('maps_fiesta'),
@@ -337,7 +342,7 @@ def editar_invitacion(id):
                 fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?,
                 dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?,
                 padres_novia=?, padres_novio=?, padrinos=?, frase_final=?, template_id=?,
-                tiene_modulo_invitados=?, codigo_acceso_cliente=?, bloquear_edicion_invitados=?
+                tiene_modulo_invitados=?, codigo_acceso_cliente=?, bloquear_edicion_invitados=?, estilo_apertura=?
                 WHERE id=?
             """, (
                 slug, 
@@ -364,7 +369,8 @@ def editar_invitacion(id):
                 template_id,
                 tiene_modulo_invitados,
                 codigo_cliente,
-                bloquear_edicion,        
+                bloquear_edicion,
+                estilo_apertura,        
                 id               
             ))
             conn.commit()

@@ -527,16 +527,149 @@
 .premium-card:hover .anim-copas {
   animation-duration: 1.5s;
 }
+
+
+/* Tooltip flotante "Click Aquí" */
+        .tooltip-click {
+            background: var(--color-oro);
+            color: var(--bg-color);
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-bottom: 15px;
+            position: relative;
+            animation: float 2s ease-in-out infinite;
+            font-weight: bold;
+        }
+        .tooltip-click::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 5px 5px 0;
+            border-style: solid;
+            border-color: var(--color-oro) transparent transparent transparent;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+
+        /* Contenedor animado de Pulso */
+        .pulso-apertura {
+            animation: pulse-apertura 2s infinite;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        @keyframes pulse-apertura {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        /* --- ESTILO 2: EL SOBRE --- */
+        .pantalla-sobre {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--card-bg); /* Fondo general detrás del sobre */
+        }
+        
+        /* Solapa superior del sobre (el triángulo) */
+        .sobre-solapa {
+            position: absolute;
+            top: 0; 
+            left: 0; 
+            width: 100%; 
+            height: 50vh;
+            background-color: #eaddcb; /* Un tono crema para simular papel */
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+            transform-origin: top;
+            transition: transform 0.8s ease-in-out;
+            z-index: 3;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .sobre-fondo-trasero {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: #d6c6b2; /* Tono más oscuro para el interior */
+            z-index: 1;
+        }
+
+        /* Sello de Cera */
+        .sello-cera {
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, #d4af37, #aa8529);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--font-title);
+            font-size: 1.8rem;
+            color: #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.3);
+            border: 2px solid #b8912d;
+            position: absolute;
+            top: 50vh;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 4;
+            transition: opacity 0.3s ease;
+        }
+
+        /* Clases de animación al abrir el sobre */
+        .sobre-abierto .sobre-solapa {
+            transform: rotateX(180deg);
+        }
+        .sobre-abierto .sello-cera {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        /* --- ESTILO 3: INICIALES DESVANECIDAS --- */
+        .iniciales-gigantes {
+            font-family: var(--font-title);
+            font-size: 6rem;
+            color: var(--color-oro);
+            margin: 0;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 
 <body>
 
     <div id="welcome-screen">
-        <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-oro);">Nuestra Boda
-        </p>
+        {% if inv.get('estilo_apertura') == 'sobre' %}
+        <div class="pantalla-sobre">
+            <div class="sobre-fondo-trasero"></div>
+            <div class="sobre-solapa" id="solapa-sobre"></div>
+        
+            <div class="sello-cera pulso-apertura" onclick="entrarSitio('sobre')">
+                <span class="tooltip-click" style="position: absolute; top: -50px;">Click Aquí</span>
+                {{ datos.get('iniciales', 'S&A') }}
+            </div>
+        </div>
+        
+        {% elif inv.get('estilo_apertura') == 'iniciales' %}
+        <div class="pulso-apertura" onclick="entrarSitio('iniciales')">
+            <span class="tooltip-click">Click Aquí</span>
+            <h1 class="iniciales-gigantes">{{ datos.get('iniciales', 'S&A') }}</h1>
+        </div>
+        
+        {% else %}
+        <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-oro);">Nuestra Boda</p>
         <h1 style="font-size: 4rem; margin: 15px 0; text-align: center;">{{ datos['novios'] }}</h1>
-        <button class="btn-entrar mt-4" onclick="entrarSitio()">Abrir Invitación</button>
+            <button class="btn-entrar mt-4" onclick="entrarSitio('simple')">Abrir Invitación</button>
+            {% endif %}
+
     </div>
 
     {% if inv['musica_url'] %}
@@ -899,34 +1032,48 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <script>
-        // Efecto de entrada y Música
-        function entrarSitio() {
+        // Efecto de entrada dinámico
+        function entrarSitio(estilo = 'simple') {
             const welcome = document.getElementById('welcome-screen');
             const content = document.getElementById('main-content');
             const audio = document.getElementById('bgMusic');
 
-            // 1. Ocultamos la bienvenida
-            welcome.style.opacity = '0';
-            setTimeout(() => { welcome.style.visibility = 'hidden'; }, 800);
+            if (estilo === 'sobre') {
+                // 1. Añadimos la clase para girar la solapa y ocultar el sello
+                welcome.classList.add('sobre-abierto');
+                
+                // 2. Esperamos a que la solapa termine de girar (800ms) para desvanecer el div principal
+                setTimeout(() => {
+                    welcome.style.opacity = '0';
+                    setTimeout(() => { welcome.style.visibility = 'hidden'; }, 800);
+                    mostrarInvitacion(content);
+                }, 800);
+                
+            } else {
+                // Comportamiento para 'simple' e 'iniciales' (Fade out normal)
+                welcome.style.opacity = '0';
+                setTimeout(() => { welcome.style.visibility = 'hidden'; }, 800);
+                mostrarInvitacion(content);
+            }
 
-            // 2. Mostramos el contenido principal
+            if (audio) { audio.play().catch(e => console.log("Autoplay bloqueado")); }
+        }
+
+        // Separo la lógica de renderizado para no repetir código
+        function mostrarInvitacion(content) {
             content.style.visibility = 'visible';
             content.style.opacity = '1';
 
-            // 3. ¡AQUÍ ES LA MAGIA! Iniciamos Swiper y AOS un instante DESPUÉS de que ya es visible
+            // Iniciamos Swiper y AOS un instante DESPUÉS de que es visible
             setTimeout(() => {
                 var swiper = new Swiper(".mySwiper", {
-                    effect: "cards",  // Usamos el efecto apilado de tarjetas
-                    grabCursor: true, // Para que salga la manita
-                    observer: true,   // Seguros de vida contra contenedores ocultos
+                    effect: "cards",
+                    grabCursor: true,
+                    observer: true,
                     observeParents: true,
-                    // Nota: En modo 'cards', no se recomiendan 'loop' ni 'slidesPerView'
                 });
-
                 AOS.init({ duration: 1200, once: true });
             }, 200);
-
-            if (audio) { audio.play().catch(e => console.log("Autoplay bloqueado")); }
         }
 
         function toggleMusic() {

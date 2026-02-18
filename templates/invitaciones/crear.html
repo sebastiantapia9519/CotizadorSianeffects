@@ -78,6 +78,15 @@
                         </div>
 
                         <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted">Estilo de Apertura</label>
+                            <select name="estilo_apertura" class="form-select border-primary">
+                                <option value="simple" {% if inv and inv.get('estilo_apertura') == 'simple' %}selected{% endif %}>✨ Clásico (Directo)</option>
+                                <option value="sobre" {% if inv and inv.get('estilo_apertura') == 'sobre' %}selected{% endif %}>✉️ Sobre Interactivo</option>
+                                <option value="iniciales" {% if inv and inv.get('estilo_apertura') == 'iniciales' %}selected{% endif %}>🔠 Iniciales Desvanecidas</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Ahorro de Tiempo: Plantilla</label>
                             <select name="template_id" class="form-select border-primary" onchange="aplicarPlantilla(this.value)">
                                 <option value="clasico" {{ 'selected' if inv and inv['template_id']=='clasico' else '' }}>✨ Clásico (Dorado)</option>
@@ -183,21 +192,20 @@
                             </div>
                             <input type="hidden" name="orden_items[]" value="hero">
                             <div class="row g-2">
-                                <div class="col-md-6">
+                                <div class="col-md-5">
                                     <input type="text" name="nombres_novios" class="form-control form-control-sm"
                                         placeholder="Nombres (Ej: Diana & Sebastián)" value="{{ datos.get('novios', '') if datos else '' }}" required>
                                 </div>
-                                <div class="col-md-6">
+                                <div class="col-md-4">
                                     <input type="text" name="frase" class="form-control form-control-sm" placeholder="Frase (Ej: ¡Nos casamos!)"
                                         value="{{ datos.get('frase', '') if datos else '' }}">
                                 </div>
-                                <div class="col-12 mt-2">
-                                    <input type="file" name="foto_portada" class="form-control form-control-sm" accept="image/*" {% if not edit_mode
-                                        %}required{% endif %}>
-                                    </div>
-                                    </div>
-                                    </div>
-                                    </div>
+                                <div class="col-md-3">
+                                    <input type="text" name="iniciales" class="form-control form-control-sm text-center" 
+                                        placeholder="Iniciales (D&S)" value="{{ datos.get('iniciales', '') if datos else '' }}" maxlength="5">
+                                </div>
+                            </div>
+                        </div>
 
                     <div class="card draggable-item shadow-sm border-warning" data-bloque="countdown">
                         <div class="card-body py-2 d-flex justify-content-between">
