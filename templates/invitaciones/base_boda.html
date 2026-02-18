@@ -483,6 +483,42 @@
             text-transform: uppercase;
             letter-spacing: 1px;
         }
+
+        /* Animación para la Iglesia (Campanadas) */
+@keyframes campana {
+  0% { transform: rotate(0); }
+  20% { transform: rotate(15deg); }
+  40% { transform: rotate(-15deg); }
+  60% { transform: rotate(10deg); }
+  80% { transform: rotate(-10deg); }
+  100% { transform: rotate(0); }
+}
+
+.anim-iglesia {
+  display: inline-block;
+  animation: campana 3s ease-in-out infinite;
+  transform-origin: top center;
+}
+
+/* Animación para las Copas (Brindis) */
+@keyframes brindis {
+  0%, 100% { transform: scale(1) rotate(0); }
+  50% { transform: scale(1.2) rotate(5deg); }
+}
+
+.anim-copas {
+  display: inline-block;
+  animation: brindis 2s ease-in-out infinite;
+}
+
+/* Efecto Hover: Cuando pasas el mouse o tocas, se acelera un poquito */
+.premium-card:hover .anim-iglesia {
+  animation-duration: 1s;
+}
+
+.premium-card:hover .anim-copas {
+  animation-duration: 0.8s;
+}
     </style>
 </head>
 
@@ -550,17 +586,20 @@
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Ubicaciones</h2>
             <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
                 {% if datos['maps_misa'] %}
-                <div class="premium-card"
-                    style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
-                    <i class="fas fa-church fa-2x mb-2" style="color: var(--color-oro);"></i>
+                <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                    <span class="anim-iglesia">
+                        <i class="fas fa-church fa-2x mb-2" style="color: var(--color-oro);"></i>
+                    </span>
                     <h3 style="margin-bottom: 15px;">Ceremonia</h3>
                     <a href="{{ datos['maps_misa'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
                 </div>
                 {% endif %}
+
                 {% if datos['maps_fiesta'] %}
-                <div class="premium-card"
-                    style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
-                    <i class="fas fa-glass-cheers fa-2x mb-2" style="color: var(--color-oro);"></i>
+                <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                    <span class="anim-copas">
+                        <i class="fas fa-glass-cheers fa-2x mb-2" style="color: var(--color-oro);"></i>
+                    </span>
                     <h3 style="margin-bottom: 15px;">Recepción</h3>
                     <a href="{{ datos['maps_fiesta'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
                 </div>

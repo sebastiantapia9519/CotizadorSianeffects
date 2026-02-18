@@ -143,17 +143,26 @@
                                 <tbody>
                                     {% for invitado in invitados %}
                                     <tr>
-                                        <td class="ps-4 fw-bold text-dark">
-                                            {{ invitado.nombre_familia }}
+                                        <td class="ps-4">
+                                            <div class="fw-bold text-dark">{{ invitado.nombre_familia }}</div>
                                             {% if invitado.telefono %}
-                                            <br><small class="text-muted fw-normal"><i
-                                                    class="fab fa-whatsapp text-success"></i> {{ invitado.telefono
-                                                }}</small>
+                                                <div class="mt-1">
+                                                    <a href="https://wa.me/{{ invitado.telefono|replace('+', '')|replace(' ', '') }}?text=¡Hola%20*{{ invitado.nombre_familia|urlencode }}*!%20💍%0A%0ANos%20encantaría%20que%20nos%20acompañen%20en%20nuestro%20gran%20día.%0A%0APueden%20ver%20toda%20la%20información%20y%20su%20pase%20de%20acceso%20aquí:%0A{{ (request.host_url + 'invitacion/' + inv.slug + '?pass=' + invitado.codigo_qr_unique)|urlencode }}"
+                                                        target="_blank" class="btn btn-sm btn-outline-success rounded-pill py-0 px-2" style="font-size: 0.75rem;">
+                                                        <i class="fab fa-whatsapp me-1"></i> Enviar Pase
+                                                    </a>
+                                                    <small class="text-muted ms-1" style="font-size: 0.7rem;">{{ invitado.telefono }}</small>
+                                                </div>
+                                                {% else %}
+                                                <small class="text-muted italic">Sin teléfono</small>
                                             {% endif %}
                                         </td>
                                         <td class="text-center">
-                                            <span class="badge bg-light text-dark border">{{ invitado.mesa if
-                                                invitado.mesa else '0' }}</span>
+                                            <div
+                                                style="width: 35px; height: 35px; line-height: 33px; border: 2px solid var(--bs-warning); color: #333; border-radius: 50%; margin: 0 auto; font-weight: bold; font-size: 0.9rem; background: white;">
+                                                {{ invitado.mesa if invitado.mesa and invitado.mesa != '0' else '—' }}
+                                            </div>
+                                            <small class="text-muted" style="font-size: 0.6rem; text-transform: uppercase;">Mesa</small>
                                         </td>
                                         <td class="text-center">
                                             {% if invitado.estado_asistencia == 'Confirmado' %}
