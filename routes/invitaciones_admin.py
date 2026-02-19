@@ -135,6 +135,9 @@ def crear_invitacion():
             orden_items = list(dict.fromkeys(orden_items))
 
             # si NO hay cámara, la quitamos del orden
+            if camara_premium and 'camara' not in orden_items:
+                orden_items.append('camara')
+
             if not camara_premium and 'camara' in orden_items:
                 orden_items.remove('camara')
 
@@ -339,6 +342,10 @@ def editar_invitacion(id):
                 orden_items = ['inicio', 'evento', 'galeria']
 
             orden_items = list(dict.fromkeys(orden_items))
+
+            # --- sincronizar camara premium con orden ---
+            if camara_premium and 'camara' not in orden_items:
+                orden_items.append('camara')
 
             if not camara_premium and 'camara' in orden_items:
                 orden_items.remove('camara')
