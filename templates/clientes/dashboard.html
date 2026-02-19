@@ -101,6 +101,17 @@
                             </div>
                             {% endfor %}
                         </div>
+
+                        {% set total_pages = (total_fotos // per_page) + (1 if total_fotos % per_page > 0 else 0) %}
+
+                        {% if page < total_pages %}
+                        <div class="text-center mt-4">
+                            <a href="{{ url_for('invitaciones_clientes.dashboard_cliente', page=page+1) }}"
+                            class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
+                                <i class="fas fa-images me-1"></i> Cargar más fotos
+                            </a>
+                        </div>
+                        {% endif %}
                         
                         {% else %}
                         <div class="text-center py-5">
@@ -113,16 +124,7 @@
                     </div>
                 </div>
             </div>
-            {% set total_pages = (total_fotos // per_page) + (1 if total_fotos % per_page > 0 else 0) %}
-
-            {% if page < total_pages %}
-            <div class="text-center mt-4">
-                <a href="{{ url_for('invitaciones_clientes.dashboard_cliente', page=page+1) }}"
-                class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
-                    <i class="fas fa-images me-1"></i> Cargar más fotos
-                </a>
-            </div>
-            {% endif %
+            
             {% endif %}
 
             {% if inv.tiene_modulo_invitados %}
