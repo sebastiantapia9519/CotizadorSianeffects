@@ -275,8 +275,41 @@
                                     Vestido corto)</option>
                                 <option value="Guayabera" {% if inv and inv['dress_code']=='Guayabera' %}selected{% endif %}>Guayabera / Playa</option>
                             </select>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item shadow-sm border-warning" data-bloque="no_ninos">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold text-warning">
+                                    <i class="fas fa-baby-slash me-2"></i> Evento sin niños
+                                </span>
+                                <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
+
+                            <input type="hidden" name="orden_items[]" value="no_ninos">
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input"
+                                    type="checkbox"
+                                    id="noNinos"
+                                    name="no_ninos"
+                                    value="1"
+                                    {% if datos and datos.get('no_ninos') %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold" for="noNinos">
+                                    Este evento es solo para adultos
+                                </label>
                             </div>
+
+                            <textarea name="mensaje_no_ninos"
+                                    class="form-control form-control-sm"
+                                    rows="2"
+                                    placeholder="Ej: Con cariño les pedimos celebrar solo adultos."
+                                    {% if not datos or not datos.get('no_ninos') %}disabled{% endif %}>
+                    {{ datos.get('mensaje_no_ninos','') if datos else '' }}</textarea>
+                        </div>
+                    </div>
+
 
                     <div class="card draggable-item shadow-sm border-success" data-bloque="regalos">
                         <div class="card-body">
@@ -308,8 +341,8 @@
                                 </div>
                             <button type="button" class="btn btn-light btn-sm w-100 border mt-1"
                                 onclick="agregarInput('container-links', 'nombre_tienda[]', 'link_tienda[]')">+ Agregar tienda</button>
-                            </div>
-                            </div>
+                        </div>
+                    </div>
 
                     <div class="card draggable-item shadow-sm border-primary" data-bloque="hospedaje">
                         <div class="card-body">
@@ -621,6 +654,18 @@
 
         syncEstado();
         gestionInvitados.addEventListener('change', syncEstado);
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const check = document.getElementById('noNinos');
+        const textarea = document.querySelector('textarea[name="mensaje_no_ninos"]');
+
+        function syncNoNinos() {
+            textarea.disabled = !check.checked;
+        }
+
+        syncNoNinos();
+        check.addEventListener('change', syncNoNinos);
     });
 
 

@@ -103,7 +103,9 @@ def crear_invitacion():
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
                 "info_transporte": request.form.get('info_transporte'),
-                "itinerario": itinerario  
+                "itinerario": itinerario,
+                "no_ninos": bool(request.form.get('no_ninos')),
+                "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip()  
             }
             
             # --- SUBIDA DE IMÁGENES ---
@@ -305,7 +307,9 @@ def editar_invitacion(id):
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
                 "info_transporte": request.form.get('info_transporte'),
-                "itinerario": itinerario
+                "itinerario": itinerario,
+                "no_ninos": bool(request.form.get('no_ninos')),
+                "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip()
             }
             
             # Mesas de regalos y Hoteles
