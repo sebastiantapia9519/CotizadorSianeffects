@@ -126,6 +126,18 @@ def crear_invitacion():
                     url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria")
                     urls_galeria.append(url)
 
+            orden_items = request.form.getlist('orden_items[]')
+
+            if not orden_items:
+                orden_items = ['inicio', 'evento', 'galeria']
+
+            # limpiar duplicados y basura
+            orden_items = list(dict.fromkeys(orden_items))
+
+            # si NO hay cámara, la quitamos del orden
+            if not camara_premium and 'camara' in orden_items:
+                orden_items.remove('camara')
+
 
            # --- INSERT ---
             conn.execute("""
@@ -136,7 +148,7 @@ def crear_invitacion():
                 padres_novia, padres_novio, padrinos, frase_final, bloquear_edicion_invitados, template_id, estilo_apertura) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
-                slug, json.dumps(request.form.getlist('orden_items[]')), musica_id or None, 
+                slug, json.dumps(orden_items), musica_id or None, 
                 request.form.get('fecha_evento'), request.form.get('vigencia'), json.dumps(datos_cliente), 
                 json.dumps(urls_galeria), url_portada, request.form.get('estilo_fuente'), request.form.get('color_fondo'), 
                 url_fondo, json.dumps(mesas_regalos), dress_code, json.dumps(hoteles_sugeridos), album_url, 
@@ -322,6 +334,14 @@ def editar_invitacion(id):
             hoteles_sugeridos = [{'nombre': n, 'url': l} for n, l in zip(nombres_hoteles, links_hoteles) if n and l]
 
             orden_items = request.form.getlist('orden_items[]')
+
+            if not orden_items:
+                orden_items = ['inicio', 'evento', 'galeria']
+
+            orden_items = list(dict.fromkeys(orden_items))
+
+            if not camara_premium and 'camara' in orden_items:
+                orden_items.remove('camara')
 
             # Procesar Fotos 
             foto_portada = request.files.get('foto_portada')
