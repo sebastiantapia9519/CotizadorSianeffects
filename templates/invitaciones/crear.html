@@ -29,6 +29,7 @@
 }
 
 #bloqueo-novios-wrapper {
+    margin-top: 8px;
     transition: all 0.25s ease;
 }
 </style>
@@ -184,7 +185,12 @@
                             </div>
                             <div id="bloqueo-novios-wrapper">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="bloquear_edicion">
+                                    <input class="form-check-input"
+                                        type="checkbox"
+                                        id="bloquear_edicion"
+                                        name="bloquear_edicion"
+                                        value="1"
+                                        {% if inv and inv['bloquear_edicion'] %}checked{% endif %}>
                                     <label class="form-check-label text-danger fw-semibold">
                                         Bloquear edición a los novios
                                     </label>
@@ -600,25 +606,23 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const gestionInvitados = document.getElementById('gestion_invitados');
+        const gestionInvitados = document.getElementById('moduloInvitados');
         const bloqueoWrapper = document.getElementById('bloqueo-novios-wrapper');
         const bloqueoInput = document.getElementById('bloquear_edicion');
 
         function syncEstado() {
             if (!gestionInvitados.checked) {
-                bloqueoInput.checked = false;      // fuerza OFF
+                bloqueoInput.checked = false;
                 bloqueoWrapper.style.display = 'none';
             } else {
                 bloqueoWrapper.style.display = 'block';
             }
         }
 
-        // Estado inicial al cargar
         syncEstado();
-
-        // Cambio en vivo
         gestionInvitados.addEventListener('change', syncEstado);
     });
+
 
 </script>
 {% endblock %}
