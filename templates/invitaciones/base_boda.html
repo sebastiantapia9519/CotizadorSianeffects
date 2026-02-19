@@ -529,43 +529,46 @@
 }
 
 
-/* Tooltip Premium Definitivo (Universal) */
+/* Tooltip Premium Definitivo (Anti-Bugs) */
         .tooltip-sian {
             position: absolute;
             bottom: calc(100% + 15px);
             left: 50%;
             
-            /* Colores fijos: Blanco puro y texto oro */
-            background-color: #ffffff !important; 
-            color: var(--color-oro, #D4AF37) !important;
+            background-color: #ffffff; 
+            color: var(--color-oro) !important;
             
             padding: 8px 24px;
             border-radius: 30px;
             font-family: var(--font-body), sans-serif;
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             font-weight: bold;
             text-transform: uppercase;
             letter-spacing: 3px;
             white-space: nowrap;
             pointer-events: none;
-            border: none !important; /* Sin bordes problemáticos */
             
-            /* LA MAGIA: Esta sombra envuelve tanto la caja como el piquito, haciéndolo visible incluso en fondos 100% blancos */
-            filter: drop-shadow(0 5px 12px rgba(0, 0, 0, 0.15));
+            /* Sombra suave y borde mínimo para que se separe de los fondos blancos */
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid rgba(0, 0, 0, 0.04);
+            
             animation: float-tooltip 2.5s infinite ease-in-out;
             z-index: 10;
         }
 
-        /* Un solo piquito, simple y blanco */
+        /* El piquito: un cuadrado rotado 45 grados (CERO bordes transparentes) */
         .tooltip-sian::after {
             content: '';
             position: absolute;
-            top: 100%;
-            left: 50%;
-            transform: translateX(-50%);
-            border-width: 7px 7px 0;
-            border-style: solid;
-            border-color: #ffffff transparent transparent transparent !important;
+            bottom: -5px; 
+            left: calc(50% - 6px);
+            width: 12px;
+            height: 12px;
+            background-color: #ffffff;
+            /* Solo le ponemos borde abajo y a la derecha para que haga la punta */
+            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+            border-right: 1px solid rgba(0, 0, 0, 0.04);
+            transform: rotate(45deg);
         }
 
         @keyframes float-tooltip {
@@ -675,16 +678,16 @@
             <div class="sobre-fondo-trasero"></div>
             <div class="sobre-solapa" id="solapa-sobre"></div>
         
-            <div class="sello-cera" onclick="entrarSitio('sobre')">
+            <div class="sello-cera pulso-apertura" onclick="entrarSitio('sobre')">
                 <div class="tooltip-sian">Click Aquí</div>
-                <span>{{ datos.get('iniciales') or 'S&A' }}</span>
+                <span>{{ datos.get('iniciales') }}</span>
             </div>
         </div>
 
         {% elif inv['estilo_apertura'] == 'iniciales' %}
         <div class="pulso-apertura" onclick="entrarSitio('iniciales')" style="position: relative;">
             <div class="tooltip-sian">Click Aquí</div>
-            <h1 class="iniciales-gigantes">{{ datos.get('iniciales') or 'S&A' }}</h1>
+            <h1 class="iniciales-gigantes">{{ datos.get('iniciales') }}</h1>
         </div>
 
         {% else %}
