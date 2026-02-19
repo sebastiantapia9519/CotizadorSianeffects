@@ -12,122 +12,52 @@
 
     <style>
         /* 1. FUENTES DINÁMICAS (¡Ojo, no separar las llaves de los porcentajes!) */
-            {
-            % if inv['estilo_fuente']=='clasico' %
-        }
+            {% if inv['estilo_fuente'] == 'clasico' %}
+            @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+            {% set font_title = "'Playfair Display', serif" %}
+            {% set font_body = "'Lato', sans-serif" %}
+            {% set color_oro_default = '#D4AF37' %}
 
-        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+            {% elif inv['estilo_fuente'] == 'romantico' %}
+            @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
+            {% set font_title = "'Great Vibes', cursive" %}
+            {% set font_body = "'Montserrat', sans-serif" %}
+            {% set color_oro_default = '#d48b9b' %}
 
-        :root {
-            --font-title: 'Playfair Display', serif;
-            --font-body: 'Lato', sans-serif;
-            --color-oro: #D4AF37;
-        }
+            {% elif inv['estilo_fuente'] == 'moderno' %}
+            @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
+            {% set font_title = "'Oswald', sans-serif" %}
+            {% set font_body = "'Roboto', sans-serif" %}
+            {% set color_oro_default = '#a89f91' %}
 
-            {
-            % elif inv['estilo_fuente']=='romantico' %
-        }
+            {% elif inv['estilo_fuente'] == 'minimal' %}
+            @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
+            {% set font_title = "'Cinzel', serif" %}
+            {% set font_body = "'Raleway', sans-serif" %}
+            {% set color_oro_default = '#8c8c8c' %}
 
-        @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
+            {% elif inv['estilo_fuente'] == 'botanico' %}
+            @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
+            {% set font_title = "'Cormorant', serif" %}
+            {% set font_body = "'Proza Libre', sans-serif" %}
+            {% set color_oro_default = '#8f9779' %}
 
-        :root {
-            --font-title: 'Great Vibes', cursive;
-            --font-body: 'Montserrat', sans-serif;
-            --color-oro: #d48b9b;
-        }
+            {% else %}
+            @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+            {% set font_title = "'Playfair Display', serif" %}
+            {% set font_body = "'Lato', sans-serif" %}
+            {% set color_oro_default = '#D4AF37' %}
+            {% endif %}
 
-            {
-            % elif inv['estilo_fuente']=='moderno' %
-        }
-
-        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
-
-        :root {
-            --font-title: 'Oswald', sans-serif;
-            --font-body: 'Roboto', sans-serif;
-            --color-oro: #a89f91;
-        }
-
-            {
-            % elif inv['estilo_fuente']=='minimal' %
-        }
-
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
-
-        :root {
-            --font-title: 'Cinzel', serif;
-            --font-body: 'Raleway', sans-serif;
-            --color-oro: #8c8c8c;
-        }
-
-            {
-            % elif inv['estilo_fuente']=='botanico' %
-        }
-
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
-
-        :root {
-            --font-title: 'Cormorant', serif;
-            --font-body: 'Proza Libre', sans-serif;
-            --color-oro: #8f9779;
-        }
-
-            {
-            % else %
-        }
-
-        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-
-        :root {
-            --font-title: 'Playfair Display', serif;
-            --font-body: 'Lato', sans-serif;
-            --color-oro: #D4AF37;
-        }
-
-            {
-            % endif %
-        }
-
-        /* 2. VARIABLES INTELIGENTES DE COLOR */
-        :root {
-
-            /* Prioridad: 1. Color elegido en panel, 2. Color por estilo, 3. Dorado default */
-                {
-                % set color_pro=inv['color_acentos'] if inv['color_acentos'] else '#D4AF37' %
+            :root {
+                --font-title: {{ font_title }};
+                --font-body: {{ font_body }};
+                --color-oro: {{ inv['color_acentos'] if inv['color_acentos'] else color_oro_default }};
+                --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
+                --text-color: {{ inv['color_fondo']|color_contraste }};
+                --card-bg: {{ inv['color_fondo']|fondo_tarjeta }};
             }
 
-            --color-oro: {
-                    {
-                    color_pro
-                }
-            }
-
-            ;
-
-            --bg-color: {
-                    {
-                    inv['color_fondo']|default('#fdfbf7')
-                }
-            }
-
-            ;
-
-            --text-color: {
-                    {
-                    inv['color_fondo']|color_contraste
-                }
-            }
-
-            ;
-
-            --card-bg: {
-                    {
-                    inv['color_fondo']|fondo_tarjeta
-                }
-            }
-
-            ;
-        }
 
         body {
             font-family: var(--font-body);
@@ -531,45 +461,46 @@
 
 /* Tooltip Premium Definitivo (Anti-Bugs) */
         .tooltip-sian {
-            position: absolute;
-            bottom: calc(100% + 15px);
-            left: 50%;
-            
-            background-color: #ffffff; 
-            color: var(--color-oro) !important;
-            
-            padding: 8px 24px;
-            border-radius: 30px;
-            font-family: var(--font-body), sans-serif;
-            font-size: 0.75rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 3px;
-            white-space: nowrap;
-            pointer-events: none;
-            
-            /* Sombra suave y borde mínimo para que se separe de los fondos blancos */
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
-            border: 1px solid rgba(0, 0, 0, 0.04);
-            
-            animation: float-tooltip 2.5s infinite ease-in-out;
-            z-index: 10;
-        }
+    position: absolute;
+    bottom: calc(100% + 18px);
+    left: 50%;
+    transform: translateX(-50%);
+    
+    background: #ffffff;
+    color: var(--color-oro);
+    
+    padding: 8px 26px;
+    border-radius: 999px;
+    
+    font-family: var(--font-body);
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    
+    white-space: nowrap;
+    pointer-events: none;
+    
+    box-shadow: 
+        0 6px 18px rgba(0,0,0,0.08),
+        inset 0 0 0 1px rgba(0,0,0,0.04);
+    
+    animation: float-tooltip 2.8s ease-in-out infinite;
+    z-index: 20;
+}
 
-        /* El piquito: un cuadrado rotado 45 grados (CERO bordes transparentes) */
-        .tooltip-sian::after {
-            content: '';
-            position: absolute;
-            bottom: -5px; 
-            left: calc(50% - 6px);
-            width: 12px;
-            height: 12px;
-            background-color: #ffffff;
-            /* Solo le ponemos borde abajo y a la derecha para que haga la punta */
-            border-bottom: 1px solid rgba(0, 0, 0, 0.04);
-            border-right: 1px solid rgba(0, 0, 0, 0.04);
-            transform: rotate(45deg);
-        }
+.tooltip-sian::after {
+    content: '';
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%) rotate(45deg);
+    width: 12px;
+    height: 12px;
+    background: #ffffff;
+    box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
+}
+
 
         @keyframes float-tooltip {
             0%, 100% { transform: translateX(-50%) translateY(0); }
