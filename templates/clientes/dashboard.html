@@ -17,10 +17,13 @@
                 <i class="fas fa-ring text-warning me-2"></i>{{ nombre_evento }}
             </span>
             <div class="d-flex gap-2">
-                <a href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv.slug) }}"
+                {% if inv.tiene_modulo_invitados %}
+                    <a href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv.slug) }}"
                     class="btn btn-dark btn-sm rounded-pill px-3 shadow-sm">
-                    <i class="fas fa-qrcode me-1"></i> Abrir Escáner
-                </a>
+                        <i class="fas fa-qrcode me-1"></i> Abrir Escáner
+                    </a>
+                    {% endif %}
+
                 <a href="{{ url_for('invitaciones_clientes.logout_cliente') }}"
                     class="btn btn-outline-secondary btn-sm rounded-pill px-3">
                     Cerrar Sesión
@@ -41,19 +44,33 @@
         {% endif %}
         {% endwith %}
 
+        {% if inv.tiene_camara and not inv.tiene_modulo_invitados %}
+        <div class="alert alert-info rounded-4 shadow-sm mb-4">
+            <i class="fas fa-camera-retro me-2"></i>
+            Tu plan incluye <strong>Cámara Desechable Digital</strong>.
+        </div>
+        {% endif %}
+
+        {% if inv.tiene_modulo_invitados %}
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card border-0 shadow-sm rounded-4 bg-dark text-white">
                     <div class="card-body d-flex align-items-center justify-content-between py-3 px-4">
                         <div>
-                            <h6 class="mb-0 text-secondary text-uppercase small fw-bold">Invitados en el salón</h6>
-                            <h2 class="mb-0 fw-bold">{{ invitados | map(attribute='pases_usados') | sum }}</h2>
+                            <h6 class="mb-0 text-secondary text-uppercase small fw-bold">
+                                Invitados en el salón
+                            </h6>
+                            <h2 class="mb-0 fw-bold">
+                                {{ invitados | map(attribute='pases_usados') | sum }}
+                            </h2>
                         </div>
                         <i class="fas fa-door-open fa-2x opacity-50"></i>
                     </div>
                 </div>
             </div>
         </div>
+        {% endif %}
+
 
         <div class="row g-4">
 
