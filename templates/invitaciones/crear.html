@@ -27,6 +27,10 @@
 #sortable-list {
     gap: 14px;
 }
+
+#bloqueo-novios-wrapper {
+    transition: all 0.25s ease;
+}
 </style>
 {% endblock %}
 
@@ -178,16 +182,18 @@
                                     Habilita el panel de confirmación de asistencia (RSVP).
                                 </small>
                             </div>
-                            <div class="form-check form-switch border-top pt-3">
-                                <input class="form-check-input border-secondary" type="checkbox" role="switch" id="bloquearEdicion"
-                                    name="bloquear_edicion_invitados" value="1" {% if inv and inv['bloquear_edicion_invitados'] %}checked{% endif %}>
-                                <label class="form-check-label fw-bold text-danger" for="bloquearEdicion">
-                                    <i class="fas fa-lock me-1"></i> Bloquear edición a los novios
-                                </label>
-                                <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">
-                                    Si lo activas, los novios solo podrán VER la lista, pero no podrán modificarla.
-                                </small>
+                            <div id="bloqueo-novios-wrapper">
+                                <div class="form-check form-switch">
+                                    <input class="form-check-input" type="checkbox" id="bloquear_edicion">
+                                    <label class="form-check-label text-danger fw-semibold">
+                                        Bloquear edición a los novios
+                                    </label>
+                                    <div class="small text-muted">
+                                        Si lo activas, los novios solo podrán VER la lista, pero no modificarla.
+                                    </div>
+                                </div>
                             </div>
+
                         </div>
                     </div>
                     </div>
@@ -592,6 +598,27 @@
         const selectFuente = document.querySelector('select[name="estilo_fuente"]');
         if (selectFuente) selectFuente.value = config.fuente;
     }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const gestionInvitados = document.getElementById('gestion_invitados');
+        const bloqueoWrapper = document.getElementById('bloqueo-novios-wrapper');
+        const bloqueoInput = document.getElementById('bloquear_edicion');
+
+        function syncEstado() {
+            if (!gestionInvitados.checked) {
+                bloqueoInput.checked = false;      // fuerza OFF
+                bloqueoWrapper.style.display = 'none';
+            } else {
+                bloqueoWrapper.style.display = 'block';
+            }
+        }
+
+        // Estado inicial al cargar
+        syncEstado();
+
+        // Cambio en vivo
+        gestionInvitados.addEventListener('change', syncEstado);
+    });
 
 </script>
 {% endblock %}
