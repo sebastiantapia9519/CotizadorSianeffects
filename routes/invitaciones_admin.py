@@ -545,13 +545,27 @@ def ver_invitacion(slug):
         config = json.loads(inv['config_json'])
         datos = json.loads(inv['datos_cliente_json'])
         fotos = json.loads(inv['fotos_json'])
+
+        template_colors = {}
+        if inv['template_id'] and inv['template_id'] != 'personalizado':
+            template = PLANTILLAS_CONFIG.get(inv['template_id'])
+            if template:
+                template_colors = {
+                    'template_color_acento': template['color_acento'],
+                    'template_color_fondo': template['color_fondo']
+                }
+
         
-        return render_template('invitaciones/base_boda.html', 
-                               inv=inv, 
-                               config=config, 
-                               datos=datos, 
-                               fotos=fotos,
-                               datos_pase=datos_pase) 
+        return render_template(
+            'invitaciones/base_boda.html',
+            inv=inv,
+            config=config,
+            datos=datos,
+            fotos=fotos,
+            datos_pase=datos_pase,
+            **template_colors
+        )
+
     except Exception as e:
         return f"Error: {str(e)}", 500
     finally:

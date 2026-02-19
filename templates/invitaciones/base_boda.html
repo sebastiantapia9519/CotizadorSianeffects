@@ -77,40 +77,19 @@
         /* 2. VARIABLES INTELIGENTES DE COLOR */
         :root {
 
-            /* Prioridad: 1. Color elegido en panel, 2. Color por estilo, 3. Dorado default */
-                {% set color_pro=inv['color_acentos'] if inv['color_acentos'] else '#D4AF37' %}
+            {% if inv['template_id'] == 'personalizado' %}
+                /* 🎨 Colores definidos manualmente por el usuario */
+                --color-oro: {{ inv['color_acentos']|default('#D4AF37') }};
+                --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
+            {% else %}
+                /* 🎨 Colores heredados de la plantilla */
+                --color-oro: {{ inv['template_color_acento']|default('#D4AF37') }};
+                --bg-color: {{ inv['template_color_fondo']|default('#fdfbf7') }};
+            {% endif %}
 
-            --color-oro: {
-                    {
-                    color_pro
-                }
-            }
-
-            ;
-
-            --bg-color: {
-                    {
-                    inv['color_fondo']|default('#fdfbf7')
-                }
-            }
-
-            ;
-
-            --text-color: {
-                    {
-                    inv['color_fondo']|color_contraste
-                }
-            }
-
-            ;
-
-            --card-bg: {
-                    {
-                    inv['color_fondo']|fondo_tarjeta
-                }
-            }
-
-            ;
+            /* Derivados automáticos (SIEMPRE se calculan) */
+            --text-color: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | color_contraste }};
+            --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | fondo_tarjeta }};
         }
 
         body {

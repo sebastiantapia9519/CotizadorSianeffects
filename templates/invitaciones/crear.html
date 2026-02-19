@@ -19,6 +19,14 @@
         cursor: grabbing;
         transform: scale(1.01);
     }
+
+    #sortable-list > .card {
+    margin-bottom: 0;
+}
+
+#sortable-list {
+    gap: 14px;
+}
 </style>
 {% endblock %}
 
@@ -74,6 +82,10 @@
                                     Raleway)</option>
                                 <option value="botanico" {% if inv and inv['estilo_fuente']=='botanico' %}selected{% endif %}>Botánico (Cormorant +
                                     Proza Libre)</option>
+                                    <option value="personalizado" {{ 'selected' if inv and inv['template_id']=='personalizado' else '' }}>
+                                    🎨 Personalizado
+                                </option>
+
                             </select>
                         </div>
 
@@ -485,17 +497,22 @@
     var sortable = Sortable.create(el, { animation: 150, handle: '.handle' });
 
     document.addEventListener("DOMContentLoaded", function () {
-        {% if edit_mode and inv and inv['config_json'] %}
-        try {
-            const savedOrder = {{ inv['config_json'] | safe }};
-            const l                
-            savedOrder.forEach(bloqueId => {
-                const item = items.find(el => el.getAttribute('data-bloque') === bloqueId);
-                if (item) { list.appendChild(item); }
-            });
-        } catch (e) { console.error(e); }
-        {% endif %}
-    });
+    {% if edit_mode and inv and inv['config_json'] %}
+    try {
+        const savedOrder = {{ inv['config_json'] | safe }};
+        const list = document.getElementById('sortable-list');
+        const items = Array.from(list.children);
+
+        savedOrder.forEach(bloqueId => {
+            const item = items.find(el => el.dataset.bloque === bloqueId);
+            if (item) list.appendChild(item);
+        });
+    } catch (e) {
+        console.error('Error aplicando orden guardado:', e);
+    }
+    {% endif %}
+});
+
 
     // Función unificada para agregar tiendas u hoteles
     function agregarInput(containerId, nameInput, linkInput) {
@@ -555,6 +572,11 @@
     });
 
     function aplicarPlantilla(templateId) {
+        if (templateId === 'personalizado') {
+            console.log('Plantilla personalizada: colores manuales activos.');
+            return; // NO tocar colores
+        }
+
         const presets = {
             'rustico': { acento: '#5d6d5a', fondo: '#f4f1ea', fuente: 'botanico' },
             'romantico': { acento: '#d48b9b', fondo: '#fff9f9', fuente: 'romantico' },
@@ -563,15 +585,14 @@
         };
 
         const config = presets[templateId];
-        if (config) {
-            document.querySelector('input[name="color_acentos"]').value = config.acento;
-            document.querySelector('input[name="color_fondo"]').value = config.fondo;
+        if (!config) return;
 
-            const selectFuente = document.querySelector('select[name="estilo_fuente"]');
-            if (selectFuente) selectFuente.value = config.fuente;
+        document.querySelector('input[name="color_acentos"]').value = config.acento;
+        document.querySelector('input[name="color_fondo"]').value = config.fondo;
 
-            console.log(`Plantilla ${templateId} aplicada correctamente.`);
-        }
+        const selectFuente = document.querySelector('select[name="estilo_fuente"]');
+        if (selectFuente) selectFuente.value = config.fuente;
     }
+
 </script>
 {% endblock %}
