@@ -92,19 +92,16 @@
                     <div class="card-body bg-light rounded-bottom-4 border-top">
                         {% if fotos %}
                         <div class="row g-2">
-                            {% for foto in fotos[:12] %}
+                            {% for foto in fotos %}
                             <div class="col-4 col-md-3">
-                                <img src="{{ foto.url }}" class="img-fluid rounded shadow-sm"
+                                <img src="{{ foto.url }}"
+                                    class="img-fluid rounded shadow-sm"
+                                    loading="lazy"
                                     style="aspect-ratio: 1; object-fit: cover; width: 100%;">
                             </div>
                             {% endfor %}
                         </div>
-                        {% if fotos|length > 12 %}
-                        <div class="text-center mt-3">
-                            <span class="badge bg-secondary rounded-pill px-3">+ {{ fotos|length - 12 }} fotos
-                                adicionales listas para descargar</span>
-                        </div>
-                        {% endif %}
+                        
                         {% else %}
                         <div class="text-center py-5">
                             <div class="mb-3"><i class="fas fa-images fa-3x text-muted opacity-50"></i></div>
@@ -116,6 +113,16 @@
                     </div>
                 </div>
             </div>
+            {% set total_pages = (total_fotos // per_page) + (1 if total_fotos % per_page > 0 else 0) %}
+
+            {% if page < total_pages %}
+            <div class="text-center mt-4">
+                <a href="{{ url_for('invitaciones_clientes.dashboard_cliente', page=page+1) }}"
+                class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
+                    <i class="fas fa-images me-1"></i> Cargar más fotos
+                </a>
+            </div>
+            {% endif %
             {% endif %}
 
             {% if inv.tiene_modulo_invitados %}

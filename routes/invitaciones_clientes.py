@@ -42,6 +42,10 @@ def dashboard_cliente():
         
     inv_id = session['cliente_inv_id']
     conn = get_db_connection()
+
+    PER_PAGE = 12
+    page = request.args.get('page', 1, type=int)
+    offset = (page - 1) * PER_PAGE
     
     try:
         inv = conn.execute("SELECT * FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
@@ -51,15 +55,33 @@ def dashboard_cliente():
              invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY nombre_familia ASC", (inv_id,)).fetchall()
         
         fotos = []
-        if inv['camara_premium']:
-             # OJO: usando tu tabla fotos_invitados
-             fotos = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ? ORDER BY fecha_creacion DESC", (inv_id,)).fetchall()
+        total_fotos = 0
 
-        return render_template('clientes/dashboard.html', 
-                               inv=inv, 
-                               invitados=invitados, 
-                               fotos=fotos,
-                               nombre_evento=session.get('cliente_nombre'))
+        if inv['camara_premium']:
+            total_fotos = conn.execute(
+                "SELECT COUNT(*) FROM fotos_invitados WHERE invitacion_id = ?",
+                (inv_id,)
+            ).fetchone()[0]
+
+            fotos = conn.execute("""
+                SELECT url 
+                FROM fotos_invitados 
+                WHERE invitacion_id = ?
+                ORDER BY fecha_creacion DESC
+                LIMIT ? OFFSET ?
+            """, (inv_id, PER_PAGE, offset)).fetchall()
+
+        return render_template(
+            'clientes/dashboard.html',
+            inv=inv,
+            invitados=invitados,
+            fotos=fotos,
+            nombre_evento=session.get('cliente_nombre'),
+            page=page,
+            per_page=PER_PAGE,
+            total_fotos=total_fotos
+        )
+
     finally:
         conn.close()
 
