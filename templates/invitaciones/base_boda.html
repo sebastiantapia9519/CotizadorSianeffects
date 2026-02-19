@@ -12,52 +12,122 @@
 
     <style>
         /* 1. FUENTES DINÁMICAS (¡Ojo, no separar las llaves de los porcentajes!) */
-            {% if inv['estilo_fuente'] == 'clasico' %}
-            @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-            {% set font_title = "'Playfair Display', serif" %}
-            {% set font_body = "'Lato', sans-serif" %}
-            {% set color_oro_default = '#D4AF37' %}
+            {
+            % if inv['estilo_fuente']=='clasico' %
+        }
 
-            {% elif inv['estilo_fuente'] == 'romantico' %}
-            @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
-            {% set font_title = "'Great Vibes', cursive" %}
-            {% set font_body = "'Montserrat', sans-serif" %}
-            {% set color_oro_default = '#d48b9b' %}
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
 
-            {% elif inv['estilo_fuente'] == 'moderno' %}
-            @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
-            {% set font_title = "'Oswald', sans-serif" %}
-            {% set font_body = "'Roboto', sans-serif" %}
-            {% set color_oro_default = '#a89f91' %}
+        :root {
+            --font-title: 'Playfair Display', serif;
+            --font-body: 'Lato', sans-serif;
+            --color-oro: #D4AF37;
+        }
 
-            {% elif inv['estilo_fuente'] == 'minimal' %}
-            @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
-            {% set font_title = "'Cinzel', serif" %}
-            {% set font_body = "'Raleway', sans-serif" %}
-            {% set color_oro_default = '#8c8c8c' %}
+            {
+            % elif inv['estilo_fuente']=='romantico' %
+        }
 
-            {% elif inv['estilo_fuente'] == 'botanico' %}
-            @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
-            {% set font_title = "'Cormorant', serif" %}
-            {% set font_body = "'Proza Libre', sans-serif" %}
-            {% set color_oro_default = '#8f9779' %}
+        @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
 
-            {% else %}
-            @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-            {% set font_title = "'Playfair Display', serif" %}
-            {% set font_body = "'Lato', sans-serif" %}
-            {% set color_oro_default = '#D4AF37' %}
-            {% endif %}
+        :root {
+            --font-title: 'Great Vibes', cursive;
+            --font-body: 'Montserrat', sans-serif;
+            --color-oro: #d48b9b;
+        }
 
-            :root {
-                --font-title: {{ font_title }};
-                --font-body: {{ font_body }};
-                --color-oro: {{ inv['color_acentos'] if inv['color_acentos'] else color_oro_default }};
-                --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
-                --text-color: {{ inv['color_fondo']|color_contraste }};
-                --card-bg: {{ inv['color_fondo']|fondo_tarjeta }};
+            {
+            % elif inv['estilo_fuente']=='moderno' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
+
+        :root {
+            --font-title: 'Oswald', sans-serif;
+            --font-body: 'Roboto', sans-serif;
+            --color-oro: #a89f91;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='minimal' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
+
+        :root {
+            --font-title: 'Cinzel', serif;
+            --font-body: 'Raleway', sans-serif;
+            --color-oro: #8c8c8c;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='botanico' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
+
+        :root {
+            --font-title: 'Cormorant', serif;
+            --font-body: 'Proza Libre', sans-serif;
+            --color-oro: #8f9779;
+        }
+
+            {
+            % else %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
+        :root {
+            --font-title: 'Playfair Display', serif;
+            --font-body: 'Lato', sans-serif;
+            --color-oro: #D4AF37;
+        }
+
+            {
+            % endif %
+        }
+
+        /* 2. VARIABLES INTELIGENTES DE COLOR */
+        :root {
+
+            /* Prioridad: 1. Color elegido en panel, 2. Color por estilo, 3. Dorado default */
+                {
+                % set color_pro=inv['color_acentos'] if inv['color_acentos'] else '#D4AF37' %
             }
 
+            --color-oro: {
+                    {
+                    color_pro
+                }
+            }
+
+            ;
+
+            --bg-color: {
+                    {
+                    inv['color_fondo']|default('#fdfbf7')
+                }
+            }
+
+            ;
+
+            --text-color: {
+                    {
+                    inv['color_fondo']|color_contraste
+                }
+            }
+
+            ;
+
+            --card-bg: {
+                    {
+                    inv['color_fondo']|fondo_tarjeta
+                }
+            }
+
+            ;
+        }
 
         body {
             font-family: var(--font-body);
