@@ -529,37 +529,52 @@
 }
 
 
-/* Tooltip Premium Unificado (Mayúsculas Elegantes) */
+/* Tooltip Premium Inteligente (Detecta el fondo automáticamente) */
         .tooltip-sian {
             position: absolute;
-            bottom: calc(100% + 15px); /* Siempre se coloca arribita del elemento */
+            bottom: calc(100% + 15px);
             left: 50%;
-            background: #ffffff;
-            color: #b8912d !important; /* Dorado fijo */
+            /* MAGIA: Usa las variables de la base de datos para acoplarse a cualquier diseño */
+            background-color: var(--bg-color); 
+            color: var(--color-oro) !important;
+            border: 1.5px solid var(--color-oro); /* Borde 100% sólido para que NO se pierda en fondos blancos */
+            
             padding: 8px 24px;
             border-radius: 30px;
-            font-family: var(--font-body), sans-serif; /* Usamos la fuente limpia, se lee mejor en mayúsculas */
-            font-size: 0.8rem; /* Letra un poco más pequeña... */
+            font-family: var(--font-body), sans-serif;
+            font-size: 0.8rem;
             font-weight: bold;
-            text-transform: uppercase; /* ...en mayúsculas */
-            letter-spacing: 3px; /* ...y con este espaciado elegante */
+            text-transform: uppercase; /* Mantiene tus mayúsculas */
+            letter-spacing: 3px;
             white-space: nowrap;
             pointer-events: none;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.08); /* Sombra suave */
-            border: 1px solid rgba(212, 175, 55, 0.3); /* Borde dorado sutil para que destaque en fondo blanco */
+            box-shadow: 0 10px 20px rgba(0,0,0,0.08); /* Sombra elegante */
             animation: float-tooltip 2s infinite ease-in-out;
             z-index: 10;
         }
 
+        /* Capa 1 del Piquito: El contorno dorado */
+        .tooltip-sian::before {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 8px 8px 0;
+            border-style: solid;
+            border-color: var(--color-oro) transparent transparent transparent;
+        }
+
+        /* Capa 2 del Piquito: El relleno que se acopla al fondo */
         .tooltip-sian::after {
             content: '';
             position: absolute;
-            top: 100%; /* El pico va hacia abajo */
+            top: calc(100% - 2.5px); /* Se superpone para borrar la línea de la caja y crear el globo continuo */
             left: 50%;
             transform: translateX(-50%);
             border-width: 6px 6px 0;
             border-style: solid;
-            border-color: #ffffff transparent transparent transparent;
+            border-color: var(--bg-color) transparent transparent transparent;
         }
 
         @keyframes float-tooltip {
