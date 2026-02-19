@@ -12,9 +12,7 @@
 
     <style>
         /* 1. FUENTES DINÁMICAS (¡Ojo, no separar las llaves de los porcentajes!) */
-            {
-            % if inv['estilo_fuente']=='clasico' %
-        }
+            {% if inv['estilo_fuente']=='clasico' %}
 
         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
 
@@ -24,9 +22,7 @@
             --color-oro: #D4AF37;
         }
 
-            {
-            % elif inv['estilo_fuente']=='romantico' %
-        }
+            {% elif inv['estilo_fuente']=='romantico' %}
 
         @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
 
@@ -36,9 +32,7 @@
             --color-oro: #d48b9b;
         }
 
-            {
-            % elif inv['estilo_fuente']=='moderno' %
-        }
+            {% elif inv['estilo_fuente']=='moderno' %}
 
         @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
 
@@ -48,9 +42,7 @@
             --color-oro: #a89f91;
         }
 
-            {
-            % elif inv['estilo_fuente']=='minimal' %
-        }
+            {% elif inv['estilo_fuente']=='minimal' %}
 
         @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
 
@@ -60,9 +52,7 @@
             --color-oro: #8c8c8c;
         }
 
-            {
-            % elif inv['estilo_fuente']=='botanico' %
-        }
+            {% elif inv['estilo_fuente']=='botanico' %}
 
         @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
 
@@ -72,9 +62,7 @@
             --color-oro: #8f9779;
         }
 
-            {
-            % else %
-        }
+            {% else %}
 
         @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
 
@@ -84,17 +72,13 @@
             --color-oro: #D4AF37;
         }
 
-            {
-            % endif %
-        }
+            {% endif %}
 
         /* 2. VARIABLES INTELIGENTES DE COLOR */
         :root {
 
             /* Prioridad: 1. Color elegido en panel, 2. Color por estilo, 3. Dorado default */
-                {
-                % set color_pro=inv['color_acentos'] if inv['color_acentos'] else '#D4AF37' %
-            }
+                {% set color_pro=inv['color_acentos'] if inv['color_acentos'] else '#D4AF37' %}
 
             --color-oro: {
                     {
@@ -484,49 +468,87 @@
             letter-spacing: 1px;
         }
 
-        /* Animación para la Iglesia (Resplandor Sutil) */
-@keyframes resplandorElegante {
-  0%, 100% { 
-    transform: scale(1); 
-    filter: drop-shadow(0 0 0 transparent); 
-  }
-  50% { 
-    transform: scale(1.05); 
-    filter: drop-shadow(0 0 8px var(--color-oro)); 
-  }
-}
-
+/* IGLESIA – Campanada Elegante */
 .anim-iglesia {
   display: inline-block;
-  animation: resplandorElegante 4s ease-in-out infinite;
+  transform-origin: top center;
+  transition: transform 0.6s ease, filter 0.6s ease;
 }
 
-/* Animación para las Copas (Brindis Elegante con Resplandor) */
-@keyframes brindisElegante {
-  0%, 100% { 
-    transform: scale(1) rotate(0deg); 
-    filter: drop-shadow(0 0 0 transparent); 
+/* Entrada sutil (con AOS ya activo) */
+[data-aos].aos-animate .anim-iglesia {
+  animation: campanaEntrada 1.6s cubic-bezier(.4,0,.2,1) both;
+}
+
+@keyframes campanaEntrada {
+  0% {
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 0 transparent);
   }
-  50% { 
-    transform: scale(1.05) rotate(5deg); 
-    filter: drop-shadow(0 0 8px var(--color-oro)); 
+  60% {
+    transform: rotate(-4deg);
+    filter: drop-shadow(0 0 10px var(--color-oro));
+  }
+  100% {
+    transform: rotate(0deg);
+    filter: drop-shadow(0 0 0 transparent);
   }
 }
 
+/* Interacción */
+.premium-card:hover .anim-iglesia {
+  animation: campanaHover 0.8s ease-in-out;
+}
+
+@keyframes campanaHover {
+  0% { transform: rotate(0); }
+  25% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+  75% { transform: rotate(-3deg); }
+  100% { transform: rotate(0); }
+}
+
+
+/* COPAS – Brindis Realista */
 .anim-copas {
   display: inline-block;
-  animation: brindisElegante 4s ease-in-out infinite;
-  transform-origin: bottom center; /* Esto hace que el eje de rotación sea la base de la copa */
+  transform-origin: center bottom;
 }
 
-/* Efecto Hover: Cuando pasas el mouse o tocas, se acelera un poquito */
-.premium-card:hover .anim-iglesia {
-  animation-duration: 1.5s;
+/* Entrada elegante */
+[data-aos].aos-animate .anim-copas {
+  animation: brindisEntrada 1.4s cubic-bezier(.4,0,.2,1) both;
 }
 
+@keyframes brindisEntrada {
+  0% {
+    transform: scale(0.9) translateY(6px);
+    filter: drop-shadow(0 0 0 transparent);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.05) translateY(0);
+    filter: drop-shadow(0 0 12px var(--color-oro));
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 transparent);
+  }
+}
+
+/* Brindis al hover */
 .premium-card:hover .anim-copas {
-  animation-duration: 1.5s;
+  animation: brindisHover 0.7s ease-in-out;
 }
+
+@keyframes brindisHover {
+  0% { transform: rotate(0); }
+  30% { transform: rotate(-8deg); }
+  60% { transform: rotate(8deg); }
+  100% { transform: rotate(0); }
+}
+
 
 
 /* Tooltip Premium Definitivo (Anti-Bugs) */
