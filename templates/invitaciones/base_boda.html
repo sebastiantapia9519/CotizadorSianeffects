@@ -93,23 +93,16 @@
         }
 
         html, body {
-            margin: 0;
-            padding: 0;
-            overflow-x: hidden; /* Solo en el body, evita barras dobles */
-            font-family: var(--font-body);
-            background-color: transparent; /* Permite ver el fondo fijo */
-            color: var(--text-color);
-            -webkit-font-smoothing: antialiased;
+            position: relative;
+            overflow-x: hidden;
+            overflow-y: auto;
         }
 
         /* NUEVO: El truco para fondos fijos sin lag en celulares */
         .fondo-fijo-app {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100vh;
-            z-index: -999;
+            position: absolute;
+            inset: 0;
+            z-index: -1;
             background-color: var(--bg-color);
             {% if inv['url_fondo'] %}
             background-image: url('{{ inv['url_fondo'] }}');
@@ -707,6 +700,13 @@
     letter-spacing: 1px;
     opacity: 0.75;
 }
+.hero {
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+[data-aos] {
+    overflow: hidden;
+}
 
     </style>
 </head>
@@ -753,12 +753,17 @@
         
         
         {% if item == 'hero' %}
-        <section
-            style="height: 100vh; height: 100svh; max-width: 100%; width: 100%; overflow: hidden; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
+        <section class="hero"
+            style=" max-width: 100%; width: 100%; overflow: hidden; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
             
-            <div style="position: absolute; top: -5%; left: -5%; right: -5%; bottom: -5%; 
-                            background-image: url('{{ inv['foto_portada_url'] if inv['foto_portada_url'] else (fotos[0] if fotos else '') }}'); 
-                            background-size: cover; background-position: center; filter: brightness(0.6);"></div>
+            <div style="
+                position: absolute;
+                inset: 0;
+                background-image: url('{{ inv['foto_portada_url'] if inv['foto_portada_url'] else (fotos[0] if fotos else '') }}');
+                background-size: cover;
+                background-position: center;
+                filter: brightness(0.6);">
+            </div>
             
             <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #fdfbf7;"
                 data-aos="zoom-in" data-aos-duration="1500">
