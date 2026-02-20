@@ -93,6 +93,15 @@ def crear_invitacion():
                 if h and a:
                     itinerario.append({'hora': h, 'actividad': a, 'icono': i})
 
+            # --- PROCESAR PROTOCOLO FAMILIAR ---
+            roles_proto = request.form.getlist('rol_protocolo[]')
+            nombres_proto = request.form.getlist('nombres_protocolo[]')
+            
+            protocolo_familiar = []
+            for rol, nombres in zip(roles_proto, nombres_proto):
+                if rol and nombres: # Solo guarda si ambos campos tienen texto
+                    protocolo_familiar.append({'rol': rol, 'nombres': nombres})
+
             # --- 2. DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
@@ -100,6 +109,7 @@ def crear_invitacion():
                 "frase": request.form.get('frase'),
                 "maps_misa": request.form.get('maps_misa'),
                 "maps_fiesta": request.form.get('maps_fiesta'),
+                "protocolo": protocolo_familiar,
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
                 "info_transporte": request.form.get('info_transporte'),
@@ -312,6 +322,15 @@ def editar_invitacion(id):
                 if h and a:
                     itinerario.append({'hora': h, 'actividad': a, 'icono': i})
 
+            # --- PROCESAR PROTOCOLO FAMILIAR ---
+            roles_proto = request.form.getlist('rol_protocolo[]')
+            nombres_proto = request.form.getlist('nombres_protocolo[]')
+            
+            protocolo_familiar = []
+            for rol, nombres in zip(roles_proto, nombres_proto):
+                if rol and nombres: # Solo guarda si ambos campos tienen texto
+                    protocolo_familiar.append({'rol': rol, 'nombres': nombres})
+
             # --- CREAR EL DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
@@ -319,6 +338,7 @@ def editar_invitacion(id):
                 "frase": request.form.get('frase'),
                 "maps_misa": request.form.get('maps_misa'),
                 "maps_fiesta": request.form.get('maps_fiesta'),
+                "protocolo": protocolo_familiar,
                 "cuenta_bancaria": request.form.get('cuenta_bancaria'),
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
                 "info_transporte": request.form.get('info_transporte'),

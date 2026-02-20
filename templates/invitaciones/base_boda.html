@@ -939,36 +939,22 @@
             </section>
             {% endif %}
         
-        {% elif item == 'protocolo' and (inv['padres_novia'] or inv['padres_novio']) %}
+        {% elif item == 'protocolo' and datos.get('protocolo') %}
         <section data-aos="fade-up">
             <h2 style="font-size: 2.2rem; color: var(--color-oro); margin-bottom: 40px;">Nuestros Padres y Padrinos</h2>
-            <div class="row g-4 justify-content-center" style="display: flex; flex-wrap: wrap;">
-                {% if inv['padres_novia'] %}
-                <div class="col-md-6" style="flex: 1; min-width: 250px;">
+            
+            <div class="row g-4 justify-content-center" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                {% for integrante in datos['protocolo'] %}
+                <div class="col-md-5 col-sm-12 text-center" style="flex: 1; min-width: 250px;">
                     <div class="p-3">
-                        <i class="fas fa-heart text-danger mb-2"></i>
-                        <h4 class="mb-1">{{ inv['padres_novia'] }}</h4>
-                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padres de la Novia</small>
+                        <i class="fas fa-heart mb-2" style="color: var(--color-oro);"></i>
+                        <h4 class="mb-1" style="font-weight: 600;">{{ integrante.nombres }}</h4>
+                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">{{ integrante.rol }}</small>
+                        
+                        <hr style="width: 40%; margin: 15px auto 0 auto; border-top: 1px solid rgba(150,150,150,0.2);">
                     </div>
                 </div>
-                {% endif %}
-                {% if inv['padres_novio'] %}
-                <div class="col-md-6" style="flex: 1; min-width: 250px;">
-                    <div class="p-3">
-                        <i class="fas fa-heart text-danger mb-2"></i>
-                        <h4 class="mb-1">{{ inv['padres_novio'] }}</h4>
-                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padres del Novio</small>
-                    </div>
-                </div>
-                {% endif %}
-                {% if inv['padrinos'] %}
-                <div class="col-12 mt-4" style="width: 100%;">
-                    <div class="p-3 border-top" style="border-top: 1px solid rgba(150,150,150,0.2); padding-top: 20px;">
-                        <h4 class="mb-1">{{ inv['padrinos'] }}</h4>
-                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">Padrinos de Velación</small>
-                    </div>
-                </div>
-                {% endif %}
+                {% endfor %}
             </div>
         </section>
 
