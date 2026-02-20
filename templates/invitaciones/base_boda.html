@@ -92,28 +92,18 @@
             --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | fondo_tarjeta }};
         }
 
-        html, body {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            /* NADA de overflow aquí, lo vamos a delegar */
+        body {
+            overflow-x: hidden;
         }
 
         *, *:before, *:after {
             box-sizing: inherit;
         }
 
-        .sian-wrapper {
-            width: 100%;
-            overflow-x: hidden;
-            position: relative;
-            contain: paint; /* 🔨 El martillazo radical que aísla los recalculos del scroll */
-        }
-
         /* NUEVO: El truco para fondos fijos sin lag en celulares */
         .fondo-fijo-app {
-            position: fixed; 
-            inset: 0; /* Esto reemplaza a top, left, width 100vw y height 100vh en una sola línea, sin bugs de scroll */
+            position: fixed; /* Cambiado de absolute a fixed */
+            inset: 0;
             z-index: -1;
             background-color: var(--bg-color);
             {% if inv['url_fondo'] %}
@@ -713,8 +703,7 @@
     opacity: 0.75;
 }
 .hero {
-    min-height: 100vh; /* Fallback para navegadores antiguos */
-    min-height: 100svh; /* Se mantiene estático aunque aparezca la barra del navegador */
+    min-height: 100vh;
 }
 
     </style>
@@ -758,9 +747,7 @@
     <div class="music-btn" onclick="toggleMusic()"><i class="fas fa-volume-up" id="musicIcon"></i></div>
     {% endif %}
 
-    <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">        
-        <div class="sian-wrapper">
-                    {% for item in config %}
+    <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">        {% for item in config %}
         
         
         {% if item == 'hero' %}
@@ -1133,7 +1120,6 @@
         <footer style="text-align: center; padding: 40px; font-size: 0.8rem; opacity: 0.5;">
             Creado con ❤️ por SianEffects
         </footer>
-        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
@@ -1170,32 +1156,27 @@
             if (audio) { audio.play().catch(e => console.log("Autoplay bloqueado")); }
         }
 
+        // Separo la lógica de renderizado para no repetir código
         function mostrarInvitacion(content) {
             content.style.visibility = 'visible';
             content.style.opacity = '1';
 
+            // Iniciamos Swiper y AOS un instante DESPUÉS de que es visible
             setTimeout(() => {
                 var swiper = new Swiper(".mySwiper", {
                     effect: "cards",
                     grabCursor: true,
-                    centeredSlides: true,
-                    loop: true,
+                    centeredSlides: true, // Agregado
+                    loop: true,           // Agregado
                     observer: true,
                     observeParents: true,
                 });
                 
                 AOS.init({ 
                     duration: 1200, 
-                    once: true,
-                    mirror: false 
+                    once: true,      // Las animaciones solo ocurren una vez
+                    mirror: false    // Evita que brinquen al hacer scroll hacia arriba
                 });
-
-                // 🔨 EL GOLPE FINAL: Obligamos a AOS a tomar una "foto" correcta 
-                // del layout medio segundo después de que todo ya cargó.
-                setTimeout(() => { 
-                    AOS.refresh(); 
-                }, 500);
-
             }, 200);
         }
 
