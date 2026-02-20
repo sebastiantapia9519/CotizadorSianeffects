@@ -642,50 +642,50 @@
             z-index: 1;
         }
 
-/* Sello de Cera (EFECTO REAL 3D) */
+/* --- ESTILO HÍBRIDO: IMAGEN R2 + TEXTO DINÁMICO --- */
         .sello-cera {
-            width: 100px; /* Lo hice un poco más grande para que luzca el detalle */
-            height: 100px;
+            width: 140px;  /* Ajustado para que se vea el detalle del sello */
+            height: 140px;
             
-            /* 1. Degradado radial para simular cómo la luz pega en la cera curva */
-            background: radial-gradient(circle at 30% 30%, #fceabb 0%, #d4af37 30%, #aa8529 70%, #6e4f12 100%);
+            /* Tu imagen desde Cloudflare R2 */
+            background-image: url('https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png');
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: transparent;
             
-            /* 2. Borde irregular: Esto hace que no sea un círculo perfecto, simulando cera derretida */
-            border-radius: 49% 51% 48% 52% / 51% 49% 52% 48%;
+            /* Eliminamos bordes y fondos viejos para no arruinar el PNG */
+            border: none; 
+            border-radius: 0;
             
             display: flex;
             align-items: center;
             justify-content: center;
+            
+            /* Ajuste del texto: Contorno negro pedido */
             font-family: var(--font-title);
-            font-size: 2.2rem;
-            
-            /* 3. El contorno negro en las letras sin cambiar su color de relleno */
+            font-size: 2.8rem; /* Un poco más grande para que destaque */
             color: #fff;
-            -webkit-text-stroke: 0.8px rgba(0,0,0,0.9); /* Contorno negro */
-            text-shadow: 2px 2px 5px rgba(0,0,0,0.6);   /* Sombra extra para despegar la letra del fondo */
+            -webkit-text-stroke: 1px rgba(0,0,0,0.85); /* El contorno negro */
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);  /* Sombra para separarlo del fondo dorado */
             
-            /* 4. LA MAGIA DEL RELIEVE: Múltiples capas de sombras internas */
-            box-shadow: 
-                0 10px 20px rgba(0,0,0,0.5),                 /* Sombra exterior principal */
-                inset -3px -4px 6px rgba(0,0,0,0.4),         /* Sombra del borde (abajo/derecha) */
-                inset 3px 4px 8px rgba(255,255,255,0.7),     /* Brillo del borde (arriba/izquierda) */
-                inset 0 0 0 8px #c59b31,                     /* El "ancho" del anillo de cera elevado */
-                inset 0 0 15px 12px rgba(80, 50, 10, 0.7);   /* El hundimiento oscuro donde van las letras */
-                
+            /* La magia: usamos drop-shadow en vez de box-shadow para que la sombra respete la forma irregular de tu PNG */
+            filter: drop-shadow(0 15px 20px rgba(0,0,0,0.4));
+            
             position: absolute;
             top: 50vh;
             left: 50%;
-            animation: pulse-sello-nuevo 2s infinite;
+            animation: pulse-sello-hibrido 2.5s infinite; /* Llamamos a la nueva animación */
             z-index: 4;
-            transition: opacity 0.3s ease;
+            transition: opacity 0.4s ease;
             cursor: pointer;
         }
 
-        /* Animación exclusiva para el sello (Ahora pulsa MÁS grande) */
-        @keyframes pulse-sello-nuevo {
+        /* La animación del latido (Ahora crece MUCHO más como pediste) */
+        @keyframes pulse-sello-hibrido {
             0% { transform: translate(-50%, -50%) scale(1); }
-            /* Subí el scale a 1.18 (antes lo tenías en 1.05) para que crezca mucho más al palpitar */
-            50% { transform: translate(-50%, -50%) scale(1.18); } 
+            /* Pasamos a 1.35 para que el crecimiento sea muy notorio al pulsar */
+            50% { transform: translate(-50%, -50%) scale(1.35); filter: drop-shadow(0 25px 25px rgba(0,0,0,0.5)); } 
             100% { transform: translate(-50%, -50%) scale(1); }
         }
 
@@ -826,9 +826,9 @@
             <div class="sobre-solapa" id="solapa-sobre"></div>
         
             <div class="sello-cera pulso-apertura" onclick="entrarSitio('sobre')">
-                <div class="tooltip-sian">Click Aquí</div>
-                <span>{{ datos.get('iniciales') }}</span>
-            </div>
+            <div class="tooltip-sian">Click Aquí</div>
+            <span style="position: relative; top: -2px;">{{ datos.get('iniciales') }}</span>
+        </div>
         </div>
 
         {% elif inv['estilo_apertura'] == 'iniciales' %}
