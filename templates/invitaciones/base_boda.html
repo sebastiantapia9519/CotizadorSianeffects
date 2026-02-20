@@ -642,13 +642,47 @@
             z-index: 1;
         }
 
-/* --- ESTILO HÍBRIDO FINAL: IIMAGEN GRANDE + TEXTO GRABADO --- */
+/* --- TOOLTIP TIPO ORIGINAL (Fondo Café/Dorado) --- */
+        .tooltip-sian {
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            background: #b5986d; /* Color café claro elegante */
+            color: #ffffff;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            pointer-events: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+            animation: float-tooltip 2.8s ease-in-out infinite;
+            z-index: 20;
+        }
+
+        .tooltip-sian::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 10px;
+            height: 10px;
+            background: #b5986d;
+        }
+
+        @keyframes float-tooltip {
+            0%, 100% { transform: translateX(-50%) translateY(0); }
+            50% { transform: translateX(-50%) translateY(-6px); }
+        }
+
+        /* --- EL SELLO HÍBRIDO (Imagen R2) --- */
         .sello-cera {
-            /* 1. MUCHO MÁS GRANDE */
-            width: 200px;  /* Antes 140px */
-            height: 200px; /* Antes 140px */
-            
-            /* Imagen R2 */
+            width: 160px;  /* Tamaño perfecto, ni tan chico ni grotesco */
+            height: 160px;
             background-image: url('https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png');
             background-size: contain;
             background-position: center;
@@ -661,36 +695,40 @@
             align-items: center;
             justify-content: center;
             
-            /* 2. AJUSTES DE TEXTO (SIN CONTORNO) */
-            font-family: var(--font-title);
-            font-size: 4rem; /* Letra mucho más grande para llenar el sello */
-            
-            /* Cambio clave: Color oscuro para parecer grabado en la cera */
-            color: #5e4215; 
-            
-            /* QUITAMOS EL CONTORNO NEGRO (-webkit-text-stroke) */
-            
-            /* Sombra suave clara abajo para dar efecto de profundidad/hundido */
-            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
-            
-            /* Sombra del sello completo */
-            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
-            
             position: absolute;
             top: 50vh;
             left: 50%;
-            animation: pulse-sello-hibrido 2.5s infinite;
+            transform: translate(-50%, -50%); /* Centrado exacto */
             z-index: 4;
-            transition: opacity 0.4s ease;
             cursor: pointer;
         }
 
-        /* Animación ajustada para el nuevo tamaño */
+        /* Contenedor de la animación (Separado para evitar bugs de centrado) */
+        .pulso-apertura {
+            animation: pulse-sello-hibrido 2.5s infinite;
+        }
+
+        /* --- LAS LETRAS "GRABADAS" EN LA CERA --- */
+        .texto-sello {
+            font-family: var(--font-title);
+            font-size: 2.2rem; /* Tamaño proporcional para que no se salga de la cera */
+            color: #382510; /* Marrón muy oscuro */
+            
+            /* LA MAGIA: Fusiona la letra con la textura de la imagen de fondo */
+            mix-blend-mode: multiply; 
+            opacity: 0.9;
+            
+            /* Sutil efecto de luz/sombra para dar profundidad de grabado */
+            text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.4), -1px -1px 0px rgba(0, 0, 0, 0.1);
+            position: relative;
+            top: -2px; /* Micro-ajuste visual vertical */
+        }
+
+        /* Animación ajustada: Escala MUCHO MÁS GRANDE al pulsar (1.25) */
         @keyframes pulse-sello-hibrido {
-            0% { transform: translate(-50%, -50%) scale(1); }
-            /* Como el sello base ya es gigante, bajamos un poquito la escala del pulso (1.2) para que no se salga de la pantalla en móviles */
-            50% { transform: translate(-50%, -50%) scale(1.2); filter: drop-shadow(0 30px 40px rgba(0,0,0,0.6)); } 
-            100% { transform: translate(-50%, -50%) scale(1); }
+            0% { transform: translate(-50%, -50%) scale(1); filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3)); }
+            50% { transform: translate(-50%, -50%) scale(1.25); filter: drop-shadow(0 20px 25px rgba(0,0,0,0.4)); } 
+            100% { transform: translate(-50%, -50%) scale(1); filter: drop-shadow(0 10px 15px rgba(0,0,0,0.3)); }
         }
 
         .sobre-abierto .sobre-solapa {
@@ -830,9 +868,9 @@
             <div class="sobre-solapa" id="solapa-sobre"></div>
         
             <div class="sello-cera pulso-apertura" onclick="entrarSitio('sobre')">
-            <div class="tooltip-sian">Click Aquí</div>
-            <span style="position: relative; top: -2px;">{{ datos.get('iniciales') }}</span>
-        </div>
+                <div class="tooltip-sian">Click Aquí</div>
+                <span class="texto-sello">{{ datos.get('iniciales') }}</span>
+            </div>
         </div>
 
         {% elif inv['estilo_apertura'] == 'iniciales' %}
