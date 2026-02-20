@@ -856,7 +856,7 @@
                     class="fas fa-gift ms-2"></i></h2>
                     
             <p class="mb-5" style="font-style: italic; opacity: 0.8; font-size: 1.1rem; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-                "¡Que nos acompañes es lo más importante! Y si está en tu disposición realizar una muestra de cariño, ¡estaremos muy agradecidos!"
+                ¡Que nos acompañes es lo más importante! Y si está en tu disposición realizar una muestra de cariño, ¡estaremos muy agradecidos!
             </p>
 
             <div class="premium-container">
@@ -987,28 +987,42 @@
         <section data-aos="fade-up">
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Hospedaje y Transporte</h2>
 
-            {% if datos['info_transporte'] %}
-            <div class="premium-card mb-4" style="text-align: center; flex-direction: column;">
-                <i class="fas fa-bus-alt fa-2x mb-2" style="color: var(--color-oro);"></i>
-                <p style="white-space: pre-line; margin: 0;">{{ datos['info_transporte'] }}</p>
-            </div>
-            {% endif %}
+            {% elif item == 'hospedaje' %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Hospedaje y Transporte</h2>
+            
+            <p class="mb-5" style="font-style: italic; opacity: 0.8; font-size: 1.1rem; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                "Pensando en tu comodidad, hemos seleccionado estas opciones de alojamiento y detalles de transporte para que disfrutes con nosotros sin preocupaciones."
+            </p>
 
-            {% if inv['hospedaje_json'] and inv['hospedaje_json'] != 'null' %}
             <div class="premium-container">
-                {% set hoteles = inv['hospedaje_json']|from_json %}
-                {% for hotel in hoteles %}
+                
+                {% if datos['info_transporte'] %}
                 <div class="premium-card">
-                    <div class="premium-icon"><i class="fas fa-bed"></i></div>
+                    <div class="premium-icon"><i class="fas fa-bus-alt"></i></div>
                     <div class="premium-info">
-                        <div class="premium-title">{{ hotel.nombre }}</div>
-                        <a href="{{ hotel.url }}" target="_blank" class="btn-card"><i class="fas fa-link me-1"></i> Ver
-                            opciones</a>
+                        <div class="premium-title">Transporte</div>
+                        <p style="white-space: pre-line; margin: 0; font-size: 0.95rem; opacity: 0.9;">
+                            {{ datos['info_transporte'] }}
+                        </p>
                     </div>
                 </div>
-                {% endfor %}
+                {% endif %}
+
+                {% if inv['hospedaje_json'] and inv['hospedaje_json'] != 'null' %}
+                    {% set hoteles = inv['hospedaje_json']|from_json %}
+                    {% for hotel in hoteles %}
+                    <div class="premium-card">
+                        <div class="premium-icon"><i class="fas fa-bed"></i></div>
+                        <div class="premium-info">
+                            <div class="premium-title">{{ hotel.nombre }}</div>
+                            <a href="{{ hotel.url }}" target="_blank" class="btn-card"><i class="fas fa-link me-1"></i> Ver opciones</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
             </div>
-            {% endif %}
         </section>
 
         {% if 'camara' in config %}
