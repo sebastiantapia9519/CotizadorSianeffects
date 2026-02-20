@@ -422,13 +422,32 @@
                                     </div>
                             <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarItinerario()">+ Agregar
                                 actividad</button>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item shadow-sm border-info" data-bloque="galeria">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold text-info"><i class="fas fa-images me-2"></i>8. Galería de Fotos</span>
+                                <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
-                            </div>
+                            <input type="hidden" name="orden_items[]" value="galeria">
+                            
+                            <label class="small fw-bold text-muted">Subir fotos (Puedes seleccionar 5)</label>
+                            <input type="file" name="fotos_galeria" class="form-control form-control-sm" accept="image/*" multiple>
+                            
+                            {% if edit_mode and inv['fotos_json'] and inv['fotos_json'] != 'null' and inv['fotos_json'] != '[]' %}
+                                <small class="text-success mt-2 d-block">
+                                    <i class="fas fa-check-circle me-1"></i> Ya hay fotos guardadas. Si subes nuevas, se reemplazarán.
+                                </small>
+                            {% endif %}
+                        </div>
+                    </div>
 
                     <div class="card draggable-item shadow-sm border-dark" data-bloque="rsvp">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>8. RSVP (Asistencia)</span>
+                                <span class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>9. RSVP (Asistencia)</span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="rsvp">
@@ -440,7 +459,7 @@
                     <div class="card draggable-item shadow-sm border-info" data-bloque="protocolo">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-info"><i class="fas fa-users me-2"></i>9. Protocolo Familiar</span>
+                                <span class="fw-bold text-info"><i class="fas fa-users me-2"></i>10. Protocolo Familiar</span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="protocolo">
@@ -470,7 +489,7 @@
                     <div class="card draggable-item shadow-sm border-secondary" data-bloque="frase_final">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-secondary"><i class="fas fa-quote-right me-2"></i>10. Frase de Cierre</span>
+                                <span class="fw-bold text-secondary"><i class="fas fa-quote-right me-2"></i>11. Frase de Cierre</span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="frase_final">
@@ -482,25 +501,29 @@
                             <div class="card draggable-item shadow-sm border-dark" data-bloque="pases">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>11. Pases de Invitados</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="pases">
-                            <div class="alert alert-light border py-2 mb-0">
-                                <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Este módulo mostrará al invitado sus pases asignados y
-                                    su código QR de acceso.</small>
-                                {% if edit_mode %}
-                                <div class="mt-2">
-                                    <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}"
-                                        class="btn btn-dark btn-sm rounded-pill w-100">
-                                        <i class="fas fa-user-plus me-1"></i> Gestionar Lista de Invitados
-                                    </a>
+                                        <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>12. Pases de Invitados</span>
+                                        <i class="fas fa-grip-lines text-muted handle"></i>
+                                    </div>
+                                    <input type="hidden" name="orden_items[]" value="pases">
+                                    
+                                    <div class="alert alert-light border py-2 mb-0">
+                                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Este módulo mostrará al invitado sus pases asignados y su código QR de acceso.</small>
+                                        
+                                        {% if edit_mode %}
+                                            <div class="mt-2" id="btn-gestion-invitados-wrapper">
+                                                <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}"
+                                                    class="btn btn-dark btn-sm rounded-pill w-100">
+                                                    <i class="fas fa-user-plus me-1"></i> Gestionar Lista de Invitados
+                                                </a>
+                                            </div>
+                                            <div class="mt-2 text-center text-muted fst-italic small" id="msg-modulo-apagado" style="display: none;">
+                                                (Habilita "Gestión de Invitados" en el panel izquierdo para agregar personas)
+                                            </div>
+                                        {% else %}
+                                            <p class="small mt-1 text-danger">Debes publicar la invitación primero para gestionar invitados.</p>
+                                        {% endif %}
+                                    </div>
                                 </div>
-                                {% else %}
-                                <p class="small mt-1 text-danger">Debes publicar la invitación primero para gestionar invitados.</p>
-                                {% endif %}
-                            </div>
-                            </div>
                             </div>
 
                 </div>
@@ -645,19 +668,40 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const gestionInvitados = document.getElementById('moduloInvitados');
+        const gestionInvitados = document.getElementById('moduloInvitados'); // El switch principal
+        
+        // Elementos de bloqueo (panel izquierdo)
         const bloqueoWrapper = document.getElementById('bloqueo-novios-wrapper');
         const bloqueoInput = document.getElementById('bloquear_edicion');
+        
+        // Elementos de la tarjeta de Pases (derecha)
+        const btnGestionWrapper = document.getElementById('btn-gestion-invitados-wrapper');
+        const msgModuloApagado = document.getElementById('msg-modulo-apagado');
 
         function syncEstado() {
-            if (!gestionInvitados.checked) {
+            const estaActivo = gestionInvitados.checked;
+
+            // 1. Controlar opciones del panel izquierdo
+            if (!estaActivo) {
                 bloqueoInput.checked = false;
                 bloqueoWrapper.style.display = 'none';
             } else {
                 bloqueoWrapper.style.display = 'block';
             }
+
+            // 2. Controlar el botón en la tarjeta de Pases (si existen en el DOM)
+            if (btnGestionWrapper && msgModuloApagado) {
+                if (estaActivo) {
+                    btnGestionWrapper.style.display = 'block';
+                    msgModuloApagado.style.display = 'none';
+                } else {
+                    btnGestionWrapper.style.display = 'none';
+                    msgModuloApagado.style.display = 'block';
+                }
+            }
         }
 
+        // Ejecutar al inicio y cada vez que cambie el switch
         syncEstado();
         gestionInvitados.addEventListener('change', syncEstado);
     });
