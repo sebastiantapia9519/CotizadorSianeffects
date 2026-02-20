@@ -597,6 +597,13 @@ def ver_invitacion(slug):
         datos = json.loads(inv['datos_cliente_json'])
         fotos = json.loads(inv['fotos_json'])
 
+        buenos_deseos = conn.execute("""
+            SELECT nombre, mensaje, fecha 
+            FROM buenos_deseos 
+            WHERE invitacion_id = ? 
+            ORDER BY fecha DESC
+        """, (inv['id'],)).fetchall()
+
         template_colors = {}
         if inv['template_id'] and inv['template_id'] != 'personalizado':
             template = PLANTILLAS_CONFIG.get(inv['template_id'])
@@ -614,6 +621,7 @@ def ver_invitacion(slug):
             datos=datos,
             fotos=fotos,
             datos_pase=datos_pase,
+            buenos_deseos=buenos_deseos,
             **template_colors
         )
 
@@ -667,3 +675,4 @@ def eliminar_pase(inv_id, pase_id):
         conn.close()
         
     return redirect(url_for('invitaciones_admin.gestionar_pases', id=inv_id))
+

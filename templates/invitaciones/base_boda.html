@@ -714,6 +714,89 @@
     min-height: 100svh; /* OJO: Borra cualquier rastro de 100vh o 100dvh que tengas aquí */
 }
 
+/* --- SECCIÓN BUENOS DESEOS --- */
+        .swiper-deseos {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            min-height: 250px;
+            margin: 30px auto;
+            border-radius: 18px;
+            overflow: hidden;
+            background: transparent;
+            padding-bottom: 40px; /* Espacio para el progreso */
+        }
+
+        .swiper-deseos .swiper-slide {
+            background: var(--card-bg);
+            border-radius: 18px;
+            padding: 40px 30px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
+            backdrop-filter: blur(6px);
+            -webkit-backdrop-filter: blur(6px);
+        }
+
+        .deseo-mensaje {
+            font-size: 1.15rem;
+            font-style: italic;
+            opacity: 0.9;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .deseo-nombre {
+            font-family: var(--font-title);
+            color: var(--color-oro);
+            font-size: 1.4rem;
+            font-weight: bold;
+        }
+
+        .deseo-fecha {
+            font-size: 0.75rem;
+            opacity: 0.5;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* Indicador de progreso circular (Autoplay) */
+        .autoplay-progress {
+            position: absolute;
+            right: 16px;
+            bottom: 16px;
+            z-index: 10;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--color-oro);
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+        }
+
+        .autoplay-progress svg {
+            --progress: 0;
+            position: absolute;
+            left: 0;
+            top: 0px;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            stroke-width: 4px;
+            stroke: var(--color-oro);
+            fill: none;
+            stroke-dashoffset: calc(125.6px * (1 - var(--progress)));
+            stroke-dasharray: 125.6;
+            transform: rotate(-90deg);
+        }
     </style>
 </head>
 
@@ -1069,6 +1152,41 @@
             </div>
         </section>
 
+        {% elif item == 'deseos' %}
+        <section data-aos="fade-up" style="padding-bottom: 60px;">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Libro de Visitas</h2>
+            <p class="mb-4" style="opacity: 0.8;">Déjanos un mensaje para recordar este día tan especial.</p>
+            
+            <button class="btn-boda mb-4" onclick="abrirModalDeseos({{ inv['id'] }})" style="margin-top: 10px;">
+                <i class="fas fa-pen-fancy me-2"></i> Escribir Mensaje
+            </button>
+
+            {% if buenos_deseos %}
+            <div class="swiper swiper-deseos">
+                <div class="swiper-wrapper">
+                    {% for deseo in buenos_deseos %}
+                    <div class="swiper-slide">
+                        <i class="fas fa-quote-left mb-3" style="color: var(--color-oro); font-size: 2rem; opacity: 0.3;"></i>
+                        <div class="deseo-mensaje">"{{ deseo.mensaje }}"</div>
+                        <div class="deseo-nombre">{{ deseo.nombre }}</div>
+                        <div class="deseo-fecha">{{ deseo.fecha[:10] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="autoplay-progress" slot="container-end">
+                    <svg viewBox="0 0 48 48">
+                        <circle cx="24" cy="24" r="20"></circle>
+                    </svg>
+                    <span></span>
+                </div>
+            </div>
+            {% else %}
+            <div class="premium-card" style="margin-top: 30px; text-align: center; display: block;">
+                <p style="font-style: italic; opacity: 0.6; margin: 0;">Aún no hay mensajes. ¡Sé el primero en firmar nuestro libro!</p>
+            </div>
+            {% endif %}
+        </section>
+
         {% elif item == 'timeline' and datos.get('itinerario') %}
         <section data-aos="fade-up">
             <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Itinerario</h2>
@@ -1169,21 +1287,47 @@
             content.style.visibility = 'visible';
             content.style.opacity = '1';
 
-            // Iniciamos Swiper y AOS un instante DESPUÉS de que es visible
             setTimeout(() => {
-                var swiper = new Swiper(".mySwiper", {
-                    effect: "cards",
-                    grabCursor: true,
-                    centeredSlides: true, // Agregado
-                    loop: true,           // Agregado
-                    observer: true,
-                    observeParents: true,
-                });
+                // Swiper de Galería (El que ya tenías)
+                if(document.querySelector('.mySwiper')) {
+                    new Swiper(".mySwiper", {
+                        effect: "cards",
+                        grabCursor: true,
+                        centeredSlides: true,
+                        loop: true,
+                        observer: true,
+                        observeParents: true,
+                    });
+                }
+
+                // NUEVO: Swiper de Buenos Deseos con Autoplay Progress
+                const swiperDeseos = document.querySelector('.swiper-deseos');
+                if(swiperDeseos) {
+                    const progressCircle = swiperDeseos.querySelector(".autoplay-progress svg");
+                    const progressContent = swiperDeseos.querySelector(".autoplay-progress span");
+                    
+                    new Swiper(".swiper-deseos", {
+                        spaceBetween: 30,
+                        centeredSlides: true,
+                        grabCursor: true,
+                        autoplay: {
+                            delay: 5000,
+                            disableOnInteraction: false
+                        },
+                        loop: true,
+                        on: {
+                            autoplayTimeLeft(s, time, progress) {
+                                progressCircle.style.setProperty("--progress", 1 - progress);
+                                progressContent.textContent = Math.ceil(time / 1000) + "s";
+                            }
+                        }
+                    });
+                }
                 
                 AOS.init({ 
                     duration: 1200, 
-                    once: true,      // Las animaciones solo ocurren una vez
-                    mirror: false    // Evita que brinquen al hacer scroll hacia arriba
+                    once: true,
+                    mirror: false
                 });
             }, 200);
         }
@@ -1310,6 +1454,88 @@
                 });
             });
         }
+// Función para el Modal de Buenos Deseos
+        function abrirModalDeseos(invitacionId) {
+            Swal.fire({
+                title: '<span style="color: var(--color-oro); font-family: var(--font-title); font-size: 2rem;">Tus Buenos Deseos</span>',
+                html: `
+                    <div style="text-align: left; margin-bottom: 10px;">
+                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-oro); font-weight: bold;">Tu Nombre o Familia</label>
+                        <input id="swal-nombre" class="swal2-input" placeholder="Ej. Familia Pérez" style="max-width: 100%; margin-top: 5px;">
+                    </div>
+                    <div style="text-align: left;">
+                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-oro); font-weight: bold;">Mensaje a los novios</label>
+                        <textarea id="swal-mensaje" class="swal2-textarea" placeholder="Les deseamos una vida llena de felicidad..." rows="4" style="max-width: 100%; resize: none; margin-top: 5px;"></textarea>
+                    </div>
+                `,
+                confirmButtonText: 'Guardar Mensaje <i class="fas fa-paper-plane ms-2"></i>',
+                showCancelButton: true,
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: 'var(--color-oro)',
+                cancelButtonColor: 'rgba(150,150,150,0.5)',
+                background: 'var(--bg-color)',
+                color: 'var(--text-color)',
+                focusConfirm: false,
+                preConfirm: () => {
+                    const nombre = document.getElementById('swal-nombre').value.trim();
+                    const mensaje = document.getElementById('swal-mensaje').value.trim();
+                    if (!nombre || !mensaje) {
+                        Swal.showValidationMessage('Por favor completa ambos campos. 🙏');
+                    }
+                    return { nombre: nombre, mensaje: mensaje };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    
+                    Swal.fire({
+                        title: 'Guardando...',
+                        allowOutsideClick: false,
+                        background: 'var(--bg-color)',
+                        color: 'var(--color-oro)',
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+
+                    fetch('/api/buenos-deseos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            invitacion_id: invitacionId,
+                            nombre: result.value.nombre,
+                            mensaje: result.value.mensaje
+                        })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Mensaje Guardado!',
+                                text: data.mensaje,
+                                confirmButtonColor: 'var(--color-oro)',
+                                background: 'var(--bg-color)',
+                                color: 'var(--text-color)'
+                            }).then(() => {
+                                window.location.reload(); // Recarga para mostrar el nuevo mensaje en el Swiper
+                            });
+                        } else {
+                            Swal.fire('Error', data.error, 'error');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: 'Ocurrió un error al enviar el mensaje. Intenta de nuevo.',
+                            background: 'var(--bg-color)',
+                            color: 'var(--text-color)',
+                            confirmButtonColor: 'var(--color-oro)'
+                        });
+                    });
+                }
+            });
+        }
+
     </script>
 </body>
 

@@ -444,10 +444,34 @@
                         </div>
                     </div>
 
+                    <div class="card draggable-item shadow-sm border-primary" data-bloque="deseos">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold text-primary">
+                                    <i class="fas fa-book-open me-2"></i>9. Libro de Visitas (Buenos Deseos)
+                                </span>
+                                <i class="fas fa-grip-lines text-muted handle"></i>
+                            </div>
+
+                            <input type="hidden" name="orden_items[]" value="deseos" id="input-orden-deseos">
+
+                            <div class="form-check form-switch mb-2">
+                                <input class="form-check-input" type="checkbox" id="switchDeseos" 
+                                    {% if not inv or 'deseos' in inv['config_json'] %}checked{% endif %}>
+                                <label class="form-check-label fw-semibold text-dark" for="switchDeseos">
+                                    Habilitar sección de Buenos Deseos
+                                </label>
+                            </div>
+                            <small class="text-muted d-block lh-sm">
+                                Permite a los invitados dejar mensajes que aparecerán en un carrusel dinámico.
+                            </small>
+                        </div>
+                    </div>
+
                     <div class="card draggable-item shadow-sm border-dark" data-bloque="rsvp">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>9. RSVP (Asistencia)</span>
+                                <span class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>10. RSVP (Asistencia)</span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="rsvp">
@@ -459,7 +483,7 @@
                     <div class="card draggable-item shadow-sm border-info" data-bloque="protocolo">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-info"><i class="fas fa-users me-2"></i>10. Protocolo Familiar</span>
+                                <span class="fw-bold text-info"><i class="fas fa-users me-2"></i>11. Protocolo Familiar</span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="protocolo">
@@ -489,7 +513,7 @@
                     <div class="card draggable-item shadow-sm border-secondary" data-bloque="frase_final">
                         <div class="card-body">
                             <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-secondary"><i class="fas fa-quote-right me-2"></i>11. Frase de Cierre</span>
+                                <span class="fw-bold text-secondary"><i class="fas fa-quote-right me-2"></i>12. Frase de Cierre</span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="frase_final">
@@ -501,7 +525,7 @@
                             <div class="card draggable-item shadow-sm border-dark" data-bloque="pases">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between mb-2">
-                                        <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>12. Pases de Invitados</span>
+                                        <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>13. Pases de Invitados</span>
                                         <i class="fas fa-grip-lines text-muted handle"></i>
                                     </div>
                                     <input type="hidden" name="orden_items[]" value="pases">
@@ -729,6 +753,22 @@
             <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
         `;
         contenedor.appendChild(nuevaFila);
+    });
+
+    // --- CONTROL DEL SWITCH DE BUENOS DESEOS ---
+    document.addEventListener('DOMContentLoaded', () => {
+        const switchDeseos = document.getElementById('switchDeseos');
+        const inputOrdenDeseos = document.getElementById('input-orden-deseos');
+        
+        if (switchDeseos && inputOrdenDeseos) {
+            // 1. Sincronizar al cargar la página (por si estaba apagado en edición)
+            inputOrdenDeseos.disabled = !switchDeseos.checked;
+            
+            // 2. Escuchar cuando el usuario lo prende o lo apaga
+            switchDeseos.addEventListener('change', function() {
+                inputOrdenDeseos.disabled = !this.checked;
+            });
+        }
     });
 
 

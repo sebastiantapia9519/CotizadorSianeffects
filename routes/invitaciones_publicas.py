@@ -3,6 +3,7 @@ import io
 import uuid
 import os
 import json
+import html
 from flask import Blueprint, render_template, request, jsonify, session
 from db import get_db_connection as get_db
 import boto3
@@ -169,3 +170,37 @@ def validar_qr():
         'mesa': invitado['mesa'] if invitado['mesa'] else '0',
         'evento': invitado['boda_nombre']
     })
+
+# =========================================================
+# BUENOS DESEOS (GUESTBOOK)
+# =========================================================
+
+@invitaciones_publicas_bp.route('/api/buenos-deseos', methods=['POST'])
+def guardar_buen_deseo():
+    try:
+        data = request.get_json()
+        invitacion_id = data.get('invitacion_id')
+        nombre = data.get('nombre')
+        mensaje = data.get('mensaje')
+
+        # 1. Validación estricta: que no vengan vacíos
+        if not invitacion_id or not nombre or not mensaje:
+            return jsonify({'success': False, 'error': 'Faltan datos. El nombre y mensaje son obligatorios.'}), 400
+
+        # 2. Seguridad: Limpiamos los inputs para evitar inyección de código (XSS)
+        nombre_limpio = html.escape(nombre.strip())
+        mensaje_limpio = html.escape(mensaje.strip())
+
+        # 3. Guardar en Base de Datos
+        conn = get_db()
+        conn.execute(
+            "INSERT INTO buenos_deseos (invitacion_id, nombre, mensaje) VALUES (?, ?, ?)",
+            (invitacion_id, nombre_limpio, mensaje_limpio)
+        )
+        conn.commit()
+        conn.close()
+
+        return jsonify({'success': True, 'mensaje': '¡Gracias por tus buenos deseos!'})
+        
+    except Exception as e:
+        return jsonify({'success': False, 'error': f"Error interno: {str(e)}"}), 500

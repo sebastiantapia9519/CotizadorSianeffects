@@ -363,5 +363,16 @@ def init_db():
         FOREIGN KEY (invitacion_id) REFERENCES invitaciones(id)
     )
     """)
+
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS buenos_deseos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invitacion_id INTEGER,
+        nombre TEXT NOT NULL,
+        mensaje TEXT NOT NULL,
+        fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (invitacion_id) REFERENCES invitaciones(id)
+    )
+    """)
     conn.commit()
     conn.close()
