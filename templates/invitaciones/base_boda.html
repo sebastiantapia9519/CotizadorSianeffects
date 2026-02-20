@@ -95,12 +95,19 @@
         html, body {
             margin: 0;
             padding: 0;
-            box-sizing: border-box;
-            overflow-x: hidden; /* Ponerlo en AMBOS es obligatorio para domar a AOS */
+            width: 100%;
+            /* NADA de overflow aquí, lo vamos a delegar */
         }
 
         *, *:before, *:after {
             box-sizing: inherit;
+        }
+
+        .sian-wrapper {
+            width: 100%;
+            overflow-x: hidden;
+            position: relative;
+            contain: paint; /* 🔨 El martillazo radical que aísla los recalculos del scroll */
         }
 
         /* NUEVO: El truco para fondos fijos sin lag en celulares */
@@ -751,7 +758,9 @@
     <div class="music-btn" onclick="toggleMusic()"><i class="fas fa-volume-up" id="musicIcon"></i></div>
     {% endif %}
 
-    <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">        {% for item in config %}
+    <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">        
+        <div class="sian-wrapper">
+                    {% for item in config %}
         
         
         {% if item == 'hero' %}
@@ -1124,6 +1133,7 @@
         <footer style="text-align: center; padding: 40px; font-size: 0.8rem; opacity: 0.5;">
             Creado con ❤️ por SianEffects
         </footer>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
@@ -1160,27 +1170,32 @@
             if (audio) { audio.play().catch(e => console.log("Autoplay bloqueado")); }
         }
 
-        // Separo la lógica de renderizado para no repetir código
         function mostrarInvitacion(content) {
             content.style.visibility = 'visible';
             content.style.opacity = '1';
 
-            // Iniciamos Swiper y AOS un instante DESPUÉS de que es visible
             setTimeout(() => {
                 var swiper = new Swiper(".mySwiper", {
                     effect: "cards",
                     grabCursor: true,
-                    centeredSlides: true, // Agregado
-                    loop: true,           // Agregado
+                    centeredSlides: true,
+                    loop: true,
                     observer: true,
                     observeParents: true,
                 });
                 
                 AOS.init({ 
                     duration: 1200, 
-                    once: true,      // Las animaciones solo ocurren una vez
-                    mirror: false    // Evita que brinquen al hacer scroll hacia arriba
+                    once: true,
+                    mirror: false 
                 });
+
+                // 🔨 EL GOLPE FINAL: Obligamos a AOS a tomar una "foto" correcta 
+                // del layout medio segundo después de que todo ya cargó.
+                setTimeout(() => { 
+                    AOS.refresh(); 
+                }, 500);
+
             }, 200);
         }
 
