@@ -92,26 +92,31 @@
             --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | fondo_tarjeta }};
         }
 
-        body {
-            font-family: var(--font-body);
-            background-color: var(--bg-color);
-            color: var(--text-color);
-
-                {
-                % if inv['url_fondo'] %
-            }
-
-            background-image: url('{{ inv[' url_fondo'] }}');
-            background-size: cover;
-            background-attachment: fixed;
-            background-position: center;
-
-                {
-                % endif %
-            }
-
+        html, body {
             margin: 0;
-            overflow-x: hidden;
+            padding: 0;
+            width: 100%;
+            max-width: 100vw;
+            overflow-x: hidden !important; /* Corta de tajo el espacio blanco lateral */
+            font-family: var(--font-body);
+            color: var(--text-color);
+            -webkit-font-smoothing: antialiased; /* Suaviza el texto en iPhone */
+        }
+
+        /* NUEVO: El truco para fondos fijos sin lag en celulares */
+        .fondo-fijo-app {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -999;
+            background-color: var(--bg-color);
+            {% if inv['url_fondo'] %}
+            background-image: url('{{ inv['url_fondo'] }}');
+            background-size: cover;
+            background-position: center;
+            {% endif %}
         }
 
         h1,
@@ -708,7 +713,7 @@
 </head>
 
 <body>
-
+    <div class="fondo-fijo-app"></div>
     <div id="welcome-screen">
         
         {% if inv['estilo_apertura'] == 'sobre' %}
@@ -745,12 +750,13 @@
     <div class="music-btn" onclick="toggleMusic()"><i class="fas fa-volume-up" id="musicIcon"></i></div>
     {% endif %}
 
-    <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">
+    <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease; width: 100%; overflow-x: hidden; position: relative;">
         {% for item in config %}
         
         {% if item == 'hero' %}
+        {% if item == 'hero' %}
         <section
-            style="height: 100vh; max-width: 100%; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
+            style="height: 100dvh; min-height: 100vh; width: 100%; overflow: hidden; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
             <div style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; 
                             background-image: url('{{ inv['foto_portada_url'] if inv['foto_portada_url'] else (fotos[0] if fotos else '') }}'); 
                             background-size: cover; background-position: center; filter: brightness(0.6);"></div>
