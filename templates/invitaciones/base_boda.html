@@ -642,19 +642,18 @@
             z-index: 1;
         }
 
-/* --- ESTILO HÍBRIDO: IMAGEN R2 + TEXTO DINÁMICO --- */
+/* --- ESTILO HÍBRIDO FINAL: IIMAGEN GRANDE + TEXTO GRABADO --- */
         .sello-cera {
-            width: 140px;  /* Ajustado para que se vea el detalle del sello */
-            height: 140px;
+            /* 1. MUCHO MÁS GRANDE */
+            width: 200px;  /* Antes 140px */
+            height: 200px; /* Antes 140px */
             
-            /* Tu imagen desde Cloudflare R2 */
+            /* Imagen R2 */
             background-image: url('https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png');
             background-size: contain;
             background-position: center;
             background-repeat: no-repeat;
             background-color: transparent;
-            
-            /* Eliminamos bordes y fondos viejos para no arruinar el PNG */
             border: none; 
             border-radius: 0;
             
@@ -662,30 +661,35 @@
             align-items: center;
             justify-content: center;
             
-            /* Ajuste del texto: Contorno negro pedido */
+            /* 2. AJUSTES DE TEXTO (SIN CONTORNO) */
             font-family: var(--font-title);
-            font-size: 2.8rem; /* Un poco más grande para que destaque */
-            color: #fff;
-            -webkit-text-stroke: 1px rgba(0,0,0,0.85); /* El contorno negro */
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.6);  /* Sombra para separarlo del fondo dorado */
+            font-size: 4rem; /* Letra mucho más grande para llenar el sello */
             
-            /* La magia: usamos drop-shadow en vez de box-shadow para que la sombra respete la forma irregular de tu PNG */
-            filter: drop-shadow(0 15px 20px rgba(0,0,0,0.4));
+            /* Cambio clave: Color oscuro para parecer grabado en la cera */
+            color: #5e4215; 
+            
+            /* QUITAMOS EL CONTORNO NEGRO (-webkit-text-stroke) */
+            
+            /* Sombra suave clara abajo para dar efecto de profundidad/hundido */
+            text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.5);
+            
+            /* Sombra del sello completo */
+            filter: drop-shadow(0 20px 30px rgba(0,0,0,0.5));
             
             position: absolute;
             top: 50vh;
             left: 50%;
-            animation: pulse-sello-hibrido 2.5s infinite; /* Llamamos a la nueva animación */
+            animation: pulse-sello-hibrido 2.5s infinite;
             z-index: 4;
             transition: opacity 0.4s ease;
             cursor: pointer;
         }
 
-        /* La animación del latido (Ahora crece MUCHO más como pediste) */
+        /* Animación ajustada para el nuevo tamaño */
         @keyframes pulse-sello-hibrido {
             0% { transform: translate(-50%, -50%) scale(1); }
-            /* Pasamos a 1.35 para que el crecimiento sea muy notorio al pulsar */
-            50% { transform: translate(-50%, -50%) scale(1.35); filter: drop-shadow(0 25px 25px rgba(0,0,0,0.5)); } 
+            /* Como el sello base ya es gigante, bajamos un poquito la escala del pulso (1.2) para que no se salga de la pantalla en móviles */
+            50% { transform: translate(-50%, -50%) scale(1.2); filter: drop-shadow(0 30px 40px rgba(0,0,0,0.6)); } 
             100% { transform: translate(-50%, -50%) scale(1); }
         }
 
