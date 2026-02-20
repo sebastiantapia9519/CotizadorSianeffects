@@ -1167,39 +1167,46 @@
             observeParents: true,
         });
 
-        // Reloj Cuenta Regresiva
-        // Reloj Cuenta Regresiva y Formato de Fecha
+       // Reloj Cuenta Regresiva y Formato de Fecha
         const fechaStr = "{{ inv['fecha_evento'] }}";
         if (fechaStr && fechaStr !== 'None') {
-            // Reemplazamos guiones por barras por compatibilidad en Safari/iOS
-            const fechaEvento = new Date(fechaStr.replace(/-/g, '/')); 
+            // El truco definitivo: cambiar el espacio por una 'T' lo hace 100% compatible con todos los navegadores
+            const safeFechaStr = fechaStr.replace(' ', 'T');
+            const fechaEvento = new Date(safeFechaStr);
             
-            // --- NUEVO: FORMATEO DE FECHA ELEGANTE ---
-            const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            let textoFecha = fechaEvento.toLocaleDateString('es-ES', opcionesFecha);
-            // Ponemos la primera letra en mayúscula
-            textoFecha = textoFecha.charAt(0).toUpperCase() + textoFecha.slice(1);
-            
-            // Lo inyectamos en el HTML
-            const elFechaTexto = document.getElementById("fecha-elegante");
-            if(elFechaTexto) elFechaTexto.innerText = textoFecha;
-            // -----------------------------------------
+            // Verificamos que la fecha cargó correctamente para no mostrar "NaN"
+            if (!isNaN(fechaEvento.getTime())) {
+                
+                // --- FORMATEO DE FECHA ELEGANTE ---
+                const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+                let textoFecha = fechaEvento.toLocaleDateString('es-ES', opcionesFecha);
+                
+                // Ponemos la primera letra en mayúscula
+                textoFecha = textoFecha.charAt(0).toUpperCase() + textoFecha.slice(1);
+                
+                // Lo inyectamos en el HTML
+                const elFechaTexto = document.getElementById("fecha-elegante");
+                if(elFechaTexto) elFechaTexto.innerText = textoFecha;
+                // -----------------------------------------
 
-            const fechaEventoMs = fechaEvento.getTime();
-            const x = setInterval(function () {
-                const now = new Date().getTime();
-                const distance = fechaEventoMs - now;
+                const fechaEventoMs = fechaEvento.getTime();
+                const x = setInterval(function () {
+                    const now = new Date().getTime();
+                    const distance = fechaEventoMs - now;
 
-                if (distance < 0) {
-                    clearInterval(x);
-                    document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-oro); margin-top:20px;'>¡ES HOY!</h3>";
-                    return;
-                }
-                document.getElementById("dias").innerText = Math.floor(distance / (1000 * 60 * 60 * 24));
-                document.getElementById("horas").innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                document.getElementById("minutos").innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-                document.getElementById("segundos").innerText = Math.floor((distance % (1000 * 60)) / 1000);
-            }, 1000);
+                    if (distance < 0) {
+                        clearInterval(x);
+                        document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-oro); margin-top:20px;'>¡ES HOY!</h3>";
+                        return;
+                    }
+                    document.getElementById("dias").innerText = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    document.getElementById("horas").innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    document.getElementById("minutos").innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    document.getElementById("segundos").innerText = Math.floor((distance % (1000 * 60)) / 1000);
+                }, 1000);
+            } else {
+                console.error("El formato de la fecha no es válido:", fechaStr);
+            }
         }
 
         // Función RSVP Premium (AJAX)
