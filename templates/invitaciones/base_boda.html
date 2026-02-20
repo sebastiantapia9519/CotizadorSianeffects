@@ -756,8 +756,6 @@
                             background-size: cover; background-position: center; filter: brightness(0.6);"></div>
             <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #fdfbf7;"
                 data-aos="zoom-in" data-aos-duration="1500">
-                <p style="text-transform: uppercase; letter-spacing: 5px; font-size: 0.9rem; color: var(--color-oro);">
-                    ¡Nos Casamos!</p>
                 <h1
                     style="font-size: clamp(3.5rem, 10vw, 6rem); margin: 10px 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">
                     {{ datos['novios'] }}</h1>
@@ -767,7 +765,15 @@
 
         {% elif item == 'countdown' %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 30px;">Faltan</h2>
+            <p
+                style="text-transform: uppercase; letter-spacing: 5px; font-size: 1.1rem; color: var(--color-oro); margin-bottom: 15px; font-weight: 600;">
+                ¡Nos Casamos!
+            </p>
+            
+            <h2 id="fecha-elegante"
+                style="font-size: 2rem; color: var(--text-color); margin-bottom: 40px; font-family: var(--font-title);">
+            </h2>
+
             <div class="countdown-box" id="contador">
                 <div class="time-unit">
                     <div class="time-number" id="dias">00</div>
@@ -1162,16 +1168,31 @@
         });
 
         // Reloj Cuenta Regresiva
+        // Reloj Cuenta Regresiva y Formato de Fecha
         const fechaStr = "{{ inv['fecha_evento'] }}";
         if (fechaStr && fechaStr !== 'None') {
-            const fechaEvento = new Date(fechaStr).getTime();
+            // Reemplazamos guiones por barras por compatibilidad en Safari/iOS
+            const fechaEvento = new Date(fechaStr.replace(/-/g, '/')); 
+            
+            // --- NUEVO: FORMATEO DE FECHA ELEGANTE ---
+            const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            let textoFecha = fechaEvento.toLocaleDateString('es-ES', opcionesFecha);
+            // Ponemos la primera letra en mayúscula
+            textoFecha = textoFecha.charAt(0).toUpperCase() + textoFecha.slice(1);
+            
+            // Lo inyectamos en el HTML
+            const elFechaTexto = document.getElementById("fecha-elegante");
+            if(elFechaTexto) elFechaTexto.innerText = textoFecha;
+            // -----------------------------------------
+
+            const fechaEventoMs = fechaEvento.getTime();
             const x = setInterval(function () {
                 const now = new Date().getTime();
-                const distance = fechaEvento - now;
+                const distance = fechaEventoMs - now;
 
                 if (distance < 0) {
                     clearInterval(x);
-                    document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-oro);'>¡ES HOY!</h3>";
+                    document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-oro); margin-top:20px;'>¡ES HOY!</h3>";
                     return;
                 }
                 document.getElementById("dias").innerText = Math.floor(distance / (1000 * 60 * 60 * 24));
