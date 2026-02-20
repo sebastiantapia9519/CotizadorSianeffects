@@ -92,14 +92,17 @@
             --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | fondo_tarjeta }};
         }
 
-        html, body {
+        html {
+            scroll-behavior: smooth; /* Le da un toque muy elegante al scroll entre secciones */
+        }
+
+        body {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
             position: relative;
-            overflow-x: hidden;
-            /* Cambiamos 'auto' por 'scroll' para evitar el "salto" de la barra */
-            overflow-y: scroll; 
+            overflow-x: hidden; /* Esto es vital para que AOS no desborde hacia los lados y cause saltos */
+            /* NADA de overflow-y aquí, dejamos que el html haga su trabajo natural */
         }
 
         *, *:before, *:after {
@@ -108,8 +111,11 @@
 
         /* NUEVO: El truco para fondos fijos sin lag en celulares */
         .fondo-fijo-app {
-            position: absolute;
-            inset: 0;
+            position: fixed; /* Cambiado de absolute a fixed */
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             z-index: -1;
             background-color: var(--bg-color);
             {% if inv['url_fondo'] %}
