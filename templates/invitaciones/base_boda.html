@@ -92,17 +92,11 @@
             --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | fondo_tarjeta }};
         }
 
-        html {
-            scroll-behavior: smooth; /* Le da un toque muy elegante al scroll entre secciones */
-        }
-
-        body {
+        html, body {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            position: relative;
-            overflow-x: hidden; /* Esto es vital para que AOS no desborde hacia los lados y cause saltos */
-            /* NADA de overflow-y aquí, dejamos que el html haga su trabajo natural */
+            overflow-x: hidden; /* Ponerlo en AMBOS es obligatorio para domar a AOS */
         }
 
         *, *:before, *:after {
@@ -1179,10 +1173,17 @@
                 var swiper = new Swiper(".mySwiper", {
                     effect: "cards",
                     grabCursor: true,
+                    centeredSlides: true, // Agregado
+                    loop: true,           // Agregado
                     observer: true,
                     observeParents: true,
                 });
-                AOS.init({ duration: 1200, once: true });
+                
+                AOS.init({ 
+                    duration: 1200, 
+                    once: true,      // Las animaciones solo ocurren una vez
+                    mirror: false    // Evita que brinquen al hacer scroll hacia arriba
+                });
             }, 200);
         }
 
