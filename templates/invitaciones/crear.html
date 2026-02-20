@@ -448,40 +448,22 @@
                             <div id="contenedor-protocolo">
                                 {% if edit_mode and datos.get('protocolo') %}
                                     {% for integrante in datos['protocolo'] %}
-                                    <div class="row g-2 mb-2 fila-protocolo">
-                                        <div class="col-md-5">
-                                            <input type="text" name="rol_protocolo[]" class="form-control form-control-sm" 
-                                                placeholder="Rol (Ej. Padres de la Novia)" value="{{ integrante.rol }}" required>
-                                        </div>
-                                        <div class="col-md-5">
-                                            <input type="text" name="nombres_protocolo[]" class="form-control form-control-sm" 
-                                                placeholder="Nombres (Ej. José y Victoria)" value="{{ integrante.nombres }}" required>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <button type="button" class="btn btn-sm btn-danger w-100 btn-eliminar-proto"><i class="fas fa-trash"></i></button>
-                                        </div>
+                                    <div class="input-group input-group-sm mb-1">
+                                        <input type="text" name="rol_protocolo[]" class="form-control" placeholder="Rol (Ej. Padres de la Novia)" value="{{ integrante.rol }}" required>
+                                        <input type="text" name="nombres_protocolo[]" class="form-control" placeholder="Nombres (Ej. José y Victoria)" value="{{ integrante.nombres }}" required>
+                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
                                     </div>
                                     {% endfor %}
                                 {% else %}
-                                    <div class="row g-2 mb-2 fila-protocolo">
-                                        <div class="col-md-5">
-                                            <input type="text" name="rol_protocolo[]" class="form-control form-control-sm" 
-                                                placeholder="Rol (Ej. Padres de la Novia)">
-                                        </div>
-                                        <div class="col-md-5">
-                                            <input type="text" name="nombres_protocolo[]" class="form-control form-control-sm" 
-                                                placeholder="Nombres (Ej. José y Victoria)">
-                                        </div>
-                                        <div class="col-md-2">
-                                            <button type="button" class="btn btn-sm btn-danger w-100 btn-eliminar-proto"><i class="fas fa-trash"></i></button>
-                                        </div>
+                                    <div class="input-group input-group-sm mb-1">
+                                        <input type="text" name="rol_protocolo[]" class="form-control" placeholder="Rol (Ej. Padres de la Novia)">
+                                        <input type="text" name="nombres_protocolo[]" class="form-control" placeholder="Nombres (Ej. José y Victoria)">
+                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
                                     </div>
                                 {% endif %}
                             </div>
                             
-                            <button type="button" class="btn btn-sm btn-outline-info mt-2" id="btn-agregar-proto">
-                                <i class="fas fa-plus"></i> Agregar integrante
-                            </button>
+                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" id="btn-agregar-proto">+ Agregar integrante</button>
                         </div>
                     </div>
 
@@ -696,26 +678,13 @@
     document.getElementById('btn-agregar-proto').addEventListener('click', function() {
         const contenedor = document.getElementById('contenedor-protocolo');
         const nuevaFila = document.createElement('div');
-        nuevaFila.className = 'row g-2 mb-2 fila-protocolo';
+        nuevaFila.className = 'input-group input-group-sm mb-1';
         nuevaFila.innerHTML = `
-            <div class="col-md-5">
-                <input type="text" name="rol_protocolo[]" class="form-control form-control-sm" placeholder="Rol (Ej. Padrinos de Anillos)">
-            </div>
-            <div class="col-md-5">
-                <input type="text" name="nombres_protocolo[]" class="form-control form-control-sm" placeholder="Nombres">
-            </div>
-            <div class="col-md-2">
-                <button type="button" class="btn btn-sm btn-danger w-100 btn-eliminar-proto"><i class="fas fa-trash"></i></button>
-            </div>
+            <input type="text" name="rol_protocolo[]" class="form-control" placeholder="Rol (Ej. Padrinos de Anillos)" required>
+            <input type="text" name="nombres_protocolo[]" class="form-control" placeholder="Nombres (Ej. Juan y Maria)" required>
+            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
         `;
         contenedor.appendChild(nuevaFila);
-    });
-
-    // Eliminar fila
-    document.getElementById('contenedor-protocolo').addEventListener('click', function(e) {
-        if(e.target.closest('.btn-eliminar-proto')) {
-            e.target.closest('.fila-protocolo').remove();
-        }
     });
 
 
