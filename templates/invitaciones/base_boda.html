@@ -642,34 +642,50 @@
             z-index: 1;
         }
 
-        /* Sello de Cera (CORREGIDO) */
+/* Sello de Cera (EFECTO REAL 3D) */
         .sello-cera {
-            width: 90px;
-            height: 90px;
-            background: linear-gradient(135deg, #d4af37, #aa8529);
-            border-radius: 50%;
+            width: 100px; /* Lo hice un poco más grande para que luzca el detalle */
+            height: 100px;
+            
+            /* 1. Degradado radial para simular cómo la luz pega en la cera curva */
+            background: radial-gradient(circle at 30% 30%, #fceabb 0%, #d4af37 30%, #aa8529 70%, #6e4f12 100%);
+            
+            /* 2. Borde irregular: Esto hace que no sea un círculo perfecto, simulando cera derretida */
+            border-radius: 49% 51% 48% 52% / 51% 49% 52% 48%;
+            
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: var(--font-title);
-            font-size: 1.8rem;
+            font-size: 2.2rem;
+            
+            /* 3. El contorno negro en las letras sin cambiar su color de relleno */
             color: #fff;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4), inset 0 0 10px rgba(255,255,255,0.3);
-            border: 2px solid #b8912d;
+            -webkit-text-stroke: 0.8px rgba(0,0,0,0.9); /* Contorno negro */
+            text-shadow: 2px 2px 5px rgba(0,0,0,0.6);   /* Sombra extra para despegar la letra del fondo */
+            
+            /* 4. LA MAGIA DEL RELIEVE: Múltiples capas de sombras internas */
+            box-shadow: 
+                0 10px 20px rgba(0,0,0,0.5),                 /* Sombra exterior principal */
+                inset -3px -4px 6px rgba(0,0,0,0.4),         /* Sombra del borde (abajo/derecha) */
+                inset 3px 4px 8px rgba(255,255,255,0.7),     /* Brillo del borde (arriba/izquierda) */
+                inset 0 0 0 8px #c59b31,                     /* El "ancho" del anillo de cera elevado */
+                inset 0 0 15px 12px rgba(80, 50, 10, 0.7);   /* El hundimiento oscuro donde van las letras */
+                
             position: absolute;
             top: 50vh;
             left: 50%;
-            /* Integramos el centrado dentro de su propia animación */
-            animation: pulse-sello 2s infinite;
+            animation: pulse-sello-nuevo 2s infinite;
             z-index: 4;
             transition: opacity 0.3s ease;
             cursor: pointer;
         }
 
-        /* Animación exclusiva para el sello que mantiene las coordenadas X e Y */
-        @keyframes pulse-sello {
+        /* Animación exclusiva para el sello (Ahora pulsa MÁS grande) */
+        @keyframes pulse-sello-nuevo {
             0% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.05); }
+            /* Subí el scale a 1.18 (antes lo tenías en 1.05) para que crezca mucho más al palpitar */
+            50% { transform: translate(-50%, -50%) scale(1.18); } 
             100% { transform: translate(-50%, -50%) scale(1); }
         }
 
