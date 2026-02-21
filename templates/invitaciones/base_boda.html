@@ -690,28 +690,34 @@
         }
 
         /* --- EL SELLO HÍBRIDO (Imagen R2) --- */
-        .sello-cera {
-            width: 160px;  
-            height: 160px;
+.sello-cera {
+            /* 1. Hacemos el sello un poco más grande para más impacto */
+            width: 180px;  
+            height: 180px;
+            
             background-image: url('https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png');
             background-size: contain;
             background-position: center;
             background-repeat: no-repeat;
             background-color: transparent;
             border: none; 
-            border-radius: 0;
             
+            /* 2. Flexbox para centrado perfecto del contenido interior */
             display: flex;
             align-items: center;
             justify-content: center;
+            flex-direction: column; /* Asegura que el tooltip quede arriba del texto */
             
             position: absolute;
-            /* 3. Ajustamos el top para que coincida con el height de la solapa (70vh) */
+            /* IMPORTANTE: Esto debe coincidir con la altura (height) de tu .sobre-solapa */
             top: 70vh; 
             left: 50%;
+            /* El transform asegura que el centro exacto del sello esté en la punta del sobre */
             transform: translate(-50%, -50%); 
             z-index: 4;
             cursor: pointer;
+            /* Sombra suave para que el sello entero "flote" sobre el papel */
+            filter: drop-shadow(0 5px 15px rgba(0,0,0,0.2));
         }
 
         /* Contenedor de la animación (Separado para evitar bugs de centrado) */
@@ -722,17 +728,25 @@
         /* --- LAS LETRAS "GRABADAS" EN LA CERA --- */
         .texto-sello {
             font-family: var(--font-title);
-            font-size: 2.2rem; /* Tamaño proporcional para que no se salga de la cera */
-            color: #382510; /* Marrón muy oscuro */
+            /* Ajustamos el tamaño para que quepa perfecto en el nuevo sello de 180px */
+            font-size: 3rem; 
+            font-weight: bold; 
             
-            /* LA MAGIA: Fusiona la letra con la textura de la imagen de fondo */
-            mix-blend-mode: multiply; 
-            opacity: 0.9;
+            /* 1. Color dorado claro, similar a la parte iluminada de la cera */
+            color: #e6c68b; 
             
-            /* Sutil efecto de luz/sombra para dar profundidad de grabado */
-            text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.4), -1px -1px 0px rgba(0, 0, 0, 0.1);
+            /* 2. LA MAGIA DEL RELIEVE 3D */
+            /* Sombra oscura abajo a la derecha + Brillo blanco arriba a la izquierda */
+            text-shadow: 
+                2px 2px 4px rgba(0, 0, 0, 0.5),   /* Sombra de profundidad */
+                -1px -1px 1px rgba(255, 255, 255, 0.7); /* Brillo de borde */
+
+            /* 3. Reseteamos posiciones antiguas, el flex del padre se encarga ahora */
             position: relative;
-            top: -2px; /* Micro-ajuste visual vertical */
+            top: 0; 
+            margin-top: 5px; /* Un pequeño ajuste visual si es necesario */
+            opacity: 1;
+            mix-blend-mode: normal; /* Quitamos el modo multiply anterior */
         }
 
         /* Animación ajustada: Escala MUCHO MÁS GRANDE al pulsar (1.25) */
