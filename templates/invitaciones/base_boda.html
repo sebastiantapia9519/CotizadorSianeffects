@@ -690,12 +690,6 @@
 
         /* --- EL SELLO --- */
         .sello-cera {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 15;
-
             width: 150px;
             height: 150px;
             border-radius: 50%;
@@ -703,28 +697,24 @@
             background-image: url('https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png');
             background-size: cover;
             background-position: center;
+            background-repeat: no-repeat;
 
-            /* MÁS CONTRASTE, MENOS “HALO” */
             box-shadow:
-                inset 0 8px 14px rgba(255,255,255,0.25),
-                inset 0 -10px 18px rgba(0,0,0,0.45),
+                inset 0 6px 10px rgba(255,255,255,0.25),
+                inset 0 -12px 20px rgba(0,0,0,0.45),
                 0 22px 40px rgba(0,0,0,0.45);
-
-            cursor: pointer;
         }
 
         /* --- LAS LETRAS GRABADAS --- */
         .texto-sello {
             font-family: var(--font-title);
-            font-size: 3.1rem;
+            font-size: 3rem;
             font-weight: bold;
-            letter-spacing: 2px;
-
-            color: #fff2cc;
+            color: #e6c68b;
 
             text-shadow:
-                2px 2px 4px rgba(0,0,0,0.6),
-                -1px -1px 1px rgba(255,255,255,0.5);
+                2px 2px 4px rgba(0,0,0,0.5),
+                -1px -1px 1px rgba(255,255,255,0.7);
 
             pointer-events: none;
         }
@@ -759,9 +749,9 @@
         }
 
         /* Animación ajustada: Escala MUCHO MÁS GRANDE al pulsar (1.25) */
-        @keyframes pulse-sello-hibrido {
-            0% { transform: translate(-50%, -50%) scale(1); }
-            50% { transform: translate(-50%, -50%) scale(1.08); }
+        @keyframes pulse-sello {
+            0%   { transform: translate(-50%, -50%) scale(1); }
+            50%  { transform: translate(-50%, -50%) scale(1.08); }
             100% { transform: translate(-50%, -50%) scale(1); }
         }
 
@@ -798,6 +788,18 @@
         .sobre-abierto .sello-cera {
             opacity: 0;
             pointer-events: none;
+        }
+
+        .sello-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 15;
+            cursor: pointer;
+
+            /* animación */
+            animation: pulse-sello 2.5s infinite;
         }
         
         .sobre-cuerpo {
@@ -956,9 +958,11 @@
                 <div class="sobre-solapa" id="solapa-sobre"></div>
                 <div class="sobre-solapa-inferior"></div>
 
-            <div class="sello-cera pulso-apertura" onclick="entrarSitio('sobre')">
+            <div class="sello-wrapper" onclick="entrarSitio('sobre')">
                 <div class="tooltip-sian">Click Aquí</div>
-                <span class="texto-sello">{{ datos.get('iniciales') }}</span>
+                <div class="sello-cera">
+                    <span class="texto-sello">{{ datos.get('iniciales') }}</span>
+                </div>
             </div>
         </div>
 
