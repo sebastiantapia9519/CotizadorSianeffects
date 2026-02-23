@@ -690,36 +690,79 @@
 
         /* --- EL SELLO --- */
         .sello-cera {
+            position: relative;
             width: 100%;
             height: 100%;
             border-radius: 50%;
 
-            background-image: url('https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png');
-            background-size: cover; /* 🔥 ESTE ERA EL ERROR */
-            background-repeat: no-repeat;
-            background-position: center;
+            background:
+                radial-gradient(circle at 30% 30%,
+                    #f7e7c3 0%,
+                    #e8c27a 35%,
+                    #c89b4a 60%,
+                    #9f6f2f 100%
+                );
 
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            box-shadow:
+                inset 0 0 0 4px rgba(255,215,140,0.9),
+                inset 0 0 12px rgba(255,255,255,0.35),
+                inset 0 -6px 10px rgba(0,0,0,0.35),
+                0 14px 24px rgba(0,0,0,0.4);
+        }
 
-            box-shadow: 0 18px 35px rgba(0,0,0,0.35);
+        .sello-cera::before {
+            content: "";
+            position: absolute;
+            top: 12%;
+            left: 18%;
+            width: 60%;
+            height: 40%;
+            border-radius: 50%;
+            background: radial-gradient(circle,
+                rgba(255,255,255,0.85),
+                rgba(255,255,255,0.15),
+                transparent 70%
+            );
+        }
+
+        .sello-cera::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            border-radius: 50%;
+            background:
+                radial-gradient(circle at 75% 80%,
+                    rgba(0,0,0,0.18),
+                    transparent 60%
+                ),
+                radial-gradient(circle at 25% 70%,
+                    rgba(255,255,255,0.15),
+                    transparent 55%
+                );
+            mix-blend-mode: overlay;
         }
 
         /* --- LAS LETRAS GRABADAS --- */
         .texto-sello {
-            font-family: var(--font-title);
-            font-size: 3rem;
-            font-weight: bold;
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
 
-            color: #e6c68b;
+            font-family: 'Playfair Display', serif;
+            font-size: 38px;
+            font-weight: 600;
 
-            text-shadow: 
-                2px 2px 4px rgba(0, 0, 0, 0.5),
-                -1px -1px 1px rgba(255, 255, 255, 0.7);
+            color: #f3d9a0;
 
+            text-shadow:
+                0 2px 1px rgba(255,255,255,0.5),
+                0 -2px 2px rgba(0,0,0,0.6),
+                0 6px 10px rgba(0,0,0,0.45);
+
+            transform: translateY(2px);
             pointer-events: none;
-            user-select: none;
         }
 
         /* Contenedor de la animación (Separado para evitar bugs de centrado) */
@@ -795,17 +838,11 @@
         }
 
         .sello-wrapper {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 15;
+            position: relative;
+            width: 140px;
+            height: 140px;
+            margin: auto;
             cursor: pointer;
-
-            width: 160px;
-            height: 160px;
-
-            animation: pulse-sello 2.5s infinite;
         }
         
         .sobre-cuerpo {
