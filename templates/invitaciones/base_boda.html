@@ -550,128 +550,31 @@
 
 
 
-/* Tooltip Premium Definitivo (Anti-Bugs) */
-    .tooltip-sian {
-    position: absolute;
-    bottom: calc(100% + 18px);
-    left: 50%;
-    transform: translateX(-50%);
-    
-    background: #ffffff;
-    color: var(--color-oro);
-    
-    padding: 8px 26px;
-    border-radius: 999px;
-    
-    font-family: var(--font-body);
-    font-size: 0.7rem;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 3px;
-    
-    white-space: nowrap;
-    pointer-events: none;
-    
-    box-shadow: 
-        0 6px 18px rgba(0,0,0,0.08),
-        inset 0 0 0 1px rgba(0,0,0,0.04);
-    
-    animation: float-tooltip 2.8s ease-in-out infinite;
-    z-index: 20;
-}
-
-.tooltip-sian::after {
-    content: '';
-    position: absolute;
-    bottom: -6px;
-    left: 50%;
-    transform: translateX(-50%) rotate(45deg);
-    width: 12px;
-    height: 12px;
-    background: #ffffff;
-    box-shadow: 2px 2px 4px rgba(0,0,0,0.05);
-}
-
-
-        @keyframes float-tooltip {
-            0%, 100% { transform: translateX(-50%) translateY(0); }
-            50% { transform: translateX(-50%) translateY(-6px); }
-        }
-
-        /* Contenedor animado de Pulso (Para las iniciales gigantes) */
-        .pulso-apertura {
-            animation: pulse-apertura 2s infinite;
-            cursor: pointer;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-
-        @keyframes pulse-apertura {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-            100% { transform: scale(1); }
-        }
-
-        /* --- ESTILO 2: EL SOBRE --- */
-        .pantalla-sobre {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            background: #e9e2d6; /* fondo general */
-            overflow: hidden;
-        }
-        
-        .sobre-solapa {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 55vh;
-
-            background: #eaddcb;
-            clip-path: polygon(0 0, 100% 0, 50% 100%);
-
-            transform-origin: top;
-
-            /* 👇 AQUÍ ESTÁ LA CLAVE */
-            transition:
-                transform 1s cubic-bezier(.4,0,.2,1),
-                opacity 0.6s ease;
-
-            z-index: 4;
-
-            filter: drop-shadow(0 12px 18px rgba(0,0,0,0.25));
-        }
-        
-        .sobre-fondo-trasero {
-        position: absolute;
-        inset: 0;
-        background: #f2e8d8;
-        z-index: 1;
-    }
-
-/* --- TOOLTIP TIPO ORIGINAL (Fondo Café/Dorado) --- */
+        /* --- TOOLTIP (AJUSTADO MÁS ABAJO) --- */
         .tooltip-sian {
             position: absolute;
-            bottom: calc(100% + 10px);
+            bottom: 85%; 
             left: 50%;
             transform: translateX(-50%);
-            background: #b5986d; /* Color café claro elegante */
+            
+            background: #b5986d;
             color: #ffffff;
             padding: 6px 18px;
             border-radius: 20px;
+            
             font-family: var(--font-body);
             font-size: 0.8rem;
             font-weight: 500;
             letter-spacing: 0.5px;
             white-space: nowrap;
             pointer-events: none;
+            
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
             animation: float-tooltip 2.8s ease-in-out infinite;
-            z-index: 20;
+            z-index: 200; 
         }
 
+        /* La flechita del tooltip */
         .tooltip-sian::after {
             content: '';
             position: absolute;
@@ -683,193 +586,160 @@
             background: #b5986d;
         }
 
+        /* Animación suave de flotación */
         @keyframes float-tooltip {
             0%, 100% { transform: translateX(-50%) translateY(0); }
-            50% { transform: translateX(-50%) translateY(-6px); }
+            50% { transform: translateX(-50%) translateY(-5px); }
         }
 
-        /* --- EL SELLO --- */
-        .sello-cera {
+        /* --- ESTILO 2: EL SOBRE --- */
+        .pantalla-sobre {
             position: relative;
             width: 100%;
-            height: 100%;
-            border-radius: 50%;
-
-            background:
-                radial-gradient(circle at 30% 30%,
-                    #f7e7c3 0%,
-                    #e8c27a 35%,
-                    #c89b4a 60%,
-                    #9f6f2f 100%
-                );
-
-            box-shadow:
-                inset 0 0 0 4px rgba(255,215,140,0.9),
-                inset 0 0 12px rgba(255,255,255,0.35),
-                inset 0 -6px 10px rgba(0,0,0,0.35),
-                0 14px 24px rgba(0,0,0,0.4);
+            height: 100vh;
+            background: #ffffff;
+            overflow: hidden;
+            /* Esto permite que el giro 3D se vea con profundidad */
+            perspective: 1500px; 
         }
-
-        .sello-cera::before {
-            content: "";
+        
+        /* --- SOLAPA SUPERIOR --- */
+        .sobre-solapa {
             position: absolute;
-            top: 12%;
-            left: 18%;
-            width: 60%;
-            height: 40%;
-            border-radius: 50%;
-            background: radial-gradient(circle,
-                rgba(255,255,255,0.85),
-                rgba(255,255,255,0.15),
-                transparent 70%
-            );
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 55vh;
+            /* Color ligeramente más oscuro para diferenciar planos */
+            background: #e6dac8; 
+            clip-path: polygon(0 0, 100% 0, 50% 100%);
+            transform-origin: top center;
+            transition: transform 1.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease;
+            z-index: 5; /* Siempre hasta arriba para tapar el sello */
+            
+            /* SOMBRA REALISTA: Se proyecta sobre las demás solapas */
+            filter: drop-shadow(0 15px 15px rgba(0,0,0,0.25));
         }
-
-        .sello-cera::after {
-            content: "";
+        
+        .sobre-fondo-trasero {
             position: absolute;
             inset: 0;
-            border-radius: 50%;
-            background:
-                radial-gradient(circle at 75% 80%,
-                    rgba(0,0,0,0.18),
-                    transparent 60%
-                ),
-                radial-gradient(circle at 25% 70%,
-                    rgba(255,255,255,0.15),
-                    transparent 55%
-                );
-            mix-blend-mode: overlay;
+            background: #f2e8d8;
+            z-index: 1;
         }
-
-        /* --- LAS LETRAS GRABADAS --- */
-        .texto-sello {
+        /* Añadimos un pseudo-elemento para simular que el sobre cierra hacia el centro */
+        .sobre-fondo-trasero::after {
+            content: '';
             position: absolute;
             inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-
-            font-family: 'Playfair Display', serif;
-            font-size: 38px;
-            font-weight: 600;
-
-            color: #f3d9a0;
-
-            text-shadow:
-                0 2px 1px rgba(255,255,255,0.5),
-                0 -2px 2px rgba(0,0,0,0.6),
-                0 6px 10px rgba(0,0,0,0.45);
-
-            transform: translateY(2px);
-            pointer-events: none;
+            background: #efe6d6;
+            clip-path: polygon(0 0, 45% 50%, 0 100%, 100% 100%, 55% 50%, 100% 0);
+            z-index: 3;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
         }
 
-        /* Contenedor de la animación (Separado para evitar bugs de centrado) */
-        .pulso-apertura {
-            animation: pulse-sello-hibrido 2.5s infinite;
-        }
-
-        /* --- LAS LETRAS "GRABADAS" EN LA CERA --- */
-        .texto-sello {
-            font-family: var(--font-title);
-            /* Ajustamos el tamaño para que quepa perfecto en el nuevo sello de 180px */
-            font-size: 3rem; 
-            font-weight: bold; 
-            
-            /* 1. Color dorado claro, similar a la parte iluminada de la cera */
-            color: #e6c68b; 
-            
-            /* 2. LA MAGIA DEL RELIEVE 3D */
-            /* Sombra oscura abajo a la derecha + Brillo blanco arriba a la izquierda */
-            text-shadow: 
-                2px 2px 4px rgba(0, 0, 0, 0.5),   /* Sombra de profundidad */
-                -1px -1px 1px rgba(255, 255, 255, 0.7); /* Brillo de borde */
-
-            /* 3. Reseteamos posiciones antiguas, el flex del padre se encarga ahora */
-            position: relative;
-            top: 0; 
-            margin-top: 5px; /* Un pequeño ajuste visual si es necesario */
-            opacity: 1;
-            mix-blend-mode: normal; /* Quitamos el modo multiply anterior */
-        }
-
-        /* Animación ajustada: Escala MUCHO MÁS GRANDE al pulsar (1.25) */
-        @keyframes pulse-sello {
-            0%   { transform: translate(-50%, -50%) scale(1); }
-            50%  { transform: translate(-50%, -50%) scale(1.08); }
-            100% { transform: translate(-50%, -50%) scale(1); }
-        }
-
+        /* --- SOLAPA INFERIOR (La que sube) --- */
         .sobre-solapa-inferior {
             position: absolute;
             bottom: 0;
             left: 0;
             width: 100%;
             height: 55vh;
-
             background: #eaddcb;
             clip-path: polygon(0 100%, 100% 100%, 50% 0);
-
-            transform-origin: bottom;
-            transition: transform 1s cubic-bezier(.4,0,.2,1);
-
-            z-index: 3;
-            filter: drop-shadow(0 -10px 18px rgba(0,0,0,0.25));
+            transform-origin: bottom center;
+            transition: transform 1.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease;
+            z-index: 4; /* Entre las laterales y la superior */
+            filter: drop-shadow(0 -5px 10px rgba(0,0,0,0.1));
         }
 
         .sobre-abierto .sobre-solapa {
-            transform: translateY(-100%);
+            transform: rotateX(140deg) translateY(-100%);
+            opacity: 0;
         }
 
         .sobre-abierto .sobre-solapa-inferior {
             transform: translateY(100%);
+            opacity: 0;
+        }
+
+        /* --- EL SELLO "MASTER" (GRANDE Y RESPIRACIÓN SUAVE) --- */
+        .sello-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px; 
+            height: 280px;
+            z-index: 6; 
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: respiracion-suave 4s infinite ease-in-out;
+            /* Transición suave para cuando se oculta */
+            transition: opacity 0.4s ease, transform 0.4s ease;
+        }
+
+        .sello-img-real {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 15px 25px rgba(0,0,0,0.35));
+        }
+
+        /* --- LETRAS (AJUSTE DE SEGURIDAD) --- */
+        .texto-sello {
+            position: absolute;
+            z-index: 101;
+            
+            font-family: var(--font-title);
+            
+            /* 2.2rem es el punto dulce. 
+               Se ve elegante y cabe incluso si la fuente es ancha */
+            font-size: 2.2rem; 
+            font-weight: bold;
+            letter-spacing: 1px;
+            
+            /* Color grabado */
+            color: #6d4c1e;
+            
+            text-shadow: 
+                1px 1px 0px rgba(255, 255, 255, 0.5),
+                -1px -1px 1px rgba(0, 0, 0, 0.2);
+            
+            padding-right: 12px;
+            max-width: 160px; 
+            overflow: visible; 
+            white-space: nowrap; 
+            text-align: center;
+            
+            pointer-events: none;
+        }
+
+        @keyframes respiracion-suave {
+            0%   { transform: translate(-50%, -50%) scale(1); }
+            50%  { transform: translate(-50%, -50%) scale(1.05); } 
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+
+        .sello-wrapper:hover {
+            cursor: pointer;
         }
 
         .sobre-abierto .sello-wrapper {
             opacity: 0;
-            transform: translate(-50%, -50%) scale(0.6);
-            transition: all 0.4s ease;
+            transform: translate(-50%, -50%) scale(0.4);
+            transition: all 0.5s ease;
             pointer-events: none;
-        }
-        .sobre-abierto .sello-cera {
-            opacity: 0;
-            pointer-events: none;
-        }
-
-        .sello-wrapper {
-            position: absolute;          /* 🔥 ESTO FALTABA */
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            
-            width: 140px;
-            height: 140px;
-
-            cursor: pointer;
-            z-index: 6;                  /* encima del sobre */
         }
         
         .sobre-cuerpo {
             position: absolute;
             inset: 0;
-            background: #efe6d6;
+            background: #fdfbf7;
             z-index: 2;
-
-            /* Forma del sobre */
-            clip-path: polygon(
-                0 0,
-                100% 0,
-                100% 75%,
-                50% 100%,
-                0 75%
-            );
-
-            /* Sombras laterales reales */
-            box-shadow:
-                inset 20px 0 30px rgba(0,0,0,0.08),
-                inset -20px 0 30px rgba(0,0,0,0.08),
-                0 25px 40px rgba(0,0,0,0.25);
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.1);
         }
         /* --- ESTILO 3: INICIALES DESVANECIDAS --- */
         .iniciales-gigantes {
@@ -1008,9 +878,10 @@
 
             <div class="sello-wrapper" onclick="entrarSitio('sobre')">
                 <div class="tooltip-sian">Click Aquí</div>
-                <div class="sello-cera">
-                    <span class="texto-sello">{{ datos.get('iniciales') }}</span>
-                </div>
+                
+                <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png" class="sello-img-real" alt="Sello">
+                
+                <span class="texto-sello">{{ datos.get('iniciales') }}</span>
             </div>
         </div>
 
@@ -1461,15 +1332,21 @@
             const audio = document.getElementById('bgMusic');
 
             if (estilo === 'sobre') {
-                // 1. Añadimos la clase para girar la solapa y ocultar el sello
+                // 1. Iniciamos la animación de las solapas y el sello
                 welcome.classList.add('sobre-abierto');
                 
-                // 2. Esperamos a que la solapa termine de girar (800ms) para desvanecer el div principal
+                // 2. Esperamos a que las solapas estén casi fuera (1 segundo)
+                // antes de empezar el fade out del fondo
                 setTimeout(() => {
                     welcome.style.opacity = '0';
-                    setTimeout(() => { welcome.style.visibility = 'hidden'; }, 800);
                     mostrarInvitacion(content);
-                }, 800);
+                }, 600);
+
+                // 3. Eliminamos el div por completo después de que termine el fade
+                setTimeout(() => { 
+                    welcome.style.visibility = 'hidden'; 
+                    welcome.style.display = 'none';
+                }, 1800);
                 
             } else {
                 // Comportamiento para 'simple' e 'iniciales' (Fade out normal)
