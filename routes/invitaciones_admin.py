@@ -640,8 +640,7 @@ def ver_invitacion(slug):
                     'template_color_fondo': template['color_fondo']
                 }
 
-        plantilla_render = 'invitaciones/xv.html' if inv.get('tipo_evento') == 'xv' else 'invitaciones/base_boda.html'
-
+        plantilla_render = 'invitaciones/xv.html' if inv['tipo_evento'] == 'xv' else 'invitaciones/base_boda.html'
         
         return render_template(
             plantilla_render,
@@ -651,7 +650,7 @@ def ver_invitacion(slug):
             fotos=fotos,
             datos_pase=datos_pase,
             buenos_deseos=buenos_deseos,
-            historia_lista=json.loads(inv['historia_json']) if inv.get('historia_json') else [], # Mandamos la historia a la vista
+            historia_lista=json.loads(inv['historia_json']) if inv['historia_json'] else [],
             **template_colors
         )
 

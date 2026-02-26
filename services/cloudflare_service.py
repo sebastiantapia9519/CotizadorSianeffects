@@ -16,6 +16,9 @@ PUBLIC_URL = os.getenv('R2_PUBLIC_URL')
 
 
 def upload_to_cloudflare(file, folder="invitaciones"):
+    if not BUCKET_NAME or not ENDPOINT_URL:
+            raise ValueError("🚨 ERROR: Las credenciales del .env no se cargaron correctamente. BUCKET_NAME es None.")
+
     # Inicializamos el cliente igual que en tu catálogo
     s3 = boto3.client(
         service_name='s3',
