@@ -187,86 +187,116 @@
 
 <style id="envelope-styles">
     /* =========================================
-       3. SISTEMA DE SOBRES E INVITACIÓN (SVG + SELLO PERSONALIZADO)
+       3. SISTEMA DE SOBRES E INVITACIÓN (Híbrido Desktop/Móvil)
        ========================================= */
 
     /* --- CONTENEDOR PRINCIPAL --- */
     .pantalla-sobre {
-        position: fixed; /* Fijo para que ocupe toda la pantalla al abrir */
+        position: fixed;
         top: 0;
         left: 0;
         width: 100vw;
         height: 100vh;
-        background-color: #eeeae4; /* Color base del sobre cerrado */
+        background-color: #eeeae4; 
         overflow: hidden;
         z-index: 1000;
         display: flex;
         justify-content: center;
         align-items: center;
-        /* IMPORTANTE: Esto activa el modo 3D para que la solapa se vea venir hacia ti */
-        perspective: 1500px;
-        /* Transición para desaparecer todo el conjunto suavemente */
+        perspective: 1500px; /* Profundidad 3D */
         transition: opacity 1s ease, visibility 1s ease;
     }
 
-    /* --- 1. LA SOLAPA (TRIÁNGULO SVG) --- */
-    .svg-solapa {
+    .triangulo-papel {
+        fill: #eeeae4; 
+    }
+
+    /* --- SOLAPA DESKTOP (Horizontal) --- */
+    .svg-desktop {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%; 
-        /* ALTURA CLAVE: 50vh.
-           Esto hace que el pico del triángulo llegue EXACTAMENTE al centro 
-           vertical de la pantalla (50%), donde estará el centro del sello.
-        */
         height: 50vh; 
         z-index: 5;
-        /* Sombra suave y realista que cae sobre la parte inferior */
         filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.15));
-        
-        /* Transición para la animación de apertura */
-       /* AQUÍ ESTÁ EL TRUCO DE LA BISAGRA: 
-           "0 0" significa coordenadas X=0 Y=0 (La parte de mero arriba).
-           Así gira como una puerta de garaje hacia arriba. */
         transform-origin: 0 0; 
-        
-        
-        /* Hacemos la transición 1.2s para que abra con energía */
         transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
         pointer-events: none;
-        
-        /* Esto ayuda a que el navegador renderice mejor el 3D */
         backface-visibility: hidden;
-        will-change: transform;
+        display: block; /* Visible en PC */
     }
 
-    .triangulo-papel {
-       fill: #eeeae4; /* Color de la solapa (ligeramente más oscuro para contraste) */
+    /* --- SOLAPAS MÓVIL (Verticales) --- */
+    .svg-mobile {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%; 
+        height: 100vh; /* Abarcan de arriba a abajo */
+        z-index: 5;
+        /* Usamos una sombra central para dibujar la forma de "X" del sobre */
+        filter: drop-shadow(0px 0px 20px rgba(0,0,0,0.18));
+        transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        backface-visibility: hidden;
+        display: none; /* Oculto en PC */
     }
 
-    /* --- 2. EL SELLO "MASTER" (TU DISEÑO) --- */
+    .svg-mobile-izq { transform-origin: left center; }
+    .svg-mobile-der { transform-origin: right center; }
+
+    /* --- MEDIA QUERY: CAMBIO A MODO CELULAR --- */
+    @media (max-width: 768px), (orientation: portrait) {
+        .svg-desktop { display: none; }
+        .svg-mobile { display: block; }
+    }
+
+    /* --- ANIMACIONES DE APERTURA --- */
+    
+    /* PC: Abre hacia arriba */
+    .sobre-abierto .svg-desktop {
+        transform: rotateX(180deg);
+    }
+
+    /* Móvil: Abren hacia los lados como puertas */
+    .sobre-abierto .svg-mobile-izq {
+        transform: rotateY(-180deg);
+    }
+    .sobre-abierto .svg-mobile-der {
+        transform: rotateY(180deg);
+    }
+
+    /* Sello se desvanece */
+    .sobre-abierto .sello-wrapper {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5); 
+        pointer-events: none;
+    }
+    
+    .sobre-abierto .tooltip-sian {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    /* --- EL SELLO "MASTER" --- */
     .sello-wrapper {
         position: absolute;
         top: 50%;
         left: 50%;
-        /* Centrado perfecto */
         transform: translate(-50%, -50%);
-        width: 260px; 
-        height: 260px;
-        z-index: 6; /* Encima del SVG */
+        width: 280px; 
+        height: 280px;
+        z-index: 10; 
         cursor: pointer;
         display: flex;
         justify-content: center;
         align-items: center;
-        
-        /* Tu animación de respiración */
         animation: respiracion-suave 4s infinite ease-in-out;
-        /* Transición para desaparecer */
         transition: opacity 0.5s ease, transform 0.5s ease;
     }
 
     .sello-wrapper:hover {
-        /* Efecto sutil al pasar el mouse (pausa la respiración o escala un poco) */
         transform: translate(-50%, -50%) scale(1.05);
     }
 
@@ -279,21 +309,16 @@
         z-index: 1;
     }
 
-    /* --- 3. LETRAS DENTRO DEL SELLO --- */
+    /* --- LETRAS DEL SELLO --- */
     .texto-sello {
         position: absolute;
         z-index: 101;
-        
         font-family: var(--font-title);
         font-size: 2.2rem; 
         font-weight: bold;
         letter-spacing: 1px;
-        color: #6d4c1e; /* Color grabado */
-        
-        text-shadow: 
-            1px 1px 0px rgba(255, 255, 255, 0.5),
-            -1px -1px 1px rgba(0, 0, 0, 0.2);
-        
+        color: #6d4c1e; 
+        text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5), -1px -1px 1px rgba(0, 0, 0, 0.2);
         padding-right: 12px;
         max-width: 160px; 
         overflow: visible; 
@@ -302,34 +327,46 @@
         pointer-events: none;
     }
 
-    /* --- ANIMACIONES --- */
+    /* --- ANIMACIÓN RESPIRACIÓN --- */
     @keyframes respiracion-suave {
         0%   { transform: translate(-50%, -50%) scale(1); }
         50%  { transform: translate(-50%, -50%) scale(1.03); } 
         100% { transform: translate(-50%, -50%) scale(1); }
     }
-
-    /* --- ESTADO ABIERTO (CLASE QUE AGREGA JS) --- */
-    /* 1. La solapa sube girando */
-    .sobre-abierto .svg-solapa {
-        transform: rotateX(180deg); /* Gira hacia arriba */        
-    }
-    /* 2. El sello se encoge y desaparece */
-    .sobre-abierto .sello-wrapper {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.5); 
+    
+    /* --- TOOLTIP FLOTANTE --- */
+    .tooltip-sian {
+        position: absolute;
+        top: 15px;
+        background: #b5986d;
+        color: #ffffff;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-family: var(--font-body);
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
         pointer-events: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        animation: float-tooltip 2.8s ease-in-out infinite;
+        z-index: 200; 
     }
-    /* 3. El tooltip desaparece rápido */
-    .sobre-abierto .tooltip-sian {
-        opacity: 0;
-        transition: opacity 0.2s;
+
+    .tooltip-sian::after {
+        content: '';
+        position: absolute;
+        bottom: -4px;
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg);
+        width: 10px;
+        height: 10px;
+        background: #b5986d;
     }
     
-    .sobre-abierto .pantalla-sobre {
-        /* El fondo desaparece al final */
-        opacity: 0;
-        pointer-events: none;
+    @keyframes float-tooltip {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
     }
     
     /* --- ESTILO 3: INICIALES DESVANECIDAS --- */
@@ -849,20 +886,21 @@
     <div id="welcome-screen">
         
         {% if inv['estilo_apertura'] == 'sobre' %}
-        <div class="pantalla-sobre">
-            
-            <svg class="svg-solapa" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <div class="pantalla-sobre">            
+            <svg class="svg-desktop" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <path class="triangulo-papel" d="M0 0 L100 0 L50 100 Z" />
             </svg>
-
+            <svg class="svg-mobile svg-mobile-izq" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path class="triangulo-papel" d="M0 0 L51 50 L0 100 Z" />
+            </svg>
+            <svg class="svg-mobile svg-mobile-der" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path class="triangulo-papel" d="M100 0 L49 50 L100 100 Z" />
+            </svg>
             <div class="sello-wrapper" onclick="entrarSitio('sobre')">
-                <div class="tooltip-sian">Click Aquí</div>
-                
-                <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png" class="sello-img-real" alt="Sello">
-                
+                <div class="tooltip-sian">Click Aquí</div>                
+                <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png" class="sello-img-real" alt="Sello">                
                 <span class="texto-sello">{{ datos.get('iniciales') }}</span>
-            </div>
-            
+            </div>            
         </div>
 
         {% elif inv['estilo_apertura'] == 'iniciales' %}
