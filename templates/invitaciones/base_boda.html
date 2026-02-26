@@ -10,856 +10,837 @@
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 
-    <style>
-        /* 1. FUENTES DINÁMICAS (¡Ojo, no separar las llaves de los porcentajes!) */
-            {% if inv['estilo_fuente']=='clasico' %}
-
-        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-
-        :root {
-            --font-title: 'Playfair Display', serif;
-            --font-body: 'Lato', sans-serif;
-            --color-oro: #D4AF37;
-        }
-
-            {% elif inv['estilo_fuente']=='romantico' %}
-
-        @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
-
-        :root {
-            --font-title: 'Great Vibes', cursive;
-            --font-body: 'Montserrat', sans-serif;
-            --color-oro: #d48b9b;
-        }
-
-            {% elif inv['estilo_fuente']=='moderno' %}
-
-        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
-
-        :root {
-            --font-title: 'Oswald', sans-serif;
-            --font-body: 'Roboto', sans-serif;
-            --color-oro: #a89f91;
-        }
-
-            {% elif inv['estilo_fuente']=='minimal' %}
-
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
-
-        :root {
-            --font-title: 'Cinzel', serif;
-            --font-body: 'Raleway', sans-serif;
-            --color-oro: #8c8c8c;
-        }
-
-            {% elif inv['estilo_fuente']=='botanico' %}
-
-        @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
-
-        :root {
-            --font-title: 'Cormorant', serif;
-            --font-body: 'Proza Libre', sans-serif;
-            --color-oro: #8f9779;
-        }
-
-            {% else %}
-
-        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
-
-        :root {
-            --font-title: 'Playfair Display', serif;
-            --font-body: 'Lato', sans-serif;
-            --color-oro: #D4AF37;
-        }
-
-            {% endif %}
-
-        /* 2. VARIABLES INTELIGENTES DE COLOR */
-        :root {
-
-            {% if inv['template_id'] == 'personalizado' %}
-                /* 🎨 Colores definidos manualmente por el usuario */
-                --color-oro: {{ inv['color_acentos']|default('#D4AF37') }};
-                --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
-            {% else %}
-                /* 🎨 Colores heredados de la plantilla */
-                --color-oro: {{ inv['template_color_acento']|default('#D4AF37') }};
-                --bg-color: {{ inv['template_color_fondo']|default('#fdfbf7') }};
-            {% endif %}
-
-            /* Derivados automáticos (SIEMPRE se calculan) */
-            --text-color: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | color_contraste }};
-            --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | fondo_tarjeta }};
-        }
-
-        html {
-            box-sizing: border-box;
-        }
-
-        *, *:before, *:after {
-            box-sizing: inherit;
-        }
-
-        body {
-            margin: 0; /* Esto elimina el borde blanco de toda la pantalla */
-            padding: 0;
-            width: 100%;
-            position: relative;
-            overflow-x: hidden; /* Esto es el candado para que las animaciones de AOS no te ensanchen la pantalla ni causen saltos */
-        }
-
-        /* NUEVO: El truco para fondos fijos sin lag en celulares */
-        .fondo-fijo-app {
-        position: fixed;
-        inset: 0; /* Esto reemplaza width, height, top y left en una sola línea segura */
-        z-index: -1;
-        background-color: var(--bg-color);
-        {% if inv['url_fondo'] %}
-        background-image: url('{{ inv['url_fondo'] }}');
-        background-size: cover;
-        background-position: center;
+<style id="core-styles">
+    /* =========================================
+       1. FUENTES DINÁMICAS Y CONFIGURACIÓN BASE
+       ========================================= */
+       
+        /* Lógica de Jinja para Fuentes */
+        {% if inv['estilo_fuente']=='clasico' %}
+    @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+    :root {
+        --font-title: 'Playfair Display', serif;
+        --font-body: 'Lato', sans-serif;
+        --color-oro: #D4AF37;
+    }
+        {% elif inv['estilo_fuente']=='romantico' %}
+    @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
+    :root {
+        --font-title: 'Great Vibes', cursive;
+        --font-body: 'Montserrat', sans-serif;
+        --color-oro: #d48b9b;
+    }
+        {% elif inv['estilo_fuente']=='moderno' %}
+    @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
+    :root {
+        --font-title: 'Oswald', sans-serif;
+        --font-body: 'Roboto', sans-serif;
+        --color-oro: #a89f91;
+    }
+        {% elif inv['estilo_fuente']=='minimal' %}
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
+    :root {
+        --font-title: 'Cinzel', serif;
+        --font-body: 'Raleway', sans-serif;
+        --color-oro: #8c8c8c;
+    }
+        {% elif inv['estilo_fuente']=='botanico' %}
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
+    :root {
+        --font-title: 'Cormorant', serif;
+        --font-body: 'Proza Libre', sans-serif;
+        --color-oro: #8f9779;
+    }
+        {% else %}
+    @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+    :root {
+        --font-title: 'Playfair Display', serif;
+        --font-body: 'Lato', sans-serif;
+        --color-oro: #D4AF37;
+    }
         {% endif %}
+
+    /* 2. VARIABLES INTELIGENTES DE COLOR */
+    :root {
+        {% if inv['template_id'] == 'personalizado' %}
+            /* 🎨 Colores definidos manualmente por el usuario */
+            --color-oro: {{ inv['color_acentos']|default('#D4AF37') }};
+            --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
+        {% else %}
+            /* 🎨 Colores heredados de la plantilla */
+            --color-oro: {{ inv['template_color_acento']|default('#D4AF37') }};
+            --bg-color: {{ inv['template_color_fondo']|default('#fdfbf7') }};
+        {% endif %}
+
+        /* Derivados automáticos (SIEMPRE se calculan) */
+        --text-color: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | color_contraste }};
+        --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | fondo_tarjeta }};
     }
 
-        h1,
-        h2,
-        h3 {
-            font-family: var(--font-title);
-            font-weight: normal;
-            margin: 0;
-        }
+    html {
+        box-sizing: border-box;
+    }
 
-        /* PANTALLA BIENVENIDA */
-        #welcome-screen {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: var(--bg-color);
-            z-index: 9999;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.8s ease, visibility 0.8s ease;
-        }
+    *, *:before, *:after {
+        box-sizing: inherit;
+    }
 
-        .btn-entrar,
-        .btn-boda {
-            padding: 12px 30px;
-            font-size: 0.9rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            background: transparent;
-            color: var(--text-color);
-            border: 1px solid var(--color-oro);
-            cursor: pointer;
-            transition: all 0.3s;
-            text-decoration: none;
-            display: inline-block;
-            border-radius: 30px;
-        }
+    body {
+        margin: 0; /* Esto elimina el borde blanco de toda la pantalla */
+        padding: 0;
+        width: 100%;
+        position: relative;
+        overflow-x: hidden; /* Esto es el candado para que las animaciones de AOS no te ensanchen la pantalla ni causen saltos */
+    }
+    
+    .hero {
+        min-height: 100svh; /* OJO: Borra cualquier rastro de 100vh o 100dvh que tengas aquí */
+    }
 
-        .btn-entrar:hover,
-        .btn-boda:hover {
-            background: var(--color-oro);
-            color: var(--bg-color);
-            border-color: var(--color-oro);
-        }
+    /* NUEVO: El truco para fondos fijos sin lag en celulares */
+    .fondo-fijo-app {
+    position: fixed;
+    inset: 0; /* Esto reemplaza width, height, top y left en una sola línea segura */
+    z-index: -1;
+    background-color: var(--bg-color);
+    {% if inv['url_fondo'] %}
+    background-image: url('{{ inv['url_fondo'] }}');
+    background-size: cover;
+    background-position: center;
+    {% endif %}
+    }
 
-        .music-btn {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            width: 50px;
-            height: 50px;
-            background: var(--color-oro);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--bg-color);
-            z-index: 1000;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-            animation: pulse 2s infinite;
-        }
+    h1, h2, h3 {
+        font-family: var(--font-title);
+        font-weight: normal;
+        margin: 0;
+    }
+</style>
 
-        /* SECCIONES Y CONTADORES */
-        section {
-            padding: 80px 20px;
-            text-align: center;
-            max-width: 800px;
-            margin: 0 auto;
-        }
+<style id="welcome-styles">
+    /* =========================================
+       2. PANTALLA DE BIENVENIDA Y ACCESOS
+       ========================================= */
+    
+    #welcome-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--bg-color);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
 
-        .countdown-box {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
+    .btn-entrar,
+    .btn-boda {
+        padding: 12px 30px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        background: transparent;
+        color: var(--text-color);
+        border: 1px solid var(--color-oro);
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-block;
+        border-radius: 30px;
+    }
 
-        .time-unit {
-            background: var(--card-bg);
-            backdrop-filter: blur(4px);
+    .btn-entrar:hover,
+    .btn-boda:hover {
+        background: var(--color-oro);
+        color: var(--bg-color);
+        border-color: var(--color-oro);
+    }
 
-            border-radius: 16px;
-            padding: 16px 18px;
-            min-width: 82px;
+    .music-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        background: var(--color-oro);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bg-color);
+        z-index: 1000;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+</style>
 
-            box-shadow:
-                0 6px 16px rgba(0,0,0,0.08),
-                inset 0 0 0 1px rgba(255,255,255,0.45);
-        }
+<style id="envelope-styles">
+    /* =========================================
+       3. SISTEMA DE SOBRES E INVITACIÓN (SVG + SELLO PERSONALIZADO)
+       ========================================= */
 
-        .time-number {
-            font-size: 2rem;
-            font-family: var(--font-title);
-            color: var(--color-oro);
-        }
+    /* --- CONTENEDOR PRINCIPAL --- */
+    .pantalla-sobre {
+        position: fixed; /* Fijo para que ocupe toda la pantalla al abrir */
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #eeeae4; /* Color base del sobre cerrado */
+        overflow: hidden;
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        /* IMPORTANTE: Esto activa el modo 3D para que la solapa se vea venir hacia ti */
+        perspective: 1500px;
+        /* Transición para desaparecer todo el conjunto suavemente */
+        transition: opacity 1s ease, visibility 1s ease;
+    }
 
-        .time-label {
-            font-size: 0.7rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-top: 5px;
-            opacity: 0.7;
-        }
-
-        /* TARJETAS PREMIUM (Regalos, Hospedaje) */
-        .premium-container {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            max-width: 500px;
-            margin: 0 auto;
-        }
-
-        .premium-card {
-            background: var(--card-bg);
-            border-radius: 18px;
-            padding: 24px;
-
-            display: flex;
-            align-items: center;
-            gap: 20px;
-
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-
-            box-shadow:
-                0 8px 25px rgba(0, 0, 0, 0.08),
-                inset 0 0 0 1px rgba(255,255,255,0.35);
-
-            transition: transform 0.25s ease, box-shadow 0.25s ease;
-        }
-
-        .premium-card:hover {
-            transform: translateY(-4px);
-            box-shadow:
-                0 14px 35px rgba(0, 0, 0, 0.12),
-                inset 0 0 0 1px var(--color-oro);
-        }
-
-        .premium-icon {
-            width: 50px;
-            height: 50px;
-            background: rgba(150, 150, 150, 0.1);
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            color: var(--color-oro);
-        }
-
-        .premium-info {
-            flex: 1;
-        }
-
-        .premium-title {
-            font-family: var(--font-title);
-            font-weight: bold;
-            margin-bottom: 5px;
-            font-size: 1.2rem;
-        }
-
-        .btn-card {
-            background: rgba(150, 150, 150, 0.1);
-            color: var(--text-color);
-            border: none;
-            padding: 6px 15px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            text-decoration: none;
-            display: inline-block;
-            transition: background 0.3s;
-            margin-top: 5px;
-        }
-
-        .btn-card:hover {
-            background: var(--color-oro);
-            color: var(--bg-color);
-        }
-
-        /* CARRUSEL SWIPER */
-        .swiper {
-            width: 280px;
-            /* Ancho estricto necesario para el modo cards */
-            height: 380px;
-            /* Alto estricto necesario para el modo cards */
-            margin-top: 20px;
-            margin-bottom: 50px;
-            padding: 10px;
-        }
-
-        .swiper-slide {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 18px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-            background-color: var(--card-bg);
-            overflow: hidden;
-        }
-
-        .swiper-slide img {
-            display: block;
-            width: 100%;
-            height: 100%;
-            /* Aquí el 100% sí funciona porque .swiper ya tiene alto */
-            object-fit: cover;
-        }
-
-        /* TIMELINE DINÁMICO */
-        .timeline {
-            position: relative;
-            max-width: 400px;
-            margin: 0 auto;
-            padding: 20px 0;
-        }
-
-        .timeline::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 90px;
-            height: 100%;
-            width: 1px;
-            background: rgba(150, 150, 150, 0.3);
-        }
-
-        .timeline-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 30px;
-            position: relative;
-        }
-
-        .timeline-time {
-            width: 70px;
-            text-align: right;
-            font-style: italic;
-            font-size: 0.9rem;
-            color: var(--color-oro);
-        }
-
-        .timeline-dot {
-            width: 10px;
-            height: 10px;
-            background: var(--color-oro);
-            border-radius: 50%;
-            margin: 0 15px;
-            z-index: 1;
-            box-shadow: 0 0 10px var(--color-oro);
-        }
-
-        .timeline-content {
-            flex: 1;
-            text-align: left;
-            font-weight: 500;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.1);
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-        /* NUEVO ESTILO PARA EL PASE (SianEffects Premium Look) */
-        .ticket-container {
-            background: var(--card-bg);
-            border-radius: 18px;
-
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-
-            box-shadow:
-                0 10px 30px rgba(0,0,0,0.08),
-                inset 0 0 0 1px rgba(255,255,255,0.35);
-        }
-
-        .ticket-header {
-            font-family: var(--font-title);
-            font-size: 1.8rem;
-            margin-bottom: 30px;
-            border-bottom: 1px solid var(--color-oro);
-            display: inline-block;
-            padding-bottom: 5px;
-        }
-
-        .ticket-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            text-align: left;
-            margin-top: 20px;
-        }
-
-        /* Para que en móviles se vea una sola columna si es necesario */
-        @media (max-width: 480px) {
-            .ticket-grid { grid-template-columns: 1fr; text-align: center; }
-            .qr-side { order: -1; } /* QR arriba en móvil */
-        }
-
-        .ticket-label {
-            font-size: 0.65rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: var(--color-oro);
-            margin-bottom: 4px;
-            display: block;
-            font-weight: bold;
-        }
-
-        .ticket-value {
-            font-family: var(--font-body);
-            font-size: 1.1rem;
-            margin-bottom: 15px;
-            display: block;
-        }
-
-        .qr-container-modern {
-            background: white;
-            padding: 10px;
-            display: inline-block;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-        }
-
-        .status-badge {
-            font-size: 0.7rem;
-            padding: 4px 12px;
-            border-radius: 20px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-/* IGLESIA – Campanada Elegante */
-.anim-iglesia {
-  display: inline-block;
-  transform-origin: top center;
-  transition: transform 0.6s ease, filter 0.6s ease;
-}
-
-/* Entrada sutil (con AOS ya activo) */
-[data-aos].aos-animate .anim-iglesia {
-  animation: campanaEntrada 1.6s cubic-bezier(.4,0,.2,1) both;
-}
-
-@keyframes campanaEntrada {
-  0% {
-    transform: rotate(0deg);
-    filter: drop-shadow(0 0 0 transparent);
-  }
-  60% {
-    transform: rotate(-4deg);
-    filter: drop-shadow(0 0 10px var(--color-oro));
-  }
-  100% {
-    transform: rotate(0deg);
-    filter: drop-shadow(0 0 0 transparent);
-  }
-}
-
-/* Interacción */
-.premium-card:hover .anim-iglesia {
-  animation: campanaHover 0.8s ease-in-out;
-}
-
-@keyframes campanaHover {
-  0% { transform: rotate(0); }
-  25% { transform: rotate(-6deg); }
-  50% { transform: rotate(6deg); }
-  75% { transform: rotate(-3deg); }
-  100% { transform: rotate(0); }
-}
-
-
-/* COPAS – Brindis Realista */
-.anim-copas {
-  display: inline-block;
-  transform-origin: center bottom;
-}
-
-/* Entrada elegante */
-[data-aos].aos-animate .anim-copas {
-  animation: brindisEntrada 1.4s cubic-bezier(.4,0,.2,1) both;
-}
-
-@keyframes brindisEntrada {
-  0% {
-    transform: scale(0.9) translateY(6px);
-    filter: drop-shadow(0 0 0 transparent);
-    opacity: 0;
-  }
-  60% {
-    transform: scale(1.05) translateY(0);
-    filter: drop-shadow(0 0 12px var(--color-oro));
-    opacity: 1;
-  }
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0 transparent);
-  }
-}
-
-/* Brindis al hover */
-.premium-card:hover .anim-copas {
-  animation: brindisHover 0.7s ease-in-out;
-}
-
-@keyframes brindisHover {
-  0% { transform: rotate(0); }
-  30% { transform: rotate(-8deg); }
-  60% { transform: rotate(8deg); }
-  100% { transform: rotate(0); }
-}
-
-
-
-        /* --- TOOLTIP (AJUSTADO MÁS ABAJO) --- */
-        .tooltip-sian {
-            position: absolute;
-            bottom: 85%; 
-            left: 50%;
-            transform: translateX(-50%);
-            
-            background: #b5986d;
-            color: #ffffff;
-            padding: 6px 18px;
-            border-radius: 20px;
-            
-            font-family: var(--font-body);
-            font-size: 0.8rem;
-            font-weight: 500;
-            letter-spacing: 0.5px;
-            white-space: nowrap;
-            pointer-events: none;
-            
-            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-            animation: float-tooltip 2.8s ease-in-out infinite;
-            z-index: 200; 
-        }
-
-        /* La flechita del tooltip */
-        .tooltip-sian::after {
-            content: '';
-            position: absolute;
-            bottom: -4px;
-            left: 50%;
-            transform: translateX(-50%) rotate(45deg);
-            width: 10px;
-            height: 10px;
-            background: #b5986d;
-        }
-
-        /* Animación suave de flotación */
-        @keyframes float-tooltip {
-            0%, 100% { transform: translateX(-50%) translateY(0); }
-            50% { transform: translateX(-50%) translateY(-5px); }
-        }
-
-        /* --- ESTILO 2: EL SOBRE --- */
-        .pantalla-sobre {
-            position: relative;
-            width: 100%;
-            height: 100vh;
-            background: #ffffff;
-            overflow: hidden;
-            /* Esto permite que el giro 3D se vea con profundidad */
-            perspective: 1500px; 
-        }
+    /* --- 1. LA SOLAPA (TRIÁNGULO SVG) --- */
+    .svg-solapa {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%; 
+        /* ALTURA CLAVE: 50vh.
+           Esto hace que el pico del triángulo llegue EXACTAMENTE al centro 
+           vertical de la pantalla (50%), donde estará el centro del sello.
+        */
+        height: 50vh; 
+        z-index: 5;
+        /* Sombra suave y realista que cae sobre la parte inferior */
+        filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.15));
         
-        /* --- SOLAPA SUPERIOR --- */
-        .sobre-solapa {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 55vh;
-            /* Color ligeramente más oscuro para diferenciar planos */
-            background: #e6dac8; 
-            clip-path: polygon(0 0, 100% 0, 50% 100%);
-            transform-origin: top center;
-            transition: transform 1.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease;
-            z-index: 5; /* Siempre hasta arriba para tapar el sello */
-            
-            /* SOMBRA REALISTA: Se proyecta sobre las demás solapas */
-            filter: drop-shadow(0 15px 15px rgba(0,0,0,0.25));
-        }
+        /* Transición para la animación de apertura */
+       /* AQUÍ ESTÁ EL TRUCO DE LA BISAGRA: 
+           "0 0" significa coordenadas X=0 Y=0 (La parte de mero arriba).
+           Así gira como una puerta de garaje hacia arriba. */
+        transform-origin: 0 0; 
         
-        .sobre-fondo-trasero {
-            position: absolute;
-            inset: 0;
-            background: #f2e8d8;
-            z-index: 1;
-        }
-        /* Añadimos un pseudo-elemento para simular que el sobre cierra hacia el centro */
-        .sobre-fondo-trasero::after {
-            content: '';
-            position: absolute;
-            inset: 0;
-            background: #efe6d6;
-            clip-path: polygon(0 0, 45% 50%, 0 100%, 100% 100%, 55% 50%, 100% 0);
-            z-index: 3;
-            box-shadow: inset 0 0 30px rgba(0,0,0,0.05);
-        }
-
-        /* --- SOLAPA INFERIOR (La que sube) --- */
-        .sobre-solapa-inferior {
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            width: 100%;
-            height: 55vh;
-            background: #eaddcb;
-            clip-path: polygon(0 100%, 100% 100%, 50% 0);
-            transform-origin: bottom center;
-            transition: transform 1.8s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.8s ease;
-            z-index: 4; /* Entre las laterales y la superior */
-            filter: drop-shadow(0 -5px 10px rgba(0,0,0,0.1));
-        }
+        /* Hacemos la transición 1.2s para que abra con energía */
+        transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
         
+        /* Esto ayuda a que el navegador renderice mejor el 3D */
+        backface-visibility: hidden;
+        will-change: transform;
+    }
 
-        .sobre-abierto .sobre-solapa {
-            transform: rotateX(140deg) translateY(-100%);
-            opacity: 0;
-        }
+    .triangulo-papel {
+       fill: #eeeae4; /* Color de la solapa (ligeramente más oscuro para contraste) */
+    }
 
-        .sobre-abierto .sobre-solapa-inferior {
-            transform: translateY(100%);
-            opacity: 0;
-        }
-
-        /* --- EL SELLO "MASTER" (GRANDE Y RESPIRACIÓN SUAVE) --- */
-        .sello-wrapper {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 280px; 
-            height: 280px;
-            z-index: 6; 
-            cursor: pointer;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            animation: respiracion-suave 4s infinite ease-in-out;
-            /* Transición suave para cuando se oculta */
-            transition: opacity 0.4s ease, transform 0.4s ease;
-        }
-
-        .sello-img-real {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            filter: drop-shadow(0 15px 25px rgba(0,0,0,0.35));
-        }
-
-        /* --- LETRAS (AJUSTE DE SEGURIDAD) --- */
-        .texto-sello {
-            position: absolute;
-            z-index: 101;
-            
-            font-family: var(--font-title);
-            
-            /* 2.2rem es el punto dulce. 
-               Se ve elegante y cabe incluso si la fuente es ancha */
-            font-size: 2.2rem; 
-            font-weight: bold;
-            letter-spacing: 1px;
-            
-            /* Color grabado */
-            color: #6d4c1e;
-            
-            text-shadow: 
-                1px 1px 0px rgba(255, 255, 255, 0.5),
-                -1px -1px 1px rgba(0, 0, 0, 0.2);
-            
-            padding-right: 12px;
-            max-width: 160px; 
-            overflow: visible; 
-            white-space: nowrap; 
-            text-align: center;
-            
-            pointer-events: none;
-        }
-
-        @keyframes respiracion-suave {
-            0%   { transform: translate(-50%, -50%) scale(1); }
-            50%  { transform: translate(-50%, -50%) scale(1.05); } 
-            100% { transform: translate(-50%, -50%) scale(1); }
-        }
-
-        .sello-wrapper:hover {
-            cursor: pointer;
-        }
-
-        .sobre-abierto .sello-wrapper {
-            opacity: 0;
-            transform: translate(-50%, -50%) scale(0.4);
-            transition: all 0.5s ease;
-            pointer-events: none;
-        }
+    /* --- 2. EL SELLO "MASTER" (TU DISEÑO) --- */
+    .sello-wrapper {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        /* Centrado perfecto */
+        transform: translate(-50%, -50%);
+        width: 260px; 
+        height: 260px;
+        z-index: 6; /* Encima del SVG */
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
         
-        .sobre-cuerpo {
-            position: absolute;
-            inset: 0;
-            background: #fdfbf7;
-            z-index: 2;
-            box-shadow: inset 0 0 80px rgba(0,0,0,0.1);
-        }
-        /* --- ESTILO 3: INICIALES DESVANECIDAS --- */
-        .iniciales-gigantes {
-            font-family: var(--font-title);
-            font-size: 6rem;
-            color: var(--color-oro);
-            margin: 0;
-            text-shadow: 0 5px 15px rgba(0,0,0,0.1);
-        }
+        /* Tu animación de respiración */
+        animation: respiracion-suave 4s infinite ease-in-out;
+        /* Transición para desaparecer */
+        transition: opacity 0.5s ease, transform 0.5s ease;
+    }
 
-        .no-ninos-card {
-    background: transparent;
-    border-top: 1px solid rgba(150,150,150,0.25);
-    border-bottom: 1px solid rgba(150,150,150,0.25);
-    padding: 35px 20px;
-    max-width: 520px;
-    margin: 0 auto;
-}
+    .sello-wrapper:hover {
+        /* Efecto sutil al pasar el mouse (pausa la respiración o escala un poco) */
+        transform: translate(-50%, -50%) scale(1.05);
+    }
 
-.no-ninos-title {
-    font-family: var(--font-title);
-    font-size: 1.8rem;
-    color: var(--color-oro);
-    margin-bottom: 10px;
-}
+    .sello-img-real {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 15px 25px rgba(0,0,0,0.35));
+        position: relative;
+        z-index: 1;
+    }
 
-.no-ninos-text {
-    font-size: 0.9rem;
-    letter-spacing: 1px;
-    opacity: 0.75;
-}
-.hero {
-    min-height: 100svh; /* OJO: Borra cualquier rastro de 100vh o 100dvh que tengas aquí */
-}
+    /* --- 3. LETRAS DENTRO DEL SELLO --- */
+    .texto-sello {
+        position: absolute;
+        z-index: 101;
+        
+        font-family: var(--font-title);
+        font-size: 2.2rem; 
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: #6d4c1e; /* Color grabado */
+        
+        text-shadow: 
+            1px 1px 0px rgba(255, 255, 255, 0.5),
+            -1px -1px 1px rgba(0, 0, 0, 0.2);
+        
+        padding-right: 12px;
+        max-width: 160px; 
+        overflow: visible; 
+        white-space: nowrap; 
+        text-align: center;
+        pointer-events: none;
+    }
 
-/* --- SECCIÓN BUENOS DESEOS --- */
-        .swiper-deseos {
-            width: 100%;
-            max-width: 600px;
-            height: auto;
-            min-height: 250px;
-            margin: 30px auto;
-            border-radius: 18px;
-            overflow: hidden;
-            background: transparent;
-            padding-bottom: 40px; /* Espacio para el progreso */
-        }
+    /* --- ANIMACIONES --- */
+    @keyframes respiracion-suave {
+        0%   { transform: translate(-50%, -50%) scale(1); }
+        50%  { transform: translate(-50%, -50%) scale(1.03); } 
+        100% { transform: translate(-50%, -50%) scale(1); }
+    }
 
-        .swiper-deseos .swiper-slide {
-            background: var(--card-bg);
-            border-radius: 18px;
-            padding: 40px 30px;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
-            backdrop-filter: blur(6px);
-            -webkit-backdrop-filter: blur(6px);
-        }
+    /* --- ESTADO ABIERTO (CLASE QUE AGREGA JS) --- */
+    /* 1. La solapa sube girando */
+    .sobre-abierto .svg-solapa {
+        transform: rotateX(180deg); /* Gira hacia arriba */        
+    }
+    /* 2. El sello se encoge y desaparece */
+    .sobre-abierto .sello-wrapper {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5); 
+        pointer-events: none;
+    }
+    /* 3. El tooltip desaparece rápido */
+    .sobre-abierto .tooltip-sian {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+    
+    .sobre-abierto .pantalla-sobre {
+        /* El fondo desaparece al final */
+        opacity: 0;
+        pointer-events: none;
+    }
+    
+    /* --- ESTILO 3: INICIALES DESVANECIDAS --- */
+    .iniciales-gigantes {
+        font-family: var(--font-title);
+        font-size: 6rem;
+        color: var(--color-oro);
+        margin: 0;
+        text-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+</style>
 
-        .deseo-mensaje {
-            font-size: 1.15rem;
-            font-style: italic;
-            opacity: 0.9;
-            margin-bottom: 20px;
-            line-height: 1.6;
-            color: var(--text-color);
-        }
+<style id="ui-components">
+    /* =========================================
+       4. COMPONENTES UI, ICONOS Y ANIMACIONES
+       ========================================= */
 
-        .deseo-nombre {
-            font-family: var(--font-title);
-            color: var(--color-oro);
-            font-size: 1.4rem;
-            font-weight: bold;
-        }
+    /* SECCIONES Y CONTADORES */
+    section {
+        padding: 80px 20px;
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto;
+    }
 
-        .deseo-fecha {
-            font-size: 0.75rem;
-            opacity: 0.5;
-            margin-top: 8px;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
+    .countdown-box {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 20px;
+    }
 
-        /* Indicador de progreso circular (Autoplay) */
-        .autoplay-progress {
-            position: absolute;
-            right: 16px;
-            bottom: 16px;
-            z-index: 10;
-            width: 48px;
-            height: 48px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: bold;
-            color: var(--color-oro);
-            font-family: var(--font-body);
-            font-size: 0.8rem;
-        }
+    .time-unit {
+        background: var(--card-bg);
+        backdrop-filter: blur(4px);
 
-        .autoplay-progress svg {
-            --progress: 0;
-            position: absolute;
-            left: 0;
-            top: 0px;
-            z-index: 10;
-            width: 100%;
-            height: 100%;
-            stroke-width: 4px;
-            stroke: var(--color-oro);
-            fill: none;
-            stroke-dashoffset: calc(125.6px * (1 - var(--progress)));
-            stroke-dasharray: 125.6;
-            transform: rotate(-90deg);
-        }
-    </style>
+        border-radius: 16px;
+        padding: 16px 18px;
+        min-width: 82px;
+
+        box-shadow:
+            0 6px 16px rgba(0,0,0,0.08),
+            inset 0 0 0 1px rgba(255,255,255,0.45);
+    }
+
+    .time-number {
+        font-size: 2rem;
+        font-family: var(--font-title);
+        color: var(--color-oro);
+    }
+
+    .time-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 5px;
+        opacity: 0.7;
+    }
+
+    /* TARJETAS PREMIUM (Regalos, Hospedaje) + ICONOS */
+    .premium-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .premium-card {
+        background: var(--card-bg);
+        border-radius: 18px;
+        padding: 24px;
+
+        display: flex;
+        align-items: center;
+        gap: 20px;
+
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+
+        box-shadow:
+            0 8px 25px rgba(0, 0, 0, 0.08),
+            inset 0 0 0 1px rgba(255,255,255,0.35);
+
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .premium-card:hover {
+        transform: translateY(-4px);
+        box-shadow:
+            0 14px 35px rgba(0, 0, 0, 0.12),
+            inset 0 0 0 1px var(--color-oro);
+    }
+
+    .premium-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(150, 150, 150, 0.1);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--color-oro);
+    }
+
+    .premium-info {
+        flex: 1;
+    }
+
+    .premium-title {
+        font-family: var(--font-title);
+        font-weight: bold;
+        margin-bottom: 5px;
+        font-size: 1.2rem;
+    }
+
+    .btn-card {
+        background: rgba(150, 150, 150, 0.1);
+        color: var(--text-color);
+        border: none;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.3s;
+        margin-top: 5px;
+    }
+
+    .btn-card:hover {
+        background: var(--color-oro);
+        color: var(--bg-color);
+    }
+
+    /* CARRUSEL SWIPER */
+    .swiper {
+        width: 280px;
+        /* Ancho estricto necesario para el modo cards */
+        height: 380px;
+        /* Alto estricto necesario para el modo cards */
+        margin-top: 20px;
+        margin-bottom: 50px;
+        padding: 10px;
+    }
+
+    .swiper-slide {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        background-color: var(--card-bg);
+        overflow: hidden;
+    }
+
+    .swiper-slide img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        /* Aquí el 100% sí funciona porque .swiper ya tiene alto */
+        object-fit: cover;
+    }
+
+    /* TIMELINE DINÁMICO */
+    .timeline {
+        position: relative;
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 20px 0;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 90px;
+        height: 100%;
+        width: 1px;
+        background: rgba(150, 150, 150, 0.3);
+    }
+
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+        position: relative;
+    }
+
+    .timeline-time {
+        width: 70px;
+        text-align: right;
+        font-style: italic;
+        font-size: 0.9rem;
+        color: var(--color-oro);
+    }
+
+    .timeline-dot {
+        width: 10px;
+        height: 10px;
+        background: var(--color-oro);
+        border-radius: 50%;
+        margin: 0 15px;
+        z-index: 1;
+        box-shadow: 0 0 10px var(--color-oro);
+    }
+
+    .timeline-content {
+        flex: 1;
+        text-align: left;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* NUEVO ESTILO PARA EL PASE (SianEffects Premium Look) */
+    .ticket-container {
+        background: var(--card-bg);
+        border-radius: 18px;
+
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+
+        box-shadow:
+            0 10px 30px rgba(0,0,0,0.08),
+            inset 0 0 0 1px rgba(255,255,255,0.35);
+    }
+
+    .ticket-header {
+        font-family: var(--font-title);
+        font-size: 1.8rem;
+        margin-bottom: 30px;
+        border-bottom: 1px solid var(--color-oro);
+        display: inline-block;
+        padding-bottom: 5px;
+    }
+
+    .ticket-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        text-align: left;
+        margin-top: 20px;
+    }
+
+    /* Para que en móviles se vea una sola columna si es necesario */
+    @media (max-width: 480px) {
+        .ticket-grid { grid-template-columns: 1fr; text-align: center; }
+        .qr-side { order: -1; } /* QR arriba en móvil */
+    }
+
+    .ticket-label {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--color-oro);
+        margin-bottom: 4px;
+        display: block;
+        font-weight: bold;
+    }
+
+    .ticket-value {
+        font-family: var(--font-body);
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    .qr-container-modern {
+        background: white;
+        padding: 10px;
+        display: inline-block;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 4px 12px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* IGLESIA – Campanada Elegante */
+    .anim-iglesia {
+      display: inline-block;
+      transform-origin: top center;
+      transition: transform 0.6s ease, filter 0.6s ease;
+    }
+
+    /* Entrada sutil (con AOS ya activo) */
+    [data-aos].aos-animate .anim-iglesia {
+      animation: campanaEntrada 1.6s cubic-bezier(.4,0,.2,1) both;
+    }
+
+    @keyframes campanaEntrada {
+      0% {
+        transform: rotate(0deg);
+        filter: drop-shadow(0 0 0 transparent);
+      }
+      60% {
+        transform: rotate(-4deg);
+        filter: drop-shadow(0 0 10px var(--color-oro));
+      }
+      100% {
+        transform: rotate(0deg);
+        filter: drop-shadow(0 0 0 transparent);
+      }
+    }
+
+    /* Interacción */
+    .premium-card:hover .anim-iglesia {
+      animation: campanaHover 0.8s ease-in-out;
+    }
+
+    @keyframes campanaHover {
+      0% { transform: rotate(0); }
+      25% { transform: rotate(-6deg); }
+      50% { transform: rotate(6deg); }
+      75% { transform: rotate(-3deg); }
+      100% { transform: rotate(0); }
+    }
+
+
+    /* COPAS – Brindis Realista */
+    .anim-copas {
+      display: inline-block;
+      transform-origin: center bottom;
+    }
+
+    /* Entrada elegante */
+    [data-aos].aos-animate .anim-copas {
+      animation: brindisEntrada 1.4s cubic-bezier(.4,0,.2,1) both;
+    }
+
+    @keyframes brindisEntrada {
+      0% {
+        transform: scale(0.9) translateY(6px);
+        filter: drop-shadow(0 0 0 transparent);
+        opacity: 0;
+      }
+      60% {
+        transform: scale(1.05) translateY(0);
+        filter: drop-shadow(0 0 12px var(--color-oro));
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        filter: drop-shadow(0 0 0 transparent);
+      }
+    }
+
+    /* Brindis al hover */
+    .premium-card:hover .anim-copas {
+      animation: brindisHover 0.7s ease-in-out;
+    }
+
+    @keyframes brindisHover {
+      0% { transform: rotate(0); }
+      30% { transform: rotate(-8deg); }
+      60% { transform: rotate(8deg); }
+      100% { transform: rotate(0); }
+    }
+
+    /* --- TOOLTIP (AJUSTADO MÁS ABAJO) --- */
+    .tooltip-sian {
+        position: absolute;
+        top: 20px; /* Ajustado para quedar encima del sello */
+        background: #b5986d;
+        color: #ffffff;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-family: var(--font-body);
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+        pointer-events: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        animation: float-tooltip 2.8s ease-in-out infinite;
+        z-index: 200; 
+    }
+
+    /* La flechita del tooltip */
+    .tooltip-sian::after {
+        content: '';
+        position: absolute;
+        bottom: -4px;
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg);
+        width: 10px;
+        height: 10px;
+        background: #b5986d;
+    }
+
+    /* Animación suave de flotación */
+    @keyframes float-tooltip {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+    }
+    
+    .no-ninos-card {
+        background: transparent;
+        border-top: 1px solid rgba(150,150,150,0.25);
+        border-bottom: 1px solid rgba(150,150,150,0.25);
+        padding: 35px 20px;
+        max-width: 520px;
+        margin: 0 auto;
+    }
+
+    .no-ninos-title {
+        font-family: var(--font-title);
+        font-size: 1.8rem;
+        color: var(--color-oro);
+        margin-bottom: 10px;
+    }
+
+    .no-ninos-text {
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+        opacity: 0.75;
+    }
+
+    /* --- SECCIÓN BUENOS DESEOS --- */
+    .swiper-deseos {
+        width: 100%;
+        max-width: 600px;
+        height: auto;
+        min-height: 250px;
+        margin: 30px auto;
+        border-radius: 18px;
+        overflow: hidden;
+        background: transparent;
+        padding-bottom: 40px; /* Espacio para el progreso */
+    }
+
+    .swiper-deseos .swiper-slide {
+        background: var(--card-bg);
+        border-radius: 18px;
+        padding: 40px 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+    }
+
+    .deseo-mensaje {
+        font-size: 1.15rem;
+        font-style: italic;
+        opacity: 0.9;
+        margin-bottom: 20px;
+        line-height: 1.6;
+        color: var(--text-color);
+    }
+
+    .deseo-nombre {
+        font-family: var(--font-title);
+        color: var(--color-oro);
+        font-size: 1.4rem;
+        font-weight: bold;
+    }
+
+    .deseo-fecha {
+        font-size: 0.75rem;
+        opacity: 0.5;
+        margin-top: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    /* Indicador de progreso circular (Autoplay) */
+    .autoplay-progress {
+        position: absolute;
+        right: 16px;
+        bottom: 16px;
+        z-index: 10;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: var(--color-oro);
+        font-family: var(--font-body);
+        font-size: 0.8rem;
+    }
+
+    .autoplay-progress svg {
+        --progress: 0;
+        position: absolute;
+        left: 0;
+        top: 0px;
+        z-index: 10;
+        width: 100%;
+        height: 100%;
+        stroke-width: 4px;
+        stroke: var(--color-oro);
+        fill: none;
+        stroke-dashoffset: calc(125.6px * (1 - var(--progress)));
+        stroke-dasharray: 125.6;
+        transform: rotate(-90deg);
+    }
+</style>
+
+
+
 </head>
 
 <body>
@@ -868,14 +849,10 @@
         
         {% if inv['estilo_apertura'] == 'sobre' %}
         <div class="pantalla-sobre">
-            <div class="sobre-fondo-trasero"></div>
-
-            <!-- CUERPO DEL SOBRE -->
-            <div class="sobre-cuerpo"></div>
-
-            <!-- SOLAPA -->
-                <div class="sobre-solapa" id="solapa-sobre"></div>
-                <div class="sobre-solapa-inferior"></div>
+            
+            <svg class="svg-solapa" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path class="triangulo-papel" d="M0 0 L100 0 L50 100 Z" />
+            </svg>
 
             <div class="sello-wrapper" onclick="entrarSitio('sobre')">
                 <div class="tooltip-sian">Click Aquí</div>
@@ -884,6 +861,7 @@
                 
                 <span class="texto-sello">{{ datos.get('iniciales') }}</span>
             </div>
+            
         </div>
 
         {% elif inv['estilo_apertura'] == 'iniciales' %}
@@ -1333,24 +1311,27 @@
             const audio = document.getElementById('bgMusic');
 
             if (estilo === 'sobre') {
-                // 1. Iniciamos la animación de las solapas y el sello
+                // 1. Activar animación (Solapa sube, sello se encoge)
                 welcome.classList.add('sobre-abierto');
                 
-                // 2. Esperamos a que las solapas estén casi fuera (1 segundo)
-                // antes de empezar el fade out del fondo
-                setTimeout(() => {
-                    welcome.style.opacity = '0';
-                    mostrarInvitacion(content);
-                }, 600);
+                // 2. Mostrar contenido detrás inmediatamente
+                mostrarInvitacion(content);
 
-                // 3. Eliminamos el div por completo después de que termine el fade
+                // 3. ESPERAR A QUE SUBA LA SOLAPA
+                // La animación CSS dura 1.6 segundos.
+                // Esperamos 1.5 segundos antes de empezar a borrar el fondo blanco.
+                setTimeout(() => {
+                    welcome.style.opacity = '0'; // Aquí empieza a desaparecer todo el telón
+                }, 800);
+
+                // 4. ELIMINAR DEL DOM
+                // 1500ms de espera + 1000ms de transición de opacidad = 2500ms
                 setTimeout(() => { 
                     welcome.style.visibility = 'hidden'; 
                     welcome.style.display = 'none';
-                }, 1800);
+                }, 2500);
                 
             } else {
-                // Comportamiento para 'simple' e 'iniciales' (Fade out normal)
                 welcome.style.opacity = '0';
                 setTimeout(() => { welcome.style.visibility = 'hidden'; }, 800);
                 mostrarInvitacion(content);
