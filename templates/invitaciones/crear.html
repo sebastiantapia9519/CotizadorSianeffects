@@ -21,17 +21,17 @@
     }
 
     #sortable-list > .card {
-    margin-bottom: 0;
-}
+        margin-bottom: 0;
+    }
 
-#sortable-list {
-    gap: 14px;
-}
+    #sortable-list {
+        gap: 14px;
+    }
 
-#bloqueo-novios-wrapper {
-    margin-top: 8px;
-    transition: all 0.25s ease;
-}
+    #bloqueo-novios-wrapper {
+        margin-top: 8px;
+        transition: all 0.25s ease;
+    }
 </style>
 {% endblock %}
 
@@ -59,6 +59,25 @@
 
         <div class="row g-4">
             <div class="col-lg-4">
+                
+                <div class="card shadow-sm border-0 mb-4 bg-white">
+                    <div class="card-body">
+                        <h5 class="fw-bold mb-3"><i class="fas fa-star text-warning me-2"></i>Tipo de Evento</h5>
+                        <div class="d-flex gap-4">
+                            <div class="form-check form-check-inline form-switch">
+                                <input class="form-check-input" type="radio" name="tipo_evento" id="eventoBoda" value="boda" 
+                                    {% if not inv or inv.get('tipo_evento') == 'boda' %}checked{% endif %} onchange="cambiarModoEvento()">
+                                <label class="form-check-label fw-bold" for="eventoBoda">💍 Boda</label>
+                            </div>
+                            <div class="form-check form-check-inline form-switch">
+                                <input class="form-check-input" type="radio" name="tipo_evento" id="eventoXV" value="xv" 
+                                    {% if inv and inv.get('tipo_evento') == 'xv' %}checked{% endif %} onchange="cambiarModoEvento()">
+                                <label class="form-check-label fw-bold" for="eventoXV">👑 XV Años</label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card shadow-sm border-0 sticky-top" style="top: 20px; z-index: 1;">
                     <div class="card-header bg-white fw-bold py-3">🎨 Personalización Visual</div>
                     <div class="card-body">
@@ -77,17 +96,12 @@
                         <div class="mb-3">
                             <label class="form-label small fw-bold text-muted">Tipografía</label>
                             <select name="estilo_fuente" class="form-select">
-                                <option value="clasico" {% if inv and inv['estilo_fuente']=='clasico' %}selected{% endif %}>Clásico (Playfair + Lato)
-                                </option>
-                                <option value="romantico" {% if inv and inv['estilo_fuente']=='romantico' %}selected{% endif %}>Romántico (Great Vibes +
-                                    Montserrat)</option>
-                                <option value="moderno" {% if inv and inv['estilo_fuente']=='moderno' %}selected{% endif %}>Moderno (Oswald + Roboto)
-                                </option>
-                                <option value="minimal" {% if inv and inv['estilo_fuente']=='minimal' %}selected{% endif %}>Minimalista (Cinzel +
-                                    Raleway)</option>
-                                <option value="botanico" {% if inv and inv['estilo_fuente']=='botanico' %}selected{% endif %}>Botánico (Cormorant +
-                                    Proza Libre)</option>
-                                                                </select>
+                                <option value="clasico" {% if inv and inv['estilo_fuente']=='clasico' %}selected{% endif %}>Clásico (Playfair + Lato)</option>
+                                <option value="romantico" {% if inv and inv['estilo_fuente']=='romantico' %}selected{% endif %}>Romántico (Great Vibes + Montserrat)</option>
+                                <option value="moderno" {% if inv and inv['estilo_fuente']=='moderno' %}selected{% endif %}>Moderno (Oswald + Roboto)</option>
+                                <option value="minimal" {% if inv and inv['estilo_fuente']=='minimal' %}selected{% endif %}>Minimalista (Cinzel + Raleway)</option>
+                                <option value="botanico" {% if inv and inv['estilo_fuente']=='botanico' %}selected{% endif %}>Botánico (Cormorant + Proza Libre)</option>
+                            </select>
                         </div>
 
                         <div class="mb-3">
@@ -95,8 +109,7 @@
                             <select name="estilo_apertura" class="form-select border-primary">
                                 <option value="simple" {% if inv and inv['estilo_apertura']=='simple' %}selected{% endif %}>✨ Clásico (Directo)</option>
                                 <option value="sobre" {% if inv and inv['estilo_apertura']=='sobre' %}selected{% endif %}>✉️ Sobre Interactivo</option>
-                                <option value="iniciales" {% if inv and inv['estilo_apertura']=='iniciales' %}selected{% endif %}>🔠 Iniciales
-                                    Desvanecidas</option>
+                                <option value="iniciales" {% if inv and inv['estilo_apertura']=='iniciales' %}selected{% endif %}>🔠 Iniciales Desvanecidas</option>
                             </select>
                         </div>
 
@@ -104,31 +117,25 @@
                             <label class="form-label small fw-bold text-muted">Ahorro de Tiempo: Plantilla</label>
                             <select name="template_id" class="form-select border-primary" onchange="aplicarPlantilla(this.value)">
                                 <option value="clasico" {{ 'selected' if inv and inv['template_id']=='clasico' else '' }}>✨ Clásico (Dorado)</option>
-                                <option value="rustico" {{ 'selected' if inv and inv['template_id']=='rustico' else '' }}>🌿 Rústico (Eucalipto)
-                                </option>
+                                <option value="rustico" {{ 'selected' if inv and inv['template_id']=='rustico' else '' }}>🌿 Rústico (Eucalipto)</option>
                                 <option value="moderno" {{ 'selected' if inv and inv['template_id']=='moderno' else '' }}>🔳 Moderno (Minimal)</option>
-                                <option value="romantico" {{ 'selected' if inv and inv['template_id']=='romantico' else '' }}>🌸 Romántico (Rosa)
-                                </option>
-                                <option value="personalizado" {{ 'selected' if inv and inv['template_id']=='personalizado' else '' }}>
-                                    🎨 Personalizado
-                                </option>
+                                <option value="romantico" {{ 'selected' if inv and inv['template_id']=='romantico' else '' }}>🌸 Romántico (Rosa)</option>
+                                <option value="personalizado" {{ 'selected' if inv and inv['template_id']=='personalizado' else '' }}>🎨 Personalizado</option>
                             </select>
                         </div>
 
                         <div class="row g-2 mb-3">
-                            <div class="row g-2 mb-3">
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold text-muted">Color Fondo</label>
-                                    <input type="color" name="color_fondo" class="form-control form-control-color w-100"
-                                        value="{{ inv['color_fondo'] if inv else '#fdfbf7' }}">
-                                </div>
-                                <div class="col-6">
-                                    <label class="form-label small fw-bold text-muted">Color Títulos/Botones</label>
-                                    <input type="color" name="color_acentos" class="form-control form-control-color w-100"
-                                        value="{{ inv['color_acentos'] if inv else '#D4AF37' }}">
-                                </div>
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Color Fondo</label>
+                                <input type="color" name="color_fondo" class="form-control form-control-color w-100"
+                                    value="{{ inv['color_fondo'] if inv else '#fdfbf7' }}">
                             </div>
-                            <div class="col-8">
+                            <div class="col-6">
+                                <label class="form-label small fw-bold text-muted">Color Títulos/Botones</label>
+                                <input type="color" name="color_acentos" class="form-control form-control-color w-100"
+                                    value="{{ inv['color_acentos'] if inv else '#D4AF37' }}">
+                            </div>
+                            <div class="col-12 mt-2">
                                 <label class="form-label small fw-bold text-muted">Img. Fondo (Opcional)</label>
                                 <input type="file" name="imagen_fondo" class="form-control form-control-sm" accept="image/*">
                             </div>
@@ -140,32 +147,27 @@
                                 <select name="musica_id" id="selectMusica" class="form-select">
                                     <option value="" {% if not inv or not inv['musica_id'] %}selected{% endif %}>Sin música</option>
                                     {% for c in canciones %}
-                                    <option value="{{ c['id'] }}" {% if inv and inv['musica_id']==c['id'] %}selected{% endif %}>🎵 {{ c['nombre_cancion'] }}
-                                    </option>
+                                    <option value="{{ c['id'] }}" {% if inv and inv['musica_id']==c['id'] %}selected{% endif %}>🎵 {{ c['nombre_cancion'] }}</option>
                                     {% endfor %}
                                 </select>
-                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalMusica"><i
-                                        class="fas fa-plus"></i></button>
+                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalMusica"><i class="fas fa-plus"></i></button>
                             </div>
                         </div>
 
                         <div class="row g-2 mb-3">
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-muted">Día Evento</label>
-                                <input type="datetime-local" name="fecha_evento" class="form-control" value="{{ inv['fecha_evento'] if inv else '' }}"
-                                    required>
+                                <input type="datetime-local" name="fecha_evento" class="form-control" value="{{ inv['fecha_evento'] if inv else '' }}" required>
                             </div>
                             <div class="col-6">
                                 <label class="form-label small fw-bold text-muted">Vigencia</label>
                                 <input type="date" name="vigencia" class="form-control" value="{{ inv['vigencia'] if inv else '' }}" required>
                             </div>
                         </div>
-                        
-                        <div class="mt-4 p-3 border rounded shadow-sm"
-                            style="background-color: #f8f9fa; border-left: 4px solid #0d6efd !important;">
+
+                        <div class="mt-4 p-3 border rounded shadow-sm" style="background-color: #f8f9fa; border-left: 4px solid #0d6efd !important;">
                             <div class="form-check form-switch mb-3">
-                                <input class="form-check-input" type="checkbox" role="switch" id="camaraPremium"
-                                    name="camara_premium" value="1" {% if inv and inv['camara_premium'] %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" role="switch" id="camaraPremium" name="camara_premium" value="1" {% if inv and inv['camara_premium'] %}checked{% endif %}>
                                 <label class="form-check-label fw-bold text-dark" for="camaraPremium">
                                     <i class="fas fa-camera-retro text-warning me-1"></i> Cámara Desechable
                                 </label>
@@ -174,8 +176,7 @@
                                 </small>
                             </div>
                             <div class="form-check form-switch mb-3 border-top pt-3">
-                                <input class="form-check-input" type="checkbox" role="switch" id="moduloInvitados" name="modulo_invitados" value="1"
-                                    {% if inv and inv['tiene_modulo_invitados'] %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" role="switch" id="moduloInvitados" name="modulo_invitados" value="1" {% if inv and inv['tiene_modulo_invitados'] %}checked{% endif %}>
                                 <label class="form-check-label fw-bold text-dark" for="moduloInvitados">
                                     <i class="fas fa-users text-primary me-1"></i> Gestión de Invitados
                                 </label>
@@ -185,12 +186,7 @@
                             </div>
                             <div id="bloqueo-novios-wrapper">
                                 <div class="form-check form-switch">
-                                    <input class="form-check-input"
-                                        type="checkbox"
-                                        id="bloquear_edicion"
-                                        name="bloquear_edicion"
-                                        value="1"
-                                        {% if inv and inv['bloquear_edicion'] %}checked{% endif %}>
+                                    <input class="form-check-input" type="checkbox" id="bloquear_edicion" name="bloquear_edicion" value="1" {% if inv and inv['bloquear_edicion'] %}checked{% endif %}>
                                     <label class="form-check-label text-danger fw-semibold">
                                         Bloquear edición a los novios
                                     </label>
@@ -199,11 +195,11 @@
                                     </div>
                                 </div>
                             </div>
-
                         </div>
+
                     </div>
-                    </div>
-                    </div>
+                </div>
+            </div>
 
             <div class="col-lg-8">
                 <div id="sortable-list" class="d-flex flex-column gap-3">
@@ -215,6 +211,15 @@
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="hero">
+                            
+                            <div class="mb-3 p-2 border rounded bg-light">
+                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-camera me-1"></i> Foto de Portada (Imagen Principal)</label>
+                                <input type="file" name="foto_portada" class="form-control form-control-sm" accept="image/*" {% if not edit_mode %}required{% endif %}>
+                                {% if edit_mode and inv and inv.get('foto_portada_url') %}
+                                    <small class="text-success mt-1 d-block"><i class="fas fa-check-circle me-1"></i> Ya tiene foto. Sube otra solo si deseas cambiarla.</small>
+                                {% endif %}
+                            </div>
+                            
                             <div class="row g-2">
                                 <div class="col-md-5">
                                     <input type="text" name="nombres_novios" class="form-control form-control-sm"
@@ -229,8 +234,15 @@
                                         placeholder="Iniciales (D&S)" value="{{ datos.get('iniciales', '') if datos else '' }}" maxlength="5">
                                 </div>
                             </div>
+
+                            <div class="mt-2" id="campo-bienvenida-xv" style="display: none;">
+                                <label class="small fw-bold text-muted">Mensaje de Bienvenida (Solo XV Años)</label>
+                                <textarea name="mensaje_bienvenida" class="form-control form-control-sm" rows="2" 
+                                    placeholder="Ej: Con mucha ilusión y emoción, quiero compartir con ustedes un momento muy especial...">{{ datos.get('mensaje_bienvenida', '') if datos else '' }}</textarea>
+                            </div>
                         </div>
                     </div>
+
                     <div class="card draggable-item shadow-sm border-warning" data-bloque="countdown">
                         <div class="card-body py-2 d-flex justify-content-between">
                             <span class="fw-bold text-warning"><i class="fas fa-clock me-2"></i>2. Countdown</span>
@@ -256,8 +268,8 @@
                                         value="{{ datos.get('maps_fiesta', '') if datos else '' }}">
                                 </div>
                             </div>
-                            </div>
-                            </div>
+                        </div>
+                    </div>
 
                     <div class="card draggable-item shadow-sm border-secondary" data-bloque="dresscode">
                         <div class="card-body">
@@ -267,12 +279,9 @@
                             </div>
                             <input type="hidden" name="orden_items[]" value="dresscode">
                             <select name="dress_code" class="form-select form-select-sm">
-                                <option value="Formal" {% if inv and inv['dress_code']=='Formal' %}selected{% endif %}>Formal (Traje y Vestido largo)
-                                </option>
-                                <option value="Etiqueta" {% if inv and inv['dress_code']=='Etiqueta' %}selected{% endif %}>Rigurosa Etiqueta (Gala)
-                                </option>
-                                <option value="Coctel" {% if inv and inv['dress_code']=='Coctel' %}selected{% endif %}>Cóctel (Traje sin corbata,
-                                    Vestido corto)</option>
+                                <option value="Formal" {% if inv and inv['dress_code']=='Formal' %}selected{% endif %}>Formal (Traje y Vestido largo)</option>
+                                <option value="Etiqueta" {% if inv and inv['dress_code']=='Etiqueta' %}selected{% endif %}>Rigurosa Etiqueta (Gala)</option>
+                                <option value="Coctel" {% if inv and inv['dress_code']=='Coctel' %}selected{% endif %}>Cóctel (Traje sin corbata, Vestido corto)</option>
                                 <option value="Guayabera" {% if inv and inv['dress_code']=='Guayabera' %}selected{% endif %}>Guayabera / Playa</option>
                             </select>
                         </div>
@@ -286,30 +295,17 @@
                                 </span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
-
                             <input type="hidden" name="orden_items[]" value="no_ninos">
 
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input"
-                                    type="checkbox"
-                                    id="noNinos"
-                                    name="no_ninos"
-                                    value="1"
-                                    {% if datos and datos.get('no_ninos') %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" id="noNinos" name="no_ninos" value="1" {% if datos and datos.get('no_ninos') %}checked{% endif %}>
                                 <label class="form-check-label fw-semibold" for="noNinos">
                                     Este evento es solo para adultos
                                 </label>
                             </div>
-
-                            <textarea name="mensaje_no_ninos"
-                                    class="form-control form-control-sm"
-                                    rows="2"
-                                    placeholder="Ej: Con cariño les pedimos celebrar solo adultos."
-                                    {% if not datos or not datos.get('no_ninos') %}disabled{% endif %}>
-                    {{ datos.get('mensaje_no_ninos','') if datos else '' }}</textarea>
+                            <textarea name="mensaje_no_ninos" class="form-control form-control-sm" rows="2" placeholder="Ej: Con cariño les pedimos celebrar solo adultos." {% if not datos or not datos.get('no_ninos') %}disabled{% endif %}>{{ datos.get('mensaje_no_ninos','') if datos else '' }}</textarea>
                         </div>
                     </div>
-
 
                     <div class="card draggable-item shadow-sm border-success" data-bloque="regalos">
                         <div class="card-body">
@@ -338,9 +334,8 @@
                                         <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
                                     </div>
                                 {% endif %}
-                                </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1"
-                                onclick="agregarInput('container-links', 'nombre_tienda[]', 'link_tienda[]')">+ Agregar tienda</button>
+                            </div>
+                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarInput('container-links', 'nombre_tienda[]', 'link_tienda[]')">+ Agregar tienda</button>
                         </div>
                     </div>
 
@@ -371,11 +366,45 @@
                                         <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
                                     </div>
                                 {% endif %}
-                                </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1"
-                                onclick="agregarInput('container-hoteles', 'nombre_hotel[]', 'link_hotel[]')">+ Agregar hotel</button>
                             </div>
+                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarInput('container-hoteles', 'nombre_hotel[]', 'link_hotel[]')">+ Agregar hotel</button>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item shadow-sm border-warning" data-bloque="historia" id="bloque-historia" style="display: none;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold text-warning"><i class="fas fa-history me-2"></i>Mi Historia (Línea de tiempo)</span>
+                                <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
+                            <input type="hidden" name="orden_items[]" value="historia">
+                            
+                            <label class="small fw-bold text-muted mb-2">Años y Recuerdos (Sube una foto por etapa)</label>
+                            <div id="container-historia">
+                                {% if edit_mode and inv and inv.get('historia_json') and inv.get('historia_json') != 'null' %}
+                                    {% set historias = inv['historia_json']|from_json %}
+                                    {% for item in historias %}
+                                    <div class="input-group input-group-sm mb-2 align-items-center">
+                                        <input type="text" name="anio_historia[]" class="form-control" style="max-width: 80px;" placeholder="Año" value="{{ item.anio }}" required>
+                                        <input type="text" name="texto_historia[]" class="form-control" placeholder="Ej: Mi primer añito..." value="{{ item.texto }}" required>
+                                        <input type="hidden" name="foto_historia_actual[]" value="{{ item.foto }}">
+                                        <input type="file" name="foto_historia_nueva[]" class="form-control" accept="image/*" style="max-width: 150px;" title="Subir nueva foto para reemplazar">
+                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
+                                    </div>
+                                    {% endfor %}
+                                {% else %}
+                                    <div class="input-group input-group-sm mb-2 align-items-center">
+                                        <input type="text" name="anio_historia[]" class="form-control" style="max-width: 80px;" placeholder="Año (Ej. 2010)" required>
+                                        <input type="text" name="texto_historia[]" class="form-control" placeholder="Ej: Mi primer añito..." required>
+                                        <input type="hidden" name="foto_historia_actual[]" value="">
+                                        <input type="file" name="foto_historia_nueva[]" class="form-control" accept="image/*" style="max-width: 150px;" required>
+                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarHistoria()">+ Agregar Recuerdo</button>
+                        </div>
+                    </div>
 
                     <div class="card draggable-item shadow-sm" data-bloque="timeline">
                         <div class="card-body">
@@ -390,10 +419,8 @@
                                 {% if edit_mode and datos.get('itinerario') %}
                                     {% for item in datos.get('itinerario') %}
                                     <div class="input-group input-group-sm mb-1">
-                                        <input type="time" name="hora_itinerario[]" class="form-control" style="max-width: 100px;" value="{{ item.hora }}"
-                                            required>
-                                        <input type="text" name="actividad_itinerario[]" class="form-control" placeholder="Ej: Recepción"
-                                            value="{{ item.actividad }}" required>
+                                        <input type="time" name="hora_itinerario[]" class="form-control" style="max-width: 100px;" value="{{ item.hora }}" required>
+                                        <input type="text" name="actividad_itinerario[]" class="form-control" placeholder="Ej: Recepción" value="{{ item.actividad }}" required>
                                         <select name="icono_itinerario[]" class="form-select" style="max-width: 65px; padding:0 5px; text-align:center;">
                                             <option value="fas fa-church" {% if item.icono=='fas fa-church' %}selected{% endif %}>⛪</option>
                                             <option value="fas fa-glass-cheers" {% if item.icono=='fas fa-glass-cheers' %}selected{% endif %}>🥂</option>
@@ -405,7 +432,7 @@
                                         <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
                                     </div>
                                     {% endfor %}
-                                    {% else %}
+                                {% else %}
                                     <div class="input-group input-group-sm mb-1">
                                         <input type="time" name="hora_itinerario[]" class="form-control" style="max-width: 100px;" required>
                                         <input type="text" name="actividad_itinerario[]" class="form-control" placeholder="Ej: Ceremonia" required>
@@ -417,11 +444,11 @@
                                             <option value="fas fa-camera-retro">📸</option>
                                             <option value="fas fa-heart">🤍</option>
                                         </select>
+                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
                                     </div>
-                                    {% endif %}
-                                    </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarItinerario()">+ Agregar
-                                actividad</button>
+                                {% endif %}
+                            </div>
+                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarItinerario()">+ Agregar actividad</button>
                         </div>
                     </div>
 
@@ -432,10 +459,8 @@
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="galeria">
-                            
-                            <label class="small fw-bold text-muted">Subir fotos (Puedes seleccionar 5)</label>
+                            <label class="small fw-bold text-muted">Subir fotos (Puedes seleccionar varias)</label>
                             <input type="file" name="fotos_galeria" class="form-control form-control-sm" accept="image/*" multiple>
-                            
                             {% if edit_mode and inv['fotos_json'] and inv['fotos_json'] != 'null' and inv['fotos_json'] != '[]' %}
                                 <small class="text-success mt-2 d-block">
                                     <i class="fas fa-check-circle me-1"></i> Ya hay fotos guardadas. Si subes nuevas, se reemplazarán.
@@ -452,19 +477,14 @@
                                 </span>
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
-
                             <input type="hidden" name="orden_items[]" value="deseos" id="input-orden-deseos">
-
                             <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="switchDeseos" 
-                                    {% if not inv or 'deseos' in inv['config_json'] %}checked{% endif %}>
+                                <input class="form-check-input" type="checkbox" id="switchDeseos" {% if not inv or 'deseos' in inv['config_json'] %}checked{% endif %}>
                                 <label class="form-check-label fw-semibold text-dark" for="switchDeseos">
                                     Habilitar sección de Buenos Deseos
                                 </label>
                             </div>
-                            <small class="text-muted d-block lh-sm">
-                                Permite a los invitados dejar mensajes que aparecerán en un carrusel dinámico.
-                            </small>
+                            <small class="text-muted d-block lh-sm">Permite a los invitados dejar mensajes que aparecerán en un carrusel dinámico.</small>
                         </div>
                     </div>
 
@@ -477,8 +497,8 @@
                             <input type="hidden" name="orden_items[]" value="rsvp">
                             <input type="text" name="telefono_rsvp" class="form-control form-control-sm"
                                 placeholder="Teléfono para confirmar (52...)" value="{{ datos.get('telefono_rsvp', '') if datos else '' }}">
-                            </div>
-                            </div>
+                        </div>
+                    </div>
 
                     <div class="card draggable-item shadow-sm border-info" data-bloque="protocolo">
                         <div class="card-body">
@@ -487,7 +507,6 @@
                                 <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
                             <input type="hidden" name="orden_items[]" value="protocolo">
-                            
                             <div id="contenedor-protocolo">
                                 {% if edit_mode and datos.get('protocolo') %}
                                     {% for integrante in datos['protocolo'] %}
@@ -505,7 +524,6 @@
                                     </div>
                                 {% endif %}
                             </div>
-                            
                             <button type="button" class="btn btn-light btn-sm w-100 border mt-1" id="btn-agregar-proto">+ Agregar integrante</button>
                         </div>
                     </div>
@@ -519,40 +537,38 @@
                             <input type="hidden" name="orden_items[]" value="frase_final">
                             <textarea name="frase_final" class="form-control form-control-sm" rows="2"
                                 placeholder="Ej: 'Que todas las noches sean de boda...'">{{ inv['frase_final'] if inv else '' }}</textarea>
+                        </div>
+                    </div>
+
+                    <div class="card draggable-item shadow-sm border-dark" data-bloque="pases">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>13. Pases de Invitados</span>
+                                <i class="fas fa-grip-lines text-muted handle"></i>
                             </div>
-                            </div>
-                            
-                            <div class="card draggable-item shadow-sm border-dark" data-bloque="pases">
-                                <div class="card-body">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>13. Pases de Invitados</span>
-                                        <i class="fas fa-grip-lines text-muted handle"></i>
+                            <input type="hidden" name="orden_items[]" value="pases">
+                            <div class="alert alert-light border py-2 mb-0">
+                                <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Este módulo mostrará al invitado sus pases asignados y su código QR de acceso.</small>
+                                {% if edit_mode %}
+                                    <div class="mt-2" id="btn-gestion-invitados-wrapper">
+                                        <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}" class="btn btn-dark btn-sm rounded-pill w-100">
+                                            <i class="fas fa-user-plus me-1"></i> Gestionar Lista de Invitados
+                                        </a>
                                     </div>
-                                    <input type="hidden" name="orden_items[]" value="pases">
-                                    
-                                    <div class="alert alert-light border py-2 mb-0">
-                                        <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Este módulo mostrará al invitado sus pases asignados y su código QR de acceso.</small>
-                                        
-                                        {% if edit_mode %}
-                                            <div class="mt-2" id="btn-gestion-invitados-wrapper">
-                                                <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}"
-                                                    class="btn btn-dark btn-sm rounded-pill w-100">
-                                                    <i class="fas fa-user-plus me-1"></i> Gestionar Lista de Invitados
-                                                </a>
-                                            </div>
-                                            <div class="mt-2 text-center text-muted fst-italic small" id="msg-modulo-apagado" style="display: none;">
-                                                (Habilita "Gestión de Invitados" en el panel izquierdo para agregar personas)
-                                            </div>
-                                        {% else %}
-                                            <p class="small mt-1 text-danger">Debes publicar la invitación primero para gestionar invitados.</p>
-                                        {% endif %}
+                                    <div class="mt-2 text-center text-muted fst-italic small" id="msg-modulo-apagado" style="display: none;">
+                                        (Habilita "Gestión de Invitados" en el panel izquierdo para agregar personas)
                                     </div>
-                                </div>
+                                {% else %}
+                                    <p class="small mt-1 text-danger">Debes publicar la invitación primero para gestionar invitados.</p>
+                                {% endif %}
                             </div>
+                        </div>
+                    </div>
 
                 </div>
             </div>
-            </div>
+
+        </div>
     </form>
 </div>
 
@@ -567,8 +583,7 @@
             <div class="modal-body">
                 <form id="formMusica">
                     <div class="mb-2">
-                        <input type="text" id="nombreCancion" class="form-control form-control-sm" placeholder="Nombre (Ej: Ed Sheeran)"
-                            required>
+                        <input type="text" id="nombreCancion" class="form-control form-control-sm" placeholder="Nombre (Ej: Ed Sheeran)" required>
                     </div>
                     <div class="mb-3">
                         <input type="file" id="archivoCancion" class="form-control form-control-sm" accept="audio/*" required>
@@ -610,7 +625,6 @@
     {% endif %}
 });
 
-
     // Función unificada para agregar tiendas u hoteles
     function agregarInput(containerId, nameInput, linkInput) {
         const div = document.createElement('div');
@@ -623,7 +637,6 @@
     const slugInput = document.getElementById('slugInput');
     nombresInput.addEventListener('input', function () {
         if (!slugInput.readOnly) {
-            // Convierte "Diana & Sebastian" en "diana-y-sebastian" sin fallas
             slugInput.value = this.value.toLowerCase().replace(/\s*&\s*/g, '-y-').replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
         }
     });
@@ -671,7 +684,7 @@
     function aplicarPlantilla(templateId) {
         if (templateId === 'personalizado') {
             console.log('Plantilla personalizada: colores manuales activos.');
-            return; // NO tocar colores
+            return;
         }
 
         const presets = {
@@ -692,20 +705,15 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        const gestionInvitados = document.getElementById('moduloInvitados'); // El switch principal
-        
-        // Elementos de bloqueo (panel izquierdo)
+        const gestionInvitados = document.getElementById('moduloInvitados');
         const bloqueoWrapper = document.getElementById('bloqueo-novios-wrapper');
         const bloqueoInput = document.getElementById('bloquear_edicion');
-        
-        // Elementos de la tarjeta de Pases (derecha)
         const btnGestionWrapper = document.getElementById('btn-gestion-invitados-wrapper');
         const msgModuloApagado = document.getElementById('msg-modulo-apagado');
 
         function syncEstado() {
             const estaActivo = gestionInvitados.checked;
 
-            // 1. Controlar opciones del panel izquierdo
             if (!estaActivo) {
                 bloqueoInput.checked = false;
                 bloqueoWrapper.style.display = 'none';
@@ -713,7 +721,6 @@
                 bloqueoWrapper.style.display = 'block';
             }
 
-            // 2. Controlar el botón en la tarjeta de Pases (si existen en el DOM)
             if (btnGestionWrapper && msgModuloApagado) {
                 if (estaActivo) {
                     btnGestionWrapper.style.display = 'block';
@@ -725,7 +732,6 @@
             }
         }
 
-        // Ejecutar al inicio y cada vez que cambie el switch
         syncEstado();
         gestionInvitados.addEventListener('change', syncEstado);
     });
@@ -741,7 +747,6 @@
         syncNoNinos();
         check.addEventListener('change', syncNoNinos);
     });
-
 
     document.getElementById('btn-agregar-proto').addEventListener('click', function() {
         const contenedor = document.getElementById('contenedor-protocolo');
@@ -761,16 +766,67 @@
         const inputOrdenDeseos = document.getElementById('input-orden-deseos');
         
         if (switchDeseos && inputOrdenDeseos) {
-            // 1. Sincronizar al cargar la página (por si estaba apagado en edición)
             inputOrdenDeseos.disabled = !switchDeseos.checked;
-            
-            // 2. Escuchar cuando el usuario lo prende o lo apaga
             switchDeseos.addEventListener('change', function() {
                 inputOrdenDeseos.disabled = !this.checked;
             });
         }
     });
 
+    // --- LÓGICA DE CAMBIO BODA / XV AÑOS ---
+    function cambiarModoEvento() {
+        const tipoRadio = document.querySelector('input[name="tipo_evento"]:checked');
+        if (!tipoRadio) return; 
+        const tipo = tipoRadio.value;
+        
+        const labelNombres = document.querySelector('input[name="nombres_novios"]');
+        const selectPlantilla = document.querySelector('select[name="template_id"]');
+        const labelPadres = document.querySelector('[data-bloque="protocolo"] .fw-bold');
+        
+        const bloqueHistoria = document.getElementById('bloque-historia');
+        const campoBienvenida = document.getElementById('campo-bienvenida-xv');
+        
+        if (tipo === 'xv') {
+            labelNombres.placeholder = "Nombre Quinceañera (Ej: Valentina)";
+            labelPadres.innerHTML = '<i class="fas fa-users me-2"></i>11. Padres y Padrinos';
+            campoBienvenida.style.display = 'block';
+            bloqueHistoria.style.display = 'block';
+            
+            selectPlantilla.innerHTML = `
+                <option value="rose_gold">🌸 Rose Gold (Elegante)</option>
+                <option value="princesa">👑 Princesa (Azul/Dorado)</option>
+                <option value="neon">✨ Neón Party (Oscuro)</option>
+                <option value="personalizado">🎨 Personalizado</option>
+            `;
+        } else {
+            labelNombres.placeholder = "Nombres (Ej: Diana & Sebastián)";
+            labelPadres.innerHTML = '<i class="fas fa-users me-2"></i>11. Protocolo Familiar';
+            campoBienvenida.style.display = 'none';
+            bloqueHistoria.style.display = 'none';
+            
+            selectPlantilla.innerHTML = `
+                <option value="clasico">✨ Clásico (Dorado)</option>
+                <option value="rustico">🌿 Rústico (Eucalipto)</option>
+                <option value="moderno">🔳 Moderno (Minimal)</option>
+                <option value="romantico">🌸 Romántico (Rosa)</option>
+                <option value="personalizado">🎨 Personalizado</option>
+            `;
+        }
+    }
+
+    // --- FUNCIÓN PARA AGREGAR FILAS A "MI HISTORIA" ---
+    function agregarHistoria() {
+        const div = document.createElement('div');
+        div.className = 'input-group input-group-sm mb-2 align-items-center';
+        div.innerHTML = `
+            <input type="text" name="anio_historia[]" class="form-control" style="max-width: 80px;" placeholder="Año" required>
+            <input type="text" name="texto_historia[]" class="form-control" placeholder="Breve descripción..." required>
+            <input type="hidden" name="foto_historia_actual[]" value="">
+            <input type="file" name="foto_historia_nueva[]" class="form-control" accept="image/*" style="max-width: 150px;" required>
+            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
+        `;
+        document.getElementById('container-historia').appendChild(div);
+    }
 
 </script>
 {% endblock %}

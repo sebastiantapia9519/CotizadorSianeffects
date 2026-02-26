@@ -53,6 +53,7 @@ def crear_invitacion():
             musica_id = request.form.get('musica_id')
             
             # --- NUEVOS CAMPOS ---
+            tipo_evento = request.form.get('tipo_evento', 'boda')
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url')
             camara_premium = 1 if 'camara_premium' in request.form else 0
@@ -66,6 +67,25 @@ def crear_invitacion():
             codigo_cliente = generar_codigo_cliente() 
             bloquear_edicion = 1 if 'bloquear_edicion_invitados' in request.form else 0
             estilo_apertura = request.form.get('estilo_apertura', 'simple')
+
+            # --- PROCESAR MI HISTORIA (Línea de tiempo XV) ---
+            anios_hist = request.form.getlist('anio_historia[]')
+            textos_hist = request.form.getlist('texto_historia[]')
+            fotos_nuevas_hist = request.files.getlist('foto_historia_nueva[]')
+
+            historia_lista = []
+            for i in range(len(anios_hist)):
+                if anios_hist[i] and textos_hist[i]:
+                    foto_url = ""
+                    # Subir foto si existe
+                    if i < len(fotos_nuevas_hist) and fotos_nuevas_hist[i].filename != '':
+                        foto_url = upload_to_cloudflare(fotos_nuevas_hist[i], folder=f"invitaciones/{slug}/historia")
+                    
+                    historia_lista.append({
+                        "anio": anios_hist[i],
+                        "texto": textos_hist[i],
+                        "foto": foto_url
+                    })
             
             # --- PROCESAR LINKS DE TIENDAS ---
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -105,6 +125,7 @@ def crear_invitacion():
             # --- 2. DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
+                "mensaje_bienvenida": request.form.get('mensaje_bienvenida', '').strip(),
                 "iniciales": request.form.get('iniciales'),
                 "frase": request.form.get('frase'),
                 "maps_misa": request.form.get('maps_misa'),
@@ -121,18 +142,18 @@ def crear_invitacion():
             # --- SUBIDA DE IMÁGENES ---
             foto_portada = request.files.get('foto_portada')
             url_portada = None
-            if foto_portada:
+            if foto_portada and foto_portada.filename: # <--- Cambio aquí
                 url_portada = upload_to_cloudflare(foto_portada, folder=f"invitaciones/{slug}")
 
             img_fondo = request.files.get('imagen_fondo')
             url_fondo = None
-            if img_fondo:
+            if img_fondo and img_fondo.filename: # <--- Cambio aquí
                 url_fondo = upload_to_cloudflare(img_fondo, folder=f"invitaciones/{slug}/bg")
 
             fotos_galeria = request.files.getlist('fotos_galeria')
             urls_galeria = []
             for f in fotos_galeria:
-                if f.filename != '':
+                if f and f.filename: # <--- Cambio aquí
                     url = upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria")
                     urls_galeria.append(url)
 
@@ -152,21 +173,23 @@ def crear_invitacion():
                 orden_items.remove('camara')
 
 
-           # --- INSERT ---
+
+            # --- INSERT ---
             conn.execute("""
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
                 fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
                 dress_code, hospedaje_json, album_url, camara_premium, tiene_modulo_invitados, codigo_acceso_cliente, color_acentos,
-                padres_novia, padres_novio, padrinos, frase_final, bloquear_edicion_invitados, template_id, estilo_apertura) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                padres_novia, padres_novio, padrinos, frase_final, bloquear_edicion_invitados, template_id, estilo_apertura, tipo_evento, historia_json) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 slug, json.dumps(orden_items), musica_id or None, 
                 request.form.get('fecha_evento'), request.form.get('vigencia'), json.dumps(datos_cliente), 
                 json.dumps(urls_galeria), url_portada, request.form.get('estilo_fuente'), request.form.get('color_fondo'), 
                 url_fondo, json.dumps(mesas_regalos), dress_code, json.dumps(hoteles_sugeridos), album_url, 
                 camara_premium, tiene_modulo_invitados, codigo_cliente, color_acentos,
-                padres_novia, padres_novio, padrinos, frase_final, bloquear_edicion, template_id, estilo_apertura
+                padres_novia, padres_novio, padrinos, frase_final, bloquear_edicion, template_id, estilo_apertura,
+                tipo_evento, json.dumps(historia_lista) # <--- NUEVOS
             ))
             conn.commit()
             flash("Invitación Premium Creada ✨", "success")
@@ -291,6 +314,7 @@ def editar_invitacion(id):
             vigencia = request.form.get('vigencia')
             
             # --- NUEVOS CAMPOS ---
+            tipo_evento = request.form.get('tipo_evento', 'boda')
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url')
             camara_premium = 1 if 'camara_premium' in request.form else 0
@@ -303,8 +327,28 @@ def editar_invitacion(id):
             tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
             bloquear_edicion = 1 if 'bloquear_edicion_invitados' in request.form else 0
             estilo_apertura = request.form.get('estilo_apertura', 'simple')
+
+            # --- PROCESAR MI HISTORIA (Edición) ---
+            anios_hist = request.form.getlist('anio_historia[]')
+            textos_hist = request.form.getlist('texto_historia[]')
+            fotos_actuales_hist = request.form.getlist('foto_historia_actual[]')
+            fotos_nuevas_hist = request.files.getlist('foto_historia_nueva[]')
             
-            # OJO AQUI ESTA LA CORRECCIÓN: Primero traemos inv_old
+            historia_lista = []
+            for i in range(len(anios_hist)):
+                if anios_hist[i] and textos_hist[i]:
+                    foto_url = ""
+                    # Subir foto si existe
+                    if i < len(fotos_nuevas_hist) and fotos_nuevas_hist[i] and fotos_nuevas_hist[i].filename: # <--- Cambio aquí
+                        foto_url = upload_to_cloudflare(fotos_nuevas_hist[i], folder=f"invitaciones/{slug}/historia")
+                    
+                    historia_lista.append({
+                        "anio": anios_hist[i],
+                        "texto": textos_hist[i],
+                        "foto": foto_url
+                    })
+            
+            #Primero traemos inv_old
             inv_old = conn.execute("SELECT foto_portada_url, fotos_json, url_fondo, codigo_acceso_cliente FROM invitaciones WHERE id=?", (id,)).fetchone()
 
             # Ahora sí verificamos el código del cliente
@@ -334,6 +378,7 @@ def editar_invitacion(id):
             # --- CREAR EL DICCIONARIO DATOS_CLIENTE ---
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
+                "mensaje_bienvenida": request.form.get('mensaje_bienvenida', '').strip(),
                 "iniciales": request.form.get('iniciales'),
                 "frase": request.form.get('frase'),
                 "maps_misa": request.form.get('maps_misa'),
@@ -387,41 +432,23 @@ def editar_invitacion(id):
                 urls_galeria = json.loads(inv_old['fotos_json']) if inv_old['fotos_json'] else []
 
             # ACTUALIZAR EN BASE DE DATOS
+            # ACTUALIZAR EN BASE DE DATOS
             conn.execute("""
                 UPDATE invitaciones SET 
                 slug=?, config_json=?, musica_id=?, fecha_evento=?, vigencia=?, datos_cliente_json=?, 
                 fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?,
                 dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?,
                 padres_novia=?, padres_novio=?, padrinos=?, frase_final=?, template_id=?,
-                tiene_modulo_invitados=?, codigo_acceso_cliente=?, bloquear_edicion_invitados=?, estilo_apertura=?
+                tiene_modulo_invitados=?, codigo_acceso_cliente=?, bloquear_edicion_invitados=?, estilo_apertura=?,
+                tipo_evento=?, historia_json=? 
                 WHERE id=?
             """, (
-                slug, 
-                json.dumps(orden_items), 
-                musica_id or None, 
-                fecha_evento, 
-                vigencia,
-                json.dumps(datos_cliente), 
-                json.dumps(urls_galeria), 
-                url_portada,
-                estilo_fuente, 
-                color_fondo, 
-                url_fondo, 
-                json.dumps(mesas_regalos),
-                dress_code, 
-                json.dumps(hoteles_sugeridos), 
-                album_url, 
-                camara_premium,
-                color_acentos,
-                padres_novia,    
-                padres_novio,    
-                padrinos,        
-                frase_final,     
-                template_id,
-                tiene_modulo_invitados,
-                codigo_cliente,
-                bloquear_edicion,
-                estilo_apertura,        
+                slug, json.dumps(orden_items), musica_id or None, fecha_evento, vigencia, json.dumps(datos_cliente), 
+                json.dumps(urls_galeria), url_portada, estilo_fuente, color_fondo, url_fondo, json.dumps(mesas_regalos),
+                dress_code, json.dumps(hoteles_sugeridos), album_url, camara_premium, color_acentos,
+                padres_novia, padres_novio, padrinos, frase_final, template_id, tiene_modulo_invitados,
+                codigo_cliente, bloquear_edicion, estilo_apertura,
+                tipo_evento, json.dumps(historia_lista),
                 id               
             ))
             conn.commit()
@@ -613,15 +640,18 @@ def ver_invitacion(slug):
                     'template_color_fondo': template['color_fondo']
                 }
 
+        plantilla_render = 'invitaciones/xv.html' if inv.get('tipo_evento') == 'xv' else 'invitaciones/base_boda.html'
+
         
         return render_template(
-            'invitaciones/base_boda.html',
+            plantilla_render,
             inv=inv,
             config=config,
             datos=datos,
             fotos=fotos,
             datos_pase=datos_pase,
             buenos_deseos=buenos_deseos,
+            historia_lista=json.loads(inv['historia_json']) if inv.get('historia_json') else [], # Mandamos la historia a la vista
             **template_colors
         )
 

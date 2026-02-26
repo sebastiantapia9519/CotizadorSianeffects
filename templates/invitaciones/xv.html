@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mis XV Años - {{ datos['novios'] }}</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css" />
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+
+<style id="core-styles">
+    /* =========================================
+       1. FUENTES DINÁMICAS (Temas de XV Años)
+       ========================================= */
+       
+    {% if inv['template_id'] == 'rose_gold' %}
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Montserrat:wght@300;400&display=swap');
+        :root {
+            --font-title: 'Playfair Display', serif;
+            --font-body: 'Montserrat', sans-serif;
+            --color-acento: #b76e79; /* Rose Gold */
+            --bg-color: #fdfaf9;
+        }
+    {% elif inv['template_id'] == 'princesa' %}
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Lato:wght@300;400&display=swap');
+        :root {
+            --font-title: 'Cinzel', serif;
+            --font-body: 'Lato', sans-serif;
+            --color-acento: #D4AF37; /* Dorado */
+            --bg-color: #f0f4f8; /* Azul claro muy sutil */
+        }
+    {% elif inv['template_id'] == 'neon' %}
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Roboto:wght@300;400&display=swap');
+        :root {
+            --font-title: 'Orbitron', sans-serif;
+            --font-body: 'Roboto', sans-serif;
+            --color-acento: #ff007f; /* Rosa Neon */
+            --bg-color: #121212; /* Oscuro */
+        }
+    {% else %}
+        /* Personalizado o Default */
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Lato:wght@300;400&display=swap');
+        :root {
+            --font-title: 'Playfair Display', serif;
+            --font-body: 'Lato', sans-serif;
+            --color-acento: {{ inv['color_acentos']|default('#D4AF37') }};
+            --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
+        }
+    {% endif %}
+
+    :root {
+        /* Mapeamos color-oro a color-acento para mantener compatibilidad con tus componentes base */
+        --color-oro: var(--color-acento); 
+        --text-color: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else '#ffffff') | color_contraste }};
+        --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else '#ffffff') | fondo_tarjeta }};
+    }
+
+    html {
+        box-sizing: border-box;
+    }
+
+    *, *:before, *:after {
+        box-sizing: inherit;
+    }
+
+    body {
+        margin: 0; 
+        padding: 0;
+        width: 100%;
+        position: relative;
+        overflow-x: hidden; 
+        background-color: var(--bg-color);
+        color: var(--text-color);
+        font-family: var(--font-body);
+    }
+    
+    .hero {
+        min-height: 100svh; 
+    }
+
+    .fondo-fijo-app {
+        position: fixed;
+        inset: 0; 
+        z-index: -1;
+        background-color: var(--bg-color);
+        {% if inv['url_fondo'] %}
+        background-image: url('{{ inv['url_fondo'] }}');
+        background-size: cover;
+        background-position: center;
+        {% endif %}
+    }
+
+    h1, h2, h3, .font-title {
+        font-family: var(--font-title);
+        font-weight: normal;
+        margin: 0;
+    }
+</style>
+
+<style id="welcome-styles">
+    /* =========================================
+       2. PANTALLA DE BIENVENIDA Y ACCESOS
+       ========================================= */
+    
+    #welcome-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: var(--bg-color);
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.8s ease, visibility 0.8s ease;
+    }
+
+    .btn-entrar,
+    .btn-boda {
+        padding: 12px 30px;
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        background: transparent;
+        color: var(--text-color);
+        border: 1px solid var(--color-acento);
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-block;
+        border-radius: 30px;
+    }
+
+    .btn-entrar:hover,
+    .btn-boda:hover {
+        background: var(--color-acento);
+        color: var(--bg-color);
+        border-color: var(--color-acento);
+    }
+
+    .music-btn {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        width: 50px;
+        height: 50px;
+        background: var(--color-acento);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--bg-color);
+        z-index: 1000;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0% { transform: scale(1); }
+        50% { transform: scale(1.1); }
+        100% { transform: scale(1); }
+    }
+</style>
+
+<style id="envelope-styles">
+    /* =========================================
+       3. SISTEMA DE SOBRES E INVITACIÓN (Híbrido Desktop/Móvil)
+       ========================================= */
+
+    .pantalla-sobre {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: #eeeae4; 
+        overflow: hidden;
+        z-index: 1000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        perspective: 1500px; 
+        transition: opacity 1s ease, visibility 1s ease;
+    }
+
+    .triangulo-papel {
+        fill: #eeeae4; 
+    }
+
+    /* --- SOLAPA DESKTOP (Horizontal) --- */
+    .svg-desktop {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%; 
+        height: 50vh; 
+        z-index: 5;
+        filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.15));
+        transform-origin: 0 0; 
+        transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        backface-visibility: hidden;
+        display: block; 
+    }
+
+    /* --- SOLAPAS MÓVIL (Verticales) --- */
+    .svg-mobile {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%; 
+        height: 100vh; 
+        z-index: 5;
+        filter: drop-shadow(0px 0px 20px rgba(0,0,0,0.18));
+        transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+        pointer-events: none;
+        backface-visibility: hidden;
+        display: none; 
+    }
+
+    .svg-mobile-izq { transform-origin: left center; }
+    .svg-mobile-der { transform-origin: right center; }
+
+    /* --- MEDIA QUERY: CAMBIO A MODO CELULAR --- */
+    @media (max-width: 768px), (orientation: portrait) {
+        .svg-desktop { display: none; }
+        .svg-mobile { display: block; }
+    }
+
+    /* --- ANIMACIONES DE APERTURA --- */
+    .sobre-abierto .svg-desktop { transform: rotateX(180deg); }
+    .sobre-abierto .svg-mobile-izq { transform: rotateY(-180deg); }
+    .sobre-abierto .svg-mobile-der { transform: rotateY(180deg); }
+
+    .sobre-abierto .sello-wrapper {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.5); 
+        pointer-events: none;
+    }
+    
+    .sobre-abierto .tooltip-sian {
+        opacity: 0;
+        transition: opacity 0.2s;
+    }
+
+    /* --- EL SELLO "MASTER" --- */
+    .sello-wrapper {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 280px; 
+        height: 280px;
+        z-index: 10; 
+        cursor: pointer;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        animation: respiracion-suave 4s infinite ease-in-out;
+        transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+
+    .sello-wrapper:hover {
+        transform: translate(-50%, -50%) scale(1.05);
+    }
+
+    .sello-img-real {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        filter: drop-shadow(0 15px 25px rgba(0,0,0,0.35));
+        position: relative;
+        z-index: 1;
+    }
+
+    /* --- LETRAS DEL SELLO --- */
+    .texto-sello {
+        position: absolute;
+        z-index: 101;
+        font-family: var(--font-title);
+        font-size: 2.2rem; 
+        font-weight: bold;
+        letter-spacing: 1px;
+        color: #6d4c1e; 
+        text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5), -1px -1px 1px rgba(0, 0, 0, 0.2);
+        padding-right: 12px;
+        max-width: 160px; 
+        overflow: visible; 
+        white-space: nowrap; 
+        text-align: center;
+        pointer-events: none;
+    }
+
+    @keyframes respiracion-suave {
+        0%   { transform: translate(-50%, -50%) scale(1); }
+        50%  { transform: translate(-50%, -50%) scale(1.03); } 
+        100% { transform: translate(-50%, -50%) scale(1); }
+    }
+    
+    .tooltip-sian {
+        position: absolute;
+        top: 15px;
+        background: #b5986d;
+        color: #ffffff;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-family: var(--font-body);
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+        pointer-events: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        animation: float-tooltip 2.8s ease-in-out infinite;
+        z-index: 200; 
+    }
+
+    .tooltip-sian::after {
+        content: '';
+        position: absolute;
+        bottom: -4px;
+        left: 50%;
+        transform: translateX(-50%) rotate(45deg);
+        width: 10px;
+        height: 10px;
+        background: #b5986d;
+    }
+    
+    @keyframes float-tooltip {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-5px); }
+    }
+    
+    .iniciales-gigantes {
+        font-family: var(--font-title);
+        font-size: 6rem;
+        color: var(--color-acento);
+        margin: 0;
+        text-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    }
+</style>
+
+<style id="ui-components">
+    /* =========================================
+       4. COMPONENTES UI, ICONOS Y ANIMACIONES
+       ========================================= */
+
+    section {
+        padding: 80px 20px;
+        text-align: center;
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .countdown-box {
+        display: flex;
+        justify-content: center;
+        gap: 15px;
+        margin-top: 20px;
+        flex-wrap: wrap;
+    }
+
+    .time-unit {
+        background: var(--card-bg);
+        backdrop-filter: blur(4px);
+        border-radius: 16px;
+        padding: 16px 18px;
+        min-width: 82px;
+        box-shadow: 0 6px 16px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.45);
+    }
+
+    .time-number {
+        font-size: 2rem;
+        font-family: var(--font-title);
+        color: var(--color-acento);
+    }
+
+    .time-label {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        margin-top: 5px;
+        opacity: 0.7;
+    }
+
+    .premium-container {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        max-width: 500px;
+        margin: 0 auto;
+    }
+
+    .premium-card {
+        background: var(--card-bg);
+        border-radius: 18px;
+        padding: 24px;
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
+        transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .premium-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.12), inset 0 0 0 1px var(--color-acento);
+    }
+
+    .premium-icon {
+        width: 50px;
+        height: 50px;
+        background: rgba(150, 150, 150, 0.1);
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        color: var(--color-acento);
+    }
+
+    .premium-info {
+        flex: 1;
+        text-align: left;
+    }
+
+    .premium-title {
+        font-family: var(--font-title);
+        font-weight: bold;
+        margin-bottom: 5px;
+        font-size: 1.2rem;
+    }
+
+    .btn-card {
+        background: rgba(150, 150, 150, 0.1);
+        color: var(--text-color);
+        border: none;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        text-decoration: none;
+        display: inline-block;
+        transition: background 0.3s;
+        margin-top: 5px;
+    }
+
+    .btn-card:hover {
+        background: var(--color-acento);
+        color: var(--bg-color);
+    }
+
+    /* --- NUEVO: SWIPER MI HISTORIA --- */
+    .swiper-historia {
+        width: 100%;
+        padding: 20px 0 50px 0;
+    }
+
+    .card-historia {
+        background: var(--card-bg);
+        border-radius: 20px;
+        overflow: hidden;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        display: flex;
+        flex-direction: column;
+        height: auto;
+    }
+
+    .card-historia img {
+        width: 100%;
+        height: 280px;
+        object-fit: cover;
+    }
+
+    .historia-content {
+        padding: 25px 20px;
+        text-align: center;
+    }
+
+    .historia-year {
+        font-family: var(--font-title);
+        font-size: 2.5rem;
+        color: var(--color-acento);
+        margin-bottom: 10px;
+        line-height: 1;
+    }
+
+    .historia-text {
+        font-size: 1rem;
+        opacity: 0.85;
+        line-height: 1.5;
+    }
+    
+    /* --- NUEVO: MASONRY GALLERY --- */
+    .masonry-grid {
+        column-count: 2;
+        column-gap: 15px;
+        margin-top: 20px;
+    }
+    
+    @media (min-width: 768px) {
+        .masonry-grid { column-count: 3; }
+    }
+    
+    .masonry-item {
+        break-inside: avoid;
+        margin-bottom: 15px;
+        border-radius: 12px;
+        overflow: hidden;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+    
+    .masonry-item img {
+        width: 100%;
+        display: block;
+        transition: transform 0.3s ease;
+    }
+    
+    .masonry-item:hover img {
+        transform: scale(1.05);
+    }
+
+    .timeline {
+        position: relative;
+        max-width: 400px;
+        margin: 0 auto;
+        padding: 20px 0;
+    }
+
+    .timeline::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 90px;
+        height: 100%;
+        width: 1px;
+        background: rgba(150, 150, 150, 0.3);
+    }
+
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 30px;
+        position: relative;
+    }
+
+    .timeline-time {
+        width: 70px;
+        text-align: right;
+        font-style: italic;
+        font-size: 0.9rem;
+        color: var(--color-acento);
+    }
+
+    .timeline-dot {
+        width: 10px;
+        height: 10px;
+        background: var(--color-acento);
+        border-radius: 50%;
+        margin: 0 15px;
+        z-index: 1;
+        box-shadow: 0 0 10px var(--color-acento);
+    }
+
+    .timeline-content {
+        flex: 1;
+        text-align: left;
+        font-weight: 500;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .ticket-container {
+        background: var(--card-bg);
+        border-radius: 18px;
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
+    }
+
+    .ticket-header {
+        font-family: var(--font-title);
+        font-size: 1.8rem;
+        margin-bottom: 30px;
+        border-bottom: 1px solid var(--color-acento);
+        display: inline-block;
+        padding-bottom: 5px;
+    }
+
+    .ticket-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        text-align: left;
+        margin-top: 20px;
+    }
+
+    @media (max-width: 480px) {
+        .ticket-grid { grid-template-columns: 1fr; text-align: center; }
+        .qr-side { order: -1; } 
+    }
+
+    .ticket-label {
+        font-size: 0.65rem;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--color-acento);
+        margin-bottom: 4px;
+        display: block;
+        font-weight: bold;
+    }
+
+    .ticket-value {
+        font-family: var(--font-body);
+        font-size: 1.1rem;
+        margin-bottom: 15px;
+        display: block;
+    }
+
+    .qr-container-modern {
+        background: white;
+        padding: 10px;
+        display: inline-block;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+
+    .status-badge {
+        font-size: 0.7rem;
+        padding: 4px 12px;
+        border-radius: 20px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .anim-iglesia { display: inline-block; transform-origin: top center; transition: transform 0.6s ease, filter 0.6s ease; }
+    [data-aos].aos-animate .anim-iglesia { animation: campanaEntrada 1.6s cubic-bezier(.4,0,.2,1) both; }
+    @keyframes campanaEntrada { 0% { transform: rotate(0deg); filter: drop-shadow(0 0 0 transparent); } 60% { transform: rotate(-4deg); filter: drop-shadow(0 0 10px var(--color-acento)); } 100% { transform: rotate(0deg); filter: drop-shadow(0 0 0 transparent); } }
+    .premium-card:hover .anim-iglesia { animation: campanaHover 0.8s ease-in-out; }
+    @keyframes campanaHover { 0% { transform: rotate(0); } 25% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } 75% { transform: rotate(-3deg); } 100% { transform: rotate(0); } }
+
+    .anim-copas { display: inline-block; transform-origin: center bottom; }
+    [data-aos].aos-animate .anim-copas { animation: brindisEntrada 1.4s cubic-bezier(.4,0,.2,1) both; }
+    @keyframes brindisEntrada { 0% { transform: scale(0.9) translateY(6px); filter: drop-shadow(0 0 0 transparent); opacity: 0; } 60% { transform: scale(1.05) translateY(0); filter: drop-shadow(0 0 12px var(--color-acento)); opacity: 1; } 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } }
+    .premium-card:hover .anim-copas { animation: brindisHover 0.7s ease-in-out; }
+    @keyframes brindisHover { 0% { transform: rotate(0); } 30% { transform: rotate(-8deg); } 60% { transform: rotate(8deg); } 100% { transform: rotate(0); } }
+
+    .swiper-deseos {
+        width: 100%;
+        max-width: 600px;
+        height: auto;
+        min-height: 250px;
+        margin: 30px auto;
+        border-radius: 18px;
+        overflow: hidden;
+        background: transparent;
+        padding-bottom: 40px; 
+    }
+
+    .swiper-deseos .swiper-slide {
+        background: var(--card-bg);
+        border-radius: 18px;
+        padding: 40px 30px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
+        backdrop-filter: blur(6px);
+        -webkit-backdrop-filter: blur(6px);
+    }
+
+    .deseo-mensaje {
+        font-size: 1.15rem;
+        font-style: italic;
+        opacity: 0.9;
+        margin-bottom: 20px;
+        line-height: 1.6;
+        color: var(--text-color);
+    }
+
+    .deseo-nombre {
+        font-family: var(--font-title);
+        color: var(--color-acento);
+        font-size: 1.4rem;
+        font-weight: bold;
+    }
+
+    .deseo-fecha {
+        font-size: 0.75rem;
+        opacity: 0.5;
+        margin-top: 8px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .autoplay-progress {
+        position: absolute;
+        right: 16px;
+        bottom: 16px;
+        z-index: 10;
+        width: 48px;
+        height: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        color: var(--color-acento);
+        font-family: var(--font-body);
+        font-size: 0.8rem;
+    }
+
+    .autoplay-progress svg {
+        --progress: 0;
+        position: absolute;
+        left: 0;
+        top: 0px;
+        z-index: 10;
+        width: 100%;
+        height: 100%;
+        stroke-width: 4px;
+        stroke: var(--color-acento);
+        fill: none;
+        stroke-dashoffset: calc(125.6px * (1 - var(--progress)));
+        stroke-dasharray: 125.6;
+        transform: rotate(-90deg);
+    }
+</style>
+
+</head>
+
+<body>
+    <div class="fondo-fijo-app"></div>
+    <div id="welcome-screen">
+        
+        {% if inv['estilo_apertura'] == 'sobre' %}
+        <div class="pantalla-sobre">            
+            <svg class="svg-desktop" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path class="triangulo-papel" d="M0 0 L100 0 L50 100 Z" />
+            </svg>
+            <svg class="svg-mobile svg-mobile-izq" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path class="triangulo-papel" d="M0 0 L51 50 L0 100 Z" />
+            </svg>
+            <svg class="svg-mobile svg-mobile-der" viewBox="0 0 100 100" preserveAspectRatio="none">
+                <path class="triangulo-papel" d="M100 0 L49 50 L100 100 Z" />
+            </svg>
+            <div class="sello-wrapper" onclick="entrarSitio('sobre')">
+                <div class="tooltip-sian">Click Aquí</div>                
+                <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png" class="sello-img-real" alt="Sello">                
+                <span class="texto-sello">{{ datos.get('iniciales') }}</span>
+            </div>            
+        </div>
+
+        {% elif inv['estilo_apertura'] == 'iniciales' %}
+        <div style="position: relative; display: inline-block;">
+            <div class="pulso-apertura" onclick="entrarSitio('iniciales')" style="position: relative; display: inline-block;">
+                <div class="tooltip-sian">Click Aquí</div>
+                <h1 class="iniciales-gigantes">{{ datos.get('iniciales') }}</h1>
+            </div>
+        </div>
+
+        {% else %}
+            <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-acento);">Mis XV Años</p>
+            <h1 style="font-size: 4rem; margin: 15px 0; text-align: center;">{{ datos['novios'] }}</h1>
+            <button class="btn-boda mt-4" onclick="entrarSitio('simple')">Abrir Invitación</button>
+        {% endif %}
+
+    </div>
+
+    {% if inv['musica_url'] %}
+    <audio id="bgMusic" loop>
+        <source src="{{ inv['musica_url'] }}" type="audio/mpeg">
+    </audio>
+    <div class="music-btn" onclick="toggleMusic()"><i class="fas fa-volume-up" id="musicIcon"></i></div>
+    {% endif %}
+
+    <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">        
+        {% for item in config %}
+        
+        {% if item == 'hero' %}
+        <section class="hero"
+            style=" max-width: 100%; width: 100%; overflow: hidden; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
+            
+            <div style="
+                position: absolute;
+                inset: 0;
+                background-image: url('{{ inv['foto_portada_url'] if inv['foto_portada_url'] else (fotos[0] if fotos else '') }}');
+                background-size: cover;
+                background-position: center;
+                filter: brightness(0.6);">
+            </div>
+            
+            <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #ffffff;"
+                data-aos="zoom-in" data-aos-duration="1500">
+                
+                {% if datos.get('mensaje_bienvenida') %}
+                    <p style="font-size: 1.1rem; font-style: italic; opacity: 0.9; max-width: 600px; margin: 0 auto 20px auto; line-height: 1.6; text-shadow: 1px 1px 5px rgba(0,0,0,0.5);">
+                        "{{ datos['mensaje_bienvenida'] }}"
+                    </p>
+                {% endif %}
+
+                <h1 style="font-size: clamp(3.5rem, 10vw, 6rem); margin: 10px 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">
+                    {{ datos['novios'] }}</h1>
+                <p style="font-size: 1.3rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-top: 10px; color: var(--color-acento);">Mis XV Años</p>
+            </div>
+        </section>
+
+        {% elif item == 'countdown' %}
+        <section data-aos="fade-up">
+            <h2 id="fecha-elegante"
+                style="font-size: 2rem; color: var(--text-color); margin-bottom: 40px; font-family: var(--font-title);">
+            </h2>
+
+            <div class="countdown-box" id="contador">
+                <div class="time-unit">
+                    <div class="time-number" id="dias">00</div>
+                    <div class="time-label">Días</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-number" id="horas">00</div>
+                    <div class="time-label">Hr</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-number" id="minutos">00</div>
+                    <div class="time-label">Min</div>
+                </div>
+                <div class="time-unit">
+                    <div class="time-number" id="segundos">00</div>
+                    <div class="time-label">Seg</div>
+                </div>
+            </div>
+        </section>
+
+        {% elif item == 'historia' and historia_lista %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Mi Historia</h2>
+            <p class="mb-4" style="opacity: 0.8;">Un pequeño recorrido por los mejores momentos de mi vida.</p>
+            
+            <div class="swiper swiper-historia">
+                <div class="swiper-wrapper">
+                    {% for recuerdo in historia_lista %}
+                    <div class="swiper-slide card-historia">
+                        {% if recuerdo.foto %}
+                        <img src="{{ recuerdo.foto }}" alt="Año {{ recuerdo.anio }}">
+                        {% endif %}
+                        <div class="historia-content">
+                            <h3 class="historia-year">{{ recuerdo.anio }}</h3>
+                            <p class="historia-text">{{ recuerdo.texto }}</p>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="swiper-pagination" style="position: relative; margin-top: 20px;"></div>
+            </div>
+        </section>
+
+        {% elif item == 'mapas' %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 40px;">Ubicaciones</h2>
+            <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+                {% if datos['maps_misa'] %}
+                <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                    <span class="anim-iglesia">
+                        <i class="fas fa-church fa-2x mb-2" style="color: var(--color-acento);"></i>
+                    </span>
+                    <h3 style="margin-bottom: 15px;">Misa de Acción de Gracias</h3>
+                    <a href="{{ datos['maps_misa'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
+                </div>
+                {% endif %}
+
+                {% if datos['maps_fiesta'] %}
+                <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                    <span class="anim-copas">
+                        <i class="fas fa-glass-cheers fa-2x mb-2" style="color: var(--color-acento);"></i>
+                    </span>
+                    <h3 style="margin-bottom: 15px;">La Recepción</h3>
+                    <a href="{{ datos['maps_fiesta'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        {% elif item == 'dresscode' and inv['dress_code'] %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 20px;">Código de Vestimenta</h2>
+            <div style="font-size: 3rem; color: var(--color-acento); margin-bottom: 15px;">
+                <i class="fas fa-user-tie me-3"></i><i class="fas fa-female"></i>
+            </div>
+            <h3 style="text-transform: uppercase; letter-spacing: 3px; font-family: var(--font-body);">{{
+                inv['dress_code'] }}</h3>
+            <p style="opacity: 0.7; margin-top: 15px; font-style: italic;">
+                {% if inv['dress_code'] == 'Formal' %}Traje oscuro y vestido largo o midi.
+                {% elif inv['dress_code'] == 'Etiqueta' %}Rigurosa etiqueta. Gala y elegancia absoluta.
+                {% elif inv['dress_code'] == 'Coctel' %}Traje sin corbata y vestido de cóctel.
+                {% elif inv['dress_code'] == 'Guayabera' %}Guayabera de lino y vestido fluido. Colores claros.
+                {% endif %}
+            </p>
+        </section>
+
+        {% elif item == 'regalos' %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Mesa de Regalos <i
+                    class="fas fa-gift ms-2"></i></h2>
+                    
+            <p class="mb-5" style="font-style: italic; opacity: 0.8; font-size: 1.1rem; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                ¡Que me acompañes en este día es mi mejor regalo! Pero si está en tu disposición realizar un obsequio, te comparto estas opciones.
+            </p>
+
+            <div class="premium-container">
+                {% if datos['cuenta_bancaria'] %}
+                <div class="premium-card">
+                    <div class="premium-icon"><i class="fas fa-envelope-open-text"></i></div>
+                    <div class="premium-info">
+                        <div class="premium-title">Lluvia de Sobres</div>
+                        <p
+                            style="white-space: pre-line; margin: 0; font-family: monospace; color: var(--color-acento); font-size: 1.1rem;">
+                            {{ datos['cuenta_bancaria'] }}</p>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if inv['mesas_regalos_json'] and inv['mesas_regalos_json'] != 'null' %}
+                {% set tiendas = inv['mesas_regalos_json']|from_json %}
+                {% for tienda in tiendas %}
+                <div class="premium-card">
+                    <div class="premium-icon">
+                        {% if 'liverpool' in tienda.nombre.lower() %}<i class="fas fa-shopping-bag"></i>
+                        {% elif 'amazon' in tienda.nombre.lower() %}<i class="fab fa-amazon"></i>
+                        {% else %}<i class="fas fa-store"></i>{% endif %}
+                    </div>
+                    <div class="premium-info">
+                        <div class="premium-title">{{ tienda.nombre }}</div>
+                        <a href="{{ tienda.url }}" target="_blank" class="btn-card">Ver mesa de regalos</a>
+                    </div>
+                </div>
+                {% endfor %}
+                {% endif %}
+            </div>
+        </section>
+
+        {% elif item == 'pases' %}
+            {% if datos_pase %}
+            <section data-aos="fade-up">
+                <div class="ticket-container">
+                    <h2 class="ticket-header">Pase de Acceso</h2>
+            
+                    <div style="margin-bottom: 30px;">
+                        <span class="ticket-label">Invitado</span>
+                        <span class="ticket-value" style="font-size: 1.5rem; font-weight: bold;">
+                            {{ datos_pase['nombre_familia'] }}
+                        </span>
+                        </div>
+
+                    <div class="row align-items-center" style="display: flex; flex-wrap: wrap;">
+                        <div class="col-md-5 mb-4 mb-md-0 qr-side" style="text-align: center;">
+                            <div class="qr-container-modern">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ datos_pase['codigo_qr_unique'] }}"
+                                    alt="QR" style="width: 140px; height: 140px; display: block; margin: 0 auto;">
+                            </div>
+                            <p class="mt-2 mb-0" style="font-size: 0.7rem; opacity: 0.5; font-family: monospace;">
+                                ID: {{ datos_pase['codigo_qr_unique'] }}
+                            </p>
+                        </div>
+
+                        <div class="col-md-7" style="flex: 1; padding-left: 20px;">
+                            <div class="ticket-grid">
+                                <div>
+                                    <span class="ticket-label">Personas</span>
+                                    <span class="ticket-value">{{ datos_pase['pases_totales'] }} Pases</span>
+                                </div>
+                                <div>
+                                    <span class="ticket-label">Mesa</span>
+                                    <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span>
+                                </div>
+                                <div style="grid-column: span 2;">
+                                    <span class="ticket-label">Estado</span>
+                                    {% if datos_pase['pases_usados'] >= datos_pase['pases_totales'] %}
+                                    <span class="status-badge" style="background: #ffcccc; color: #cc0000;">No válido para ingresar</span>
+                                    {% else %}
+                                    <span class="status-badge" style="background: #e1f5fe; color: #01579b;">Válido para ingresar</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            </div>
+                            </div>
+
+                    {% if inv['tiene_modulo_invitados'] %}
+                    <div style="margin-top: 40px; border-top: 1px dashed var(--color-acento); padding-top: 30px;">
+                        <p class="mb-4" style="opacity: 0.8; font-weight: bold;">¿Confirmas tu asistencia?</p>
+                        <div id="botones-rsvp" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                            <button class="btn-boda" style="background: var(--color-acento); color: var(--bg-color);"
+                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Confirmado')">
+                                <i class="fas fa-check me-2"></i> Sí, asistiré
+                            </button>
+                            <button class="btn-entrar" style="border-color: rgba(150,150,150,0.5); color: var(--text-color);"
+                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Declinado')">
+                                <i class="fas fa-times me-2"></i> No podré ir
+                            </button>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <p class="mt-4 mb-0" style="text-align: center; font-style: italic; font-size: 0.8rem; opacity: 0.6;">
+                        "Presenta este código digital al llegar a la recepción."
+                    </p>
+                    </div>
+            </section>
+            {% endif %}
+        
+        {% elif item == 'protocolo' and datos.get('protocolo') %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.2rem; color: var(--color-acento); margin-bottom: 10px;">Mis Padres y Padrinos</h2>
+            
+            <p style="font-style: italic; opacity: 0.7; font-size: 1.1rem; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                "Con el amor y apoyo incondicional de quienes me guían en cada paso."
+            </p>
+            
+            <div class="row g-4 justify-content-center" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                {% for integrante in datos['protocolo'] %}
+                <div class="col-md-5 col-sm-12 text-center" style="flex: 1; min-width: 250px;">
+                    <div class="p-3">
+                        <i class="fas fa-heart mb-2" style="color: var(--color-acento);"></i>
+                        <h4 class="mb-1" style="font-weight: 600;">{{ integrante.nombres }}</h4>
+                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">{{ integrante.rol }}</small>
+                        
+                        <hr style="width: 40%; margin: 15px auto 0 auto; border-top: 1px solid rgba(150,150,150,0.2);">
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section> 
+
+        {% elif item == 'hospedaje' %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Hospedaje y Transporte</h2>
+            
+            <p class="mb-5" style="font-style: italic; opacity: 0.8; font-size: 1.1rem; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.5;">
+                Pensando en tu comodidad, hemos seleccionado estas opciones de alojamiento y detalles de transporte para que disfrutes con nosotros sin preocupaciones.
+            </p>
+
+            <div class="premium-container">
+                
+                {% if datos['info_transporte'] %}
+                <div class="premium-card">
+                    <div class="premium-icon"><i class="fas fa-bus-alt"></i></div>
+                    <div class="premium-info">
+                        <div class="premium-title">Transporte</div>
+                        <p style="white-space: pre-line; margin: 0; font-size: 0.95rem; opacity: 0.9;">
+                            {{ datos['info_transporte'] }}
+                        </p>
+                    </div>
+                </div>
+                {% endif %}
+
+                {% if inv['hospedaje_json'] and inv['hospedaje_json'] != 'null' %}
+                    {% set hoteles = inv['hospedaje_json']|from_json %}
+                    {% for hotel in hoteles %}
+                    <div class="premium-card">
+                        <div class="premium-icon"><i class="fas fa-bed"></i></div>
+                        <div class="premium-info">
+                            <div class="premium-title">{{ hotel.nombre }}</div>
+                            <a href="{{ hotel.url }}" target="_blank" class="btn-card"><i class="fas fa-link me-1"></i> Ver opciones</a>
+                        </div>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+            </div>
+        </section>
+
+        {% if 'camara' in config %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 15px;">Captura el Momento</h2>
+            <p class="mb-4" style="opacity: 0.8;">Ayúdame a documentar este día tan especial. Te regalo una cámara
+                desechable virtual con 5 fotos para mi rollo.</p>
+
+            <div class="premium-card"
+                style="flex-direction: column; text-align: center; justify-content: center; padding: 40px;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id'], _external=True) }}"
+                    alt="QR Cámara" style="border-radius: 10px; border: 5px solid white; margin-bottom: 15px;">
+
+                <a href="{{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id']) }}" class="btn-boda">
+                    <i class="fas fa-camera-retro me-2"></i> Usar Cámara Desechable
+                </a>
+            </div>
+        </section>
+        {% endif %}
+
+        {% elif item == 'galeria' and fotos %}
+        <section data-aos="fade-up" style="max-width: 1000px;">
+            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Mi Sesión Fotográfica</h2>
+            
+            <div class="masonry-grid">
+                {% for foto in fotos %}
+                <div class="masonry-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 50 }}">
+                    <img src="{{ foto }}" alt="Foto XV Años">
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% elif item == 'deseos' %}
+        <section data-aos="fade-up" style="padding-bottom: 60px;">
+            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Libro de Visitas</h2>
+            <p class="mb-4" style="opacity: 0.8;">Déjame un mensaje para recordar este día tan especial.</p>
+            
+            <button class="btn-boda mb-4" onclick="abrirModalDeseos({{ inv['id'] }})" style="margin-top: 10px;">
+                <i class="fas fa-pen-fancy me-2"></i> Escribir Mensaje
+            </button>
+
+            {% if buenos_deseos %}
+            <div class="swiper swiper-deseos">
+                <div class="swiper-wrapper">
+                    {% for deseo in buenos_deseos %}
+                    <div class="swiper-slide">
+                        <i class="fas fa-quote-left mb-3" style="color: var(--color-acento); font-size: 2rem; opacity: 0.3;"></i>
+                        <div class="deseo-mensaje">"{{ deseo.mensaje }}"</div>
+                        <div class="deseo-nombre">{{ deseo.nombre }}</div>
+                        <div class="deseo-fecha">{{ deseo.fecha[:10] }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                <div class="autoplay-progress" slot="container-end">
+                    <svg viewBox="0 0 48 48">
+                        <circle cx="24" cy="24" r="20"></circle>
+                    </svg>
+                    <span></span>
+                </div>
+            </div>
+            {% else %}
+            <div class="premium-card" style="margin-top: 30px; text-align: center; display: block;">
+                <p style="font-style: italic; opacity: 0.6; margin: 0;">Aún no hay mensajes. ¡Sé el primero en firmar mi libro!</p>
+            </div>
+            {% endif %}
+        </section>
+
+        {% elif item == 'timeline' and datos.get('itinerario') %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 40px;">Itinerario</h2>
+            <div class="timeline">
+                {% for act in datos['itinerario'] %}
+                <div class="timeline-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 + 100 }}">
+                    <div class="timeline-time">{{ act.hora }}</div>
+                    <div class="timeline-dot"></div>
+                    <div class="timeline-content"><i class="{{ act.icono }} me-2" style="color: var(--color-acento);"></i>
+                        {{ act.actividad }}</div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+
+        {% elif item == 'rsvp' %}
+            {% if not datos_pase %}
+            <section data-aos="fade-up" style="padding-bottom: 100px;">
+                <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 20px;">Asistencia</h2>
+                <p class="mb-4" style="opacity: 0.8;">Me encantaría contar con tu presencia.</p>
+                {% if datos['telefono_rsvp'] %}
+                    <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia%20a%20los%20XV%20años..."
+                        target="_blank" class="btn-boda" style="background: #25D366; border-color: #25D366; color: white;">
+                        <i class="fab fa-whatsapp me-2"></i> Confirmar por WhatsApp
+                    </a>
+                {% endif %}
+            </section>
+        {% endif %}
+
+        {% elif item == 'frase_final' and inv['frase_final'] %}
+        <section data-aos="fade-up" class="text-center" style="padding: 100px 20px;">
+            <div style="color: var(--color-acento); font-size: 1.5rem; margin-bottom: 25px; opacity: 0.6;">
+                <i class="fas fa-star"></i>
+                <span style="margin: 0 10px;">✦</span>
+                <i class="fas fa-star"></i>
+            </div>
+            
+            <div style="max-width: 600px; margin: 0 auto;">
+                <p class="fs-3" style="font-family: var(--font-title); color: var(--color-acento); font-style: italic; line-height: 1.4; margin-bottom: 30px;">
+                    "{{ inv['frase_final'] }}"
+                </p>
+                
+                <h3 style="font-size: 2.5rem; margin-bottom: 10px; color: var(--text-color);">
+                    {{ datos['novios'] }}
+                </h3>
+                
+                <p style="text-transform: uppercase; letter-spacing: 4px; font-size: 0.8rem; opacity: 0.6; font-weight: bold;">
+                    ¡Te espero para celebrar!
+                </p>
+            </div>
+        </section>
+
+        {% endif %}
+
+        {% endfor %}
+
+        <footer style="text-align: center; padding: 40px; font-size: 0.8rem; opacity: 0.5;">
+            Creado con ❤️ por SianEffects
+        </footer>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+    <script>
+        function entrarSitio(estilo = 'simple') {
+            const welcome = document.getElementById('welcome-screen');
+            const content = document.getElementById('main-content');
+            const audio = document.getElementById('bgMusic');
+
+            if (estilo === 'sobre') {
+                welcome.classList.add('sobre-abierto');
+                mostrarInvitacion(content);
+                setTimeout(() => { welcome.style.opacity = '0'; }, 800);
+                setTimeout(() => { welcome.style.visibility = 'hidden'; welcome.style.display = 'none'; }, 2000);
+            } else {
+                welcome.style.opacity = '0';
+                setTimeout(() => { welcome.style.visibility = 'hidden'; }, 800);
+                mostrarInvitacion(content);
+            }
+
+            if (audio) { audio.play().catch(e => console.log("Autoplay bloqueado")); }
+        }
+
+        function mostrarInvitacion(content) {
+            content.style.visibility = 'visible';
+            content.style.opacity = '1';
+
+            setTimeout(() => {
+                // INICIALIZAR EL NUEVO SWIPER DE HISTORIA DE XV
+                if(document.querySelector('.swiper-historia')) {
+                    new Swiper(".swiper-historia", {
+                        slidesPerView: 1.2,
+                        spaceBetween: 20,
+                        centeredSlides: true,
+                        grabCursor: true,
+                        pagination: {
+                            el: ".swiper-pagination",
+                            clickable: true,
+                        },
+                        breakpoints: {
+                            640: { slidesPerView: 2.2 },
+                            1024: { slidesPerView: 3.2 }
+                        }
+                    });
+                }
+
+                // SWIPER DE BUENOS DESEOS
+                const swiperDeseos = document.querySelector('.swiper-deseos');
+                if(swiperDeseos) {
+                    const progressCircle = swiperDeseos.querySelector(".autoplay-progress svg");
+                    const progressContent = swiperDeseos.querySelector(".autoplay-progress span");
+                    
+                    new Swiper(".swiper-deseos", {
+                        spaceBetween: 30,
+                        centeredSlides: true,
+                        grabCursor: true,
+                        autoplay: {
+                            delay: 5000,
+                            disableOnInteraction: false
+                        },
+                        loop: true,
+                        on: {
+                            autoplayTimeLeft(s, time, progress) {
+                                progressCircle.style.setProperty("--progress", 1 - progress);
+                                progressContent.textContent = Math.ceil(time / 1000) + "s";
+                            }
+                        }
+                    });
+                }
+                
+                AOS.init({ 
+                    duration: 1200, 
+                    once: true,
+                    mirror: false
+                });
+            }, 200);
+        }
+
+        function toggleMusic() {
+            const audio = document.getElementById('bgMusic');
+            const icon = document.getElementById('musicIcon');
+            if (audio.paused) {
+                audio.play(); icon.classList.remove('fa-volume-mute'); icon.classList.add('fa-volume-up');
+            } else {
+                audio.pause(); icon.classList.remove('fa-volume-up'); icon.classList.add('fa-volume-mute');
+            }
+        }
+
+        const fechaStr = "{{ inv['fecha_evento'] }}";
+        if (fechaStr && fechaStr !== 'None') {
+            const safeFechaStr = fechaStr.replace(' ', 'T');
+            const fechaEvento = new Date(safeFechaStr);
+            
+            if (!isNaN(fechaEvento.getTime())) {
+                const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+                let textoFecha = fechaEvento.toLocaleDateString('es-ES', opcionesFecha);
+                textoFecha = textoFecha.charAt(0).toUpperCase() + textoFecha.slice(1);
+                
+                const elFechaTexto = document.getElementById("fecha-elegante");
+                if(elFechaTexto) elFechaTexto.innerText = textoFecha;
+
+                const fechaEventoMs = fechaEvento.getTime();
+                const x = setInterval(function () {
+                    const now = new Date().getTime();
+                    const distance = fechaEventoMs - now;
+
+                    if (distance < 0) {
+                        clearInterval(x);
+                        document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-acento); margin-top:20px;'>¡ES HOY!</h3>";
+                        return;
+                    }
+                    document.getElementById("dias").innerText = Math.floor(distance / (1000 * 60 * 60 * 24));
+                    document.getElementById("horas").innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    document.getElementById("minutos").innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                    document.getElementById("segundos").innerText = Math.floor((distance % (1000 * 60)) / 1000);
+                }, 1000);
+            }
+        }
+
+        function confirmarAsistencia(invitadoId, estado) {
+            fetch(`/api/invitados/${invitadoId}/confirmar`, {  
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado: estado })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('botones-rsvp').innerHTML = `
+                        <p style="color: var(--color-acento); font-weight: bold; font-size: 1.2rem; margin-top: 15px;">
+                            <i class="fas fa-check-circle me-1"></i> ¡Asistencia ${estado.toLowerCase()} exitosamente!
+                        </p>`;
+
+                    if (estado === 'Confirmado') {
+                        confetti({
+                            particleCount: 150,
+                            spread: 80,
+                            origin: { y: 0.6 },
+                            colors: ['#ff007f', '#D4AF37', '#ffffff'] // Colores más festivos
+                        });
+                        
+                        Swal.fire({
+                            title: '¡Qué emoción! ✨',
+                            text: 'Gracias por confirmar. Me hace inmensamente feliz saber que compartirás este día tan especial conmigo.',
+                            icon: 'success',
+                            confirmButtonColor: 'var(--color-acento)',
+                            confirmButtonText: '¡Nos vemos pronto!',
+                            background: 'var(--bg-color)',
+                            color: 'var(--text-color)'
+                        });
+                    } else {
+                        Swal.fire({
+                            title: '¡Te extrañaré! 🥺',
+                            text: 'Entiendo que no puedas acompañarme, gracias por avisarme con tiempo.',
+                            icon: 'info',
+                            confirmButtonColor: 'rgba(150,150,150,0.5)',
+                            confirmButtonText: 'Cerrar',
+                            background: 'var(--bg-color)',
+                            color: 'var(--text-color)'
+                        });
+                    }
+                } else {
+                    Swal.fire('Ups...', 'Hubo un problema al guardar tu confirmación.', 'error');
+                }
+            })
+            .catch(error => {
+                Swal.fire('Error de conexión', 'No pudimos conectar con el servidor.', 'error');
+            });
+        }
+
+        function abrirModalDeseos(invitacionId) {
+            Swal.fire({
+                title: '<span style="color: var(--color-acento); font-family: var(--font-title); font-size: 2rem;">Tus Buenos Deseos</span>',
+                html: `
+                    <div style="text-align: left; margin-bottom: 10px;">
+                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-acento); font-weight: bold;">Tu Nombre o Familia</label>
+                        <input id="swal-nombre" class="swal2-input" placeholder="Ej. Familia Pérez" style="max-width: 100%; margin-top: 5px;">
+                    </div>
+                    <div style="text-align: left;">
+                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-acento); font-weight: bold;">Mensaje a la Quinceañera</label>
+                        <textarea id="swal-mensaje" class="swal2-textarea" placeholder="Te deseamos una vida llena de felicidad..." rows="4" style="max-width: 100%; resize: none; margin-top: 5px;"></textarea>
+                    </div>
+                `,
+                confirmButtonText: 'Guardar Mensaje <i class="fas fa-paper-plane ms-2"></i>',
+                showCancelButton: true,
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: 'var(--color-acento)',
+                cancelButtonColor: 'rgba(150,150,150,0.5)',
+                background: 'var(--bg-color)',
+                color: 'var(--text-color)',
+                preConfirm: () => {
+                    const nombre = document.getElementById('swal-nombre').value.trim();
+                    const mensaje = document.getElementById('swal-mensaje').value.trim();
+                    if (!nombre || !mensaje) Swal.showValidationMessage('Por favor completa ambos campos. 🙏');
+                    return { nombre: nombre, mensaje: mensaje };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    fetch('/api/buenos-deseos', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ invitacion_id: invitacionId, nombre: result.value.nombre, mensaje: result.value.mensaje })
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if(data.success) {
+                            Swal.fire({ icon: 'success', title: '¡Mensaje Guardado!', confirmButtonColor: 'var(--color-acento)' }).then(() => window.location.reload());
+                        } else {
+                            Swal.fire('Error', data.error, 'error');
+                        }
+                    });
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>
