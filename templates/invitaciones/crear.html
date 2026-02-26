@@ -609,21 +609,24 @@
     var sortable = Sortable.create(el, { animation: 150, handle: '.handle' });
 
     document.addEventListener("DOMContentLoaded", function () {
-    {% if edit_mode and inv and inv['config_json'] %}
-    try {
-        const savedOrder = {{ inv['config_json'] | safe }};
-        const list = document.getElementById('sortable-list');
-        const items = Array.from(list.children);
+        {% if edit_mode and inv and inv['config_json'] %}
+        try {
+            const savedOrder = {{ inv['config_json'] | safe }};
+            const list = document.getElementById('sortable-list');
+            const items = Array.from(list.children);
 
-        savedOrder.forEach(bloqueId => {
-            const item = items.find(el => el.dataset.bloque === bloqueId);
-            if (item) list.appendChild(item);
-        });
-    } catch (e) {
-        console.error('Error aplicando orden guardado:', e);
-    }
-    {% endif %}
-});
+            savedOrder.forEach(bloqueId => {
+                const item = items.find(el => el.dataset.bloque === bloqueId);
+                if (item) list.appendChild(item);
+            });
+        } catch (e) {
+            console.error('Error aplicando orden guardado:', e);
+        }
+        {% endif %}
+        
+        
+        cambiarModoEvento();
+    });
 
     // Función unificada para agregar tiendas u hoteles
     function agregarInput(containerId, nameInput, linkInput) {

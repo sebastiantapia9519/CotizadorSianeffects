@@ -464,6 +464,8 @@ def editar_invitacion(id):
     canciones = conn.execute("SELECT * FROM lista_musica WHERE activa = 1").fetchall()
     conn.close()
 
+    inv = dict(inv)
+
     if not inv:
         flash("Invitación no encontrada.", "danger")
         return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))

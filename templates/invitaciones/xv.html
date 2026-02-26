@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis XV Años - {{ datos['novios'] }}</title>
 
+
+    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css" />
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -456,46 +458,6 @@
         color: var(--bg-color);
     }
 
-    /* --- NUEVO: SWIPER MI HISTORIA --- */
-    .swiper-historia {
-        width: 100%;
-        padding: 20px 0 50px 0;
-    }
-
-    .card-historia {
-        background: var(--card-bg);
-        border-radius: 20px;
-        overflow: hidden;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        display: flex;
-        flex-direction: column;
-        height: auto;
-    }
-
-    .card-historia img {
-        width: 100%;
-        height: 280px;
-        object-fit: cover;
-    }
-
-    .historia-content {
-        padding: 25px 20px;
-        text-align: center;
-    }
-
-    .historia-year {
-        font-family: var(--font-title);
-        font-size: 2.5rem;
-        color: var(--color-acento);
-        margin-bottom: 10px;
-        line-height: 1;
-    }
-
-    .historia-text {
-        font-size: 1rem;
-        opacity: 0.85;
-        line-height: 1.5;
-    }
     
     /* --- NUEVO: MASONRY GALLERY --- */
     .masonry-grid {
@@ -733,6 +695,120 @@
         stroke-dasharray: 125.6;
         transform: rotate(-90deg);
     }
+
+    /* --- MI HISTORIA - ESTILO EDITORIAL (NUEVO) --- */
+    .historia-container {
+        background-color: var(--card-bg);
+        background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+        border-radius: 12px;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.08);
+        padding: 50px 20px 40px 20px;
+        max-width: 850px;
+        margin: 0 auto;
+    }
+
+    .historia-layout {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+    }
+
+    .historia-header {
+        flex: 1;
+        text-align: center;
+    }
+
+    .historia-header-title {
+        font-family: var(--font-title);
+        font-size: 3.5rem;
+        color: var(--color-acento);
+        letter-spacing: 4px;
+        margin: 0;
+        line-height: 1;
+        text-transform: uppercase;
+    }
+
+    .historia-header-subtitle {
+        font-family: 'Great Vibes', cursive;
+        font-size: 3.5rem;
+        color: var(--color-acento);
+        margin: -15px 0 0 0;
+        font-weight: normal;
+    }
+
+    .swiper-historia {
+        flex: 1.5;
+        width: 100%;
+        padding-bottom: 40px;
+        position: relative;
+    }
+
+    .card-historia {
+        /* ¡SIN FONDO NI SOMBRAS AQUÍ PARA EVITAR DOBLE CAJA! */
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        background: transparent;
+    }
+
+    .card-historia img {
+        width: 100%;
+        max-width: 320px;
+        height: auto;
+        aspect-ratio: 4/3;
+        object-fit: cover;
+        border-radius: 12px;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15); /* La sombra solo va en la foto */
+        margin-bottom: 20px;
+    }
+
+    .historia-content {
+        max-width: 320px;
+        margin: 0 auto;
+    }
+
+    .historia-year {
+        font-family: var(--font-title);
+        font-size: 1.3rem;
+        color: var(--text-color);
+        letter-spacing: 2px;
+        margin-bottom: 5px;
+    }
+
+    .historia-title {
+        font-family: var(--font-body);
+        font-size: 1rem;
+        color: var(--color-acento);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+    }
+
+    /* Controles de navegación de la historia */
+    .swiper-button-prev, .swiper-button-next {
+        color: var(--color-acento) !important;
+        transform: scale(0.6); /* Flechas más elegantes y pequeñas */
+    }
+
+    .swiper-pagination-bullet {
+        background: var(--color-acento) !important;
+    }
+
+    /* Adaptación a celular */
+    @media (max-width: 768px) {
+        .historia-layout {
+            flex-direction: column;
+        }
+        .historia-header {
+            margin-bottom: 10px;
+        }
+        .swiper-button-prev, .swiper-button-next {
+            top: 35%; /* Centra las flechas con la foto en celular */
+        }
+    }
+
+    
 </style>
 
 </head>
@@ -839,26 +915,38 @@
             </div>
         </section>
 
-        {% elif item == 'historia' and historia_lista %}
-        <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Mi Historia</h2>
-            <p class="mb-4" style="opacity: 0.8;">Un pequeño recorrido por los mejores momentos de mi vida.</p>
-            
-            <div class="swiper swiper-historia">
-                <div class="swiper-wrapper">
-                    {% for recuerdo in historia_lista %}
-                    <div class="swiper-slide card-historia">
-                        {% if recuerdo.foto %}
-                        <img src="{{ recuerdo.foto }}" alt="Año {{ recuerdo.anio }}">
-                        {% endif %}
-                        <div class="historia-content">
-                            <h3 class="historia-year">{{ recuerdo.anio }}</h3>
-                            <p class="historia-text">{{ recuerdo.texto }}</p>
-                        </div>
+{% elif item == 'historia' and historia_lista %}
+        <section data-aos="fade-up" style="max-width: 1000px;">
+            <div class="historia-container">
+                <div class="historia-layout">
+                    
+                    <div class="historia-header">
+                        <h2 class="historia-header-title">MI</h2>
+                        <h3 class="historia-header-subtitle">Historia</h3>
                     </div>
-                    {% endfor %}
+
+                    <div class="swiper swiper-historia">
+                        <div class="swiper-wrapper">
+                            {% for recuerdo in historia_lista %}
+                            <div class="swiper-slide"> <div class="card-historia">
+                                    {% if recuerdo.foto %}
+                                    <img src="{{ recuerdo.foto }}" alt="Año {{ recuerdo.anio }}">
+                                    {% endif %}
+                                    <div class="historia-content">
+                                        <div class="historia-year">{{ recuerdo.anio }}</div>
+                                        <div class="historia-title">{{ recuerdo.texto }}</div>
+                                    </div> </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        <div class="swiper-button-prev swiper-btn-custom"></div>
+                        <div class="swiper-button-next swiper-btn-custom"></div>
+                        
+                        <div class="swiper-pagination"></div>
+                    </div>
+
                 </div>
-                <div class="swiper-pagination" style="position: relative; margin-top: 20px;"></div>
             </div>
         </section>
 
@@ -1234,24 +1322,29 @@
             content.style.opacity = '1';
 
             setTimeout(() => {
-                // INICIALIZAR EL NUEVO SWIPER DE HISTORIA DE XV
+           // INICIALIZAR EL NUEVO SWIPER DE HISTORIA DE XV
                 if(document.querySelector('.swiper-historia')) {
                     new Swiper(".swiper-historia", {
-                        slidesPerView: 1.2,
-                        spaceBetween: 20,
-                        centeredSlides: true,
-                        grabCursor: true,
+                        observer: true,
+                        observeParents: true,
+                        allowTouchMove: false, // 🚫 ESTO BLOQUEA EL SWIPE
+                        slidesPerView: 1, 
+                        spaceBetween: 30, 
+                        loop: false, 
+                        navigation: {
+                            nextEl: ".swiper-button-next", // Asegúrate de que apunte aquí
+                            prevEl: ".swiper-button-prev", // Asegúrate de que apunte aquí
+                        },
                         pagination: {
                             el: ".swiper-pagination",
                             clickable: true,
                         },
-                        breakpoints: {
-                            640: { slidesPerView: 2.2 },
-                            1024: { slidesPerView: 3.2 }
+                        effect: "fade", 
+                        fadeEffect: {
+                            crossFade: true
                         }
                     });
                 }
-
                 // SWIPER DE BUENOS DESEOS
                 const swiperDeseos = document.querySelector('.swiper-deseos');
                 if(swiperDeseos) {
