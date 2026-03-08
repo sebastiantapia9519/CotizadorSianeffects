@@ -5,6 +5,7 @@ import os
 import json
 import html
 from flask import Blueprint, render_template, request, jsonify, session
+from utils.datetime_utils import ahora_sql
 from db import get_db_connection as get_db
 import boto3
 from botocore.config import Config
@@ -62,7 +63,13 @@ def upload_rollo(invitacion_id):
         
         url_final = f"{PUBLIC_URL}/{nombre_archivo}"
         conn = get_db()
-        conn.execute('INSERT INTO fotos_invitados (invitacion_id, url) VALUES (?, ?)', (invitacion_id, url_final))
+        conn.execute(
+            """
+            INSERT INTO fotos_invitados (invitacion_id, url, fecha_creacion)
+            VALUES (?, ?, ?)
+            """,
+            (invitacion_id, url_final, ahora_sql())
+        )
         conn.commit()
         conn.close()
         
@@ -194,8 +201,11 @@ def guardar_buen_deseo():
         # 3. Guardar en Base de Datos
         conn = get_db()
         conn.execute(
-            "INSERT INTO buenos_deseos (invitacion_id, nombre, mensaje) VALUES (?, ?, ?)",
-            (invitacion_id, nombre_limpio, mensaje_limpio)
+            """
+            INSERT INTO buenos_deseos (invitacion_id, nombre, mensaje, created_at)
+            VALUES (?, ?, ?, ?)
+            """,
+            (invitacion_id, nombre_limpio, mensaje_limpio, ahora_sql())
         )
         conn.commit()
         conn.close()

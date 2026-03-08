@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel de Socio | SianEffects</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
+    <style>
+        :root {
+            --sian-pink: #ff6b81;
+            --sian-teal: #2ec4b6;
+            --bg-cream: #fffdf9;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg-cream);
+            color: #555;
+            padding-bottom: 50px;
+        }
+
+        .navbar-socio {
+            background-color: #ffffff;
+            border-bottom: 3px solid #fff0f3;
+        }
+
+        .card-stats {
+            border: none;
+            border-radius: 20px;
+            transition: transform 0.2s;
+        }
+
+        .card-stats:hover {
+            transform: translateY(-5px);
+        }
+
+        /* --- REDISEÑO MÓVIL ESTILO APP --- */
+        @media (max-width: 768px) {
+            .planner-table thead { display: none; }
+            .planner-table tr {
+                display: flex; 
+                flex-direction: column;
+                background: white; 
+                border-radius: 15px;
+                margin-bottom: 1rem; 
+                padding: 15px; 
+                border: 1px solid #eee;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            }
+            .planner-table td {
+                display: flex; 
+                justify-content: space-between; 
+                align-items: center;
+                border: none !important; 
+                padding: 10px 0 !important;
+            }
+            /* Solo ponemos etiqueta a la Fecha y al Acceso */
+            .planner-table td[data-label="Fecha"]::before,
+            .planner-table td[data-label="Acceso"]::before {
+                content: attr(data-label);
+                font-weight: 800; 
+                color: #adb5bd; 
+                font-size: 0.7rem; 
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
+            /* La primera celda (Nombre/Evento) abarca todo el ancho */
+            .planner-table td:first-child {
+                flex-direction: column; 
+                align-items: flex-start;
+                border-bottom: 1px solid #f1f3f5 !important; 
+                margin-bottom: 10px;
+                padding-bottom: 15px !important;
+            }
+            /* Botones de Acción al 100% de ancho y centrados */
+            .planner-table td.mobile-actions {
+                width: 100%;
+                justify-content: center !important;
+                margin-top: 10px;
+                padding-top: 15px !important;
+                border-top: 1px solid #f1f3f5 !important;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <script>
+                document.addEventListener("DOMContentLoaded", function() {
+                    {% for category, message in messages %}
+                        let icono = 'info';
+                        {% if category == 'success' %} icono = 'success';
+                        {% elif category == 'danger' or category == 'error' %} icono = 'error';
+                        {% elif category == 'warning' %} icono = 'warning';
+                        {% endif %}
+
+                        const Toast = Swal.mixin({
+                            toast: true,
+                            position: 'top-end',
+                            showConfirmButton: false,
+                            timer: 4000,
+                            timerProgressBar: true,
+                            didOpen: (toast) => {
+                                toast.addEventListener('mouseenter', Swal.stopTimer)
+                                toast.addEventListener('mouseleave', Swal.resumeTimer)
+                            }
+                        });
+
+                        Toast.fire({
+                            icon: icono,
+                            title: '{{ message }}'
+                        });
+                    {% endfor %}
+                });
+            </script>
+        {% endif %}
+    {% endwith %}
+
+
+    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4 py-3 navbar-socio">
+        <div class="container d-flex justify-content-between">
+            <span class="navbar-brand fw-bold">
+                <span style="color: var(--sian-pink);">🎨 Panel de Socios</span>
+            </span>
+            <div class="d-flex gap-2">
+                <a href="{{ url_for('invitaciones_clientes.ayuda_planner') }}" class="btn btn-outline-info btn-sm rounded-pill px-3">
+                    <i class="fas fa-question-circle me-1"></i> Ayuda
+                </a>
+                
+                <a href="{{ url_for('invitaciones_clientes.logout_cliente') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                    <i class="fas fa-sign-out-alt me-1"></i> Salir
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row align-items-center mb-4">
+            <div class="col-md-7">
+                <h3 class="fw-bold text-dark m-0">¡Hola, {{ session['planner_nombre'] }}!</h3>
+                <p class="text-muted">Gestiona tus paquetes y eventos activos.</p>
+            </div>
+            <div class="col-md-5 text-md-end">
+                {% if saldo > 0 %}
+                <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}" class="btn btn-dark rounded-pill shadow px-4 py-2">
+                    <i class="fas fa-plus-circle me-2"></i>Nueva Invitación
+                </a>
+                {% else %}
+                <button class="btn btn-secondary rounded-pill px-4" disabled>
+                    <i class="fas fa-lock me-2"></i>Sin créditos disponibles
+                </button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="row g-3 mb-5">
+            <div class="col-md-4">
+                <div class="card card-stats shadow-sm bg-white h-100 border-start border-primary border-5">
+                    <div class="card-body py-4">
+                        <h6 class="text-muted text-uppercase small fw-bold">Saldo Disponible</h6>
+                        <h1 class="display-4 fw-bold text-primary m-0">{{ saldo }}</h1>
+                        <small class="text-muted">Invitaciones por crear</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <div class="card card-stats shadow-sm bg-white h-100">
+                    <div class="card-header bg-transparent border-0 pt-3">
+                        <h6 class="fw-bold m-0"><i class="fas fa-history me-2 text-warning"></i>Mis Paquetes Comprados</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="text-muted small">
+                                    <tr>
+                                        <th>ID Pack</th>
+                                        <th class="text-center">Uso</th>
+                                        <th class="text-end">Expira el</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for p in paquetes %}
+                                    <tr>
+                                        <td><small class="fw-bold text-dark">#{{ p.id }}</small></td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark border">{{ p.cantidad_usada }} / {{ p.cantidad_total }}</span>
+                                        </td>
+                                        <td class="text-end">
+                                            <small class="text-muted">{{ p.fecha_vencimiento }}</small>
+                                        </td>
+                                    </tr>
+                                    {% else %}
+                                    <tr><td colspan="3" class="text-center text-muted small py-3">No tienes paquetes registrados.</td></tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card border-0 shadow-sm rounded-4">
+            <div class="card-header bg-white py-3 border-bottom-0">
+                <h5 class="m-0 fw-bold text-dark"><i class="fas fa-envelope-open-text me-2 text-primary"></i>Mis Invitaciones Creadas</h5>
+            </div>
+            
+            <div class="card-body p-0">
+                {% if invitaciones|length > 0 %}
+                <div class="table-responsive">
+                    <table class="table align-middle mb-0 planner-table">
+                        <thead class="bg-light text-muted small text-uppercase">
+                            <tr>
+                                <th class="ps-4">Evento / Festejados</th>
+                                <th class="text-center">Fecha</th>
+                                <th class="text-center">Acceso Cliente</th>
+                                <th class="text-end pe-4">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for inv in invitaciones %}
+                            <tr>
+                                <td class="ps-4" data-label="Evento">
+                                    <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-2" style="font-size: 1.1rem;">
+                                        {{ inv.datos_cliente.get('novios', 'Evento sin nombre') }}
+                                        
+                                        {% if inv.tipo_evento == 'xv' %}
+                                            <span class="badge bg-warning text-dark border align-middle" style="font-size: 0.7rem; height: fit-content;">👑 XV Años</span>
+                                        {% else %}
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border align-middle" style="font-size: 0.7rem; height: fit-content;">💍 Boda</span>
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted d-block mt-1 text-truncate" style="max-width: 250px;">Slug: /invitacion/{{ inv.slug }}</small>
+                                </td>
+                                
+                                <td class="text-center" data-label="Fecha">
+                                    <span class="fw-bold text-dark">{{ inv.fecha_evento[:10] }}</span>
+                                </td>
+                                
+                                <td class="text-center" data-label="Acceso">
+                                    <button type="button" class="btn btn-sm btn-light border-primary text-primary fw-bold px-3 rounded-pill transition-all" 
+                                            onclick="copiarCodigo('{{ inv.codigo_acceso_cliente }}', this)" 
+                                            title="Clic para copiar código">
+                                        <i class="fas fa-copy me-1"></i> <span>{{ inv.codigo_acceso_cliente }}</span>
+                                    </button>
+                                </td>
+                                
+                                <td class="text-end pe-md-4 mobile-actions">
+                                    <div class="d-flex justify-content-md-end justify-content-center gap-2 flex-wrap">
+                                        
+                                        <a href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv.id) }}" class="btn btn-light border rounded-circle text-warning shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                        
+                                        {% if inv.tiene_modulo_invitados %}
+                                        <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv.id) }}" class="btn btn-light border rounded-circle text-info shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Lista de Invitados">
+                                            <i class="fas fa-users"></i>
+                                        </a>
+                                        {% endif %}
+
+                                        {% if inv.camara_premium %}
+                                        <a href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv.id) }}" class="btn btn-light border rounded-circle text-danger shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Ver Álbum de Fotos">
+                                            <i class="fas fa-camera-retro"></i>
+                                        </a>
+                                        {% endif %}
+                                        
+                                        <a href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv.slug) }}" target="_blank" class="btn btn-light border rounded-circle text-primary shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Ver Link">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
+
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                {% else %}
+                <div class="text-center py-5">
+                    <div class="mb-4">
+                        <span class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                            <i class="fas fa-magic fa-3x"></i>
+                        </span>
+                    </div>
+                    <h4 class="fw-bold text-dark mb-2">Tu lienzo está en blanco</h4>
+                    <p class="text-muted mb-4 mx-auto" style="max-width: 450px;">
+                        Aún no has creado ninguna invitación. Haz clic en el botón de arriba para comenzar a diseñar y sorprender a tus clientes.
+                    </p>
+                    
+                    <a href="{{ url_for('invitaciones_clientes.ayuda_planner') }}" class="btn btn-light border rounded-pill px-4 text-muted fw-bold shadow-sm">
+                        <i class="fas fa-play-circle me-1 text-info"></i> ¿No sabes por dónde empezar? Ve la guía
+                    </a>
+                </div>
+                {% endif %}
+
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        function copiarCodigo(texto, btnElement) {
+            // API del navegador para copiar
+            navigator.clipboard.writeText(texto).then(function() {
+                
+                const spanText = btnElement.querySelector('span');
+                const icon = btnElement.querySelector('i');
+                const textoOriginal = spanText.innerText;
+                
+                // Efecto visual: Cambiamos a verde y palomita
+                btnElement.style.transition = "all 0.3s ease";
+                btnElement.classList.replace('btn-light', 'btn-success');
+                btnElement.classList.replace('border-primary', 'border-success');
+                btnElement.classList.replace('text-primary', 'text-white');
+                icon.className = 'fas fa-check me-1';
+                spanText.innerText = '¡Copiado!';
+                
+                // Regresamos a la normalidad después de 2.5 segundos
+                setTimeout(() => {
+                    btnElement.classList.replace('btn-success', 'btn-light');
+                    btnElement.classList.replace('border-success', 'border-primary');
+                    btnElement.classList.replace('text-white', 'text-primary');
+                    icon.className = 'fas fa-copy me-1';
+                    spanText.innerText = textoOriginal;
+                }, 2500);
+
+            }).catch(function(err) {
+                console.error('Error al copiar: ', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Oops...',
+                    text: 'Tu navegador no permite copiar automáticamente.',
+                    confirmButtonColor: '#333'
+                });
+            });
+        }
+    </script>
+</body>
+
+</html>

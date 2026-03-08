@@ -4,36 +4,130 @@ import zipfile
 import uuid
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
 from db import get_db_connection
+from utils.datetime_utils import hoy_sqlite
+from functools import wraps # Necesario para los decoradores
 from routes.invitaciones_publicas import s3_client, BUCKET_NAME
 
 clientes_bp = Blueprint('invitaciones_clientes', __name__)
 
-@clientes_bp.route('/mi-evento', methods=['GET', 'POST'])
+hoy = hoy_sqlite()
+
+# ==========================================
+# DECORADORES DE SEGURIDAD
+# ==========================================
+
+def planner_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if session.get('user_type') != 'planner' or 'planner_id' not in session:
+            flash("Debes iniciar sesión como Planner para acceder.", "warning")
+            return redirect(url_for('invitaciones_clientes.login_cliente'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+# ==========================================
+# RUTAS DE ACCESO (EL EMBUDO)
+# ==========================================
+
+@clientes_bp.route('/mi-evento', methods=['GET', 'POST'], strict_slashes=False)
 def login_cliente():
     if request.method == 'POST':
         codigo = request.form.get('codigo', '').strip().upper()
         conn = get_db_connection()
         try:
-            # Buscamos usando la tabla exacta
-            inv = conn.execute("""
-                SELECT id, slug, datos_cliente_json, camara_premium, tiene_modulo_invitados 
-                FROM invitaciones 
-                WHERE codigo_acceso_cliente = ?
-            """, (codigo,)).fetchone()
-            
-            if inv:
-                session['cliente_inv_id'] = inv['id']
-                session['cliente_slug'] = inv['slug']
-                datos = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
-                session['cliente_nombre'] = datos.get('novios', 'Nuestro Evento')
+            # --- CASO 1: ES UN PLANNER (PLAN-XXXXX) ---
+            if codigo.startswith('PLAN-'):
+                planner = conn.execute("""
+                    SELECT id, nombre_contacto, nombre_empresa 
+                    FROM planners WHERE codigo_acceso_planner = ?
+                """, (codigo,)).fetchone()
                 
-                return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
+                if planner:
+                    session.clear() # Limpiamos basura
+                    session['planner_id'] = planner['id']
+                    session['planner_nombre'] = planner['nombre_contacto']
+                    session['user_type'] = 'planner'
+                    return redirect(url_for('invitaciones_clientes.dashboard_planner'))
+                else:
+                    flash("Código de Planner no encontrado.", "danger")
+
+            # --- CASO 2: ES UN CLIENTE/NOVIOS (SIA-XXXXX) ---
             else:
-                flash("Código de acceso no válido.", "danger")
+                inv = conn.execute("""
+                    SELECT id, slug, datos_cliente_json 
+                    FROM invitaciones WHERE codigo_acceso_cliente = ?
+                """, (codigo,)).fetchone()
+                
+                if inv:
+                    session.clear()
+                    session['cliente_inv_id'] = inv['id']
+                    session['cliente_slug'] = inv['slug']
+                    session['user_type'] = 'novios'
+                    datos = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
+                    session['cliente_nombre'] = datos.get('novios', 'Nuestro Evento')
+                    return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
+                else:
+                    flash("Código de acceso no válido.", "danger")
         finally:
             conn.close()
             
     return render_template('clientes/login.html')
+
+# ==========================================
+# DASHBOARD DEL PLANNER (B2B)
+# ==========================================
+
+@clientes_bp.route('/socio/panel')
+@planner_required
+def dashboard_planner():
+    planner_id = session['planner_id']
+    conn = get_db_connection()
+    
+    try:
+        # 1. Obtener Créditos Disponibles (Saldo Total sumado)
+        creditos_info = conn.execute("""
+            SELECT SUM(cantidad_total - cantidad_usada) as saldo
+            FROM planner_paquetes 
+            WHERE planner_id = ? 
+            AND activo = 1 
+            AND fecha_vencimiento > ?
+        """, (planner_id, hoy)).fetchone()
+        
+        saldo = creditos_info['saldo'] if creditos_info['saldo'] else 0
+
+        # 2. Obtener la lista de paquetes individuales para mostrar vencimientos
+        paquetes_db = conn.execute("""
+            SELECT id, cantidad_total, cantidad_usada, fecha_vencimiento
+            FROM planner_paquetes
+            WHERE planner_id = ? AND activo = 1
+            ORDER BY fecha_vencimiento ASC
+        """, (planner_id,)).fetchall()
+
+        # 3. Obtener Invitaciones creadas por este Planner
+        invitaciones_db = conn.execute("""
+            SELECT id, slug, datos_cliente_json, fecha_evento, created_at, 
+                   codigo_acceso_cliente, tipo_evento, tiene_modulo_invitados, camara_premium
+            FROM invitaciones 
+            WHERE planner_id = ? 
+            ORDER BY created_at DESC
+        """, (planner_id,)).fetchall()
+
+        invitaciones = []
+        for inv in invitaciones_db:
+            item = dict(inv)
+            # Decodificamos el JSON para mostrar el nombre de los novios en la tabla
+            try:
+                item['datos_cliente'] = json.loads(inv['datos_cliente_json'])
+            except:
+                item['datos_cliente'] = {"novios": "Evento sin nombre"}
+            invitaciones.append(item)
+
+        return render_template('clientes/dashboard_planner.html', 
+                               saldo=saldo, 
+                               paquetes=paquetes_db,
+                               invitaciones=invitaciones)
+    finally:
+        conn.close()
 
 @clientes_bp.route('/mi-evento/panel')
 def dashboard_cliente():
@@ -50,32 +144,41 @@ def dashboard_cliente():
     try:
         inv = conn.execute("SELECT * FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
         
+        # 1. Leer qué módulos están prendidos
+        config_modulos = json.loads(inv['config_json']) if inv['config_json'] else []
+        
+        # 2. Traer invitados (si aplica)
         invitados = []
         if inv['tiene_modulo_invitados']:
              invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY nombre_familia ASC", (inv_id,)).fetchall()
         
+        # 3. Traer fotos (si aplica)
         fotos = []
         total_fotos = 0
-
         if inv['camara_premium']:
-            total_fotos = conn.execute(
-                "SELECT COUNT(*) FROM fotos_invitados WHERE invitacion_id = ?",
-                (inv_id,)
-            ).fetchone()[0]
-
+            total_fotos = conn.execute("SELECT COUNT(*) FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,)).fetchone()[0]
             fotos = conn.execute("""
-                SELECT url 
-                FROM fotos_invitados 
-                WHERE invitacion_id = ?
-                ORDER BY fecha_creacion DESC
-                LIMIT ? OFFSET ?
+                SELECT url FROM fotos_invitados 
+                WHERE invitacion_id = ? ORDER BY fecha_creacion DESC LIMIT ? OFFSET ?
             """, (inv_id, PER_PAGE, offset)).fetchall()
+
+        # 4. NUEVO: Traer Buenos Deseos (Si el módulo está activo)
+        buenos_deseos = []
+        if 'deseos' in config_modulos:
+            buenos_deseos = conn.execute("""
+                SELECT nombre, mensaje, fecha 
+                FROM buenos_deseos 
+                WHERE invitacion_id = ? 
+                ORDER BY fecha DESC
+            """, (inv_id,)).fetchall()
 
         return render_template(
             'clientes/dashboard.html',
             inv=inv,
             invitados=invitados,
             fotos=fotos,
+            deseos=buenos_deseos,       # Mandamos los mensajes
+            modulos=config_modulos,     # Mandamos la config para los botones
             nombre_evento=session.get('cliente_nombre'),
             page=page,
             per_page=PER_PAGE,
@@ -216,3 +319,10 @@ def logout_cliente():
     session.clear()
     return redirect(url_for('invitaciones_clientes.login_cliente'))
 
+# ==========================================
+# CENTRO DE AYUDA DEL PLANNER
+# ==========================================
+@clientes_bp.route('/socio/ayuda')
+@planner_required
+def ayuda_planner():
+    return render_template('clientes/ayuda_planner.html')

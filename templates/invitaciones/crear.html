@@ -1,614 +1,1148 @@
+{% if session.get('user_type') == 'planner' %}
+{% extends "clientes/layout_planner_base.html" %}
+{% else %}
 {% extends "layout.html" %}
+{% endif %}
+
 {% block title %}{{ 'Editar' if edit_mode else 'Nueva' }} Invitación Premium{% endblock %}
 
 {% block extra_css %}
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <style>
-    .builder-container {
+    body {
         background-color: #f0f2f5;
-        min-height: 100vh;
     }
 
+
     .draggable-item {
-        border-left: 4px solid #0d6efd;
+        border-left: 5px solid #0d6efd;
         cursor: grab;
-        transition: all 0.2s;
+        transition: all 0.3s ease;
+        opacity: 1;
+        background: #ffffff;
+    }
+
+    /* Estilo para las secciones apagadas */
+    .draggable-item.apagado {
+        opacity: 0.5;
+        border-left: 5px solid #adb5bd;
+        filter: grayscale(100%);
     }
 
     .draggable-item:active {
         cursor: grabbing;
-        transform: scale(1.01);
-    }
-
-    #sortable-list > .card {
-        margin-bottom: 0;
+        transform: scale(1.02);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
     }
 
     #sortable-list {
-        gap: 14px;
+        gap: 1rem;
     }
 
-    #bloqueo-novios-wrapper {
-        margin-top: 8px;
-        transition: all 0.25s ease;
+    .builder-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding-bottom: 60px;
+    }
+
+    /* Reduce el aire muerto */
+    body {
+        background-color: #f4f6f8;
+    }
+
+    /* =========================
+   HEADER STICKY
+========================= */
+
+    .builder-container .sticky-top {
+        backdrop-filter: blur(6px);
+        background: rgba(255, 255, 255, 0.95) !important;
+        border: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    /* =========================
+   TARJETAS GENERALES
+========================= */
+
+    .card {
+        border-radius: 16px !important;
+    }
+
+    .card-body {
+        padding: 1.25rem;
+    }
+
+    .draggable-item {
+        border-left-width: 4px;
+    }
+
+    .draggable-item .handle {
+        cursor: grab;
+    }
+
+    .draggable-item.apagado {
+        opacity: 0.45;
+        background: #f8f9fa;
+    }
+
+    /* =========================
+   COLUMNA IZQUIERDA
+========================= */
+
+    .col-lg-4 .card {
+        margin-bottom: 1rem;
+    }
+
+    .col-lg-4 .card-body {
+        padding: 1.25rem;
+    }
+
+    /* =========================
+   INPUTS
+========================= */
+
+    .form-control,
+    .form-select {
+        border-radius: 10px;
+    }
+
+    .input-group>.form-control,
+    .input-group>.form-select {
+        min-height: 42px;
+    }
+
+    /* =========================
+   BOTONES
+========================= */
+
+    .btn {
+        border-radius: 999px;
+    }
+
+    .btn-outline-danger,
+    .btn-outline-primary {
+        border-width: 1.5px;
+    }
+
+    /* =========================
+   SWITCHES Y ALINEACIÓN (CORREGIDO)
+========================= */
+
+    .switch-seccion {
+        transform: scale(1.2);
+        cursor: pointer;
+        margin-top: 0 !important;
+    }
+
+    /* Blindaje para que los switches y los títulos de las tarjetas NUNCA se aplasten o separen en celulares */
+    .draggable-item .form-check.form-switch {
+        padding-left: 0 !important;
+        flex-wrap: nowrap !important; /* Fuerza a una sola línea siempre */
+        align-items: center;
+    }
+    
+    .draggable-item .form-check.form-switch .form-check-input {
+        margin-left: 0 !important; /* Quita el margen negativo de Bootstrap */
+        flex-shrink: 0 !important; /* Impide que el switch se haga pequeño si hay mucho texto */
+        margin-top: 0 !important;
+        position: relative;
+    }
+
+    .draggable-item .form-check.form-switch h6 {
+        line-height: 1.3;
+        white-space: normal; /* Permite que títulos largos bajen bien sin empujar al switch */
+    }
+
+    /* =========================
+   SORTABLE LIST
+========================= */
+
+    #sortable-list {
+        gap: 1.25rem;
+    }
+
+    #sortable-list>.draggable-item {
+        margin-bottom: 1rem;
+    }
+
+    .draggable-item {
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+    }
+
+    .draggable-item:hover {
+        box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    /* =========================
+   MOBILE OPTIMIZATION
+========================= */
+
+    @media (max-width: 768px) {
+
+        .sticky-top {
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .sticky-top h4 {
+            font-size: 1.1rem;
+            text-align: center;
+        }
+
+        .sticky-top .btn {
+            width: 100%;
+        }
+
+        .card-body {
+            padding: 1rem;
+        }
+
+        .handle {
+            font-size: 1.2rem;
+        }
+
+        /* Eliminamos el .form-check { flex-wrap: wrap; } que rompía todo */
+
+        .input-group {
+            flex-wrap: nowrap;
+        }
+    }
+
+    .builder-header {
+        backdrop-filter: blur(8px);
+    }
+
+    .ajustes-sticky {
+    position: sticky;
+    top: {% if session.get('user_type') == 'planner' %}90px{% else %}20px{% endif %};
+    }
+
+    .builder-container {
+        max-width: 1400px;
+        margin-left: auto;
+        margin-right: auto;
+        padding-left: 16px;
+        padding-right: 16px;
+    }
+
+    /* =========================
+       OVERLAY DE CARGA
+    ========================= */
+    #loadingOverlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(5px);
+        z-index: 9999;
+        display: none; 
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .spinner-sian {
+        width: 4rem;
+        height: 4rem;
+        border-width: 0.35em;
+        color: #0d6efd; 
+    }
+
+    .loading-text {
+        margin-top: 1.5rem;
+        font-size: 1.2rem;
+        font-weight: 800;
+        color: #2c3e50;
+        letter-spacing: 0.5px;
+    }
+
+    .loading-subtext {
+        font-size: 0.9rem;
+        color: #6c757d;
+        margin-top: 0.5rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="builder-container p-4">
-    <form
-        action="{% if edit_mode %}{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}{% else %}{{ url_for('invitaciones_admin.crear_invitacion') }}{% endif %}" 
-        method="POST" enctype="multipart/form-data">
 
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h3 class="fw-bold">
+<div id="loadingOverlay">
+    <div class="spinner-border spinner-sian" role="status"></div>
+    <div class="loading-text">{{ 'Actualizando tu invitación...' if edit_mode else 'Creando la magia...' }}</div>
+    <div class="loading-subtext">Estamos subiendo tus fotos y configurando todo. Esto tomará unos segundos.</div>
+</div>
+
+<div class="builder-container pt-3"> 
+    <form action="{% if edit_mode %}{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}{% else %}{{ url_for('invitaciones_admin.crear_invitacion') }}{% endif %}"
+        method="POST" enctype="multipart/form-data" id="formInvitacion">
+
+        <div class="builder-header d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 p-3 bg-white rounded-4 shadow-sm">
+
+            <h4 class="fw-bold m-0 mb-3 mb-md-0 text-dark">
                 <i class="fas fa-{{ 'edit text-warning' if edit_mode else 'plus-circle text-primary' }} me-2"></i>
-                {{ 'Editar Invitación' if edit_mode else 'Crear Nueva Invitación' }}
-            </h3>
-            <div>
-                <a href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}"
-                    class="btn btn-outline-secondary rounded-pill px-3 me-2">
-                    <i class="fas fa-arrow-left me-1"></i> Cancelar
+                {{ 'Editar' if edit_mode else 'Crear Nueva' }} Invitación
+            </h4>
+
+            <div class="d-flex gap-2">
+                <a href="{% if session.get('user_type') == 'planner' %}{{ url_for('invitaciones_clientes.dashboard_planner') }}{% else %}{{ url_for('invitaciones_admin.gestionar_invitaciones') }}{% endif %}"
+                    class="btn btn-outline-secondary rounded-pill px-3 fw-bold w-100 d-flex align-items-center justify-content-center"
+                    style="max-width: fit-content;">
+                    Cancelar
                 </a>
-                <button type="submit" class="btn btn-dark rounded-pill px-4 shadow">
-                    <i class="fas fa-save me-2"></i>{{ 'Guardar Cambios' if edit_mode else 'Publicar Sitio' }}
+                <button type="button" class="btn btn-dark rounded-pill px-4 shadow fw-bold w-100 d-flex align-items-center justify-content-center"
+                        style="max-width: fit-content;"
+                        onclick="validarYContinuar({{ 'true' if edit_mode else 'false' }})">
+                    <i class="fas fa-{{ 'save' if edit_mode else 'cloud-upload-alt' }} me-2"></i>{{ 'Guardar Cambios' if edit_mode else 'Publicar Invitación' }}
                 </button>
             </div>
         </div>
 
         <div class="row g-4">
-            <div class="col-lg-4">
-                
-                <div class="card shadow-sm border-0 mb-4 bg-white">
-                    <div class="card-body">
-                        <h5 class="fw-bold mb-3"><i class="fas fa-star text-warning me-2"></i>Tipo de Evento</h5>
-                        <div class="d-flex gap-4">
-                            <div class="form-check form-check-inline form-switch">
-                                <input class="form-check-input" type="radio" name="tipo_evento" id="eventoBoda" value="boda" 
-                                    {% if not inv or inv.get('tipo_evento') == 'boda' %}checked{% endif %} onchange="cambiarModoEvento()">
-                                <label class="form-check-label fw-bold" for="eventoBoda">💍 Boda</label>
-                            </div>
-                            <div class="form-check form-check-inline form-switch">
-                                <input class="form-check-input" type="radio" name="tipo_evento" id="eventoXV" value="xv" 
-                                    {% if inv and inv.get('tipo_evento') == 'xv' %}checked{% endif %} onchange="cambiarModoEvento()">
-                                <label class="form-check-label fw-bold" for="eventoXV">👑 XV Años</label>
+                <div class="col-12 col-lg-4">
+
+                    <div class="ajustes-sticky">
+
+                        <div class="card shadow-sm border-0 mb-4 rounded-4">
+                            <div class="card-body p-4">
+                                <h6 class="fw-bold mb-3 text-dark"><i class="fas fa-star text-warning me-2"></i>Tipo de Evento</h6>
+                                <div class="d-flex gap-4">
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="radio" name="tipo_evento" id="eventoBoda" value="boda" 
+                                            {% if not inv or inv.get('tipo_evento')=='boda' %}checked{% endif %} 
+                                            {% if edit_mode and session.get('user_type') == 'planner' %}disabled{% endif %} 
+                                            onchange="cambiarModoEvento()">
+                                        <label class="form-check-label fw-bold" for="eventoBoda">💍 Boda</label>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="radio" name="tipo_evento" id="eventoXV" value="xv" 
+                                            {% if inv and inv.get('tipo_evento')=='xv' %}checked{% endif %} 
+                                            {% if edit_mode and session.get('user_type') == 'planner' %}disabled{% endif %} 
+                                            onchange="cambiarModoEvento()">
+                                        <label class="form-check-label fw-bold" for="eventoXV">👑 XV Años</label>
+                                    </div>
+                                </div>
                             </div>
                         </div>
+
+                        <div class="card shadow-sm border-0 rounded-4">
+            <div class="card-header bg-white fw-bold py-3 border-bottom-0 fs-5"><i class="fas fa-palette text-danger me-2"></i>Ajustes Visuales</div>
+            <div class="card-body pt-0 p-4">
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-1">URL del Evento</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light text-muted border-end-0 px-2 small">sianeffects.com/</span>
+                        <input type="text" name="slug" id="slugInput" class="form-control fw-bold border-start-0 ps-0"
+                            placeholder="diana-y-sebastian" value="{{ inv['slug'] if inv else '' }}" required
+                            {{ 'readonly' if edit_mode else '' }}>
+                    </div>
+                    <small id="slugFeedback" class="d-block mt-1 fw-bold" style="font-size: 0.8rem;"></small>
+                    
+                    {% if edit_mode %}<small class="text-danger d-block mt-1" style="font-size:0.75rem;">La URL no se puede editar por seguridad.</small>{% endif %}
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-1">Plantilla Rápida</label>
+                    <select name="template_id" class="form-select border-primary" onchange="aplicarPlantilla(this.value)">
+                        <option value="clasico" {{ 'selected' if inv and inv['template_id']=='clasico' else '' }}>✨ Clásico (Dorado)</option>
+                        <option value="rustico" {{ 'selected' if inv and inv['template_id']=='rustico' else '' }}>🌿 Rústico (Verde)</option>
+                        <option value="moderno" {{ 'selected' if inv and inv['template_id']=='moderno' else '' }}>🔳 Moderno (Minimal)</option>
+                        <option value="romantico" {{ 'selected' if inv and inv['template_id']=='romantico' else '' }}>🌸 Romántico (Rosa)</option>
+                        <option value="personalizado" {{ 'selected' if inv and inv['template_id']=='personalizado' else '' }}>🎨 Personalizado</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-1">Estilo de Apertura</label>
+                    <select name="estilo_apertura" class="form-select border-primary">
+                        <option value="simple" {% if inv and inv['estilo_apertura']=='simple' %}selected{% endif %}>✨ Clásico (Directo)</option>
+                        <option value="sobre" {% if inv and inv['estilo_apertura']=='sobre' %}selected{% endif %}>✉️ Sobre Interactivo</option>
+                        <option value="iniciales" {% if inv and inv['estilo_apertura']=='iniciales' %}selected{% endif %}>🔠 Iniciales Desvanecidas</option>
+                    </select>
+                </div>
+
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-1">Tipografía</label>
+                    <select name="estilo_fuente" class="form-select">
+                        <option value="clasico" {% if inv and inv['estilo_fuente']=='clasico' %}selected{% endif %}>Clásico (Playfair + Lato)</option>
+                        <option value="romantico" {% if inv and inv['estilo_fuente']=='romantico' %}selected{% endif %}>Romántico (Great Vibes + Montserrat)</option>
+                        <option value="moderno" {% if inv and inv['estilo_fuente']=='moderno' %}selected{% endif %}>Moderno (Oswald + Roboto)</option>
+                        <option value="minimal" {% if inv and inv['estilo_fuente']=='minimal' %}selected{% endif %}>Minimalista (Cinzel + Raleway)</option>
+                        <option value="botanico" {% if inv and inv['estilo_fuente']=='botanico' %}selected{% endif %}>Botánico (Cormorant + Proza Libre)</option>
+                    </select>
+                </div>
+
+                <div class="row g-3 mb-4">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-muted mb-1">Color de Fondo</label>
+                        <input type="color" name="color_fondo" class="form-control form-control-color w-100 p-1 border-0 shadow-sm"
+                            value="{{ inv['color_fondo'] if inv else '#fdfbf7' }}">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold text-muted mb-1">Color de Acentos</label>
+                        <input type="color" name="color_acentos" class="form-control form-control-color w-100 p-1 border-0 shadow-sm"
+                            value="{{ inv['color_acentos'] if inv else '#D4AF37' }}">
                     </div>
                 </div>
 
-                <div class="card shadow-sm border-0 sticky-top" style="top: 20px; z-index: 1;">
-                    <div class="card-header bg-white fw-bold py-3">🎨 Personalización Visual</div>
-                    <div class="card-body">
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">URL del Evento</label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light">sianeffects.com/</span>
-                                <input type="text" name="slug" id="slugInput" class="form-control fw-bold"
-                                    placeholder="diana-y-sebastian" value="{{ inv['slug'] if inv else '' }}" required
-                                    {{ 'readonly' if edit_mode else '' }}>
-                            </div>
-                            {% if edit_mode %}<small class="text-danger">La URL no se puede cambiar para no romper links.</small>{% endif %}
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-1 d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-image me-1"></i>Img. de Fondo (Opcional)</span>
+                        {% if edit_mode and inv and inv.get('url_fondo') %}
+                            <button type="button" class="btn btn-link text-danger btn-sm p-0 text-decoration-none fw-bold" 
+                                    onclick="confirmarEliminarImagen({{ inv['id'] }}, 'fondo')">
+                                <i class="fas fa-trash-alt me-1"></i>Eliminar Actual
+                            </button>
+                        {% endif %}
+                    </label>
+                    
+                    {% if edit_mode and inv and inv.get('url_fondo') %}
+                        <div class="position-relative mb-2" style="max-width: 150px;">
+                            <img src="{{ inv['url_fondo'] }}" class="img-thumbnail rounded-3 shadow-sm w-100" alt="Fondo">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">
+                                <i class="fas fa-check"></i>
+                            </span>
                         </div>
+                    {% else %}
+                        <input type="file" name="imagen_fondo" class="form-control" accept="image/*">
+                    {% endif %}
+                </div>
 
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Tipografía</label>
-                            <select name="estilo_fuente" class="form-select">
-                                <option value="clasico" {% if inv and inv['estilo_fuente']=='clasico' %}selected{% endif %}>Clásico (Playfair + Lato)</option>
-                                <option value="romantico" {% if inv and inv['estilo_fuente']=='romantico' %}selected{% endif %}>Romántico (Great Vibes + Montserrat)</option>
-                                <option value="moderno" {% if inv and inv['estilo_fuente']=='moderno' %}selected{% endif %}>Moderno (Oswald + Roboto)</option>
-                                <option value="minimal" {% if inv and inv['estilo_fuente']=='minimal' %}selected{% endif %}>Minimalista (Cinzel + Raleway)</option>
-                                <option value="botanico" {% if inv and inv['estilo_fuente']=='botanico' %}selected{% endif %}>Botánico (Cormorant + Proza Libre)</option>
-                            </select>
-                        </div>
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-1">Música de Fondo</label>
+                    <div class="d-flex gap-2">
+                        <select name="musica_id" id="selectMusica" class="form-select">
+                            <option value="" {% if not inv or not inv['musica_id'] %}selected{% endif %}>Sin música</option>
+                            {% for c in canciones %}
+                            <option value="{{ c['id'] }}" {% if inv and inv['musica_id']==c['id'] %}selected{% endif %}>🎵 {{ c['nombre_cancion'] }}</option>
+                            {% endfor %}
+                        </select>
+                        
+                        {% if session.get('user_type') != 'planner' %}
+                        <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#modalMusica" title="Subir nueva canción al catálogo general">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
 
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Estilo de Apertura</label>
-                            <select name="estilo_apertura" class="form-select border-primary">
-                                <option value="simple" {% if inv and inv['estilo_apertura']=='simple' %}selected{% endif %}>✨ Clásico (Directo)</option>
-                                <option value="sobre" {% if inv and inv['estilo_apertura']=='sobre' %}selected{% endif %}>✉️ Sobre Interactivo</option>
-                                <option value="iniciales" {% if inv and inv['estilo_apertura']=='iniciales' %}selected{% endif %}>🔠 Iniciales Desvanecidas</option>
-                            </select>
-                        </div>
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-1">Día del Evento</label>
+                    <input type="datetime-local" name="fecha_evento" class="form-control fw-bold text-primary" value="{{ inv['fecha_evento'] if inv else '' }}" required>
+                </div>
 
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Ahorro de Tiempo: Plantilla</label>
-                            <select name="template_id" class="form-select border-primary" onchange="aplicarPlantilla(this.value)">
-                                <option value="clasico" {{ 'selected' if inv and inv['template_id']=='clasico' else '' }}>✨ Clásico (Dorado)</option>
-                                <option value="rustico" {{ 'selected' if inv and inv['template_id']=='rustico' else '' }}>🌿 Rústico (Eucalipto)</option>
-                                <option value="moderno" {{ 'selected' if inv and inv['template_id']=='moderno' else '' }}>🔳 Moderno (Minimal)</option>
-                                <option value="romantico" {{ 'selected' if inv and inv['template_id']=='romantico' else '' }}>🌸 Romántico (Rosa)</option>
-                                <option value="personalizado" {{ 'selected' if inv and inv['template_id']=='personalizado' else '' }}>🎨 Personalizado</option>
-                            </select>
-                        </div>
+                {% if session.get('user_type') != 'planner' %}
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted mb-1">Vigencia del Link (Admin)</label>
+                    <input type="date" name="vigencia" class="form-control text-danger fw-bold" value="{{ inv['vigencia'] if inv else '' }}" required>
+                </div>
+                {% endif %}
 
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-muted">Color Fondo</label>
-                                <input type="color" name="color_fondo" class="form-control form-control-color w-100"
-                                    value="{{ inv['color_fondo'] if inv else '#fdfbf7' }}">
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-muted">Color Títulos/Botones</label>
-                                <input type="color" name="color_acentos" class="form-control form-control-color w-100"
-                                    value="{{ inv['color_acentos'] if inv else '#D4AF37' }}">
-                            </div>
-                            <div class="col-12 mt-2">
-                                <label class="form-label small fw-bold text-muted">Img. Fondo (Opcional)</label>
-                                <input type="file" name="imagen_fondo" class="form-control form-control-sm" accept="image/*">
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label class="form-label small fw-bold text-muted">Música</label>
-                            <div class="d-flex gap-2">
-                                <select name="musica_id" id="selectMusica" class="form-select">
-                                    <option value="" {% if not inv or not inv['musica_id'] %}selected{% endif %}>Sin música</option>
-                                    {% for c in canciones %}
-                                    <option value="{{ c['id'] }}" {% if inv and inv['musica_id']==c['id'] %}selected{% endif %}>🎵 {{ c['nombre_cancion'] }}</option>
-                                    {% endfor %}
-                                </select>
-                                <button type="button" class="btn btn-outline-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalMusica"><i class="fas fa-plus"></i></button>
-                            </div>
-                        </div>
-
-                        <div class="row g-2 mb-3">
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-muted">Día Evento</label>
-                                <input type="datetime-local" name="fecha_evento" class="form-control" value="{{ inv['fecha_evento'] if inv else '' }}" required>
-                            </div>
-                            <div class="col-6">
-                                <label class="form-label small fw-bold text-muted">Vigencia</label>
-                                <input type="date" name="vigencia" class="form-control" value="{{ inv['vigencia'] if inv else '' }}" required>
-                            </div>
-                        </div>
-
-                        <div class="mt-4 p-3 border rounded shadow-sm" style="background-color: #f8f9fa; border-left: 4px solid #0d6efd !important;">
-                            <div class="form-check form-switch mb-3">
-                                <input class="form-check-input" type="checkbox" role="switch" id="camaraPremium" name="camara_premium" value="1" {% if inv and inv['camara_premium'] %}checked{% endif %}>
-                                <label class="form-check-label fw-bold text-dark" for="camaraPremium">
-                                    <i class="fas fa-camera-retro text-warning me-1"></i> Cámara Desechable
-                                </label>
-                                <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">
+                <div class="p-3 rounded-4 bg-light border border-primary border-opacity-25">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="camaraPremium" name="camara_premium" value="1" {% if inv and inv['camara_premium'] %}checked{% endif %}>
+                        <label class="form-check-label fw-bold text-dark" for="camaraPremium">
+                            <i class="fas fa-camera-retro text-warning me-1"></i> Cámara Desechable
+                        </label>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">
                                     Habilita la sección "Álbum" para que los invitados suban fotos.
-                                </small>
-                            </div>
-                            <div class="form-check form-switch mb-3 border-top pt-3">
-                                <input class="form-check-input" type="checkbox" role="switch" id="moduloInvitados" name="modulo_invitados" value="1" {% if inv and inv['tiene_modulo_invitados'] %}checked{% endif %}>
-                                <label class="form-check-label fw-bold text-dark" for="moduloInvitados">
-                                    <i class="fas fa-users text-primary me-1"></i> Gestión de Invitados
-                                </label>
-                                <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">
+                        </small>
+                    </div>
+                    <div class="form-check form-switch mb-3 border-top pt-3">
+                        <input class="form-check-input" type="checkbox" role="switch" id="moduloInvitados" name="modulo_invitados" value="1" {% if inv and inv['tiene_modulo_invitados'] %}checked{% endif %}>
+                        <label class="form-check-label fw-bold text-dark" for="moduloInvitados">
+                            <i class="fas fa-users text-primary me-1"></i> Gestión de Invitados
+                        </label>
+                        <small class="text-muted d-block mt-1" style="font-size: 0.8rem;">
                                     Habilita el panel de confirmación de asistencia (RSVP).
-                                </small>
-                            </div>
-                            <div id="bloqueo-novios-wrapper">
-                                <div class="form-check form-switch">
-                                    <input class="form-check-input" type="checkbox" id="bloquear_edicion" name="bloquear_edicion" value="1" {% if inv and inv['bloquear_edicion'] %}checked{% endif %}>
-                                    <label class="form-check-label text-danger fw-semibold">
-                                        Bloquear edición a los novios
-                                    </label>
-                                    <div class="small text-muted">
+                        </small>
+                    </div>
+                    <div id="bloqueo-novios-wrapper">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="bloquear_edicion" name="bloquear_edicion_invitados" value="1" {% if inv and inv['bloquear_edicion_invitados'] %}checked{% endif %}>
+                            <label class="form-check-label text-danger fw-semibold" style="font-size: 0.9rem;">
+                                Bloquear edición a los novios
+                            </label>
+                            <div class="small text-muted">
                                         Si lo activas, los novios solo podrán VER la lista, pero no modificarla.
-                                    </div>
-                                </div>
                             </div>
                         </div>
-
                     </div>
                 </div>
+
             </div>
-
-            <div class="col-lg-8">
-                <div id="sortable-list" class="d-flex flex-column gap-3">
-
-                    <div class="card draggable-item shadow-sm" data-bloque="hero">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <div class="fw-bold text-primary"><i class="fas fa-image me-2"></i>1. Portada Principal</div>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="hero">
-                            
-                            <div class="mb-3 p-2 border rounded bg-light">
-                                <label class="small fw-bold text-muted mb-1"><i class="fas fa-camera me-1"></i> Foto de Portada (Imagen Principal)</label>
-                                <input type="file" name="foto_portada" class="form-control form-control-sm" accept="image/*" {% if not edit_mode %}required{% endif %}>
-                                {% if edit_mode and inv and inv.get('foto_portada_url') %}
-                                    <small class="text-success mt-1 d-block"><i class="fas fa-check-circle me-1"></i> Ya tiene foto. Sube otra solo si deseas cambiarla.</small>
-                                {% endif %}
-                            </div>
-                            
-                            <div class="row g-2">
-                                <div class="col-md-5">
-                                    <input type="text" name="nombres_novios" class="form-control form-control-sm"
-                                        placeholder="Nombres (Ej: Diana & Sebastián)" value="{{ datos.get('novios', '') if datos else '' }}" required>
-                                </div>
-                                <div class="col-md-4">
-                                    <input type="text" name="frase" class="form-control form-control-sm" placeholder="Frase (Ej: ¡Nos casamos!)"
-                                        value="{{ datos.get('frase', '') if datos else '' }}">
-                                </div>
-                                <div class="col-md-3">
-                                    <input type="text" name="iniciales" class="form-control form-control-sm text-center" 
-                                        placeholder="Iniciales (D&S)" value="{{ datos.get('iniciales', '') if datos else '' }}" maxlength="5">
-                                </div>
-                            </div>
-
-                            <div class="mt-2" id="campo-bienvenida-xv" style="display: none;">
-                                <label class="small fw-bold text-muted">Mensaje de Bienvenida (Solo XV Años)</label>
-                                <textarea name="mensaje_bienvenida" class="form-control form-control-sm" rows="2" 
-                                    placeholder="Ej: Con mucha ilusión y emoción, quiero compartir con ustedes un momento muy especial...">{{ datos.get('mensaje_bienvenida', '') if datos else '' }}</textarea>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-warning" data-bloque="countdown">
-                        <div class="card-body py-2 d-flex justify-content-between">
-                            <span class="fw-bold text-warning"><i class="fas fa-clock me-2"></i>2. Countdown</span>
-                            <i class="fas fa-grip-lines text-muted handle"></i>
-                            <input type="hidden" name="orden_items[]" value="countdown">
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-danger" data-bloque="mapas">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-danger"><i class="fas fa-map-marker-alt me-2"></i>3. Ubicaciones</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="mapas">
-                            <div class="row g-2">
-                                <div class="col-6">
-                                    <input type="text" name="maps_misa" class="form-control form-control-sm" placeholder="Link Maps Ceremonia"
-                                        value="{{ datos.get('maps_misa', '') if datos else '' }}">
-                                </div>
-                                <div class="col-6">
-                                    <input type="text" name="maps_fiesta" class="form-control form-control-sm" placeholder="Link Maps Fiesta"
-                                        value="{{ datos.get('maps_fiesta', '') if datos else '' }}">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-secondary" data-bloque="dresscode">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-secondary"><i class="fas fa-tshirt me-2"></i>4. Código de Vestimenta</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="dresscode">
-                            <select name="dress_code" class="form-select form-select-sm">
-                                <option value="Formal" {% if inv and inv['dress_code']=='Formal' %}selected{% endif %}>Formal (Traje y Vestido largo)</option>
-                                <option value="Etiqueta" {% if inv and inv['dress_code']=='Etiqueta' %}selected{% endif %}>Rigurosa Etiqueta (Gala)</option>
-                                <option value="Coctel" {% if inv and inv['dress_code']=='Coctel' %}selected{% endif %}>Cóctel (Traje sin corbata, Vestido corto)</option>
-                                <option value="Guayabera" {% if inv and inv['dress_code']=='Guayabera' %}selected{% endif %}>Guayabera / Playa</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-warning" data-bloque="no_ninos">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-warning">
-                                    <i class="fas fa-baby-slash me-2"></i> Evento sin niños
-                                </span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="no_ninos">
-
-                            <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="noNinos" name="no_ninos" value="1" {% if datos and datos.get('no_ninos') %}checked{% endif %}>
-                                <label class="form-check-label fw-semibold" for="noNinos">
-                                    Este evento es solo para adultos
-                                </label>
-                            </div>
-                            <textarea name="mensaje_no_ninos" class="form-control form-control-sm" rows="2" placeholder="Ej: Con cariño les pedimos celebrar solo adultos." {% if not datos or not datos.get('no_ninos') %}disabled{% endif %}>{{ datos.get('mensaje_no_ninos','') if datos else '' }}</textarea>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-success" data-bloque="regalos">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-success"><i class="fas fa-gift me-2"></i>5. Mesa de Regalos</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="regalos">
-                            <textarea name="cuenta_bancaria" class="form-control form-control-sm mb-2" rows="2"
-                                placeholder="Frase o CLABE interbancaria...">{{ datos.get('cuenta_bancaria', '') if datos else '' }}</textarea>
-
-                            <label class="small fw-bold text-muted">Links a Tiendas</label>
-                            <div id="container-links">
-                                {% if edit_mode and mesas %}
-                                    {% for mesa in mesas %}
-                                    <div class="input-group input-group-sm mb-1">
-                                        <input type="text" name="nombre_tienda[]" class="form-control" value="{{ mesa.nombre }}">
-                                        <input type="text" name="link_tienda[]" class="form-control" value="{{ mesa.url }}">
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <div class="input-group input-group-sm mb-1">
-                                        <input type="text" name="nombre_tienda[]" class="form-control" placeholder="Nombre">
-                                        <input type="text" name="link_tienda[]" class="form-control" placeholder="URL">
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarInput('container-links', 'nombre_tienda[]', 'link_tienda[]')">+ Agregar tienda</button>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-primary" data-bloque="hospedaje">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-primary"><i class="fas fa-bed me-2"></i>6. Hospedaje y Transporte</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="hospedaje">
-                            <textarea name="info_transporte" class="form-control form-control-sm mb-2" rows="2"
-                                placeholder="Información de transporte (Ej: Habrá un camión saliendo del hotel a las 4pm)">{{ datos.get('info_transporte', '') if datos else '' }}</textarea>
-
-                            <label class="small fw-bold text-muted">Hoteles Sugeridos / Airbnb</label>
-                            <div id="container-hoteles">
-                                {% if edit_mode and hoteles %}
-                                    {% for hotel in hoteles %}
-                                    <div class="input-group input-group-sm mb-1">
-                                        <input type="text" name="nombre_hotel[]" class="form-control" value="{{ hotel.nombre }}">
-                                        <input type="text" name="link_hotel[]" class="form-control" value="{{ hotel.url }}">
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <div class="input-group input-group-sm mb-1">
-                                        <input type="text" name="nombre_hotel[]" class="form-control" placeholder="Nombre (Ej: Hotel Fiesta Americana)">
-                                        <input type="text" name="link_hotel[]" class="form-control" placeholder="URL">
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarInput('container-hoteles', 'nombre_hotel[]', 'link_hotel[]')">+ Agregar hotel</button>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-warning" data-bloque="historia" id="bloque-historia" style="display: none;">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-warning"><i class="fas fa-history me-2"></i>Mi Historia (Línea de tiempo)</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="historia">
-                            
-                            <label class="small fw-bold text-muted mb-2">Años y Recuerdos (Sube una foto por etapa)</label>
-                            <div id="container-historia">
-                                {% if edit_mode and inv and inv.get('historia_json') and inv.get('historia_json') != 'null' %}
-                                    {% set historias = inv['historia_json']|from_json %}
-                                    {% for item in historias %}
-                                    <div class="input-group input-group-sm mb-2 align-items-center">
-                                        <input type="text" name="anio_historia[]" class="form-control" style="max-width: 80px;" placeholder="Año" value="{{ item.anio }}" required>
-                                        <input type="text" name="texto_historia[]" class="form-control" placeholder="Ej: Mi primer añito..." value="{{ item.texto }}" required>
-                                        <input type="hidden" name="foto_historia_actual[]" value="{{ item.foto }}">
-                                        <input type="file" name="foto_historia_nueva[]" class="form-control" accept="image/*" style="max-width: 150px;" title="Subir nueva foto para reemplazar">
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <div class="input-group input-group-sm mb-2 align-items-center">
-                                        <input type="text" name="anio_historia[]" class="form-control" style="max-width: 80px;" placeholder="Año (Ej. 2010)" required>
-                                        <input type="text" name="texto_historia[]" class="form-control" placeholder="Ej: Mi primer añito..." required>
-                                        <input type="hidden" name="foto_historia_actual[]" value="">
-                                        <input type="file" name="foto_historia_nueva[]" class="form-control" accept="image/*" style="max-width: 150px;" required>
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarHistoria()">+ Agregar Recuerdo</button>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm" data-bloque="timeline">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-secondary"><i class="fas fa-list me-2"></i>7. Itinerario</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="timeline">
-
-                            <label class="small fw-bold text-muted">Actividades del Evento</label>
-                            <div id="container-itinerario">
-                                {% if edit_mode and datos.get('itinerario') %}
-                                    {% for item in datos.get('itinerario') %}
-                                    <div class="input-group input-group-sm mb-1">
-                                        <input type="time" name="hora_itinerario[]" class="form-control" style="max-width: 100px;" value="{{ item.hora }}" required>
-                                        <input type="text" name="actividad_itinerario[]" class="form-control" placeholder="Ej: Recepción" value="{{ item.actividad }}" required>
-                                        <select name="icono_itinerario[]" class="form-select" style="max-width: 65px; padding:0 5px; text-align:center;">
-                                            <option value="fas fa-church" {% if item.icono=='fas fa-church' %}selected{% endif %}>⛪</option>
-                                            <option value="fas fa-glass-cheers" {% if item.icono=='fas fa-glass-cheers' %}selected{% endif %}>🥂</option>
-                                            <option value="fas fa-utensils" {% if item.icono=='fas fa-utensils' %}selected{% endif %}>🍽️</option>
-                                            <option value="fas fa-music" {% if item.icono=='fas fa-music' %}selected{% endif %}>🎵</option>
-                                            <option value="fas fa-camera-retro" {% if item.icono=='fas fa-camera-retro' %}selected{% endif %}>📸</option>
-                                            <option value="fas fa-heart" {% if item.icono=='fas fa-heart' %}selected{% endif %}>🤍</option>
-                                        </select>
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <div class="input-group input-group-sm mb-1">
-                                        <input type="time" name="hora_itinerario[]" class="form-control" style="max-width: 100px;" required>
-                                        <input type="text" name="actividad_itinerario[]" class="form-control" placeholder="Ej: Ceremonia" required>
-                                        <select name="icono_itinerario[]" class="form-select" style="max-width: 65px; padding:0 5px; text-align:center;">
-                                            <option value="fas fa-church">⛪</option>
-                                            <option value="fas fa-glass-cheers">🥂</option>
-                                            <option value="fas fa-utensils">🍽️</option>
-                                            <option value="fas fa-music">🎵</option>
-                                            <option value="fas fa-camera-retro">📸</option>
-                                            <option value="fas fa-heart">🤍</option>
-                                        </select>
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" onclick="agregarItinerario()">+ Agregar actividad</button>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-info" data-bloque="galeria">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-info"><i class="fas fa-images me-2"></i>8. Galería de Fotos</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="galeria">
-                            <label class="small fw-bold text-muted">Subir fotos (Puedes seleccionar varias)</label>
-                            <input type="file" name="fotos_galeria" class="form-control form-control-sm" accept="image/*" multiple>
-                            {% if edit_mode and inv['fotos_json'] and inv['fotos_json'] != 'null' and inv['fotos_json'] != '[]' %}
-                                <small class="text-success mt-2 d-block">
-                                    <i class="fas fa-check-circle me-1"></i> Ya hay fotos guardadas. Si subes nuevas, se reemplazarán.
-                                </small>
-                            {% endif %}
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-primary" data-bloque="deseos">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-primary">
-                                    <i class="fas fa-book-open me-2"></i>9. Libro de Visitas (Buenos Deseos)
-                                </span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="deseos" id="input-orden-deseos">
-                            <div class="form-check form-switch mb-2">
-                                <input class="form-check-input" type="checkbox" id="switchDeseos" {% if not inv or 'deseos' in inv['config_json'] %}checked{% endif %}>
-                                <label class="form-check-label fw-semibold text-dark" for="switchDeseos">
-                                    Habilitar sección de Buenos Deseos
-                                </label>
-                            </div>
-                            <small class="text-muted d-block lh-sm">Permite a los invitados dejar mensajes que aparecerán en un carrusel dinámico.</small>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-dark" data-bloque="rsvp">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark"><i class="fab fa-whatsapp me-2"></i>10. RSVP (Asistencia)</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="rsvp">
-                            <input type="text" name="telefono_rsvp" class="form-control form-control-sm"
-                                placeholder="Teléfono para confirmar (52...)" value="{{ datos.get('telefono_rsvp', '') if datos else '' }}">
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-info" data-bloque="protocolo">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-info"><i class="fas fa-users me-2"></i>11. Protocolo Familiar</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="protocolo">
-                            <div id="contenedor-protocolo">
-                                {% if edit_mode and datos.get('protocolo') %}
-                                    {% for integrante in datos['protocolo'] %}
-                                    <div class="input-group input-group-sm mb-1">
-                                        <input type="text" name="rol_protocolo[]" class="form-control" placeholder="Rol (Ej. Padres de la Novia)" value="{{ integrante.rol }}" required>
-                                        <input type="text" name="nombres_protocolo[]" class="form-control" placeholder="Nombres (Ej. José y Victoria)" value="{{ integrante.nombres }}" required>
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                    {% endfor %}
-                                {% else %}
-                                    <div class="input-group input-group-sm mb-1">
-                                        <input type="text" name="rol_protocolo[]" class="form-control" placeholder="Rol (Ej. Padres de la Novia)">
-                                        <input type="text" name="nombres_protocolo[]" class="form-control" placeholder="Nombres (Ej. José y Victoria)">
-                                        <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-                                    </div>
-                                {% endif %}
-                            </div>
-                            <button type="button" class="btn btn-light btn-sm w-100 border mt-1" id="btn-agregar-proto">+ Agregar integrante</button>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-secondary" data-bloque="frase_final">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-secondary"><i class="fas fa-quote-right me-2"></i>12. Frase de Cierre</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="frase_final">
-                            <textarea name="frase_final" class="form-control form-control-sm" rows="2"
-                                placeholder="Ej: 'Que todas las noches sean de boda...'">{{ inv['frase_final'] if inv else '' }}</textarea>
-                        </div>
-                    </div>
-
-                    <div class="card draggable-item shadow-sm border-dark" data-bloque="pases">
-                        <div class="card-body">
-                            <div class="d-flex justify-content-between mb-2">
-                                <span class="fw-bold text-dark"><i class="fas fa-ticket-alt me-2"></i>13. Pases de Invitados</span>
-                                <i class="fas fa-grip-lines text-muted handle"></i>
-                            </div>
-                            <input type="hidden" name="orden_items[]" value="pases">
-                            <div class="alert alert-light border py-2 mb-0">
-                                <small class="text-muted"><i class="fas fa-info-circle me-1"></i> Este módulo mostrará al invitado sus pases asignados y su código QR de acceso.</small>
-                                {% if edit_mode %}
-                                    <div class="mt-2" id="btn-gestion-invitados-wrapper">
-                                        <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}" class="btn btn-dark btn-sm rounded-pill w-100">
-                                            <i class="fas fa-user-plus me-1"></i> Gestionar Lista de Invitados
-                                        </a>
-                                    </div>
-                                    <div class="mt-2 text-center text-muted fst-italic small" id="msg-modulo-apagado" style="display: none;">
-                                        (Habilita "Gestión de Invitados" en el panel izquierdo para agregar personas)
-                                    </div>
-                                {% else %}
-                                    <p class="small mt-1 text-danger">Debes publicar la invitación primero para gestionar invitados.</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
         </div>
-    </form>
-</div>
 
-{% include "invitaciones/_modal_musica.html" ignore missing %}
-<div class="modal fade" id="modalMusica" tabindex="-1">
-    <div class="modal-dialog modal-sm modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h6 class="modal-title fw-bold">Nueva Canción</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                </div>
+
+                <div class="col-12 col-lg-8">
+                    <div
+                        class="alert alert-primary bg-white border-primary border-opacity-25 shadow-sm rounded-4 small d-flex align-items-center mb-4">
+                        <i class="fas fa-info-circle fa-2x me-3 text-primary"></i>
+                        <div><strong>Diseña a tu gusto:</strong> Arrastra las tarjetas desde las líneas (☰) para
+                            ordenarlas. Usa el interruptor de cada bloque para apagar las secciones que no necesites.
+                        </div>
+                    </div>
+
+                    <div id="sortable-list" class="d-flex flex-column pb-5">
+
+                        <div class="card draggable-item shadow-sm rounded-4 mb-3" data-bloque="hero">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <h5 class="fw-bold text-primary m-0"><i class="fas fa-image me-2"></i>1. Portada Principal</h5>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="hero" class="input-orden">
+
+                                <div class="mb-4">
+                                    <label class="form-label small fw-bold text-muted mb-1 d-flex justify-content-between align-items-center">
+                                        <span><i class="fas fa-camera me-1"></i> Foto de Portada</span>
+                                        {% if edit_mode and inv and inv.get('foto_portada_url') %}
+                                            <button type="button" class="btn btn-link text-danger btn-sm p-0 text-decoration-none fw-bold" 
+                                                    onclick="confirmarEliminarImagen({{ inv['id'] }}, 'portada')">
+                                                <i class="fas fa-trash-alt me-1"></i>Eliminar Actual
+                                            </button>
+                                        {% endif %}
+                                    </label>
+                                    
+                                    {% if edit_mode and inv and inv.get('foto_portada_url') %}
+                                        <div class="position-relative mb-2" style="max-width: 150px;">
+                                            <img src="{{ inv['foto_portada_url'] }}" class="img-thumbnail rounded-3 shadow-sm w-100" alt="Portada">
+                                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-success">
+                                                <i class="fas fa-check"></i>
+                                            </span>
+                                        </div>
+                                    {% else %}
+                                        <input type="file" name="foto_portada" class="form-control" accept="image/*" {% if not edit_mode %}required{% endif %}>
+                                    {% endif %}
+                                </div>
+
+                                <div class="row g-3">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-muted mb-1">Nombres / Festejado</label>
+                                        <input type="text" name="nombres_novios" class="form-control fw-bold"
+                                            placeholder="Ej: Diana & Sebastián"
+                                            value="{{ datos.get('novios', '') if datos else '' }}" 
+                                            {% if edit_mode and session.get('user_type') == 'planner' %}
+                                                readonly title="No puedes cambiar el nombre principal. Contacta a soporte si hay un error."
+                                            {% endif %}
+                                            required>
+                                        {% if edit_mode and session.get('user_type') == 'planner' %}
+                                            <small class="text-danger" style="font-size: 0.7rem;">Bloqueado por seguridad.</small>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col-8 col-md-4">
+                                        <label class="form-label small fw-bold text-muted mb-1">Frase Principal</label>
+                                        <input type="text" name="frase" class="form-control"
+                                            placeholder="Ej: ¡Nos casamos!"
+                                            value="{{ datos.get('frase', '') if datos else '' }}">
+                                    </div>
+                                    <div class="col-4 col-md-2">
+                                        <label class="form-label small fw-bold text-muted mb-1">Iniciales</label>
+                                        <input type="text" name="iniciales"
+                                            class="form-control text-center font-monospace" placeholder="D&S"
+                                            value="{{ datos.get('iniciales', '') if datos else '' }}" maxlength="5">
+                                    </div>
+                                </div>
+
+                                <div class="mt-3" id="campo-bienvenida-xv" style="display: none;">
+                                    <label class="form-label small fw-bold text-muted mb-1">Mensaje de Bienvenida (Solo
+                                        XV)</label>
+                                    <textarea name="mensaje_bienvenida" class="form-control" rows="2"
+                                        placeholder="Ej: Con mucha ilusión...">{{ datos.get('mensaje_bienvenida', '') if datos else '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-warning rounded-4" data-bloque="countdown">
+                            <div class="card-body p-3 d-flex justify-content-between align-items-center">
+                                <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                    <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" checked
+                                        onchange="toggleSeccion(this)">
+                                    <h6 class="fw-bold text-warning m-0"><i class="fas fa-clock me-2"></i>2. Cuenta Regresiva</h6>
+                                </div>
+                                <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                <input type="hidden" name="orden_items[]" value="countdown" class="input-orden">
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-danger rounded-4" data-bloque="mapas">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if
+                                            not inv or 'mapas' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-danger m-0"><i class="fas fa-map-marker-alt me-2"></i>3. Ubicaciones</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="mapas" class="input-orden" {% if inv
+                                    and 'mapas' not in inv['config_json'] %}disabled{% endif %}>
+
+                                <div class="row g-3 contenedor-inputs">
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-muted mb-1">Ceremonia (Google Maps)</label>
+                                        <input type="text" name="maps_misa" class="form-control"
+                                            placeholder="Pega el link aquí..."
+                                            value="{{ datos.get('maps_misa', '') if datos else '' }}">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <label class="form-label small fw-bold text-muted mb-1">Recepción (Google Maps)</label>
+                                        <input type="text" name="maps_fiesta" class="form-control"
+                                            placeholder="Pega el link aquí..."
+                                            value="{{ datos.get('maps_fiesta', '') if datos else '' }}">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-secondary rounded-4" data-bloque="dresscode">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if
+                                            not inv or 'dresscode' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-secondary m-0"><i class="fas fa-tshirt me-2"></i>4. Código de Vestimenta</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="dresscode" class="input-orden" {% if
+                                    inv and 'dresscode' not in inv['config_json'] %}disabled{% endif %}>
+
+                                <div class="contenedor-inputs">
+                                    <select name="dress_code" class="form-select">
+                                        <option value="Formal" {% if inv and inv['dress_code']=='Formal' %}selected{% endif %}>Formal (Traje y Vestido largo)</option>
+                                        <option value="Etiqueta" {% if inv and inv['dress_code']=='Etiqueta' %}selected{% endif %}>Rigurosa Etiqueta (Gala)</option>
+                                        <option value="Coctel" {% if inv and inv['dress_code']=='Coctel' %}selected{% endif %}>Cóctel (Traje sin corbata, Vestido corto)</option>
+                                        <option value="Guayabera" {% if inv and inv['dress_code']=='Guayabera' %}selected{% endif %}>Guayabera / Playa</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-warning rounded-4" data-bloque="no_ninos">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" 
+                                            {% if not inv or 'no_ninos' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-warning m-0"><i class="fas fa-baby-slash me-2"></i>5. Evento sin Niños</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="no_ninos" class="input-orden" 
+                                    {% if inv and 'no_ninos' not in inv['config_json'] %}disabled{% endif %}>
+
+                                <div class="contenedor-inputs">
+                                    <label class="form-label small fw-bold text-muted mb-1">Mensaje de restricción</label>
+                                    <textarea name="mensaje_no_ninos" class="form-control" rows="2" 
+                                        placeholder="Ej: Con cariño les pedimos celebrar solo adultos.">{{ datos.get('mensaje_no_ninos','') if datos else '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-success rounded-4" data-bloque="regalos">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if
+                                            not inv or 'regalos' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-success m-0"><i class="fas fa-gift me-2"></i>6. Mesa de Regalos</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="regalos" class="input-orden" {% if inv
+                                    and 'regalos' not in inv['config_json'] %}disabled{% endif %}>
+
+                                <div class="contenedor-inputs">
+                                    <label class="form-label small fw-bold text-muted mb-1">Datos Bancarios o Frase</label>
+                                    <textarea name="cuenta_bancaria" class="form-control mb-3" rows="2"
+                                        placeholder="Ej: Tu presencia es nuestro mejor regalo...">{{ datos.get('cuenta_bancaria', '') if datos else '' }}</textarea>
+
+                                    <label class="form-label small fw-bold text-muted mb-1">Links a Tiendas (Amazon, Liverpool, etc.)</label>
+                                    <div id="container-links">
+                                        {% if edit_mode and mesas %}
+                                        {% for mesa in mesas %}
+                                        <div class="d-flex mb-2 gap-2 w-100">
+                                            <input type="text" name="nombre_tienda[]" class="form-control flex-grow-1" value="{{ mesa.nombre }}" style="min-width: 100px;">
+                                            <input type="text" name="link_tienda[]" class="form-control flex-grow-1" value="{{ mesa.url }}" style="min-width: 100px;">
+                                            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="d-flex mb-2 gap-2 w-100">
+                                            <input type="text" name="nombre_tienda[]" class="form-control flex-grow-1" placeholder="Tienda" style="min-width: 100px;">
+                                            <input type="text" name="link_tienda[]" class="form-control flex-grow-1" placeholder="URL" style="min-width: 100px;">
+                                            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <button type="button" class="btn btn-light w-100 border text-primary fw-bold"
+                                        onclick="agregarInput('container-links', 'nombre_tienda[]', 'link_tienda[]')">+
+                                        Agregar Otra Tienda</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-primary rounded-4" data-bloque="hospedaje">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if
+                                            not inv or 'hospedaje' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-primary m-0"><i class="fas fa-bed me-2"></i>7. Hospedaje y Transporte</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="hospedaje" class="input-orden" {% if
+                                    inv and 'hospedaje' not in inv['config_json'] %}disabled{% endif %}>
+
+                                <div class="contenedor-inputs">
+                                    <label class="form-label small fw-bold text-muted mb-1">Información de Transporte</label>
+                                    <textarea name="info_transporte" class="form-control mb-3" rows="2"
+                                        placeholder="Ej: Habrá transporte saliendo del hotel a las 4pm...">{{ datos.get('info_transporte', '') if datos else '' }}</textarea>
+
+                                    <label class="form-label small fw-bold text-muted mb-1">Hoteles Sugeridos / Airbnb</label>
+                                    <div id="container-hoteles">
+                                        {% if edit_mode and hoteles %}
+                                        {% for hotel in hoteles %}
+                                        <div class="d-flex mb-2 gap-2 w-100">
+                                            <input type="text" name="nombre_hotel[]" class="form-control flex-grow-1" value="{{ hotel.nombre }}" style="min-width: 100px;">
+                                            <input type="text" name="link_hotel[]" class="form-control flex-grow-1" value="{{ hotel.url }}" style="min-width: 100px;">
+                                            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="d-flex mb-2 gap-2 w-100">
+                                            <input type="text" name="nombre_hotel[]" class="form-control flex-grow-1" placeholder="Hotel" style="min-width: 100px;">
+                                            <input type="text" name="link_hotel[]" class="form-control flex-grow-1" placeholder="URL" style="min-width: 100px;">
+                                            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <button type="button" class="btn btn-light w-100 border text-primary fw-bold"
+                                        onclick="agregarInput('container-hoteles', 'nombre_hotel[]', 'link_hotel[]')">+ Agregar Hotel</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-danger rounded-4" data-bloque="camara" id="bloque-camara" {% if not inv or not inv['camara_premium'] %}style="display: none;"{% endif %}>
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center w-100">
+                                        <span class="bg-danger bg-opacity-10 text-danger rounded-circle p-2 me-3 flex-shrink-0"><i class="fas fa-camera-retro"></i></span>
+                                        <h6 class="fw-bold text-danger m-0">Módulo: Cámara Desechable</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="camara" class="input-orden" id="input-orden-camara" {% if not inv or not inv['camara_premium'] %}disabled{% endif %}>
+                                <div class="mt-2 ms-5">
+                                    <small class="text-muted d-block lh-sm">Se mostrará el Código QR y el botón de cámara a los invitados. <strong>¡Arrástralo para cambiar su posición!</strong></small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-warning rounded-4" data-bloque="historia" id="bloque-historia" style="display: none;">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if
+                                            not inv or 'historia' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-warning m-0"><i class="fas fa-history me-2"></i>Historia / Timeline</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="historia" class="input-orden" {% if inv
+                                    and 'historia' not in inv['config_json'] %}disabled{% endif %}>
+
+                                <div class="contenedor-inputs">
+                                    <label class="form-label small fw-bold text-muted mb-2">Recuerdos con Fotos</label>
+                                    <div id="container-historia">
+                                        {% if edit_mode and inv and inv.get('historia_json') and
+                                        inv.get('historia_json') != 'null' %}
+                                        {% set historias = inv['historia_json']|from_json %}
+                                        {% for item in historias %}
+                                        <div class="row g-2 mb-3 bg-light p-2 rounded border align-items-center">
+                                            <div class="col-12 col-md-2">
+                                                <input type="text" name="anio_historia[]" class="form-control"
+                                                    placeholder="Año" value="{{ item.anio }}">
+                                            </div>
+                                            <div class="col-12 col-md-5">
+                                                <input type="text" name="texto_historia[]" class="form-control"
+                                                    placeholder="Descripción..." value="{{ item.texto }}">
+                                            </div>
+                                            <div class="col-10 col-md-4">
+                                                <input type="hidden" name="foto_historia_actual[]" value="{{ item.foto }}">
+                                                <input type="file" name="foto_historia_nueva[]" class="form-control form-control-sm" accept="image/*">
+                                            </div>
+                                            <div class="col-2 col-md-1 text-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="this.closest('.row').remove()"><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="row g-2 mb-3 bg-light p-2 rounded border align-items-center">
+                                            <div class="col-12 col-md-2">
+                                                <input type="text" name="anio_historia[]" class="form-control" placeholder="Año">
+                                            </div>
+                                            <div class="col-12 col-md-5">
+                                                <input type="text" name="texto_historia[]" class="form-control" placeholder="Descripción...">
+                                            </div>
+                                            <div class="col-10 col-md-4">
+                                                <input type="hidden" name="foto_historia_actual[]" value="">
+                                                <input type="file" name="foto_historia_nueva[]" class="form-control form-control-sm" accept="image/*">
+                                            </div>
+                                            <div class="col-2 col-md-1 text-end">
+                                                <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="this.closest('.row').remove()"><i class="fas fa-trash"></i></button>
+                                            </div>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <button type="button" class="btn btn-light w-100 border text-warning fw-bold mt-1"
+                                        onclick="agregarHistoria()">+ Agregar Recuerdo</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-secondary rounded-4" data-bloque="timeline">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if
+                                            not inv or 'timeline' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-secondary m-0"><i
+                                                class="fas fa-list me-2"></i>Itinerario de Actividades</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="timeline" class="input-orden" {% if inv
+                                    and 'timeline' not in inv['config_json'] %}disabled{% endif %}>
+
+                                <div class="contenedor-inputs">
+                                    <div id="container-itinerario">
+                                        {% if edit_mode and datos.get('itinerario') %}
+                                        {% for item in datos.get('itinerario') %}
+                                        <div class="d-flex mb-2 gap-2 w-100 flex-wrap flex-md-nowrap">
+                                            <input type="time" name="hora_itinerario[]" class="form-control flex-shrink-0" style="width: auto; min-width: 100px;" value="{{ item.hora }}">
+                                            <input type="text" name="actividad_itinerario[]" class="form-control flex-grow-1" placeholder="Ej: Recepción" value="{{ item.actividad }}" style="min-width: 100px;">
+                                            <select name="icono_itinerario[]" class="form-select flex-shrink-0" style="width: auto; text-align:center;">
+                                                <option value="fas fa-church" {% if item.icono=='fas fa-church' %}selected{% endif %}>⛪</option>
+                                                <option value="fas fa-glass-cheers" {% if item.icono=='fas fa-glass-cheers' %}selected{% endif %}>🥂</option>
+                                                <option value="fas fa-utensils" {% if item.icono=='fas fa-utensils' %}selected{% endif %}>🍽️</option>
+                                                <option value="fas fa-music" {% if item.icono=='fas fa-music' %}selected{% endif %}>🎵</option>
+                                                <option value="fas fa-camera-retro" {% if item.icono=='fas fa-camera-retro' %}selected{% endif %}>📸</option>
+                                                <option value="fas fa-heart" {% if item.icono=='fas fa-heart' %}selected{% endif %}>🤍</option>
+                                            </select>
+                                            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="d-flex mb-2 gap-2 w-100 flex-wrap flex-md-nowrap">
+                                            <input type="time" name="hora_itinerario[]" class="form-control flex-shrink-0" style="width: auto; min-width: 100px;">
+                                            <input type="text" name="actividad_itinerario[]" class="form-control flex-grow-1" placeholder="Actividad" style="min-width: 100px;">
+                                            <select name="icono_itinerario[]" class="form-select flex-shrink-0" style="width: auto; text-align:center;">
+                                                <option value="fas fa-church">⛪</option>
+                                                <option value="fas fa-glass-cheers">🥂</option>
+                                                <option value="fas fa-utensils">🍽️</option>
+                                                <option value="fas fa-music">🎵</option>
+                                                <option value="fas fa-camera-retro">📸</option>
+                                                <option value="fas fa-heart">🤍</option>
+                                            </select>
+                                            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <button type="button" class="btn btn-light w-100 border text-secondary fw-bold mt-1"
+                                        onclick="agregarItinerario()">+ Agregar Actividad</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-info rounded-4" data-bloque="galeria">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" 
+                                            {% if not inv or 'galeria' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-info m-0"><i class="fas fa-images me-2"></i>Galería Fotográfica</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="galeria" class="input-orden" 
+                                    {% if inv and 'galeria' not in inv['config_json'] %}disabled{% endif %}>
+
+                                <div class="contenedor-inputs">
+                                    
+                                    {% if edit_mode and inv and inv.get('fotos_json') and inv.get('fotos_json') != 'null' and inv.get('fotos_json') != '[]' %}
+                                        {% set fotos_gal = inv['fotos_json']|from_json %}
+                                        <label class="form-label small fw-bold text-muted mb-2">Tus Fotos Actuales</label>
+                                        <div class="row g-2 mb-3">
+                                            {% for f_url in fotos_gal %}
+                                            <div class="col-4 col-md-3 position-relative">
+                                                <img src="{{ f_url }}" class="img-thumbnail w-100 rounded-3 shadow-sm" style="height: 90px; object-fit: cover;">
+                                                <button type="button" class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 p-1 lh-1 rounded-circle" 
+                                                        onclick="confirmarEliminarImagen({{ inv['id'] }}, 'galeria', '{{ f_url }}')" title="Eliminar foto">
+                                                    <i class="fas fa-times" style="font-size: 0.7rem; width: 12px; height: 12px;"></i>
+                                                </button>
+                                            </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+
+                                    <label class="form-label small fw-bold text-muted mb-1"><i class="fas fa-plus-circle me-1"></i>Añadir Nuevas Fotos</label>
+                                    <input type="file" name="fotos_galeria" class="form-control" accept="image/*" multiple>
+                                    
+                                </div>
+                                </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-primary rounded-4" data-bloque="deseos">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if
+                                            not inv or 'deseos' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-primary m-0"><i class="fas fa-book-open me-2"></i>Libro
+                                            de Visitas</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="deseos" class="input-orden" {% if inv
+                                    and 'deseos' not in inv['config_json'] %}disabled{% endif %}>
+                                    <small class="text-muted d-block lh-sm mt-3">Permite a los invitados dejar mensajes que aparecerán en un carrusel dinámico.</small>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-dark rounded-4" data-bloque="rsvp">
+                        <div class="card-body p-4">
+                            <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                    <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if not inv or 'rsvp' in inv['config_json'] %}checked{% endif %} onchange="toggleSeccion(this)">
+                                    <h6 class="fw-bold text-dark m-0"><i class="fab fa-whatsapp me-2"></i>RSVP (Asistencia)</h6>
+                                </div>
+                                <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                            </div>
+                            <input type="hidden" name="orden_items[]" value="rsvp" class="input-orden" {% if inv and 'rsvp' not in inv['config_json'] %}disabled{% endif %}>
+                            
+                            <div class="contenedor-inputs">
+                                <label class="form-label small fw-bold text-muted mb-1">Teléfono de Confirmación</label>
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text bg-light border-end-0"><i class="fab fa-whatsapp text-success"></i></span>
+                                    <input type="text" name="telefono_rsvp" class="form-control border-start-0 ps-0"
+                                        placeholder="Ej: 528123456789" value="{{ datos.get('telefono_rsvp', '') if datos else '' }}">
+                                </div>
+                                <small class="text-muted d-block lh-sm" style="font-size: 0.8rem;">Incluye el código de país (ej. 52 para México) sin el signo "+".</small>
+                            </div>
+                        </div>
+                    </div>
+
+                        <div class="card draggable-item shadow-sm border-info rounded-4" data-bloque="protocolo">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if
+                                            not inv or 'protocolo' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-info m-0" id="titulo-protocolo"><i
+                                                class="fas fa-users me-2"></i>Protocolo Familiar</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="protocolo" class="input-orden" {% if
+                                    inv and 'protocolo' not in inv['config_json'] %}disabled{% endif %}>
+
+                                <div class="contenedor-inputs">
+                                    <div id="contenedor-protocolo">
+                                        {% if edit_mode and datos.get('protocolo') %}
+                                        {% for integrante in datos['protocolo'] %}
+                                        <div class="d-flex mb-2 gap-2 w-100">
+                                            <input type="text" name="rol_protocolo[]" class="form-control flex-grow-1" placeholder="Rol" value="{{ integrante.rol }}" style="min-width: 80px;">
+                                            <input type="text" name="nombres_protocolo[]" class="form-control flex-grow-1" placeholder="Nombres" value="{{ integrante.nombres }}" style="min-width: 100px;">
+                                            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <div class="d-flex mb-2 gap-2 w-100">
+                                            <input type="text" name="rol_protocolo[]" class="form-control flex-grow-1" placeholder="Rol (Ej. Padrinos)" style="min-width: 80px;">
+                                            <input type="text" name="nombres_protocolo[]" class="form-control flex-grow-1" placeholder="Nombres" style="min-width: 100px;">
+                                            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <button type="button" class="btn btn-light w-100 border text-info fw-bold mt-1"
+                                        id="btn-agregar-proto">+ Agregar integrante</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card draggable-item shadow-sm border-secondary rounded-4" data-bloque="frase_final">
+                            <div class="card-body p-4">
+                                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                                    <div class="form-check form-switch m-0 d-flex align-items-center w-100">
+                                        <input class="form-check-input switch-seccion m-0 me-3" type="checkbox" {% if
+                                            not inv or 'frase_final' in inv['config_json'] %}checked{% endif %}
+                                            onchange="toggleSeccion(this)">
+                                        <h6 class="fw-bold text-secondary m-0"><i
+                                                class="fas fa-quote-right me-2"></i>Frase de Cierre</h6>
+                                    </div>
+                                    <i class="fas fa-grip-lines text-muted handle fs-5 px-2 flex-shrink-0"></i>
+                                </div>
+                                <input type="hidden" name="orden_items[]" value="frase_final" class="input-orden" {% if
+                                    inv and 'frase_final' not in inv['config_json'] %}disabled{% endif %}>
+                                <div class="contenedor-inputs">
+                                    <textarea name="frase_final" class="form-control" rows="2"
+                                        placeholder="Ej: 'Que todas las noches sean de boda...'">{{ inv['frase_final'] if inv else '' }}</textarea>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
             </div>
-            <div class="modal-body">
-                <form id="formMusica">
-                    <div class="mb-2">
-                        <input type="text" id="nombreCancion" class="form-control form-control-sm" placeholder="Nombre (Ej: Ed Sheeran)" required>
+        </form>
+    </div> 
+    
+    <div class="modal fade" id="modalMusica" tabindex="-1">
+        <div class="modal-dialog modal-sm modal-dialog-centered">
+            <div class="modal-content border-0 shadow rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h6 class="modal-title fw-bold"><i class="fas fa-music text-primary me-2"></i>Nueva Canción</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formMusica">
+                        <div class="mb-3">
+                            <input type="text" id="nombreCancion" class="form-control" placeholder="Nombre (Ej: Ed Sheeran)" required>
+                        </div>
+                        <div class="mb-3">
+                            <input type="file" id="archivoCancion" class="form-control" accept="audio/*" required>
+                        </div>
+                        <button type="submit" id="btnSubirMusica" class="btn btn-primary w-100 rounded-pill fw-bold">
+                            <i class="fas fa-cloud-upload-alt me-2"></i> Subir Canción
+                        </button>
+                    </form>
+                    <div id="loadingMusica" class="text-center mt-3 d-none">
+                        <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
+                        <small class="text-muted ms-2 fw-bold">Subiendo...</small>
                     </div>
-                    <div class="mb-3">
-                        <input type="file" id="archivoCancion" class="form-control form-control-sm" accept="audio/*" required>
-                    </div>
-                    <button type="submit" id="btnSubirMusica" class="btn btn-primary btn-sm w-100 rounded-pill">
-                        <i class="fas fa-cloud-upload-alt me-1"></i> Subir
-                    </button>
-                </form>
-                <div id="loadingMusica" class="text-center mt-2 d-none">
-                    <div class="spinner-border spinner-border-sm text-primary" role="status"></div>
-                    <small class="text-muted ms-2">Subiendo...</small>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-{% endblock %}
+{% if not edit_mode %}
+<div class="modal fade" id="confirmarPublicacionModal" tabindex="-1" aria-labelledby="confirmarModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg rounded-4">
+            <div class="modal-header bg-dark text-white border-0 rounded-top-4 p-4">
+                <h5 class="modal-title fw-bold" id="confirmarModalLabel">
+                    <i class="fas fa-rocket me-2 text-warning"></i>¿Estás listo para publicar?
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <i class="fas fa-ticket-alt fa-3x text-primary mb-3"></i>
+                <h4 class="fw-bold text-dark">Confirmación de Costo</h4>
+                
+                <p class="text-muted fs-5 mb-4">Estás a punto de crear una nueva invitación Premium. Esto tendrá el siguiente impacto en tu cuenta:</p>
+                
+                <div class="alert alert-light border rounded-3 p-3 mb-4">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted fw-bold">Costo de Publicación:</span>
+                        <span class="text-danger fw-extrabold fs-4">-1 <small>Crédito</small></span>
+                    </div>
+                    <hr class="my-2">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted fw-bold">Tu Saldo después de crear:</span>
+                        <span class="text-success fw-extrabold fs-4">{{ (saldo|default(1)) - 1 }} <small>Créditos</small></span>
+                    </div>
+                </div>
+
+                <div class="alert alert-warning border-0 small d-flex align-items-center rounded-3">
+                    <i class="fas fa-exclamation-triangle fa-2x me-3 text-warning"></i>
+                    <div class="text-start">Esta acción **no se puede deshacer**. Asegúrate de que todos los datos y el slug son correctos antes de proceder.</div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-3 bg-light rounded-bottom-4 d-flex gap-2">
+                <button type="button" class="btn btn-outline-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">
+                    Cancelar
+                </button>
+                <button type="button" class="btn btn-dark rounded-pill px-5 fw-bold" onclick="ejecutarPublicacionFinal()">
+                    <i class="fas fa-check-circle me-2 text-success"></i>Sí, Publicar y Descontar Crédito
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endblock %} 
 
 {% block scripts %}
 <script>
+    // --- DRAG AND DROP ---
     var el = document.getElementById('sortable-list');
     var sortable = Sortable.create(el, { animation: 150, handle: '.handle' });
 
+    // --- FUNCIÓN ENCENDIDO/APAGADO DE BLOQUES ---
+    function toggleSeccion(checkbox) {
+        const card = checkbox.closest('.draggable-item');
+        const inputOrden = card.querySelector('.input-orden');
+        const inputs = card.querySelector('.contenedor-inputs');
+
+        if (checkbox.checked) {
+            card.classList.remove('apagado');
+            if (inputOrden) inputOrden.disabled = false;
+            if (inputs) inputs.style.display = 'block';
+        } else {
+            card.classList.add('apagado');
+            if (inputOrden) inputOrden.disabled = true;
+            if (inputs) inputs.style.display = 'none';
+        }
+    }
+
+    // --- FUNCIÓN PARA ELIMINAR IMÁGENES ---
+    async function confirmarEliminarImagen(invId, tipoImagen, fotoUrl = null) {
+        if (!confirm(`¿Seguro que deseas eliminar esta imagen de tu ${tipoImagen}? No se puede deshacer.`)) return;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        document.querySelector('.loading-text').innerText = 'Borrando imagen...';
+
+        const bodyData = fotoUrl ? JSON.stringify({ foto_url: fotoUrl }) : JSON.stringify({});
+        try {
+            const response = await fetch(`/admin/invitacion/${invId}/eliminar-imagen/${tipoImagen}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: bodyData
+            });
+            const data = await response.json();
+            if (data.success) {
+                location.reload(); 
+            } else {
+                alert('Error al eliminar: ' + data.error);
+                document.getElementById('loadingOverlay').style.display = 'none';
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión.');
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
+        // Restaurar orden al editar
         {% if edit_mode and inv and inv['config_json'] %}
         try {
             const savedOrder = {{ inv['config_json'] | safe }};
@@ -619,182 +1153,141 @@
                 const item = items.find(el => el.dataset.bloque === bloqueId);
                 if (item) list.appendChild(item);
             });
-        } catch (e) {
-            console.error('Error aplicando orden guardado:', e);
-        }
+        } catch (e) { console.error('Error aplicando orden:', e); }
         {% endif %}
-        
-        
+
         cambiarModoEvento();
+        document.querySelectorAll('.switch-seccion').forEach(check => toggleSeccion(check));
     });
 
-    // Función unificada para agregar tiendas u hoteles
+    // --- FUNCIONES AUXILIARES ---
     function agregarInput(containerId, nameInput, linkInput) {
         const div = document.createElement('div');
-        div.className = 'input-group input-group-sm mb-1';
-        div.innerHTML = `<input type="text" name="${nameInput}" class="form-control" placeholder="Nombre"><input type="text" name="${linkInput}" class="form-control" placeholder="URL"><button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>`;
+        div.className = 'd-flex mb-2 gap-2 w-100';
+        div.innerHTML = `<input type="text" name="${nameInput}" class="form-control flex-grow-1" placeholder="Nombre" style="min-width: 100px;"><input type="text" name="${linkInput}" class="form-control flex-grow-1" placeholder="URL" style="min-width: 100px;"><button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
         document.getElementById(containerId).appendChild(div);
     }
 
     const nombresInput = document.querySelector('input[name="nombres_novios"]');
     const slugInput = document.getElementById('slugInput');
+    
     nombresInput.addEventListener('input', function () {
         if (!slugInput.readOnly) {
             slugInput.value = this.value.toLowerCase().replace(/\s*&\s*/g, '-y-').replace(/\s+/g, '-').replace(/[^\w\-]+/g, '');
         }
     });
 
-    // Función para agregar nuevas filas al itinerario
+    // --- VALIDACIÓN DE SLUG EN TIEMPO REAL ---
+    const slugFeedback = document.getElementById('slugFeedback');
+    let timeoutSlug = null;
+
+    if (slugInput && !slugInput.readOnly) {
+        slugInput.addEventListener('input', function() {
+            clearTimeout(timeoutSlug);
+            const slugActual = this.value.trim();
+            
+            if(slugActual.length < 2) {
+                slugFeedback.innerHTML = '';
+                slugInput.classList.remove('border-danger', 'border-success');
+                return;
+            }
+
+            slugFeedback.innerHTML = '<span class="text-muted"><i class="fas fa-spinner fa-spin me-1"></i>Verificando disponibilidad...</span>';
+
+            timeoutSlug = setTimeout(async () => {
+                try {
+                    const response = await fetch('/admin/api/verificar-slug', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ slug: slugActual })
+                    });
+                    const data = await response.json();
+                    
+                    if (data.disponible) {
+                        slugFeedback.innerHTML = '<span class="text-success"><i class="fas fa-check-circle me-1"></i>¡Enlace disponible!</span>';
+                        slugInput.classList.remove('border-danger');
+                        slugInput.classList.add('border-success');
+                    } else {
+                        slugFeedback.innerHTML = '<span class="text-danger"><i class="fas fa-times-circle me-1"></i>Enlace ocupado. Intenta agregar un número o apellido.</span>';
+                        slugInput.classList.remove('border-success');
+                        slugInput.classList.add('border-danger');
+                    }
+                } catch(e) {
+                    console.error("Error verificando:", e);
+                    slugFeedback.innerHTML = '';
+                }
+            }, 500); 
+        });
+
+        if(nombresInput) {
+            nombresInput.addEventListener('keyup', function() {
+                slugInput.dispatchEvent(new Event('input'));
+            });
+        }
+    }
+
+
     function agregarItinerario() {
         const div = document.createElement('div');
-        div.className = 'input-group input-group-sm mb-1';
+        div.className = 'd-flex mb-2 gap-2 w-100 flex-wrap flex-md-nowrap';
         div.innerHTML = `
-            <input type="time" name="hora_itinerario[]" class="form-control" style="max-width: 100px;" required>
-            <input type="text" name="actividad_itinerario[]" class="form-control" placeholder="Ej: Banquete" required>
-            <select name="icono_itinerario[]" class="form-select" style="max-width: 65px; padding:0 5px; text-align:center;">
+            <input type="time" name="hora_itinerario[]" class="form-control flex-shrink-0" style="width: auto; min-width: 100px;">
+            <input type="text" name="actividad_itinerario[]" class="form-control flex-grow-1" placeholder="Ej: Banquete" style="min-width: 100px;">
+            <select name="icono_itinerario[]" class="form-select flex-shrink-0" style="width: auto; text-align:center;">
                 <option value="fas fa-church">⛪</option><option value="fas fa-glass-cheers">🥂</option>
                 <option value="fas fa-utensils">🍽️</option><option value="fas fa-music">🎵</option>
                 <option value="fas fa-camera-retro">📸</option><option value="fas fa-heart">🤍</option>
             </select>
-            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
+            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
         `;
         document.getElementById('container-itinerario').appendChild(div);
     }
 
-    document.getElementById('formMusica').addEventListener('submit', async function (e) {
-        e.preventDefault();
-        const btn = document.getElementById('btnSubirMusica');
-        const loading = document.getElementById('loadingMusica');
-        btn.classList.add('d-none'); loading.classList.remove('d-none');
-        const formData = new FormData();
-        formData.append('nombre', document.getElementById('nombreCancion').value);
-        formData.append('archivo', document.getElementById('archivoCancion').files[0]);
-        try {
-            const response = await fetch("{{ url_for('invitaciones_admin.api_subir_musica') }}", { method: 'POST', body: formData });
-            const data = await response.json();
-            if (data.success) {
-                const select = document.getElementById('selectMusica');
-                select.add(new Option('🎵 ' + data.nombre, data.id));
-                select.value = data.id;
-                bootstrap.Modal.getInstance(document.getElementById('modalMusica')).hide();
-                document.getElementById('formMusica').reset();
-            } else { alert('Error: ' + data.error); }
-        } catch (error) { alert('Ocurrió un error al subir.'); } finally {
-            btn.classList.remove('d-none'); loading.classList.add('d-none');
-        }
+    document.getElementById('btn-agregar-proto').addEventListener('click', function () {
+        const contenedor = document.getElementById('contenedor-protocolo');
+        const nuevaFila = document.createElement('div');
+        nuevaFila.className = 'd-flex mb-2 gap-2 w-100';
+        nuevaFila.innerHTML = `
+            <input type="text" name="rol_protocolo[]" class="form-control flex-grow-1" placeholder="Rol (Ej. Padrinos)" style="min-width: 80px;">
+            <input type="text" name="nombres_protocolo[]" class="form-control flex-grow-1" placeholder="Nombres" style="min-width: 100px;">
+            <button type="button" class="btn btn-outline-danger flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+        `;
+        contenedor.appendChild(nuevaFila);
     });
 
     function aplicarPlantilla(templateId) {
-        if (templateId === 'personalizado') {
-            console.log('Plantilla personalizada: colores manuales activos.');
-            return;
-        }
-
+        if (templateId === 'personalizado') return;
         const presets = {
             'rustico': { acento: '#5d6d5a', fondo: '#f4f1ea', fuente: 'botanico' },
             'romantico': { acento: '#d48b9b', fondo: '#fff9f9', fuente: 'romantico' },
             'moderno': { acento: '#2c3e50', fondo: '#ffffff', fuente: 'moderno' },
             'clasico': { acento: '#D4AF37', fondo: '#fdfbf7', fuente: 'clasico' }
         };
-
         const config = presets[templateId];
         if (!config) return;
-
         document.querySelector('input[name="color_acentos"]').value = config.acento;
         document.querySelector('input[name="color_fondo"]').value = config.fondo;
-
         const selectFuente = document.querySelector('select[name="estilo_fuente"]');
         if (selectFuente) selectFuente.value = config.fuente;
     }
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const gestionInvitados = document.getElementById('moduloInvitados');
-        const bloqueoWrapper = document.getElementById('bloqueo-novios-wrapper');
-        const bloqueoInput = document.getElementById('bloquear_edicion');
-        const btnGestionWrapper = document.getElementById('btn-gestion-invitados-wrapper');
-        const msgModuloApagado = document.getElementById('msg-modulo-apagado');
-
-        function syncEstado() {
-            const estaActivo = gestionInvitados.checked;
-
-            if (!estaActivo) {
-                bloqueoInput.checked = false;
-                bloqueoWrapper.style.display = 'none';
-            } else {
-                bloqueoWrapper.style.display = 'block';
-            }
-
-            if (btnGestionWrapper && msgModuloApagado) {
-                if (estaActivo) {
-                    btnGestionWrapper.style.display = 'block';
-                    msgModuloApagado.style.display = 'none';
-                } else {
-                    btnGestionWrapper.style.display = 'none';
-                    msgModuloApagado.style.display = 'block';
-                }
-            }
-        }
-
-        syncEstado();
-        gestionInvitados.addEventListener('change', syncEstado);
-    });
-
-    document.addEventListener('DOMContentLoaded', () => {
-        const check = document.getElementById('noNinos');
-        const textarea = document.querySelector('textarea[name="mensaje_no_ninos"]');
-
-        function syncNoNinos() {
-            textarea.disabled = !check.checked;
-        }
-
-        syncNoNinos();
-        check.addEventListener('change', syncNoNinos);
-    });
-
-    document.getElementById('btn-agregar-proto').addEventListener('click', function() {
-        const contenedor = document.getElementById('contenedor-protocolo');
-        const nuevaFila = document.createElement('div');
-        nuevaFila.className = 'input-group input-group-sm mb-1';
-        nuevaFila.innerHTML = `
-            <input type="text" name="rol_protocolo[]" class="form-control" placeholder="Rol (Ej. Padrinos de Anillos)" required>
-            <input type="text" name="nombres_protocolo[]" class="form-control" placeholder="Nombres (Ej. Juan y Maria)" required>
-            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
-        `;
-        contenedor.appendChild(nuevaFila);
-    });
-
-    // --- CONTROL DEL SWITCH DE BUENOS DESEOS ---
-    document.addEventListener('DOMContentLoaded', () => {
-        const switchDeseos = document.getElementById('switchDeseos');
-        const inputOrdenDeseos = document.getElementById('input-orden-deseos');
-        
-        if (switchDeseos && inputOrdenDeseos) {
-            inputOrdenDeseos.disabled = !switchDeseos.checked;
-            switchDeseos.addEventListener('change', function() {
-                inputOrdenDeseos.disabled = !this.checked;
-            });
-        }
-    });
-
-    // --- LÓGICA DE CAMBIO BODA / XV AÑOS ---
     function cambiarModoEvento() {
         const tipoRadio = document.querySelector('input[name="tipo_evento"]:checked');
-        if (!tipoRadio) return; 
+        if (!tipoRadio) return;
         const tipo = tipoRadio.value;
-        
+
         const labelNombres = document.querySelector('input[name="nombres_novios"]');
         const selectPlantilla = document.querySelector('select[name="template_id"]');
-        const labelPadres = document.querySelector('[data-bloque="protocolo"] .fw-bold');
-        
+        const tituloProtocolo = document.getElementById('titulo-protocolo');
+
         const bloqueHistoria = document.getElementById('bloque-historia');
         const campoBienvenida = document.getElementById('campo-bienvenida-xv');
-        
+
         if (tipo === 'xv') {
             labelNombres.placeholder = "Nombre Quinceañera (Ej: Valentina)";
-            labelPadres.innerHTML = '<i class="fas fa-users me-2"></i>11. Padres y Padrinos';
+            if (tituloProtocolo) tituloProtocolo.innerHTML = '<i class="fas fa-users me-2"></i>Padres y Padrinos';
             campoBienvenida.style.display = 'block';
             bloqueHistoria.style.display = 'block';
-            
             selectPlantilla.innerHTML = `
                 <option value="rose_gold">🌸 Rose Gold (Elegante)</option>
                 <option value="princesa">👑 Princesa (Azul/Dorado)</option>
@@ -803,10 +1296,9 @@
             `;
         } else {
             labelNombres.placeholder = "Nombres (Ej: Diana & Sebastián)";
-            labelPadres.innerHTML = '<i class="fas fa-users me-2"></i>11. Protocolo Familiar';
+            if (tituloProtocolo) tituloProtocolo.innerHTML = '<i class="fas fa-users me-2"></i>Protocolo Familiar';
             campoBienvenida.style.display = 'none';
             bloqueHistoria.style.display = 'none';
-            
             selectPlantilla.innerHTML = `
                 <option value="clasico">✨ Clásico (Dorado)</option>
                 <option value="rustico">🌿 Rústico (Eucalipto)</option>
@@ -817,19 +1309,234 @@
         }
     }
 
-    // --- FUNCIÓN PARA AGREGAR FILAS A "MI HISTORIA" ---
     function agregarHistoria() {
         const div = document.createElement('div');
-        div.className = 'input-group input-group-sm mb-2 align-items-center';
+        div.className = 'row g-2 mb-3 bg-light p-2 rounded border align-items-center';
         div.innerHTML = `
-            <input type="text" name="anio_historia[]" class="form-control" style="max-width: 80px;" placeholder="Año" required>
-            <input type="text" name="texto_historia[]" class="form-control" placeholder="Breve descripción..." required>
-            <input type="hidden" name="foto_historia_actual[]" value="">
-            <input type="file" name="foto_historia_nueva[]" class="form-control" accept="image/*" style="max-width: 150px;" required>
-            <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()">X</button>
+            <div class="col-12 col-md-2">
+                <input type="text" name="anio_historia[]" class="form-control" placeholder="Año">
+            </div>
+            <div class="col-12 col-md-5">
+                <input type="text" name="texto_historia[]" class="form-control" placeholder="Descripción...">
+            </div>
+            <div class="col-10 col-md-4">
+                <input type="hidden" name="foto_historia_actual[]" value="">
+                <input type="file" name="foto_historia_nueva[]" class="form-control form-control-sm" accept="image/*">
+            </div>
+            <div class="col-2 col-md-1 text-end">
+                <button type="button" class="btn btn-outline-danger btn-sm w-100" onclick="this.closest('.row').remove()"><i class="fas fa-trash"></i></button>
+            </div>
         `;
         document.getElementById('container-historia').appendChild(div);
     }
 
+    // --- LÓGICA PARA SUBIR MÚSICA ---
+    document.getElementById('formMusica').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const btn = document.getElementById('btnSubirMusica');
+        const loading = document.getElementById('loadingMusica');
+        
+        btn.classList.add('d-none'); 
+        loading.classList.remove('d-none');
+        
+        const formData = new FormData();
+        formData.append('nombre', document.getElementById('nombreCancion').value);
+        formData.append('archivo', document.getElementById('archivoCancion').files[0]);
+        
+        try {
+            const response = await fetch("{{ url_for('invitaciones_admin.api_subir_musica') }}", { 
+                method: 'POST', 
+                body: formData 
+            });
+            const data = await response.json();
+            
+            if (data.success) {
+                const select = document.getElementById('selectMusica');
+                select.add(new Option('🎵 ' + data.nombre, data.id));
+                select.value = data.id;
+                
+                bootstrap.Modal.getInstance(document.getElementById('modalMusica')).hide();
+                document.getElementById('formMusica').reset();
+            } else { 
+                alert('Error: ' + data.error); 
+            }
+        } catch (error) { 
+            alert('Ocurrió un error al subir la canción.'); 
+            console.error(error);
+        } finally {
+            btn.classList.remove('d-none'); 
+            loading.classList.add('d-none');
+        }
+    });
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const switchInvitados = document.getElementById('moduloInvitados');
+        const wrapperBloqueo = document.getElementById('bloqueo-novios-wrapper');
+        const inputBloqueo = document.getElementById('bloquear_edicion');
+        const camaraSwitch = document.getElementById('camaraPremium');
+        const bloqueCamara = document.getElementById('bloque-camara');
+        const inputOrdenCamara = document.getElementById('input-orden-camara');
+
+        function toggleBloqueo() {
+            if (switchInvitados.checked) {
+                wrapperBloqueo.style.display = 'block';
+            } else {
+                wrapperBloqueo.style.display = 'none';
+                if(inputBloqueo) inputBloqueo.checked = false;
+            }
+        }
+
+        if (switchInvitados && wrapperBloqueo) {
+            toggleBloqueo();
+            switchInvitados.addEventListener('change', toggleBloqueo);
+        }
+
+        // Lógica de visualización de la tarjeta de cámara
+        if(camaraSwitch && bloqueCamara) {
+            camaraSwitch.addEventListener('change', function() {
+                if(this.checked) {
+                    bloqueCamara.style.display = 'block';
+                    if(inputOrdenCamara) inputOrdenCamara.disabled = false;
+                } else {
+                    bloqueCamara.style.display = 'none';
+                    if(inputOrdenCamara) inputOrdenCamara.disabled = true;
+                }
+            });
+        }
+    });
+
+    // --- ESCUDO: VALIDAR ANTES DE ABRIR MODAL O GUARDAR ---
+    function validarYContinuar(isEditMode) {
+        const form = document.getElementById('formInvitacion');
+        
+        // 1. Verificamos que los campos obligatorios estén llenos
+        if (!form.checkValidity()) {
+            // Muestra el globito nativo de "Completa este campo" sin que el modal lo tape
+            form.reportValidity();
+            return;
+        }
+
+        // 2. Si todo está completo, decidimos qué hacer
+        if (isEditMode) {
+            // Si es edición, guardamos directo mostrando pantalla de carga
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            form.submit();
+        } else {
+            // Si es nueva, abrimos el modal de confirmación de créditos
+            const modalConfirmacion = new bootstrap.Modal(document.getElementById('confirmarPublicacionModal'));
+            modalConfirmacion.show();
+        }
+    }
+
+    // --- FUNCIÓN FINAL (Desde el botón "Sí, Publicar" del modal) ---
+    async function ejecutarPublicacionFinal() {
+        const slugInput = document.getElementById('slugInput').value;
+        
+        try {
+            const response = await fetch('/admin/api/verificar-slug', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ slug: slugInput })
+            });
+            const data = await response.json();
+            
+            if (!data.disponible) {
+                const modalEl = document.getElementById('confirmarPublicacionModal');
+                if(modalEl) {
+                    const modal = bootstrap.Modal.getInstance(modalEl);
+                    if(modal) modal.hide();
+                }
+                
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Enlace no disponible',
+                    text: 'La URL "' + data.slug_sugerido + '" ya está siendo utilizada. Por favor, edítala agregando un número o apellido.',
+                    confirmButtonColor: '#343a40',
+                    confirmButtonText: 'Corregir enlace'
+                });
+                
+                document.getElementById('slugInput').focus();
+                document.getElementById('slugInput').classList.add('border-danger', 'text-danger');
+                return; 
+            }
+        } catch(e) {
+            console.error("Error verificando slug:", e);
+        }
+        
+        const modalEl = document.getElementById('confirmarPublicacionModal');
+        if(modalEl) {
+            const modal = bootstrap.Modal.getInstance(modalEl);
+            if(modal) modal.hide();
+        }
+        
+        document.getElementById('loadingOverlay').style.display = 'flex';
+        document.getElementById('formInvitacion').submit();
+    }
+
+    // --- FILTRO ANTI-ERRORES PARA SUBIDA DE ARCHIVOS ---
+    document.addEventListener("DOMContentLoaded", function() {
+        const inputsImagen = document.querySelectorAll('input[type="file"][accept="image/*"]');
+        
+        inputsImagen.forEach(input => {
+            input.addEventListener('change', function() {
+                const archivo = this.files[0];
+                
+                if (archivo) {
+                    if (!archivo.type.startsWith('image/')) {
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Formato inválido',
+                            text: 'Por favor, sube únicamente imágenes (JPG, PNG, WEBP). Los documentos como PDF no están permitidos.',
+                            confirmButtonColor: '#343a40',
+                            confirmButtonText: 'Entendido'
+                        });
+                        this.value = ''; 
+                    } else if (archivo.size > 15 * 1024 * 1024) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Archivo muy pesado',
+                            text: 'La imagen supera los 15MB. Intenta con una más ligera.',
+                            confirmButtonColor: '#343a40'
+                        });
+                        this.value = '';
+                    }
+                }
+            });
+        });
+    });
 </script>
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+        <script>
+            document.addEventListener("DOMContentLoaded", function() {
+                {% for category, message in messages %}
+                    let icono = 'info';
+                    {% if category == 'success' %} icono = 'success';
+                    {% elif category == 'danger' or category == 'error' %} icono = 'error';
+                    {% elif category == 'warning' %} icono = 'warning';
+                    {% endif %}
+
+                    const Toast = Swal.mixin({
+                        toast: true,
+                        position: 'top-end',
+                        showConfirmButton: false,
+                        timer: 5000,
+                        timerProgressBar: true,
+                        didOpen: (toast) => {
+                            toast.addEventListener('mouseenter', Swal.stopTimer)
+                            toast.addEventListener('mouseleave', Swal.resumeTimer)
+                        }
+                    });
+
+                    Toast.fire({
+                        icon: icono,
+                        title: '{{ message }}'
+                    });
+                {% endfor %}
+            });
+        </script>
+    {% endif %}
+{% endwith %}
+
 {% endblock %}

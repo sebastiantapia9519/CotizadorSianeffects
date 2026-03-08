@@ -158,8 +158,7 @@
                         <div class="fw-bold text-dark">{{ v['cliente'] }}</div>
                         {% if v['estado'] == 'cancelada' %}
                         <small class="text-danger fw-bold">Cancelada</small>
-                        {% else %}
-                        <small class="text-muted"><i class="fas fa-box-open me-1"></i> Ver detalles...</small>
+                        
                         {% endif %}
                     </td>
 
@@ -205,37 +204,68 @@
                     </td>
 
                     <td class="text-end pe-4">
-                        <button class="btn btn-sm btn-light text-primary rounded-circle shadow-sm me-1 border"
-                            onclick="verDetalles({{ v['id'] }})" title="Ver Detalles / Receta">
-                            <i class="fas fa-eye"></i>
-                        </button>
+                        <div class="dropdown">
+                            <button class="btn btn-light btn-sm rounded-circle shadow-sm border" type="button"
+                                data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
+                                <i class="fas fa-ellipsis-v"></i>
+                            </button>
 
-                        {% if v['estado'] != 'cancelada' %}
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0"
+                                style="border-radius: 12px; min-width: 210px;">
 
-                        <button class="btn btn-sm btn-outline-primary rounded-circle shadow-sm me-1 border"
-                            onclick="recargarCotizacion({{ v['id'] }})" title="Editar / Reutilizar en Cotizador">
-                            <i class="fas fa-edit"></i>
-                        </button>
+                                <li>
+                                    <button class="dropdown-item py-2 fw-bold text-secondary" type="button"
+                                        onclick="verDetalles({{ v['id'] }})">
+                                        <i class="fas fa-eye text-primary bg-primary bg-opacity-10 rounded p-1 me-2"
+                                            style="width: 26px; text-align: center;"></i> Ver Detalles
+                                    </button>
+                                </li>
 
-                        <a href="{{ url_for('main.ver_ticket', id=v['id']) }}" target="_blank"
-                            class="btn btn-sm btn-light text-dark rounded-circle shadow-sm me-1 border"
-                            title="Imprimir Ticket">
-                            <i class="fas fa-print"></i>
-                        </a>
+                                {% if v['estado'] != 'cancelada' %}
+                                <li>
+                                    <hr class="dropdown-divider my-1">
+                                </li>
 
-                        {% if v['saldo_pendiente'] > 0.5 %}
-                        <button class="btn btn-sm btn-success rounded-circle shadow-sm me-1"
-                            onclick="abonar({{v['id']}}, {{v['saldo_pendiente']}}, '{{v['estado']}}')"
-                            title="Registrar Pago / Abono">
-                            <i class="fas fa-dollar-sign"></i>
-                        </button>
-                        {% endif %}
+                                <li>
+                                    <button class="dropdown-item py-2 fw-bold text-secondary" type="button"
+                                        onclick="recargarCotizacion({{ v['id'] }})">
+                                        <i class="fas fa-edit text-info bg-info bg-opacity-10 rounded p-1 me-2"
+                                            style="width: 26px; text-align: center;"></i> Editar / Reutilizar
+                                    </button>
+                                </li>
 
-                        <button class="btn btn-sm btn-outline-danger rounded-circle border-0"
-                            onclick="cancelarVenta({{v['id']}})" title="Cancelar Venta">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
-                        {% endif %}
+                                <li>
+                                    <a class="dropdown-item py-2 fw-bold text-secondary"
+                                        href="{{ url_for('main.ver_ticket', id=v['id']) }}" target="_blank">
+                                        <i class="fas fa-print text-dark bg-dark bg-opacity-10 rounded p-1 me-2"
+                                            style="width: 26px; text-align: center;"></i> Imprimir Ticket
+                                    </a>
+                                </li>
+
+                                {% if v['saldo_pendiente'] > 0.5 %}
+                                <li>
+                                    <button class="dropdown-item py-2 fw-bold text-secondary" type="button"
+                                        onclick="abonar({{v['id']}}, {{v['saldo_pendiente']}}, '{{v['estado']}}')">
+                                        <i class="fas fa-dollar-sign text-success bg-success bg-opacity-10 rounded p-1 me-2"
+                                            style="width: 26px; text-align: center;"></i> Registrar Abono
+                                    </button>
+                                </li>
+                                {% endif %}
+
+                                <li>
+                                    <hr class="dropdown-divider my-1">
+                                </li>
+
+                                <li>
+                                    <button class="dropdown-item py-2 fw-bold text-danger" type="button"
+                                        onclick="cancelarVenta({{v['id']}})">
+                                        <i class="fas fa-trash-alt text-danger bg-danger bg-opacity-10 rounded p-1 me-2"
+                                            style="width: 26px; text-align: center;"></i> Anular Venta
+                                    </button>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
                     </td>
                 </tr>
                 {% else %}
@@ -310,9 +340,9 @@
 
                 <div class="table-responsive rounded-3 border mb-4" style="max-height: 300px;">
                     <table class="table table-striped mb-0 align-middle">
-                        <thead class="sticky-top bg-white small text-secondary">
+                        <thead class="sticky-top bg-white small text-secondary text-nowrap">
                             <tr>
-                                <th class="ps-3 py-2">Producto</th>
+                                <th class="ps-3 py-2" style="min-width: 220px;">Producto</th>
                                 <th class="text-center py-2">Cant.</th>
                                 <th class="text-end py-2">$ P. Unit.</th>
                                 <th class="text-end py-2 text-dark fw-bold">Importe</th>
@@ -418,25 +448,25 @@
                         // RENDERIZADO DE FILA
                         tbody.innerHTML += `
                             <tr>
-                                <td class="ps-3">
+                                <td class="ps-3" style="min-width: 220px; white-space: normal;">
                                     <div class="fw-bold text-dark">${item.concepto}</div>
                                     ${htmlIngredientes}
                                 </td>
                                 <td class="text-center align-middle">${cant}</td>
                                 
-                                <td class="text-end text-muted align-middle small">
+                                <td class="text-end text-muted align-middle small text-nowrap">
                                     $${precioUnitarioBD.toFixed(2)} unit.
                                 </td>
 
-                                <td class="text-end text-dark fw-bold align-middle">
+                                <td class="text-end text-dark fw-bold align-middle text-nowrap">
                                     $${ventaTotalItem.toFixed(2)}
                                 </td>
 
-                                <td class="text-end text-danger text-opacity-75 align-middle small">
+                                <td class="text-end text-danger text-opacity-75 align-middle small text-nowrap">
                                     - $${costoTotalItem.toFixed(2)}
                                 </td>
 
-                                <td class="text-end pe-3 fw-bold text-success bg-success bg-opacity-10 align-middle">
+                                <td class="text-end pe-3 fw-bold text-success bg-success bg-opacity-10 align-middle text-nowrap">
                                     $${gananciaTotalItem.toFixed(2)}
                                 </td>
                             </tr>

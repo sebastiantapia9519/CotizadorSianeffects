@@ -1,4 +1,7 @@
 import os
+import csv
+from io import StringIO
+from flask import Response
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, send_from_directory, abort
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
@@ -244,9 +247,71 @@ def stop_impersonate():
 
         flash('👻 Modo Fantasma finalizado. Bienvenido de vuelta, Jefe.', 'success')
         
-        # --- AQUÍ ESTABA EL ERROR ---
         return redirect(url_for('admin.dashboard'))
     
     # Si algo falla gravemente, te saca
     session.clear()
     return redirect(url_for('auth.login'))
+
+@admin_bp.route('/exportar-usuarios')
+@admin_required
+def exportar_usuarios():
+    # Bloqueo opcional: Puedes decidir si solo el Dueño (2) o también los Admins (1) pueden exportar.
+    # Aquí lo dejaré para Dueños y Admins, igual que descargar_log.
+    if session.get('role') < 1:
+        abort(403)
+
+    conn = get_db_connection()
+    # Traemos todos los usuarios ordenados por fecha de creación (los más nuevos primero)
+    usuarios = conn.execute("""
+        SELECT 
+            id, username, email, company_name, 
+            role, created_at, subscription_end, last_login 
+        FROM usuarios 
+        ORDER BY created_at DESC
+    """).fetchall()
+    conn.close()
+
+    # Preparamos el archivo CSV en memoria
+    si = StringIO()
+    
+    # Escribimos un byte order mark (BOM) para que Excel reconozca correctamente los acentos (UTF-8)
+    si.write('\ufeff') 
+    
+    cw = csv.writer(si)
+    
+    # Escribimos la fila de encabezados
+    cw.writerow([
+        'ID', 
+        'Usuario', 
+        'Email', 
+        'Empresa', 
+        'Rol (0=Usuario, 1=Admin, 2=Dueño)', 
+        'Fecha de Registro', 
+        'Vencimiento Suscripción', 
+        'Última Vez Visto'
+    ])
+    
+    # Escribimos los datos fila por fila
+    for u in usuarios:
+        cw.writerow([
+            u['id'],
+            u['username'],
+            u['email'],
+            u['company_name'],
+            u['role'],
+            u['created_at'],
+            u['subscription_end'] if u['subscription_end'] else 'Sin fecha',
+            u['last_login'] if u['last_login'] else 'Nunca'
+        ])
+
+    # Preparamos la respuesta para forzar la descarga del archivo
+    output = si.getvalue()
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={
+            "Content-Disposition": "attachment;filename=reporte_usuarios_sianeffects.csv",
+            "Content-type": "text/csv; charset=utf-8"
+        }
+    )

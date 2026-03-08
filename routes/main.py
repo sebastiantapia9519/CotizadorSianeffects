@@ -5,8 +5,9 @@ import pandas as pd
 import io
 import json
 import math
-from utils.datetime_utils import now_utc, utc_to_local
+from utils.datetime_utils import now_utc, utc_to_local, ahora_sql
 from db import get_db_connection as get_db
+from dateutil import parser
 from helpers import login_required, subscription_required, obtener_alertas
 
 main_bp = Blueprint('main', __name__)
@@ -28,7 +29,9 @@ def procesar_fila_fechas(fila_db):
         if valor_original:
             try:
                 str_fecha = str(valor_original).replace('T', ' ')[:19]
-                dt_utc = datetime.strptime(str_fecha, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                dt_utc = parser.parse(str(valor_original))
+                if dt_utc.tzinfo is None:
+                    dt_utc = dt_utc.replace(tzinfo=timezone.utc)
                 dt_local = utc_to_local(dt_utc)
                 item[campo] = dt_local.strftime('%d/%m/%Y %H:%M')
             except ValueError:
@@ -183,8 +186,8 @@ def guardar_venta():
         saldo_pendiente = total - monto_pagado
         if saldo_pendiente < 0: saldo_pendiente = 0
 
-        fecha_actual = now_utc()
-        fecha_vencimiento = (now_utc() + timedelta(days=7)).isoformat()
+        fecha_actual = ahora_sql()
+        fecha_vencimiento = ahora_sql(dias=2) #Si la venta no se concreta en 2 dias se elimina
 
         print("VENTA_ID RECIBIDA:", venta_id)
 
@@ -256,17 +259,21 @@ def guardar_venta():
                                     SET stock_actual = stock_actual - ? 
                                     WHERE id = ?
                                 ''', (cantidad_a_descontar, material_id))
-
+                                
                                 cursor.execute('''
                                     INSERT INTO movimientos_inventario 
-                                    (user_id, material_id, tipo, cantidad, motivo, stock_resultante)
-                                    VALUES (?, ?, 'salida', ?, ?, (SELECT stock_actual FROM materiales WHERE id=?))
+                                    (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
+                                    VALUES (?, ?, 'salida', ?, ?, 
+                                        (SELECT stock_actual FROM materiales WHERE id=?),
+                                        ?
+                                    )
                                 ''', (
-                                    session['user_id'], 
-                                    material_id, 
-                                    cantidad_a_descontar, 
-                                    f"Venta #{venta_id} - {item['concepto']}", 
-                                    material_id
+                                    session['user_id'],
+                                    material_id,
+                                    cantidad_a_descontar,
+                                    f"Venta #{venta_id} - {item['concepto']}",
+                                    material_id,
+                                    ahora_sql()
                                 ))
                 except Exception as e:
                     print(f"Error descontando inventario: {e}")
@@ -495,6 +502,8 @@ def configuracion():
         # --- GESTIÓN DE ENVÍOS (Config Base) ---
         elif action == 'update_shipping':
             try:
+                # 1. Atrapamos el link que ahora sí tiene "name"
+                origin_address = request.form.get('origin_address') 
                 origin_lat = request.form.get('origin_lat')
                 origin_lng = request.form.get('origin_lng')
                 local_base = float(request.form.get('local_base_rate') or 0)
@@ -504,16 +513,18 @@ def configuracion():
                 existing = conn.execute("SELECT id FROM shipping_configs WHERE user_id=?", (uid,)).fetchone()
 
                 if existing:
+                    # 2. Agregamos origin_address al UPDATE
                     conn.execute("""
                         UPDATE shipping_configs 
-                        SET origin_lat=?, origin_lng=?, local_base_rate=?, local_km_rate=?, safety_margin_percent=?
+                        SET origin_address=?, origin_lat=?, origin_lng=?, local_base_rate=?, local_km_rate=?, safety_margin_percent=?
                         WHERE user_id=?
-                    """, (origin_lat, origin_lng, local_base, local_km, safety_margin, uid))
+                    """, (origin_address, origin_lat, origin_lng, local_base, local_km, safety_margin, uid))
                 else:
+                    # 3. Agregamos origin_address al INSERT
                     conn.execute("""
-                        INSERT INTO shipping_configs (user_id, origin_lat, origin_lng, local_base_rate, local_km_rate, safety_margin_percent)
-                        VALUES (?, ?, ?, ?, ?, ?)
-                    """, (uid, origin_lat, origin_lng, local_base, local_km, safety_margin))
+                        INSERT INTO shipping_configs (user_id, origin_address, origin_lat, origin_lng, local_base_rate, local_km_rate, safety_margin_percent)
+                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (uid, origin_address, origin_lat, origin_lng, local_base, local_km, safety_margin))
 
                 flash('Configuración de envíos actualizada.', 'success')
             except Exception as e:
@@ -608,7 +619,6 @@ def configuracion():
     
     # AQUI ESTÁ EL TRUCO: 
     # Sobrescribimos 'nombre_empresa' con lo que diga la tabla de usuarios ('company_name').
-    # Así, aunque en config esté vacío, se verá "AAA" o lo que tenga el usuario.
     config['nombre_empresa'] = user_raw['company_name'] if user_raw['company_name'] else ''
 
      # -------------------------------------------------

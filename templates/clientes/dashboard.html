@@ -7,27 +7,99 @@
     <title>Panel - {{ nombre_evento }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* --- ESTILOS MÓVILES PARA LA TABLA (Diseño Ultra Compacto) --- */
+        @media (max-width: 768px) {
+            .mobile-card-table thead { display: none; }
+            
+            .mobile-card-table tbody tr {
+                display: flex; 
+                flex-wrap: wrap; 
+                background: #ffffff; border-radius: 12px;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+                margin-bottom: 0.75rem; padding: 10px 12px; border: 1px solid #e9ecef;
+            }
+
+            .mobile-card-table td {
+                border: none !important; padding: 4px 2px !important;
+                display: flex; flex-direction: column; 
+                align-items: center !important; text-align: center !important;
+            }
+
+            /* Etiquetas de columnas (MESA, ESTATUS, etc) */
+            .mobile-card-table td::before {
+                content: attr(data-label);
+                font-weight: 700; color: #adb5bd; font-size: 0.6rem; 
+                text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+                white-space: nowrap;
+            }
+
+            /* 1. Fila Superior Izquierda: Nombre y WhatsApp (70% del ancho) */
+            .mobile-card-table td:first-child {
+                order: 1; width: 70%;
+                align-items: flex-start !important; text-align: left !important;
+                border-bottom: 1px dashed #e9ecef !important;
+                padding-bottom: 10px !important; margin-bottom: 8px;
+            }
+            .mobile-card-table td:first-child::before { display: none; }
+
+            /* 2. Fila Superior Derecha: Botones Edit/Trash (30% del ancho) */
+            .mobile-card-table td:last-child {
+                order: 2; width: 30%;
+                flex-direction: row; justify-content: flex-end !important; align-items: flex-start !important;
+                border-bottom: 1px dashed #e9ecef !important; border-top: none !important;
+                padding-bottom: 10px !important; margin-bottom: 8px; margin-top: 0; padding-top: 4px !important;
+            }
+            .mobile-card-table td:last-child::before { display: none; }
+
+            /* 3. Fila Inferior: 4 Columnas Compactas (25% cada una) */
+            .mobile-card-table td:nth-child(2),
+            .mobile-card-table td:nth-child(3),
+            .mobile-card-table td:nth-child(4),
+            .mobile-card-table td:nth-child(5) {
+                order: 3; width: 25%;
+                justify-content: flex-end;
+            }
+
+            /* Hacemos los botones y globos más pequeños para que quepan */
+            .mobile-card-table td .badge { font-size: 0.65rem; padding: 4px 6px; }
+            .mobile-card-table td:nth-child(2) div {
+                width: 26px !important; height: 26px !important; line-height: 22px !important; 
+                font-size: 0.8rem !important; margin: 0 auto !important;
+            }
+        }
+
+        /* --- EVITAR QUE LA TABLA SE APLASTE EN COMPUTADORA --- */
+        @media (min-width: 769px) {
+            .mobile-card-table { min-width: 850px; }
+            .mobile-card-table th { white-space: nowrap; }
+        }
+
+        /* --- ESTILOS PARA PAGINACIÓN Y TABS --- */
+        .page-item.active .page-link { background-color: #212529; border-color: #212529; color: white; }
+        .page-link { color: #212529; border: none; border-radius: 8px; margin: 0 3px; font-weight: 500; }
+        .page-link:hover { background-color: #f8f9fa; color: #000; }
+        
+        .nav-pills .nav-link { color: #6c757d; font-weight: 600; border-radius: 50rem; padding: 8px 24px; transition: all 0.3s; }
+        .nav-pills .nav-link.active { background-color: #212529; color: #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+    </style>
 </head>
 
 <body class="bg-light">
 
-    <nav class="navbar navbar-light bg-white shadow-sm mb-4">
+    <nav class="navbar navbar-light bg-white shadow-sm mb-4 py-3">
         <div class="container d-flex justify-content-between align-items-center">
-            <span class="navbar-brand mb-0 h4 fw-bold text-uppercase"
-                style="font-family: 'Playfair Display', serif;">
+            <span class="navbar-brand mb-0 h4 fw-bold text-uppercase" style="font-family: 'Playfair Display', serif;">
                 <i class="fas fa-ring text-warning me-2"></i>{{ nombre_evento }}
             </span>
             <div class="d-flex gap-2">
                 {% if inv.tiene_modulo_invitados %}
-                    <a href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv.slug) }}"
-                    class="btn btn-dark btn-sm rounded-pill px-3 shadow-sm">
-                        <i class="fas fa-qrcode me-1"></i> Abrir Escáner
+                    <a href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv.slug) }}" class="btn btn-dark btn-sm rounded-pill px-3 shadow-sm">
+                        <i class="fas fa-qrcode me-1"></i> Escáner
                     </a>
-                    {% endif %}
-
-                <a href="{{ url_for('invitaciones_clientes.logout_cliente') }}"
-                    class="btn btn-outline-secondary btn-sm rounded-pill px-3">
-                    Cerrar Sesión
+                {% endif %}
+                <a href="{{ url_for('invitaciones_clientes.logout_cliente') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                    Salir
                 </a>
             </div>
         </div>
@@ -35,173 +107,187 @@
 
     <div class="container pb-5">
         {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        {% endfor %}
-        {% endif %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }} alert-dismissible fade show rounded-4 shadow-sm" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endfor %}
+            {% endif %}
         {% endwith %}
 
-        {% if inv.tiene_camara %}
-        <div class="alert alert-info rounded-4 shadow-sm mb-4">
-            <i class="fas fa-camera-retro me-2"></i>
-            Tu plan incluye <strong>Cámara Desechable Digital</strong>.
-        </div>
-        {% endif %}
-
-        {% if inv.tiene_modulo_invitados %}
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm rounded-4 bg-dark text-white">
-                    <div class="card-body d-flex align-items-center justify-content-between py-3 px-4">
-                        <div>
-                            <h6 class="mb-0 text-secondary text-uppercase small fw-bold">
-                                Invitados en el salón
-                            </h6>
-                            <h2 class="mb-0 fw-bold">
-                                {{ invitados | map(attribute='pases_usados') | sum }}
-                            </h2>
-                        </div>
-                        <i class="fas fa-door-open fa-2x opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-
-
-        <div class="row g-4">
-
-            {% if inv.camara_premium %}
-            <div class="col-lg-{% if inv.tiene_modulo_invitados %}6{% else %}12{% endif %}">
-                <div class="card shadow-sm border-0 rounded-4 h-100">
-                    <div
-                        class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
-                        <h5 class="m-0 fw-bold text-dark"><i class="fas fa-camera-retro text-warning me-2"></i>Álbum de
-                            Invitados</h5>
-                        {% if fotos %}
-                        <a href="{{ url_for('invitaciones_clientes.descargar_fotos_cliente') }}"
-                            class="btn btn-dark btn-sm rounded-pill shadow-sm">
-                            <i class="fas fa-download me-1"></i> Descargar Zip
-                        </a>
-                        {% endif %}
-                    </div>
-                    <div class="card-body bg-light rounded-bottom-4 border-top">
-                        {% if fotos %}
-                        <div class="row g-2">
-                            {% for foto in fotos %}
-                            <div class="col-4 col-md-3">
-                                <img src="{{ foto.url }}"
-                                    class="img-fluid rounded shadow-sm"
-                                    loading="lazy"
-                                    style="aspect-ratio: 1; object-fit: cover; width: 100%;">
-                            </div>
-                            {% endfor %}
-                        </div>
-
-                        {% set total_pages = (total_fotos // per_page) + (1 if total_fotos % per_page > 0 else 0) %}
-
-                        {% if page < total_pages %}
-                        <div class="text-center mt-4">
-                            <a href="{{ url_for('invitaciones_clientes.dashboard_cliente', page=page+1) }}"
-                            class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
-                                <i class="fas fa-images me-1"></i> Cargar más fotos
-                            </a>
-                        </div>
-                        {% endif %}
-                        
-                        {% else %}
-                        <div class="text-center py-5">
-                            <div class="mb-3"><i class="fas fa-images fa-3x text-muted opacity-50"></i></div>
-                            <h6 class="text-muted fw-bold">Aún no hay fotos</h6>
-                            <p class="small text-muted mb-0">Las fotos que tomen tus invitados con la cámara virtual
-                                aparecerán aquí.</p>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
+        <ul class="nav nav-pills mb-4 justify-content-center bg-white p-2 rounded-pill shadow-sm" style="max-width: fit-content; margin: 0 auto;">
+            {% if inv.tiene_modulo_invitados %}
+            <li class="nav-item">
+                <button class="nav-link active" onclick="mostrarSeccion('asistencia', this)">
+                    <i class="fas fa-users me-2"></i>Asistencia
+                </button>
+            </li>
+            {% endif %}
             
+            {% if inv.camara_premium %}
+            <li class="nav-item">
+                <button class="nav-link {% if not inv.tiene_modulo_invitados %}active{% endif %}" onclick="mostrarSeccion('camara', this)">
+                    <i class="fas fa-camera-retro me-2"></i>Cámara
+                </button>
+            </li>
             {% endif %}
 
+            {% if 'deseos' in modulos %}
+            <li class="nav-item">
+                <button class="nav-link {% if not inv.tiene_modulo_invitados and not inv.camara_premium %}active{% endif %}" onclick="mostrarSeccion('deseos', this)">
+                    <i class="fas fa-book-open me-2"></i>Mensajes
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+
+
+        <div id="contenedor-secciones">
+            
             {% if inv.tiene_modulo_invitados %}
-            <div class="col-lg-{% if inv.camara_premium %}6{% else %}12{% endif %}">
+            <div id="seccion-asistencia" class="seccion-panel">
+                
+                {% set total_pases = invitados | map(attribute='pases_totales') | sum %}
+                {% set pases_usados = invitados | map(attribute='pases_usados') | sum %}
+                
+                {% set confirmados = invitados | selectattr("estado_asistencia", "equalto", "Confirmado") | list %}
+                {% set pases_confirmados = confirmados | map(attribute='pases_totales') | sum if confirmados else 0 %}
+                
+                {% set declinados = invitados | selectattr("estado_asistencia", "equalto", "Declinado") | list %}
+                {% set pases_declinados = declinados | map(attribute='pases_totales') | sum if declinados else 0 %}
+                
+                {% set pases_pendientes = total_pases - pases_confirmados - pases_declinados %}
+
+                <div class="row g-3 mb-4">
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm rounded-4 border-start border-primary border-4 h-100">
+                            <div class="card-body p-3">
+                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Pases Totales</small>
+                                <h3 class="mb-0 fw-bold text-dark">{{ total_pases }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm rounded-4 border-start border-success border-4 h-100">
+                            <div class="card-body p-3">
+                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Confirmados</small>
+                                <h3 class="mb-0 fw-bold text-success">{{ pases_confirmados }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm rounded-4 border-start border-warning border-4 h-100">
+                            <div class="card-body p-3">
+                                <small class="text-muted text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Por Confirmar</small>
+                                <h3 class="mb-0 fw-bold text-warning">{{ pases_pendientes }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 col-md-3">
+                        <div class="card border-0 shadow-sm rounded-4 border-start border-dark border-4 h-100 bg-dark text-white">
+                            <div class="card-body p-3">
+                                <small class="text-secondary text-uppercase fw-bold" style="font-size: 0.7rem; letter-spacing: 1px;">Ya en Salón</small>
+                                <h3 class="mb-0 fw-bold">{{ pases_usados }}</h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 {% if inv.bloquear_edicion_invitados %}
                 <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center rounded-4 mb-3">
                     <i class="fas fa-lock fa-2x me-3 text-warning"></i>
                     <div>
                         <h6 class="mb-0 fw-bold">Modo Lectura Activo</h6>
-                        <small>Tu plan incluye gestión completa por nuestro equipo. Si necesitas hacer un cambio,
-                            contáctanos.</small>
+                        <small>Tu plan incluye gestión completa por nuestro equipo.</small>
                     </div>
                 </div>
                 {% endif %}
 
-                <div class="card shadow-sm border-0 rounded-4 h-100">
-                    <div
-                        class="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
-                        <h5 class="m-0 fw-bold text-dark"><i class="fas fa-users text-primary me-2"></i>Lista de
-                            Asistencia</h5>
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-header bg-white py-3 border-bottom-0 d-flex justify-content-between align-items-center">
+                        <h5 class="m-0 fw-bold text-dark">Lista de Asistencia</h5>
                         {% if not inv.bloquear_edicion_invitados %}
-                        <button class="btn btn-outline-primary btn-sm rounded-pill fw-bold" data-bs-toggle="modal"
-                            data-bs-target="#modalAgregarInvitado">
+                        <button class="btn btn-outline-primary btn-sm rounded-pill fw-bold" data-bs-toggle="modal" data-bs-target="#modalAgregarInvitado">
                             <i class="fas fa-plus me-1"></i> Agregar
                         </button>
                         {% endif %}
                     </div>
-                    <div class="card-body p-0">
+
+                    <div class="card-body bg-white border-top py-3">
+                        <div class="row g-2">
+                            <div class="col-md-7">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-text bg-light border-0 rounded-start-pill px-3"><i class="fas fa-search text-muted"></i></span>
+                                    <input type="text" id="buscadorInvitados" class="form-control bg-light border-0 rounded-end-pill shadow-none" placeholder="Buscar por nombre..." onkeyup="filtrarTabla()">
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <select id="filtroEstado" class="form-select form-select-sm bg-light border-0 rounded-pill shadow-none fw-bold text-muted" onchange="filtrarTabla()">
+                                    <option value="all">Todos los estados</option>
+                                    <option value="Confirmado">✅ Confirmados</option>
+                                    <option value="Pendiente">⏳ Pendientes</option>
+                                    <option value="Declinado">❌ Declinados</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0 bg-light">
                         <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0">
+                            <table class="table table-hover align-middle mb-0 mobile-card-table">
                                 <thead class="bg-light text-muted small text-uppercase">
                                     <tr>
-                                        <th class="ps-4">Familia / Invitado</th>
+                                        <th class="ps-4 py-3">Familia / Invitado</th>
                                         <th class="text-center">Mesa</th>
-                                        <th class="text-center">Confirmación</th>
+                                        <th class="text-center">Estatus</th>
                                         <th class="text-center">Pases</th>
-                                        <th class="text-center">En Salón</th>
+                                        <th class="text-center">Ingreso</th>
                                         {% if not inv.bloquear_edicion_invitados %}
-                                        <th class="text-end pe-4">Acciones</th>
+                                        <th class="text-center pe-4">Acciones</th>
                                         {% endif %}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for invitado in invitados %}
-                                    <tr>
-                                        <td class="ps-4">
-                                            <div class="fw-bold text-dark">{{ invitado.nombre_familia }}</div>
+                                    {% set estado_limpio = invitado.estado_asistencia if invitado.estado_asistencia else 'Pendiente' %}
+                                    <tr class="fila-invitado" data-nombre="{{ invitado.nombre_familia|lower }}" data-estado="{{ estado_limpio }}">
+                                        
+                                        <td class="ps-md-4" data-label="Invitado">
+                                            <div class="fw-bold text-dark text-truncate" style="max-width: 100%; font-size: 0.95rem;">{{ invitado.nombre_familia }}</div>
                                             {% if invitado.telefono %}
-                                                <div class="mt-1">
+                                                <div class="mt-1 d-flex align-items-center gap-2">
                                                     <a href="https://wa.me/{{ invitado.telefono|replace('+', '')|replace(' ', '') }}?text=¡Hola%20*{{ invitado.nombre_familia|urlencode }}*!%20💍%0A%0ANos%20encantaría%20que%20nos%20acompañen%20en%20nuestro%20gran%20día.%0A%0APueden%20ver%20toda%20la%20información%20y%20su%20pase%20de%20acceso%20aquí:%0A{{ (request.host_url + 'invitacion/' + inv.slug + '?pass=' + invitado.codigo_qr_unique)|urlencode }}"
-                                                        target="_blank" class="btn btn-sm btn-outline-success rounded-pill py-0 px-2" style="font-size: 0.75rem;">
-                                                        <i class="fab fa-whatsapp me-1"></i> Enviar Pase
+                                                        target="_blank" class="btn btn-sm btn-outline-success rounded-pill py-0 px-2" style="font-size: 0.7rem;">
+                                                        <i class="fab fa-whatsapp"></i> <span class="d-none d-sm-inline ms-1">Enviar</span>
                                                     </a>
-                                                    <small class="text-muted ms-1" style="font-size: 0.7rem;">{{ invitado.telefono }}</small>
+                                                    <small class="text-muted d-none d-sm-inline" style="font-size: 0.7rem;">{{ invitado.telefono }}</small>
                                                 </div>
-                                                {% else %}
-                                                <small class="text-muted italic">Sin teléfono</small>
+                                            {% else %}
+                                                <small class="text-muted fst-italic" style="font-size: 0.7rem;">Sin teléfono</small>
                                             {% endif %}
                                         </td>
-                                        <td class="text-center">
-                                            <div
-                                                style="width: 35px; height: 35px; line-height: 33px; border: 2px solid var(--bs-warning); color: #333; border-radius: 50%; margin: 0 auto; font-weight: bold; font-size: 0.9rem; background: white;">
-                                                {{ invitado.mesa if invitado.mesa and invitado.mesa != '0' else '—' }}
+                                        
+                                        <td class="text-center" data-label="Mesa">
+                                            <div style="width: 32px; height: 32px; line-height: 28px; border: 2px solid var(--bs-warning); color: #333; border-radius: 50%; margin: 0 auto; font-weight: bold; font-size: 0.85rem; background: white;">
+                                                {{ invitado.mesa if invitado.mesa and invitado.mesa|string != '0' else '—' }}
                                             </div>
-                                            <small class="text-muted" style="font-size: 0.6rem; text-transform: uppercase;">Mesa</small>
                                         </td>
-                                        <td class="text-center">
+                                        
+                                        <td class="text-center" data-label="Estatus">
                                             {% if invitado.estado_asistencia == 'Confirmado' %}
                                                 <span class="badge bg-success rounded-pill"><i class="fas fa-check me-1"></i>Sí</span>
                                             {% elif invitado.estado_asistencia == 'Declinado' %}
                                                 <span class="badge bg-danger rounded-pill"><i class="fas fa-times me-1"></i>No</span>
                                             {% else %}
-                                                <span class="badge bg-warning text-dark rounded-pill">Pendiente</span>
+                                                <span class="badge bg-warning text-dark rounded-pill">Pend.</span>
                                             {% endif %}
                                         </td>
-                                        <td class="text-center">{{ invitado.pases_totales }}</td>
-                                        <td class="text-center">
+                                        
+                                        <td class="text-center fw-bold" data-label="Pases">{{ invitado.pases_totales }}</td>
+                                        
+                                        <td class="text-center" data-label="Ingreso">
                                             {% if invitado.pases_usados >= invitado.pases_totales %}
                                             <span class="text-success fw-bold small"><i class="fas fa-check-double me-1"></i>Listo</span>
                                             {% elif invitado.pases_usados > 0 %}
@@ -210,83 +296,63 @@
                                             <span class="text-muted small">No llegó</span>
                                             {% endif %}
                                         </td>
+                                        
                                         {% if not inv.bloquear_edicion_invitados %}
-                                        <td class="text-end pe-4">
-                                            <button class="btn btn-sm btn-light text-primary rounded-circle"
-                                                data-bs-toggle="modal" data-bs-target="#modalEditar{{ invitado.id }}"
-                                                title="Editar">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <form
-                                                action="{{ url_for('invitaciones_clientes.eliminar_invitado_cliente', pase_id=invitado.id) }}"
-                                                method="POST" class="d-inline"
-                                                onsubmit="return confirm('¿Eliminar a este invitado?');">
-                                                <button type="submit"
-                                                    class="btn btn-sm btn-light text-danger rounded-circle ms-1"
-                                                    title="Eliminar">
-                                                    <i class="fas fa-trash"></i>
+                                        <td class="text-md-center pe-md-4">
+                                            <div class="d-flex justify-content-end justify-content-md-center gap-2">
+                                                <button class="btn btn-sm btn-white border text-primary rounded-circle shadow-sm" data-bs-toggle="modal" data-bs-target="#modalEditar{{ invitado.id }}" title="Editar">
+                                                    <i class="fas fa-edit"></i>
                                                 </button>
-                                            </form>
+                                                <form action="{{ url_for('invitaciones_clientes.eliminar_invitado_cliente', pase_id=invitado.id) }}" method="POST" class="m-0" onsubmit="return confirm('¿Eliminar a este invitado?');">
+                                                    <button type="submit" class="btn btn-sm btn-white border text-danger rounded-circle shadow-sm" title="Eliminar">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
                                         </td>
                                         {% endif %}
                                     </tr>
 
                                     {% if not inv.bloquear_edicion_invitados %}
-                                    <div class="modal fade" id="modalEditar{{ invitado.id }}" tabindex="-1"
-                                        aria-hidden="true">
+                                    <div class="modal fade" id="modalEditar{{ invitado.id }}" tabindex="-1" aria-hidden="true">
                                         <div class="modal-dialog modal-dialog-centered">
                                             <div class="modal-content border-0 rounded-4 shadow">
                                                 <div class="modal-header border-bottom-0 pb-0">
                                                     <h5 class="modal-title fw-bold">Editar Invitado</h5>
-                                                    <button type="button" class="btn-close"
-                                                        data-bs-dismiss="modal"></button>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                 </div>
                                                 <div class="modal-body pt-2 text-start">
-                                                    <form
-                                                        action="{{ url_for('invitaciones_clientes.editar_invitado_cliente', pase_id=invitado.id) }}"
-                                                        method="POST">
+                                                    <form action="{{ url_for('invitaciones_clientes.editar_invitado_cliente', pase_id=invitado.id) }}" method="POST">
                                                         <div class="mb-3">
-                                                            <label class="form-label small fw-bold">Nombre /
-                                                                Familia</label>
-                                                            <input type="text" name="nombre_familia"
-                                                                class="form-control bg-light border-0"
-                                                                value="{{ invitado.nombre_familia }}" required>
+                                                            <label class="form-label small fw-bold">Nombre / Familia</label>
+                                                            <input type="text" name="nombre_familia" class="form-control bg-light border-0" value="{{ invitado.nombre_familia }}" required>
                                                         </div>
                                                         <div class="row g-3 mb-4">
                                                             <div class="col-4">
                                                                 <label class="form-label small fw-bold">Pases</label>
-                                                                <input type="number" name="pases_totales"
-                                                                    class="form-control bg-light border-0"
-                                                                    value="{{ invitado.pases_totales }}" min="1"
-                                                                    required>
+                                                                <input type="number" name="pases_totales" class="form-control bg-light border-0" value="{{ invitado.pases_totales }}" min="1" required>
                                                             </div>
                                                             <div class="col-4">
                                                                 <label class="form-label small fw-bold"># Mesa</label>
-                                                                <input type="text" name="mesa"
-                                                                    class="form-control bg-light border-0"
-                                                                    value="{{ invitado.mesa if invitado.mesa else '0' }}">
+                                                                <input type="text" name="mesa" class="form-control bg-light border-0" value="{{ invitado.mesa if invitado.mesa else '0' }}">
                                                             </div>
                                                             <div class="col-4">
                                                                 <label class="form-label small fw-bold">Teléfono</label>
-                                                                <input type="text" name="telefono"
-                                                                    class="form-control bg-light border-0"
-                                                                    value="{{ invitado.telefono if invitado.telefono else '' }}">
+                                                                <input type="text" name="telefono" class="form-control bg-light border-0" value="{{ invitado.telefono if invitado.telefono else '' }}">
                                                             </div>
                                                         </div>
-                                                        <button type="submit"
-                                                            class="btn btn-primary w-100 rounded-pill py-2">Guardar
-                                                            Cambios</button>
+                                                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 shadow-sm">Guardar Cambios</button>
                                                     </form>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
                                     {% endif %}
+                                    
                                     {% else %}
-                                    <tr>
-                                        <td colspan="6" class="text-center py-5 text-muted">
-                                            <div class="mb-2"><i class="fas fa-clipboard-list fa-2x opacity-50"></i>
-                                            </div>
+                                    <tr id="emptyStateRow">
+                                        <td colspan="6" class="text-center py-5 text-muted" style="width: 100%; display: block; border: none;">
+                                            <div class="mb-2"><i class="fas fa-clipboard-list fa-2x opacity-50"></i></div>
                                             No hay invitados registrados todavía.
                                         </td>
                                     </tr>
@@ -295,12 +361,102 @@
                             </table>
                         </div>
                     </div>
+                    
+                    <div class="card-footer bg-white border-top py-3 d-flex justify-content-between align-items-center flex-wrap gap-3 rounded-bottom-4">
+                        <small class="text-muted fw-bold" id="infoPaginacion">Cargando...</small>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0" id="paginacionLista"></ul>
+                        </nav>
+                    </div>
                 </div>
             </div>
             {% endif %}
 
-        </div>
-    </div>
+            {% if inv.camara_premium %}
+            <div id="seccion-camara" class="seccion-panel" style="{% if inv.tiene_modulo_invitados %}display: none;{% endif %}">
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center border-bottom-0">
+                        <h5 class="m-0 fw-bold text-dark"><i class="fas fa-camera-retro text-warning me-2"></i>Álbum de Invitados</h5>
+                        {% if fotos %}
+                        <a href="{{ url_for('invitaciones_clientes.descargar_fotos_cliente') }}" class="btn btn-dark btn-sm rounded-pill shadow-sm">
+                            <i class="fas fa-download me-1"></i> Descargar Todo
+                        </a>
+                        {% endif %}
+                    </div>
+                    <div class="card-body bg-light rounded-bottom-4 border-top">
+                        {% if fotos %}
+                        
+                        <div class="row g-2" id="galeria-fotos">
+                            {% for foto in fotos %}
+                            <div class="col-4 col-md-3 col-lg-2">
+                                <img src="{{ foto.url }}" class="img-fluid rounded shadow-sm" loading="lazy" style="aspect-ratio: 1; object-fit: cover; width: 100%;">
+                            </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% set total_pages = (total_fotos // per_page) + (1 if total_fotos % per_page > 0 else 0) %}
+                        {% if page < total_pages %}
+                        <div class="text-center mt-4" id="contenedor-btn-cargar">
+                            <button type="button" onclick="cargarMasFotos()" data-siguiente="{{ page + 1 }}" data-total="{{ total_pages }}" id="btnCargarMas" class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
+                                <i class="fas fa-images me-1"></i> Cargar más
+                            </button>
+                        </div>
+                        {% endif %}
+                        
+                        {% else %}
+                        <div class="text-center py-5">
+                            <div class="mb-3"><i class="fas fa-images fa-3x text-muted opacity-50"></i></div>
+                            <h6 class="text-muted fw-bold">Aún no hay fotos</h6>
+                            <p class="small text-muted mb-0">Las fotos que tomen tus invitados aparecerán aquí.</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if 'deseos' in modulos %}
+            <div id="seccion-deseos" class="seccion-panel" style="{% if inv.tiene_modulo_invitados or inv.camara_premium %}display: none;{% endif %}">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h4 class="fw-bold m-0 text-dark"><i class="fas fa-book-open text-info me-2"></i>Libro de Visitas</h4>
+                    <span class="badge bg-primary rounded-pill fs-6 px-3 shadow-sm">{{ deseos|length }} Mensajes</span>
+                </div>
+
+                {% if deseos %}
+                    <div class="row g-4">
+                    {% for deseo in deseos %}
+                        <div class="col-md-6 col-lg-4">
+                            <div class="card h-100 border-0 shadow-sm rounded-4 bg-white" style="transition: transform 0.2s; cursor: default;" onmouseover="this.style.transform='translateY(-5px)'" onmouseout="this.style.transform='translateY(0)'">
+                                <div class="card-body p-4 d-flex flex-column">
+                                    <i class="fas fa-quote-left text-primary opacity-25 fa-2x mb-3"></i>
+                                    <p class="text-dark fst-italic mb-4" style="font-size: 1.05rem;">"{{ deseo.mensaje }}"</p>
+                                    
+                                    <div class="d-flex justify-content-between align-items-end border-top pt-3 mt-auto">
+                                        <span class="fw-bold text-dark">
+                                            <i class="fas fa-user-circle text-muted me-2"></i>{{ deseo.nombre }}
+                                        </span>
+                                        <small class="text-muted" style="font-size: 0.75rem;">{{ deseo.fecha[:10] }}</small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="card border-0 shadow-sm rounded-4 bg-white text-center py-5">
+                        <div class="card-body">
+                            <i class="fas fa-envelope-open-text fa-4x text-muted opacity-25 mb-3"></i>
+                            <h5 class="text-dark fw-bold">Aún no hay mensajes</h5>
+                            <p class="text-muted">¡Comparte tu invitación! Los buenos deseos de tus invitados aparecerán aquí.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+        </div> 
+    </div> 
+    
     <div class="modal fade" id="modalAgregarInvitado" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -312,14 +468,12 @@
                     <form action="{{ url_for('invitaciones_clientes.agregar_invitado_cliente') }}" method="POST">
                         <div class="mb-3">
                             <label class="form-label small fw-bold">Nombre / Familia</label>
-                            <input type="text" name="nombre_familia" class="form-control bg-light border-0"
-                                placeholder="Ej: Familia Tapia Reyes" required>
+                            <input type="text" name="nombre_familia" class="form-control bg-light border-0" placeholder="Ej: Familia Tapia Reyes" required>
                         </div>
                         <div class="row g-3 mb-4">
                             <div class="col-4">
                                 <label class="form-label small fw-bold">Pases</label>
-                                <input type="number" name="pases_totales" class="form-control bg-light border-0"
-                                    value="2" min="1" required>
+                                <input type="number" name="pases_totales" class="form-control bg-light border-0" value="2" min="1" required>
                             </div>
                             <div class="col-4">
                                 <label class="form-label small fw-bold"># Mesa</label>
@@ -327,19 +481,186 @@
                             </div>
                             <div class="col-4">
                                 <label class="form-label small fw-bold">WhatsApp</label>
-                                <input type="text" name="telefono" class="form-control bg-light border-0"
-                                    placeholder="81...">
+                                <input type="text" name="telefono" class="form-control bg-light border-0" placeholder="81...">
                             </div>
                         </div>
-                        <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 shadow-sm">Guardar en la
-                            Lista</button>
+                        <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 shadow-sm">Guardar en la Lista</button>
                     </form>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
 
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <script>
+        // --- LÓGICA DE LAS PESTAÑAS (TABS) ---
+        function mostrarSeccion(idSeccion, botonPresionado) {
+            // 1. Ocultar todas las secciones
+            document.querySelectorAll('.seccion-panel').forEach(function(seccion) {
+                seccion.style.display = 'none';
+            });
+            
+            // 2. Mostrar la sección seleccionada
+            const seccionAMostrar = document.getElementById('seccion-' + idSeccion);
+            if (seccionAMostrar) {
+                seccionAMostrar.style.display = 'block';
+            }
+
+            // 3. Quitar clase 'active' de todos los botones y ponerla en el presionado
+            document.querySelectorAll('.nav-pills .nav-link').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            botonPresionado.classList.add('active');
+        }
+        
+        // --- NUEVO: CARGA INFINITA DE FOTOS (AJAX) ---
+        async function cargarMasFotos() {
+            const btn = document.getElementById('btnCargarMas');
+            const galeria = document.getElementById('galeria-fotos');
+            
+            if(!btn || !galeria) return;
+            
+            const paginaSiguiente = parseInt(btn.getAttribute('data-siguiente'));
+            const totalPaginas = parseInt(btn.getAttribute('data-total'));
+            
+            // Cambiar estado visual del botón
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Cargando...';
+            btn.disabled = true;
+
+            try {
+                // Hacer petición a una ruta especial que devuelva JSON con las fotos
+                // (Asegúrate de que tu backend esté configurado para devolver JSON si detecta fetch/AJAX)
+                const response = await fetch(`{{ url_for('invitaciones_clientes.dashboard_cliente') }}?page=${paginaSiguiente}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                });
+                
+                const htmlTexto = await response.text();
+                
+                // Parsear la respuesta y extraer solo las imágenes nuevas
+                const parser = new DOMParser();
+                const htmlDOM = parser.parseFromString(htmlTexto, 'text/html');
+                const fotosNuevas = htmlDOM.querySelectorAll('#galeria-fotos .col-4');
+                
+                // Inyectar al final de la galería actual
+                fotosNuevas.forEach(foto => {
+                    galeria.appendChild(foto);
+                });
+                
+                // Actualizar contadores
+                if (paginaSiguiente >= totalPaginas) {
+                    document.getElementById('contenedor-btn-cargar').style.display = 'none';
+                } else {
+                    btn.setAttribute('data-siguiente', paginaSiguiente + 1);
+                    btn.innerHTML = '<i class="fas fa-images me-1"></i> Cargar más';
+                    btn.disabled = false;
+                }
+                
+            } catch(e) {
+                console.error('Error cargando fotos:', e);
+                btn.innerHTML = 'Error. Intentar de nuevo';
+                btn.disabled = false;
+            }
+        }
+
+
+        // --- LÓGICA DE TABLA DE INVITADOS ---
+        const filasPorPagina = 10;
+        let paginaActual = 1;
+        let filasFiltradas = [];
+
+        function filtrarTabla() {
+            const buscador = document.getElementById('buscadorInvitados');
+            if(!buscador) return; 
+            
+            const busqueda = buscador.value.toLowerCase();
+            const filtro = document.getElementById('filtroEstado').value;
+            const filas = document.querySelectorAll('.fila-invitado');
+            
+            filasFiltradas = [];
+
+            filas.forEach(fila => {
+                const nombre = fila.getAttribute('data-nombre');
+                const estado = fila.getAttribute('data-estado');
+                
+                const coincideBusqueda = nombre.includes(busqueda);
+                const coincideFiltro = (filtro === 'all') || (estado === filtro);
+                
+                if (coincideBusqueda && coincideFiltro) {
+                    filasFiltradas.push(fila);
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+            
+            paginaActual = 1;
+            renderizarPaginacion();
+        }
+
+        function renderizarPaginacion() {
+            const total = filasFiltradas.length;
+            const totalPaginas = Math.ceil(total / filasPorPagina);
+            const ul = document.getElementById('paginacionLista');
+            const info = document.getElementById('infoPaginacion');
+            
+            if(!ul || !info) return;
+
+            ul.innerHTML = ''; 
+            
+            if (total === 0) {
+                info.textContent = 'No se encontraron invitados.';
+                return;
+            }
+            
+            const inicio = (paginaActual - 1) * filasPorPagina;
+            const fin = Math.min(inicio + filasPorPagina, total);
+            
+            info.innerHTML = `Mostrando <span class="text-dark">${inicio + 1} - ${fin}</span> de ${total}`;
+            
+            filasFiltradas.forEach((fila, index) => {
+                if (index >= inicio && index < fin) {
+                    fila.style.display = ''; 
+                } else {
+                    fila.style.display = 'none';
+                }
+            });
+            
+            if (totalPaginas > 1) {
+                let html = '';
+                html += `<li class="page-item ${paginaActual === 1 ? 'disabled' : ''}">
+                            <button class="page-link shadow-sm" onclick="cambiarPagina(${paginaActual - 1})"><i class="fas fa-chevron-left text-muted"></i></button>
+                         </li>`;
+                
+                for (let i = 1; i <= totalPaginas; i++) {
+                    html += `<li class="page-item ${paginaActual === i ? 'active' : ''}">
+                                <button class="page-link shadow-sm" onclick="cambiarPagina(${i})">${i}</button>
+                             </li>`;
+                }
+                
+                html += `<li class="page-item ${paginaActual === totalPaginas ? 'disabled' : ''}">
+                            <button class="page-link shadow-sm" onclick="cambiarPagina(${paginaActual + 1})"><i class="fas fa-chevron-right text-muted"></i></button>
+                         </li>`;
+                         
+                ul.innerHTML = html;
+            }
+        }
+
+        function cambiarPagina(page) {
+            paginaActual = page;
+            renderizarPaginacion();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (document.querySelectorAll('.fila-invitado').length > 0) {
+                filtrarTabla();
+            } else {
+                const infoE = document.getElementById('infoPaginacion');
+                if(infoE) infoE.style.display = 'none';
+            }
+        });
+    </script>
+</body>
 </html>

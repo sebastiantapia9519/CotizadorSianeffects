@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css" />
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <style id="core-styles">
     /* =========================================
@@ -156,7 +157,7 @@
         align-items: center;
         justify-content: center;
         color: var(--bg-color);
-        z-index: 1000;
+        z-index: 90;
         cursor: pointer;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         animation: pulse 2s infinite;
@@ -306,7 +307,9 @@
     
     .tooltip-sian {
         position: absolute;
-        top: 15px;
+        bottom: 100%;
+        left: 50%;
+        margin-bottom: 15px; 
         background: #b5986d;
         color: #ffffff;
         padding: 6px 18px;
@@ -334,8 +337,8 @@
     }
     
     @keyframes float-tooltip {
-        0%, 100% { transform: translateY(0); }
-        50% { transform: translateY(-5px); }
+        0%, 100% { transform: translateX(-50%) translateY(0); }
+        50% { transform: translateX(-50%) translateY(-5px); }
     }
     
     .iniciales-gigantes {
@@ -744,7 +747,6 @@
     }
 
     .card-historia {
-        /* ¡SIN FONDO NI SOMBRAS AQUÍ PARA EVITAR DOBLE CAJA! */
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -760,7 +762,7 @@
         aspect-ratio: 4/3;
         object-fit: cover;
         border-radius: 12px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15); /* La sombra solo va en la foto */
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15); 
         margin-bottom: 20px;
     }
 
@@ -785,17 +787,15 @@
         letter-spacing: 2px;
     }
 
-    /* Controles de navegación de la historia */
     .swiper-button-prev, .swiper-button-next {
         color: var(--color-acento) !important;
-        transform: scale(0.6); /* Flechas más elegantes y pequeñas */
+        transform: scale(0.6); 
     }
 
     .swiper-pagination-bullet {
         background: var(--color-acento) !important;
     }
 
-    /* Adaptación a celular */
     @media (max-width: 768px) {
         .historia-layout {
             flex-direction: column;
@@ -804,8 +804,70 @@
             margin-bottom: 10px;
         }
         .swiper-button-prev, .swiper-button-next {
-            top: 35%; /* Centra las flechas con la foto en celular */
+            top: 35%; 
         }
+    }
+
+    .dropdown-menu-center {
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) !important;
+    }
+    .dropdown-item:active {
+        background-color: var(--bs-primary);
+    }
+
+    .btn-calendar-premium {
+        background: var(--card-bg);
+        color: var(--color-oro); /* Usa el color de acento dinámico de tu invitación */
+        border: 1px solid rgba(255,255,255,0.3);
+        padding: 12px 28px;
+        border-radius: 15px; /* Bordes suaves como tus contadores */
+        font-family: var(--font-body);
+        font-weight: 600;
+        font-size: 0.9rem;
+        letter-spacing: 0.5px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+        backdrop-filter: blur(4px);
+        transition: all 0.3s ease;
+    }
+
+    .btn-calendar-premium:hover, .btn-calendar-premium:focus {
+        background: var(--card-bg);
+        color: var(--color-oro);
+        transform: translateY(-3px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+        border-color: var(--color-oro);
+    }
+
+    /* Centrado del menú en móvil */
+    .dropdown-menu-center {
+        left: 50% !important;
+        right: auto !important;
+        transform: translateX(-50%) translateY(10px) !important;
+        background: var(--card-bg);
+        backdrop-filter: blur(10px);
+    }
+
+    .dropdown-item {
+        color: var(--text-color);
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    .dropdown-item:hover {
+        background: rgba(150, 150, 150, 0.1);
+        color: var(--color-oro);
+    }
+
+    /* Animación de entrada sutil */
+    .animate-dropdown {
+        animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
+        to { opacity: 1; transform: translateX(-50%) translateY(10px); }
     }
 
     
@@ -859,6 +921,7 @@
     {% endif %}
 
     <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">        
+        
         {% for item in config %}
         
         {% if item == 'hero' %}
@@ -913,9 +976,29 @@
                     <div class="time-label">Seg</div>
                 </div>
             </div>
+            <div class="text-center mt-5" data-aos="fade-up" data-aos-delay="200">
+    <div class="dropdown d-inline-block">
+        <button class="btn btn-calendar-premium dropdown-toggle" 
+                type="button" id="calendarMenu" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="far fa-calendar-check me-2"></i>Añadir a mi Agenda
+        </button>
+        <ul class="dropdown-menu dropdown-menu-center shadow-lg border-0 rounded-4 p-2 animate-dropdown" aria-labelledby="calendarMenu">
+            <li><a class="dropdown-item rounded-3 py-2" href="javascript:void(0)" onclick="addToCalendar('google')">
+                <i class="fab fa-google text-danger me-2"></i> Google Calendar</a>
+            </li>
+            <li><a class="dropdown-item rounded-3 py-2" href="javascript:void(0)" onclick="addToCalendar('outlook')">
+                <i class="fab fa-windows text-primary me-2"></i> Outlook / Office 365</a>
+            </li>
+            <li><hr class="dropdown-divider opacity-50"></li>
+            <li><a class="dropdown-item rounded-3 py-2" href="javascript:void(0)" onclick="addToCalendar('ics')">
+                <i class="fas fa-apple-alt text-dark me-2"></i> Apple / iCal (.ics)</a>
+            </li>
+        </ul>
+    </div>
+</div>
         </section>
 
-{% elif item == 'historia' and historia_lista %}
+        {% elif item == 'historia' and historia_lista %}
         <section data-aos="fade-up" style="max-width: 1000px;">
             <div class="historia-container">
                 <div class="historia-layout">
@@ -1034,7 +1117,8 @@
             </div>
         </section>
 
-        {% elif item == 'pases' %}
+        {% elif item == 'rsvp' %}
+            
             {% if datos_pase %}
             <section data-aos="fade-up">
                 <div class="ticket-container">
@@ -1045,7 +1129,7 @@
                         <span class="ticket-value" style="font-size: 1.5rem; font-weight: bold;">
                             {{ datos_pase['nombre_familia'] }}
                         </span>
-                        </div>
+                    </div>
 
                     <div class="row align-items-center" style="display: flex; flex-wrap: wrap;">
                         <div class="col-md-5 mb-4 mb-md-0 qr-side" style="text-align: center;">
@@ -1066,7 +1150,7 @@
                                 </div>
                                 <div>
                                     <span class="ticket-label">Mesa</span>
-                                    <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span>
+                                    <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] and datos_pase['mesa']|string != '0' else 'Por asignar' }}</span>
                                 </div>
                                 <div style="grid-column: span 2;">
                                     <span class="ticket-label">Estado</span>
@@ -1077,8 +1161,8 @@
                                     {% endif %}
                                 </div>
                             </div>
-                            </div>
-                            </div>
+                        </div>
+                    </div>
 
                     {% if inv['tiene_modulo_invitados'] %}
                     <div style="margin-top: 40px; border-top: 1px dashed var(--color-acento); padding-top: 30px;">
@@ -1099,7 +1183,19 @@
                     <p class="mt-4 mb-0" style="text-align: center; font-style: italic; font-size: 0.8rem; opacity: 0.6;">
                         "Presenta este código digital al llegar a la recepción."
                     </p>
-                    </div>
+                </div>
+            </section>
+            
+            {% else %}
+            <section data-aos="fade-up" style="padding-bottom: 100px;">
+                <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 20px;">Asistencia</h2>
+                <p class="mb-4" style="opacity: 0.8;">Me encantaría contar con tu presencia.</p>
+                {% if datos['telefono_rsvp'] %}
+                    <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia%20a%20los%20XV%20años..."
+                        target="_blank" class="btn-boda" style="background: #25D366; border-color: #25D366; color: white;">
+                        <i class="fab fa-whatsapp me-2"></i> Confirmar por WhatsApp
+                    </a>
+                {% endif %}
             </section>
             {% endif %}
         
@@ -1164,7 +1260,7 @@
             </div>
         </section>
 
-        {% if 'camara' in config %}
+        {% elif item == 'camara' and inv['camara_premium'] %}
         <section data-aos="fade-up">
             <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 15px;">Captura el Momento</h2>
             <p class="mb-4" style="opacity: 0.8;">Ayúdame a documentar este día tan especial. Te regalo una cámara
@@ -1175,12 +1271,11 @@
                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id'], _external=True) }}"
                     alt="QR Cámara" style="border-radius: 10px; border: 5px solid white; margin-bottom: 15px;">
 
-                <a href="{{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id']) }}" class="btn-boda">
+                <button type="button" class="btn-boda" data-bs-toggle="modal" data-bs-target="#modalAvisoPrivacidad">
                     <i class="fas fa-camera-retro me-2"></i> Usar Cámara Desechable
-                </a>
+                </button>
             </div>
         </section>
-        {% endif %}
 
         {% elif item == 'galeria' and fotos %}
         <section data-aos="fade-up" style="max-width: 1000px;">
@@ -1245,20 +1340,6 @@
             </div>
         </section>
 
-        {% elif item == 'rsvp' %}
-            {% if not datos_pase %}
-            <section data-aos="fade-up" style="padding-bottom: 100px;">
-                <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 20px;">Asistencia</h2>
-                <p class="mb-4" style="opacity: 0.8;">Me encantaría contar con tu presencia.</p>
-                {% if datos['telefono_rsvp'] %}
-                    <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia%20a%20los%20XV%20años..."
-                        target="_blank" class="btn-boda" style="background: #25D366; border-color: #25D366; color: white;">
-                        <i class="fab fa-whatsapp me-2"></i> Confirmar por WhatsApp
-                    </a>
-                {% endif %}
-            </section>
-        {% endif %}
-
         {% elif item == 'frase_final' and inv['frase_final'] %}
         <section data-aos="fade-up" class="text-center" style="padding: 100px 20px;">
             <div style="color: var(--color-acento); font-size: 1.5rem; margin-bottom: 25px; opacity: 0.6;">
@@ -1291,9 +1372,45 @@
         </footer>
     </div>
 
+    <div class="modal fade" id="modalAvisoPrivacidad" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; background: var(--bg-color); color: var(--text-color);">
+                <div class="modal-header border-bottom-0 pb-0">
+                    <h5 class="modal-title fw-bold" style="font-family: var(--font-title); color: var(--color-acento);">
+                        <i class="fas fa-shield-alt me-2"></i>Aviso de Privacidad
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(var(--text-color) == '#333333' ? 0 : 1);"></button>
+                </div>
+                <div class="modal-body small" style="font-family: var(--font-body); line-height: 1.6; opacity: 0.9;">
+                    <p>Al utilizar la función de <strong>Cámara de Invitados</strong>, aceptas lo siguiente:</p>
+                    <ul style="padding-left: 20px; margin-bottom: 0;">
+                        <li class="mb-2"><strong>Uso de imagen:</strong> Otorgas permiso a la Quinceañera y a su familia para visualizar, descargar y conservar las fotografías que subas.</li>
+                        <li class="mb-2"><strong>Almacenamiento:</strong> Tus imágenes serán procesadas y almacenadas temporalmente en nuestra infraestructura segura.</li>
+                        <li class="mb-2"><strong>Vigencia:</strong> Todas las fotografías se eliminarán permanentemente de nuestros servidores 45 días después de la fecha del evento.</li>
+                        <li><strong>Responsabilidad:</strong> SianEffects y los organizadores se reservan el derecho de eliminar contenido inapropiado.</li>
+                    </ul>
+                </div>
+                <div class="modal-footer border-top-0 pt-0 d-flex flex-column gap-2">
+                    <div class="form-check text-start w-100 mb-2">
+                        <input class="form-check-input" type="checkbox" id="checkAceptoPrivacidad">
+                        <label class="form-check-label fw-bold" for="checkAceptoPrivacidad" style="font-size: 0.85rem; cursor: pointer;">
+                            He leído y acepto los términos.
+                        </label>
+                    </div>
+                    <a href="{{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id']) }}" 
+                       id="btnContinuarCamara" 
+                       class="btn-boda w-100 text-center" 
+                       style="background: #e9ecef; color: #adb5bd; border-color: transparent; pointer-events: none;">
+                        Abrir Cámara <i class="fas fa-arrow-right ms-2"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -1322,18 +1439,17 @@
             content.style.opacity = '1';
 
             setTimeout(() => {
-           // INICIALIZAR EL NUEVO SWIPER DE HISTORIA DE XV
                 if(document.querySelector('.swiper-historia')) {
                     new Swiper(".swiper-historia", {
                         observer: true,
                         observeParents: true,
-                        allowTouchMove: false, // 🚫 ESTO BLOQUEA EL SWIPE
+                        allowTouchMove: false,
                         slidesPerView: 1, 
                         spaceBetween: 30, 
                         loop: false, 
                         navigation: {
-                            nextEl: ".swiper-button-next", // Asegúrate de que apunte aquí
-                            prevEl: ".swiper-button-prev", // Asegúrate de que apunte aquí
+                            nextEl: ".swiper-button-next", 
+                            prevEl: ".swiper-button-prev", 
                         },
                         pagination: {
                             el: ".swiper-pagination",
@@ -1345,7 +1461,7 @@
                         }
                     });
                 }
-                // SWIPER DE BUENOS DESEOS
+                
                 const swiperDeseos = document.querySelector('.swiper-deseos');
                 if(swiperDeseos) {
                     const progressCircle = swiperDeseos.querySelector(".autoplay-progress svg");
@@ -1418,6 +1534,29 @@
             }
         }
 
+        document.addEventListener('DOMContentLoaded', function() {
+            const checkPrivacidad = document.getElementById('checkAceptoPrivacidad');
+            const btnContinuar = document.getElementById('btnContinuarCamara');
+
+            if (checkPrivacidad && btnContinuar) {
+                checkPrivacidad.addEventListener('change', function() {
+                    if (this.checked) {
+                        btnContinuar.style.pointerEvents = 'auto';
+                        btnContinuar.style.opacity = '1';
+                        btnContinuar.style.background = 'var(--color-acento)';
+                        btnContinuar.style.color = 'var(--bg-color)';
+                        btnContinuar.style.borderColor = 'var(--color-acento)';
+                    } else {
+                        btnContinuar.style.pointerEvents = 'none';
+                        btnContinuar.style.opacity = '1';
+                        btnContinuar.style.background = '#e9ecef';
+                        btnContinuar.style.color = '#adb5bd';
+                        btnContinuar.style.borderColor = 'transparent';
+                    }
+                });
+            }
+        });
+
         function confirmarAsistencia(invitadoId, estado) {
             fetch(`/api/invitados/${invitadoId}/confirmar`, {  
                 method: 'POST',
@@ -1437,7 +1576,7 @@
                             particleCount: 150,
                             spread: 80,
                             origin: { y: 0.6 },
-                            colors: ['#ff007f', '#D4AF37', '#ffffff'] // Colores más festivos
+                            colors: ['#ff007f', '#D4AF37', '#ffffff'] 
                         });
                         
                         Swal.fire({
@@ -1514,6 +1653,47 @@
                 }
             });
         }
+
+    function addToCalendar(type) {
+    // Obtenemos los datos dinámicos de tu invitación
+    const eventName = "{{ datos['novios'] }}";
+    const eventSlug = "{{ inv['slug'] }}";
+    
+    // Formateamos la fecha para el calendario (Quitar guiones y puntos)
+    // Asumimos que fecha_evento viene como 'YYYY-MM-DD HH:MM'
+    let rawDate = "{{ inv['fecha_evento'] }}".replace(/[- :]/g, ""); 
+    const startDate = rawDate.substring(0, 12) + "00"; // YYYYMMDDTHHMMSS
+    
+    // Creamos una fecha de fin (3 horas después por default)
+    const eventData = {
+        title: `Evento: ${eventName}`,
+        description: `¡Te esperamos! Puedes ver la invitación aquí: ${window.location.origin}/invitacion/${eventSlug}`,
+        location: "{{ datos['maps_fiesta'] or 'Por confirmar' }}",
+        start: startDate,
+        end: startDate // Google ajusta si son iguales, pero puedes sumarle tiempo en JS si prefieres
+    };
+
+    const title = encodeURIComponent(eventData.title);
+    const desc = encodeURIComponent(eventData.description);
+    const loc = encodeURIComponent(eventData.location);
+
+    if (type === 'google') {
+        window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${desc}&location=${loc}&dates=${eventData.start}/${eventData.start}`, '_blank');
+    } 
+    else if (type === 'outlook') {
+        window.open(`https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&body=${desc}&location=${loc}&startdt=${eventData.start}`, '_blank');
+    } 
+    else if (type === 'ics') {
+        const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${eventData.title}\nDESCRIPTION:${eventData.description}\nLOCATION:${eventData.location}\nDTSTART:${eventData.start}\nDTEND:${eventData.start}\nEND:VEVENT\nEND:VCALENDAR`;
+        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+        const link = document.createElement('a');
+        link.href = window.URL.createObjectURL(blob);
+        link.setAttribute('download', 'evento-sianeffects.ics');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+}
     </script>
 </body>
 

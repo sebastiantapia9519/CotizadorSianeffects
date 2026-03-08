@@ -1,0 +1,429 @@
+{% extends "layout.html" %}
+{% block title %}Administrar Socios Planners{% endblock %}
+
+{% block content %}
+<style>
+    /* --- MAGIA RESPONSIVA MÓVIL PARA LA TABLA DE SOCIOS --- */
+    @media (max-width: 768px) {
+        .tabla-socios thead { display: none; }
+        .tabla-socios tr {
+            display: flex; 
+            flex-direction: column;
+            background: white; 
+            border-bottom: 3px solid #f8f9fa;
+            padding: 15px; 
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #eee;
+            position: relative;
+        }
+        /* Elevamos la tarjeta si el menú dropdown está abierto para que no se corte */
+        .tabla-socios tr:has(.show) {
+            z-index: 1050;
+        }
+        .tabla-socios td {
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            border: none !important; 
+            padding: 8px 0 !important;
+        }
+        .tabla-socios td[data-label]::before {
+            content: attr(data-label);
+            font-weight: 800; 
+            color: #adb5bd; 
+            font-size: 0.7rem; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .tabla-socios td:first-child {
+            flex-direction: column; 
+            align-items: flex-start;
+            border-bottom: 1px dashed #eee !important; 
+            margin-bottom: 10px;
+            padding-bottom: 15px !important;
+        }
+        .tabla-socios td:first-child::before { display: none; }
+        
+        .tabla-socios td.mobile-actions {
+            width: 100%;
+            justify-content: space-between !important;
+            margin-top: 10px;
+            padding-top: 15px !important;
+            border-top: 1px dashed #eee !important;
+        }
+        /* Ajuste para que el dropdown se abra hacia arriba en móviles si está muy abajo */
+        .dropdown-menu-mobile-up {
+            bottom: 100% !important;
+            top: auto !important;
+            margin-bottom: 5px !important;
+        }
+    }
+</style>
+
+<div class="container mt-4 mb-5">
+    <div class="row g-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-body p-4">
+                    <h5 class="fw-bold mb-3 text-dark"><i class="fas fa-user-plus text-primary me-2"></i>Nuevo Socio</h5>
+                    <form method="POST">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Nombre de Contacto</label>
+                            <input type="text" name="nombre" class="form-control bg-light border-0 py-2 fw-bold" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Empresa / Planner</label>
+                            <input type="text" name="empresa" class="form-control bg-light border-0 py-2 fw-bold" required>
+                        </div>
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Teléfono WhatsApp</label>
+                            <input type="text" name="telefono" class="form-control bg-light border-0 py-2 fw-bold"
+                                placeholder="81...">
+                        </div>
+                        <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 fw-bold shadow-sm">
+                            <i class="fas fa-check me-2"></i>Registrar Socio
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card border-0 shadow-sm rounded-4">
+                <div class="card-header bg-white py-3 border-bottom-0">
+                    <h5 class="m-0 fw-bold text-dark"><i class="fas fa-address-book text-info me-2"></i>Directorio de Partners</h5>
+                </div>
+                <div class="card-body p-0 bg-light rounded-bottom-4">
+                    <div class="table-responsive" style="overflow: visible !important;">
+                        <table class="table table-hover align-middle mb-0 tabla-socios">
+                            <thead class="bg-light text-muted small text-uppercase">
+                                <tr>
+                                    <th class="ps-4">Socio / Empresa</th>
+                                    <th class="text-center">Código Acceso</th>
+                                    <th class="text-center">Saldo</th>
+                                    <th class="text-end pe-4">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for socio in socios %}
+                                <tr>
+                                    <td class="ps-md-4" data-label="Socio">
+                                        <div class="fw-bold text-dark fs-6">{{ socio.nombre_contacto }}</div>
+                                        <small class="text-muted">{{ socio.nombre_empresa }}</small>
+                                    </td>
+                                    
+                                    <td class="text-md-center" data-label="Código de Acceso">
+                                        <code class="fw-bold text-primary px-3 py-2 bg-primary bg-opacity-10 rounded-pill border border-primary-subtle" style="font-size: 0.85rem;">{{ socio.codigo_acceso_planner }}</code>
+                                    </td>
+
+                                    <td class="text-md-center" data-label="Saldo Actual">
+                                        {% if socio.creditos_disponibles and socio.creditos_disponibles > 0 %}
+                                        <span class="badge bg-success rounded-pill px-3 py-2 fs-6 shadow-sm"><i class="fas fa-coins me-1"></i>{{ socio.creditos_disponibles }}</span>
+                                        {% else %}
+                                        <span class="badge bg-danger rounded-pill px-3 py-2 fs-6 shadow-sm">0</span>
+                                        {% endif %}
+                                    </td>
+
+                                    <td class="text-md-end pe-md-4 mobile-actions">
+                                        <div class="d-flex justify-content-end justify-content-md-end w-100 gap-2 align-items-center">
+                                            
+                                            <button class="btn btn-outline-success btn-sm rounded-pill px-3 shadow-sm fw-bold bg-white" data-bs-toggle="modal" data-bs-target="#modalPack{{ socio.id }}">
+                                                <i class="fas fa-plus me-1"></i> Cargar Pack
+                                            </button>
+
+                                            <div class="dropdown">
+                                                <button class="btn btn-white border btn-sm rounded-circle shadow-sm" type="button" data-bs-toggle="dropdown" style="width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+                                                    <i class="fas fa-ellipsis-v text-secondary"></i>
+                                                </button>
+
+                                                <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-2" style="border-radius: 16px; min-width: 220px; z-index: 9999;">
+                                                    <li>
+                                                        <button class="dropdown-item py-2 fw-bold text-secondary rounded" type="button" onclick="abrirAuditoria({{ socio.id }}, '{{ socio.nombre_empresa }}')">
+                                                            <i class="fas fa-list-ul text-primary bg-primary bg-opacity-10 rounded p-1 me-2" style="width: 26px; text-align: center;"></i> Auditoría de Consumo
+                                                        </button>
+                                                    </li>
+
+                                                    <li>
+                                                        <button class="dropdown-item py-2 fw-bold text-secondary rounded" data-bs-toggle="modal" data-bs-target="#modalEditar{{ socio.id }}">
+                                                            <i class="fas fa-user-edit text-info bg-info bg-opacity-10 rounded p-1 me-2" style="width: 26px; text-align: center;"></i> Editar Perfil
+                                                        </button>
+                                                    </li>
+
+                                                    <li>
+                                                        <button class="dropdown-item py-2 fw-bold text-secondary rounded" data-bs-toggle="modal" data-bs-target="#modalAjuste{{ socio.id }}">
+                                                            <i class="fas fa-sliders-h text-warning bg-warning bg-opacity-10 rounded p-1 me-2" style="width: 26px; text-align: center;"></i> Ajustar Saldo
+                                                        </button>
+                                                    </li>
+
+                                                    <li><hr class="dropdown-divider my-2"></li>
+
+                                                    <li>
+                                                        <button class="dropdown-item py-2 fw-bold text-secondary rounded" onclick="regenerarCodigo({{ socio.id }}, '{{ socio.nombre_empresa }}')">
+                                                            <i class="fas fa-sync-alt text-dark bg-dark bg-opacity-10 rounded p-1 me-2" style="width: 26px; text-align: center;"></i> Regenerar Código
+                                                        </button>
+                                                    </li>
+
+                                                    <li>
+                                                        <button class="dropdown-item py-2 fw-bold text-danger rounded mt-1" onclick="suspenderSocio({{ socio.id }}, '{{ socio.nombre_empresa }}')">
+                                                            <i class="fas fa-ban text-danger bg-danger bg-opacity-10 rounded p-1 me-2" style="width: 26px; text-align: center;"></i> Suspender Cuenta
+                                                        </button>
+                                                    </li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+
+                                <div class="modal fade" id="modalPack{{ socio.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-sm modal-dialog-centered">
+                                        <div class="modal-content border-0 rounded-4 shadow-lg">
+                                            <div class="modal-header border-0 pb-0">
+                                                <h6 class="modal-title fw-bold"><i class="fas fa-box-open text-success me-2"></i>Cargar Créditos</h6>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form action="{{ url_for('invitaciones_admin.cargar_paquete') }}" method="POST">
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="planner_id" value="{{ socio.id }}">
+                                                    <div class="alert alert-success bg-success bg-opacity-10 border-0 mb-3 small text-success fw-bold rounded-3">
+                                                        <i class="fas fa-info-circle me-1"></i> Destino: {{ socio.nombre_empresa }}
+                                                    </div>
+                                                    <label class="form-label small fw-bold text-muted text-uppercase mb-1">Cantidad (Invitaciones)</label>
+                                                    <input type="number" name="cantidad" class="form-control form-control-lg text-center fw-bold text-success bg-light border-0" value="5" min="1" required>
+                                                </div>
+                                                <div class="p-3 pt-0">
+                                                    <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 shadow-sm fw-bold">Confirmar Carga</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal fade" id="modalEditar{{ socio.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-dialog-centered">
+                                        <div class="modal-content border-0 rounded-4 shadow-lg">
+                                            <div class="modal-header border-0 pb-0">
+                                                <h6 class="modal-title fw-bold"><i class="fas fa-user-edit text-info me-2"></i>Editar Planner</h6>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form action="{{ url_for('invitaciones_admin.editar_planner') }}" method="POST">
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="planner_id" value="{{ socio.id }}">
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Nombre de Contacto</label>
+                                                        <input type="text" name="nombre" class="form-control bg-light border-0 py-2 fw-bold" value="{{ socio.nombre_contacto }}" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Empresa / Planner</label>
+                                                        <input type="text" name="empresa" class="form-control bg-light border-0 py-2 fw-bold" value="{{ socio.nombre_empresa }}" required>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Teléfono WhatsApp</label>
+                                                        <input type="text" name="telefono" class="form-control bg-light border-0 py-2 fw-bold" value="{{ socio.telefono or '' }}">
+                                                    </div>
+                                                </div>
+                                                <div class="p-3 pt-0">
+                                                    <button type="submit" class="btn btn-info text-white w-100 rounded-pill py-2 shadow-sm fw-bold">Guardar Cambios</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="modal fade" id="modalAjuste{{ socio.id }}" tabindex="-1">
+                                    <div class="modal-dialog modal-sm modal-dialog-centered">
+                                        <div class="modal-content border-0 rounded-4 shadow-lg">
+                                            <div class="modal-header border-0 pb-0">
+                                                <h6 class="modal-title fw-bold"><i class="fas fa-sliders-h text-warning me-2"></i>Ajustar Saldo</h6>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                            </div>
+                                            <form action="{{ url_for('invitaciones_admin.ajustar_saldo') }}" method="POST">
+                                                <div class="modal-body">
+                                                    <input type="hidden" name="planner_id" value="{{ socio.id }}">
+                                                    <div class="text-center mb-3">
+                                                        <small class="text-muted d-block text-uppercase fw-bold">Saldo Actual</small>
+                                                        <span class="fs-1 fw-bold text-dark">{{ socio.creditos_disponibles }}</span>
+                                                    </div>
+                                                    <div class="mb-3">
+                                                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Modificar en:</label>
+                                                        <input type="number" name="ajuste" class="form-control form-control-lg text-center bg-light border-0 fw-bold" placeholder="Ej: -2 o +5" required>
+                                                        <small class="text-muted d-block mt-1" style="font-size: 0.75rem;">Usa el signo menos (-) para restar.</small>
+                                                    </div>
+                                                    <div class="mb-2">
+                                                        <label class="form-label small fw-bold text-muted text-uppercase mb-1">Motivo del ajuste</label>
+                                                        <input type="text" name="motivo" class="form-control bg-light border-0 py-2" placeholder="Ej: Error de carga, reembolso..." required>
+                                                    </div>
+                                                </div>
+                                                <div class="p-3 pt-0">
+                                                    <button type="submit" class="btn btn-warning text-dark w-100 rounded-pill py-2 shadow-sm fw-bold">Aplicar Ajuste</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalAuditoria" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-dark">
+                    <i class="fas fa-search-dollar text-primary me-2"></i>Auditoría: <span id="auditEmpresa" class="text-primary"></span>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body p-4 pt-2">
+                <div class="text-center mb-4 bg-light rounded-4 py-3 border border-light shadow-sm">
+                    <small class="text-uppercase fw-bold text-muted" style="letter-spacing: 1px;">Saldo Actual Real</small>
+                    <h1 class="display-3 fw-bold m-0 text-dark" id="auditSaldo">-</h1>
+                </div>
+                
+                <div class="row g-4">
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-success border-bottom pb-2"><i class="fas fa-download me-2"></i>Cargas y Ajustes</h6>
+                        <div class="table-responsive" style="max-height: 250px;">
+                            <table class="table table-sm table-hover align-middle small">
+                                <thead class="sticky-top bg-white text-muted">
+                                    <tr><th>Fecha</th><th>Concepto</th><th class="text-center">Créditos</th></tr>
+                                </thead>
+                                <tbody id="tablaMovimientos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <h6 class="fw-bold text-primary border-bottom pb-2"><i class="fas fa-upload me-2"></i>Invitaciones Creadas</h6>
+                        <div class="table-responsive" style="max-height: 250px;">
+                            <table class="table table-sm table-hover align-middle small">
+                                <thead class="sticky-top bg-white text-muted">
+                                    <tr><th>Fecha</th><th>Evento / Novios</th></tr>
+                                </thead>
+                                <tbody id="tablaConsumos"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="modal-footer border-top-0 px-4 pb-4 pt-0">
+                <button type="button" class="btn btn-light border rounded-pill px-5 fw-bold text-muted w-100 shadow-sm" data-bs-dismiss="modal">Cerrar Auditoría</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function regenerarCodigo(id, empresa) {
+        if (confirm(`⚠️ ¿Estás seguro de regenerar el código de acceso para ${empresa}?\n\nEl código actual dejará de funcionar INMEDIATAMENTE y tendrás que enviarles el nuevo.`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{{ url_for('invitaciones_admin.regenerar_codigo') }}";
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'planner_id';
+            input.value = id;
+
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    function suspenderSocio(id, empresa) {
+        if (confirm(`🛑 PELIGRO: Vas a suspender la cuenta de ${empresa}.\n\nYa no podrán acceder al sistema. Sus invitaciones seguirán en línea. ¿Continuar?`)) {
+            const form = document.createElement('form');
+            form.method = 'POST';
+            form.action = "{{ url_for('invitaciones_admin.suspender_planner') }}";
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'planner_id';
+            input.value = id;
+
+            form.appendChild(input);
+            document.body.appendChild(form);
+            form.submit();
+        }
+    }
+
+    function abrirAuditoria(id, empresa) {
+        document.getElementById('auditEmpresa').innerText = empresa;
+        document.getElementById('auditSaldo').innerHTML = '<i class="fas fa-spinner fa-spin text-muted fs-4"></i>';
+        document.getElementById('tablaMovimientos').innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Cargando...</td></tr>';
+        document.getElementById('tablaConsumos').innerHTML = '<tr><td colspan="2" class="text-center text-muted py-3">Cargando...</td></tr>';
+        
+        new bootstrap.Modal(document.getElementById('modalAuditoria')).show();
+
+        fetch('/api/socios/' + id + '/auditoria')
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('auditSaldo').innerText = data.saldo;
+                    
+                    let htmlMovs = '';
+                    if(data.movimientos.length === 0) {
+                        htmlMovs = '<tr><td colspan="3" class="text-center text-muted py-3">No hay recargas.</td></tr>';
+                    } else {
+                        data.movimientos.forEach(m => {
+                            let fecha = m.fecha_compra.substring(0, 10);
+                            let concepto = m.notas ? m.notas : 'Compra de Paquete';
+                            let cantClass = m.cantidad_total > 0 ? 'text-success bg-success' : 'text-danger bg-danger';
+                            let signo = m.cantidad_total > 0 ? '+' : '';
+                            htmlMovs += `<tr>
+                                <td class="text-muted fw-bold">${fecha}</td>
+                                <td><small class="fw-bold text-dark">${concepto}</small></td>
+                                <td class="text-center">
+                                    <span class="badge ${cantClass} bg-opacity-10 text-dark border rounded-pill px-2">
+                                        ${signo}${m.cantidad_total}
+                                    </span>
+                                </td>
+                            </tr>`;
+                        });
+                    }
+                    document.getElementById('tablaMovimientos').innerHTML = htmlMovs;
+
+                    let htmlCons = '';
+                    if(data.consumos.length === 0) {
+                        htmlCons = '<tr><td colspan="2" class="text-center text-muted py-3">No ha creado invitaciones.</td></tr>';
+                    } else {
+                        data.consumos.forEach(c => {
+                            let fecha = c.created_at.substring(0, 10);
+                            htmlCons += `<tr>
+                                <td class="text-muted fw-bold">${fecha}</td>
+                                <td>
+                                    <div class="fw-bold text-dark">${c.nombres}</div>
+                                    <a href="/invitacion/${c.slug}" target="_blank" class="small text-primary text-decoration-none fw-bold">
+                                        <i class="fas fa-external-link-alt me-1"></i>Ver sitio
+                                    </a>
+                                </td>
+                            </tr>`;
+                        });
+                    }
+                    document.getElementById('tablaConsumos').innerHTML = htmlCons;
+
+                } else {
+                    alert("Error: " + data.error);
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert("Error de conexión al cargar la auditoría.");
+            });
+    }
+</script>
+{% endblock %}

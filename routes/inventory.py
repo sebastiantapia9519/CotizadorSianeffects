@@ -2,45 +2,12 @@ from flask import Blueprint, request, session, jsonify, render_template, redirec
 import json
 from helpers import login_required
 from db import get_db_connection as get_db
+from utils.datetime_utils import now_utc
 
 inventory_bp = Blueprint('inventory', __name__)
 
 # =========================
-# 1. TEST Y REPARACIÓN
-# =========================
-@inventory_bp.route('/test')
-def test_inventory():
-    return 'INVENTORY OK'
-
-@inventory_bp.route('/reparar-materiales')
-@login_required
-def reparar_materiales():
-    conn = get_db()
-    try:
-        columns = [
-            ("es_paquete", "BOOLEAN DEFAULT 0"),
-            ("precio_compra", "REAL DEFAULT 0"),
-            ("cantidad_paquete", "REAL DEFAULT 1"),
-            ("precio_unitario", "REAL DEFAULT 0"),
-            ("stock_actual", "REAL DEFAULT 0"),
-            ("stock_minimo", "REAL DEFAULT 5")
-        ]
-        mensaje = "Resultado: "
-        for col, tipo in columns:
-            try:
-                conn.execute(f"ALTER TABLE materiales ADD COLUMN {col} {tipo}")
-                mensaje += f"Columna {col} agregada. "
-            except Exception:
-                pass
-        conn.commit()
-        return f"Base de datos sincronizada. {mensaje} <a href='/materiales'>Ir a Materiales</a>"
-    except Exception as e:
-        return f"Error: {e}"
-    finally:
-        conn.close()
-
-# =========================
-# 2. MATERIALES
+# MATERIALES
 # =========================
 @inventory_bp.route('/materiales', methods=['GET', 'POST'])
 @login_required
@@ -84,7 +51,7 @@ def materiales():
                 precio_unitario = 0
 
             if id_actualizar:
-                # <-- Agregamos unidad_medida al UPDATE
+                #
                 conn.execute("""
                     UPDATE materiales 
                     SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?, unidad_medida=?
@@ -321,9 +288,19 @@ def registrar_compra():
 
         try:
             conn.execute("""
-                INSERT INTO movimientos_inventario (user_id, material_id, tipo, cantidad, motivo, stock_resultante)
-                VALUES (?, ?, 'entrada', ?, 'Compra / Ajuste', (SELECT stock_actual FROM materiales WHERE id=?))
-            """, (session['user_id'], material_id, cantidad_a_sumar, material_id))
+                INSERT INTO movimientos_inventario 
+                (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
+                VALUES (?, ?, 'entrada', ?, 'Compra / Ajuste',
+                    (SELECT stock_actual FROM materiales WHERE id=?),
+                    ?
+                )
+            """, (
+                session['user_id'],
+                material_id,
+                cantidad_a_sumar,
+                material_id,
+                now_utc()
+            ))
         except:
             pass 
 

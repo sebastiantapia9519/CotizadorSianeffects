@@ -148,7 +148,7 @@ def init_db():
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         cliente TEXT,
-        fecha DATETIME,
+        fecha TIMESTAMPTZ NOT NULL,
         subtotal REAL,
         descuento_porcentaje INTEGER,
         descuento_monto REAL,
@@ -260,8 +260,8 @@ def init_db():
         origin_address TEXT, 
         origin_lat REAL,
         origin_lng REAL,
-        local_base_rate REAL DEFAULT 0,
-        local_km_rate REAL DEFAULT 0,
+        local_base_rate REAL DEFAULT 35,
+        local_km_rate REAL DEFAULT 8,
         free_shipping_threshold REAL DEFAULT 0,
         safety_margin_percent INTEGER DEFAULT 10,
         FOREIGN KEY(user_id) REFERENCES usuarios(id)
@@ -336,6 +336,7 @@ def init_db():
         tiene_modulo_invitados BOOLEAN DEFAULT 0,
         estilo_apertura TEXT DEFAULT 'simple',
         codigo_acceso_cliente TEXT UNIQUE,
+        planner_id INTEGER,
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );
     """)
@@ -376,5 +377,36 @@ def init_db():
         FOREIGN KEY (invitacion_id) REFERENCES invitaciones(id)
     )
     """)
+
+    # 1. Tabla de Perfiles de Planners
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS planners (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre_contacto TEXT,
+        nombre_empresa TEXT,
+        telefono TEXT,
+        codigo_acceso_planner TEXT UNIQUE, -- Formato 'PLAN-XXXXX'
+        notas TEXT,
+        estado TEXT DEFAULT 'activo',
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    # 2. Tabla de Paquetes de Créditos (La cartera)
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS planner_paquetes (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        planner_id INTEGER,
+        cantidad_total INTEGER,   -- Cuántos compró en este paquete
+        cantidad_usada INTEGER DEFAULT 0,
+        fecha_compra DATETIME DEFAULT CURRENT_TIMESTAMP,
+        fecha_vencimiento DATETIME, -- Aquí aplicamos lo de 1 año de vigencia
+        activo BOOLEAN DEFAULT 1,
+        notas TEXT,
+        FOREIGN KEY(planner_id) REFERENCES planners(id)
+    )
+    """)
+
+    
     conn.commit()
     conn.close()

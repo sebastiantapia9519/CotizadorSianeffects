@@ -1,49 +1,79 @@
-{% extends "layout.html" %}
-{% block title %}Galería de Invitados - {{ datos['novios'] }}{% endblock %}
+{% if session.get('user_type') == 'planner' %}
+    {% extends "clientes/layout_planner_base.html" %}
+{% else %}
+    {% extends "layout.html" %}
+{% endif %}
+
+{% block title %}Álbum de Invitados - SianEffects{% endblock %}
 
 {% block content %}
-<div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
+<div class="container py-4" style="max-width: 1200px;">
+    
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 pb-3 border-bottom gap-3">
         <div>
-            <h3 class="fw-bold">📸 Fotos de Invitados</h3>
-            <p class="text-muted">Boda de: {{ datos['novios'] }}</p>
+            <h3 class="fw-bold text-dark m-0">
+                <i class="fas fa-camera-retro text-danger me-2"></i>Álbum de Invitados
+            </h3>
+            <p class="text-muted m-0 mt-1">Evento: <span class="fw-bold text-dark">{{ datos.get('novios', 'Sin nombre') }}</span></p>
         </div>
-        <div class="d-flex gap-2">
+        
+        <div class="d-flex flex-wrap gap-2">
             {% if fotos %}
-            <a href="{{ url_for('invitaciones_admin.descargar_rollo_zip', id=inv_id) }}"
-                class="btn btn-success rounded-pill px-3 shadow-sm">
-                <i class="fas fa-file-archive me-2"></i>Descargar todo (ZIP)
+            <a href="{{ url_for('invitaciones_admin.descargar_rollo_zip', id=inv_id) }}" class="btn btn-dark rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center">
+                <i class="fas fa-file-archive me-2"></i> Descargar ZIP
             </a>
             {% endif %}
-
-            <a href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}"
-                class="btn btn-outline-secondary rounded-pill">
-                <i class="fas fa-arrow-left me-2"></i>Volver
-            </a>
+            
+            {% if session.get('user_type') == 'planner' %}
+                <a href="{{ url_for('invitaciones_clientes.dashboard_planner') }}" class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center">
+                    <i class="fas fa-arrow-left me-2"></i> Volver al Panel
+                </a>
+            {% else %}
+                <a href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}" class="btn btn-outline-secondary rounded-pill px-4 fw-bold shadow-sm d-flex align-items-center">
+                    <i class="fas fa-arrow-left me-2"></i> Volver a Gestión
+                </a>
+            {% endif %}
         </div>
     </div>
 
     {% if fotos %}
-    <div class="row g-3">
-        {% for foto in fotos %}
-        <div class="col-6 col-md-4 col-lg-3">
-            <div class="card h-100 shadow-sm border-0">
-                <a href="{{ foto['url'] }}" target="_blank">
-                    <img src="{{ foto['url'] }}" class="card-img-top img-fluid rounded"
-                        style="height: 250px; object-fit: cover;" alt="Foto invitado">
-                </a>
-                <div class="card-footer bg-white border-0 small text-center text-muted">
-                    {{ foto['fecha_creacion'] }}
+        <div class="row g-3">
+            {% for foto in fotos %}
+            <div class="col-6 col-md-4 col-lg-3">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden position-relative group-hover">
+                    <img src="{{ foto.url }}" class="w-100 h-100" style="object-fit: cover; min-height: 250px; max-height: 250px;" alt="Foto Invitado">
+                    
+                    <div class="position-absolute bottom-0 start-0 w-100 p-2 bg-dark bg-opacity-50 text-white small" style="backdrop-filter: blur(2px);">
+                        <i class="fas fa-clock me-1"></i> {{ foto.fecha_creacion[:16] if foto.fecha_creacion else 'Reciente' }}
+                    </div>
                 </div>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
     {% else %}
-    <div class="text-center py-5">
-        <i class="fas fa-images fa-4x text-light mb-3"></i>
-        <p class="text-muted">Aún no hay fotos en este carrete digital.</p>
-    </div>
+        <div class="card border-0 shadow-sm rounded-4 text-center py-5 mt-3" style="background-color: #f8f9fa;">
+            <div class="card-body py-5">
+                <div class="mb-4">
+                    <span class="bg-danger bg-opacity-10 text-danger rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                        <i class="fas fa-images fa-3x"></i>
+                    </span>
+                </div>
+                <h4 class="fw-bold text-dark mb-2">El carrete está vacío</h4>
+                <p class="text-muted mb-4 mx-auto" style="max-width: 450px;">
+                    Aún no hay fotos en este evento. A medida que los invitados utilicen la cámara desechable desde la invitación, sus recuerdos aparecerán aquí mágicamente.
+                </p>
+                {% if session.get('user_type') == 'planner' %}
+                    <a href="{{ url_for('invitaciones_clientes.dashboard_planner') }}" class="btn btn-light border rounded-pill px-4 fw-bold text-muted shadow-sm">
+                        <i class="fas fa-arrow-left me-2"></i>Regresar
+                    </a>
+                {% else %}
+                    <a href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}" class="btn btn-light border rounded-pill px-4 fw-bold text-muted shadow-sm">
+                        <i class="fas fa-arrow-left me-2"></i>Regresar
+                    </a>
+                {% endif %}
+            </div>
+        </div>
     {% endif %}
+
 </div>
 {% endblock %}

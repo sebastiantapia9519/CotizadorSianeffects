@@ -1,25 +1,26 @@
 import boto3
 import os
+import io
+import uuid
 from botocore.client import Config
 from dotenv import load_dotenv
+from PIL import Image  # 👈 IMPORTANTE: Asegúrate de hacer 'pip install Pillow'
 
 # Carga las variables del archivo .env
 load_dotenv()
 
 # --- CONFIGURACIÓN PROTEGIDA ---
-# os.getenv busca el nombre exacto que pusiste en tu archivo .env
 ACCESS_KEY = os.getenv('R2_ACCESS_KEY')
 SECRET_KEY = os.getenv('R2_SECRET_KEY')
 ENDPOINT_URL = os.getenv('R2_ENDPOINT_URL')
 BUCKET_NAME = os.getenv('R2_BUCKET_NAME')
 PUBLIC_URL = os.getenv('R2_PUBLIC_URL')
 
-
 def upload_to_cloudflare(file, folder="invitaciones"):
     if not BUCKET_NAME or not ENDPOINT_URL:
             raise ValueError("🚨 ERROR: Las credenciales del .env no se cargaron correctamente. BUCKET_NAME es None.")
 
-    # Inicializamos el cliente igual que en tu catálogo
+    # Inicializamos el cliente
     s3 = boto3.client(
         service_name='s3',
         endpoint_url=ENDPOINT_URL,
@@ -29,19 +30,57 @@ def upload_to_cloudflare(file, folder="invitaciones"):
         config=Config(signature_version='s3v4')
     )
     
-    # Definimos la ruta dentro del bucket
-    filename = f"{folder}/{file.filename}"
-    
-    # Aseguramos que el puntero del archivo esté al inicio (buena práctica)
+    # Aseguramos que el puntero del archivo esté al inicio
     file.seek(0)
+    content_type = file.content_type
     
-    # Subimos el archivo
-    # ExtraArgs={'ContentType': ...} ayuda a que el navegador sepa que es música o imagen
+    # --- 🛡️ LÓGICA INTELIGENTE DE COMPRESIÓN (SOLO IMÁGENES) ---
+    if content_type and content_type.startswith('image/') and 'svg' not in content_type:
+        try:
+            # 1. Abrimos la imagen en RAM
+            img = Image.open(file)
+            
+            # 2. Convertimos a RGB (Evita errores al comprimir PNGs con fondo transparente)
+            if img.mode in ("RGBA", "P"):
+                img = img.convert("RGB")
+                
+            # 3. Redimensionamos si es gigantesca (Max 1200px de ancho)
+            max_width = 1200
+            if img.width > max_width:
+                ratio = max_width / float(img.width)
+                new_height = int((float(img.height) * float(ratio)))
+                img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
+            
+            # 4. Guardamos optimizada en memoria como WEBP
+            img_byte_arr = io.BytesIO()
+            img.save(img_byte_arr, format='WEBP', quality=80)
+            img_byte_arr.seek(0)
+            
+            # 5. Variables listas para subida
+            nuevo_nombre = f"{uuid.uuid4().hex}.webp"
+            filename = f"{folder}/{nuevo_nombre}"
+            file_to_upload = img_byte_arr
+            content_type = 'image/webp'
+            
+        except Exception as e:
+            print(f"Error al comprimir imagen, subiendo original: {e}")
+            # Fallback: si falla la compresión, subimos el original de forma segura
+            file.seek(0)
+            nuevo_nombre = f"{uuid.uuid4().hex}_{file.filename}"
+            filename = f"{folder}/{nuevo_nombre}"
+            file_to_upload = file
+    else:
+        # --- 🎵 LÓGICA PARA ARCHIVOS NO-IMAGEN (Música, etc.) ---
+        nuevo_nombre = f"{uuid.uuid4().hex}_{file.filename}"
+        filename = f"{folder}/{nuevo_nombre}"
+        file_to_upload = file
+
+    # --- ☁️ SUBIDA A CLOUDFLARE R2 ---
     s3.upload_fileobj(
-        file, 
+        file_to_upload, 
         BUCKET_NAME, 
         filename,
-        ExtraArgs={'ContentType': file.content_type}
+        ExtraArgs={'ContentType': content_type}
     )
     
     # Retornamos la URL pública lista para usarse

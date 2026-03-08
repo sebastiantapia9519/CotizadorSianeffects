@@ -3,8 +3,10 @@ from flask import Flask
 from flask import Flask, session
 from flask_apscheduler import APScheduler
 import logging
+import json
 from datetime import timedelta
 from dotenv import load_dotenv
+from services.cloudflare_service import delete_from_cloudflare
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -15,6 +17,10 @@ from utils.datetime_utils import now_utc
 from db import init_db, get_db_connection
 
 app = Flask(__name__)
+
+# --- ESCUDO DE SEGURIDAD ---
+# Limita la subida máxima por petición a 15 MB (Evita ataques DDoS o colapsos)
+app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
 # Leemos la llave del archivo .env. Si no existe, usa la cadena 'dev_key...' como respaldo
 app.secret_key = os.getenv('SECRET_KEY', 'dev_key_fallback_insegura')
@@ -38,46 +44,60 @@ logging.basicConfig(
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 
 # =========================
-# TAREA AUTOMÁTICA
+# TAREAS AUTOMÁTICAS (JOBS)
 # =========================
 def tarea_limpieza():
     """
-    Limpia cotizaciones y ejecuta el borrado total de cuentas/datos 
-    después de 12 meses, usando la lógica UTC de SianEffects.
+    Limpia cotizaciones expiradas, cuentas inactivas e invitaciones obsoletas.
+    Se ejecuta automáticamente en los horarios programados (cron).
     """
     with app.app_context():
         try:
             conn = get_db_connection()
-            # USAMOS TU FUNCIÓN ORIGINAL
             ahora = now_utc() 
+            # Formateamos a string para que empate perfecto con SQLite
+            str_ahora = ahora.strftime('%Y-%m-%d %H:%M:%S')
             
-            # 1. Limpieza de cotizaciones (2 días)
-            cursor = conn.execute(
-                "DELETE FROM ventas WHERE estado = 'cotizacion' AND fecha_vencimiento < ?",
-                (ahora,)
-            )
-            if cursor.rowcount > 0:
-                logging.info(f"Cotizaciones eliminadas: {cursor.rowcount}")
+            # -------------------------------------------------------------
+            # 1. Limpieza de cotizaciones vencidas (Borrar detalles primero)
+            # -------------------------------------------------------------
+            vencidas = conn.execute(
+                "SELECT id FROM ventas WHERE estado = 'cotizacion' AND fecha_vencimiento < ?",
+                (str_ahora,)
+            ).fetchall()
 
+            if vencidas:
+                ids_ven = [v['id'] for v in vencidas]
+                placeholders = ', '.join(['?'] * len(ids_ven))
+                
+                # A) Borramos los productos del carrito (hijos)
+                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN ({placeholders})", ids_ven)
+                # B) Borramos la cotización (padre)
+                conn.execute(f"DELETE FROM ventas WHERE id IN ({placeholders})", ids_ven)
+                
+                logging.info(f"Cotizaciones expiradas eliminadas de raíz: {len(ids_ven)}")
+
+            # -------------------------------------------------------------
             # 2. Identificar usuarios (role 0) con 12 meses de vencimiento
+            # -------------------------------------------------------------
             limite_12_meses = ahora - timedelta(days=365)
+            str_limite_12 = limite_12_meses.strftime('%Y-%m-%d %H:%M:%S')
             
-            # Buscamos quiénes cumplen el criterio
             usuarios_out = conn.execute(
                 "SELECT id, email FROM usuarios WHERE role = 0 AND subscription_end < ?",
-                (limite_12_meses,)
+                (str_limite_12,)
             ).fetchall()
 
             if usuarios_out:
                 ids = [u['id'] for u in usuarios_out]
                 emails = [u['email'] for u in usuarios_out]
-                placeholder = ', '.join(['?'] * len(ids))
+                ph = ', '.join(['?'] * len(ids))
 
                 # --- A. BORRAR DETALLES (Hijos) ---
-                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id IN ({placeholder}))", ids)
-                conn.execute(f"DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({placeholder}))", ids)
-                conn.execute(f"DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({placeholder}))", ids)
-                conn.execute(f"DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id IN ({placeholder}))", ids)
+                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id IN ({ph}))", ids)
+                conn.execute(f"DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({ph}))", ids)
+                conn.execute(f"DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({ph}))", ids)
+                conn.execute(f"DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id IN ({ph}))", ids)
 
                 # --- B. BORRAR TABLAS PRINCIPALES (Padres) ---
                 tablas_directas = [
@@ -86,25 +106,100 @@ def tarea_limpieza():
                     'shipping_configs', 'shipping_zones'
                 ]
                 for tabla in tablas_directas:
-                    conn.execute(f"DELETE FROM {tabla} WHERE user_id IN ({placeholder})", ids)
+                    conn.execute(f"DELETE FROM {tabla} WHERE user_id IN ({ph})", ids)
 
                 # --- C. BORRAR AL USUARIO ---
-                conn.execute(f"DELETE FROM usuarios WHERE id IN ({placeholder})", ids)
+                conn.execute(f"DELETE FROM usuarios WHERE id IN ({ph})", ids)
                 
-                conn.commit()
-                
-                # Registrar en el historial
                 for email in emails:
                     logging.warning(f"CUENTA ELIMINADA POR INACTIVIDAD (12 MESES): {email}")
-                
-                print(f"♻️ Limpieza UTC completada para {len(ids)} usuarios.")
+                print(f"♻️ Limpieza UTC completada para {len(ids)} usuarios inactivos.")
 
-            conn.close()
+            # -------------------------------------------------------------
+            # 3. PURGA DE INVITACIONES OBSOLETAS (NUEVO)
+            # -------------------------------------------------------------
+            # Buscamos invitaciones cuya fecha de vigencia haya pasado hace más de 15 días
+            # (Ej. Si caducó el 1 de Mayo, se borrará definitivamente el 16 de Mayo)
+            fecha_limite_purga = ahora - timedelta(days=15)
+            str_fecha_purga = fecha_limite_purga.strftime('%Y-%m-%d')
+
+            invitaciones_basura = conn.execute(
+                "SELECT id, slug, foto_portada_url, url_fondo, fotos_json FROM invitaciones WHERE vigencia < ?",
+                (str_fecha_purga,)
+            ).fetchall()
+
+            if invitaciones_basura:
+                for inv in invitaciones_basura:
+                    inv_id = inv['id']
+                    slug_inv = inv['slug']
+                    
+                    # --- A) DESTRUCCIÓN DE ARCHIVOS EN CLOUDFLARE R2 ---
+                    if inv['foto_portada_url']: 
+                        delete_from_cloudflare(inv['foto_portada_url'])
+                    if inv['url_fondo']: 
+                        delete_from_cloudflare(inv['url_fondo'])
+                    
+                    if inv['fotos_json']:
+                        try:
+                            import json # Por si acaso no está global
+                            fotos_galeria = json.loads(inv['fotos_json'])
+                            for foto_url in fotos_galeria:
+                                delete_from_cloudflare(foto_url)
+                        except Exception as e:
+                            logging.error(f"Error borrando galería R2 inv {inv_id}: {e}")
+                            pass
+                            
+                    # Borrar fotos subidas por los invitados
+                    fotos_camara = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,)).fetchall()
+                    for fc in fotos_camara:
+                        if fc['url']: delete_from_cloudflare(fc['url'])
+
+                    # --- B) DESTRUCCIÓN LÓGICA EN BASE DE DATOS ---
+                    # Borramos en cascada manual (hijos primero, luego padre)
+                    conn.execute("DELETE FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,))
+                    conn.execute("DELETE FROM pases_invitados WHERE invitacion_id = ?", (inv_id,))
+                    conn.execute("DELETE FROM buenos_deseos WHERE invitacion_id = ?", (inv_id,))
+                    conn.execute("DELETE FROM invitaciones WHERE id = ?", (inv_id,))
+                    
+                    logging.info(f"PURGA COMPLETA: Invitación '{slug_inv}' (ID: {inv_id}) eliminada de BD y R2 por antigüedad.")
+                    print(f"🔥 Invitación '{slug_inv}' purgada del sistema liberando espacio.")
+
+            # Guardar todos los cambios (De cotizaciones, usuarios e invitaciones)
+            conn.commit()
 
         except Exception as e:
-            error_msg = f"Error en tarea_limpieza: {str(e)}"
-            logging.error(error_msg)
-            print(f"❌ {error_msg}")
+            logging.error(f"Error en tarea_limpieza general: {str(e)}")
+        finally:
+            conn.close()
+
+
+def tarea_canceladas():
+    """
+    Se ejecuta el día 1 de cada mes.
+    Elimina permanentemente de la BD todas las ventas con estado 'cancelada'.
+    """
+    with app.app_context():
+        try:
+            conn = get_db_connection()
+            canceladas = conn.execute("SELECT id FROM ventas WHERE estado = 'cancelada'").fetchall()
+            
+            if canceladas:
+                ids_canc = [c['id'] for c in canceladas]
+                placeholders = ', '.join(['?'] * len(ids_canc))
+                
+                # Borrar items primero y luego la venta
+                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN ({placeholders})", ids_canc)
+                conn.execute(f"DELETE FROM ventas WHERE id IN ({placeholders})", ids_canc)
+                
+                conn.commit()
+                logging.info(f"Mantenimiento Mensual: {len(ids_canc)} ventas 'canceladas' borradas permanentemente.")
+                print(f"🧹 Mantenimiento: {len(ids_canc)} ventas basura eliminadas.")
+                
+        except Exception as e:
+            logging.error(f"Error en tarea_canceladas: {str(e)}")
+        finally:
+            conn.close()
+
 
 # =========================
 # BASE DE DATOS
@@ -118,6 +213,29 @@ init_db()
 scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
+
+# 1. Job Diario (Cotizaciones y Cuentas Muertas) - Corre a las 12 PM y 12 AM
+if not scheduler.get_job('Limpieza'):
+    scheduler.add_job(
+        id='Limpieza',
+        func=tarea_limpieza,
+        trigger='cron',
+        hour='0, 12',   # 0 es la medianoche (12 AM) y 12 es el mediodía (12 PM)
+        minute=0,       # Exactamente en el minuto 0
+        replace_existing=True
+    )
+
+# 2. Job Mensual (Borrar Canceladas) - Corre el día 1 de cada mes a las 3:00 AM
+if not scheduler.get_job('LimpiezaCanceladas'):
+    scheduler.add_job(
+        id='LimpiezaCanceladas',
+        func=tarea_canceladas,
+        trigger='cron',
+        day=1,
+        hour=3,
+        minute=0,
+        replace_existing=True
+    )
 
 # Evitar duplicar el job (CRÍTICO cuando Flask recarga)
 if not scheduler.get_job('Limpieza'):
