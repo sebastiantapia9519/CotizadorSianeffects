@@ -253,7 +253,7 @@
                         </div>
                         <div class="card-body p-4">
 
-                            <form method="POST" action="{{ url_for('main.configuracion') }}">
+                            <form method="POST" action="{{ url_for('main.configuracion') }}#list-envios" onsubmit="return confirm('¿Borrar zona?')">
                                 <input type="hidden" name="action" value="update_shipping">
 
                                 <h6 class="fw-bold text-muted mb-3">📍 ¿Desde dónde envías? (Origen)</h6>
@@ -366,13 +366,10 @@
                                                     Cobertura: {{ zone['states_str'] }}
                                                 </div>
                                             </div>
-                                            <form method="POST" action="{{ url_for('main.configuracion') }}"
-                                                onsubmit="return confirm('¿Borrar zona?')">
-                                                <input type="hidden" name="action" value="delete_zone">
-                                                <input type="hidden" name="zone_id" value="{{ zone['id'] }}">
-                                                <button class="btn btn-sm text-danger"><i
-                                                        class="fas fa-trash"></i></button>
-                                            </form>
+                                            <button type="button" class="btn btn-sm text-danger" 
+                                                onclick="confirmarEliminarZona('{{ zone['id'] }}', '{{ zone['zone_name'] }}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         </div>
                                         <div class="card-body p-0">
                                             <table class="table table-sm table-striped m-0" style="font-size: 0.85rem;">
@@ -673,7 +670,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form method="POST" action="{{ url_for('main.configuracion') }}">
+                <form method="POST" action="{{ url_for('main.configuracion') }}#list-envios">
                     <input type="hidden" name="action" value="create_zone">
 
                     <div class="mb-3">
@@ -698,23 +695,50 @@
         </div>
     </div>
 </div>
-
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- PERSISTENCIA AL CARGAR LA PÁGINA ---
+document.addEventListener('DOMContentLoaded', function() {
+        // --- 1. PERSISTENCIA DE PESTAÑA ---
+        // Revisamos si en la URL hay un hash (ej: #list-envios)
+        let hash = window.location.hash;
+        if (hash) {
+            let activeTab = document.querySelector(`a[href="${hash}"]`);
+            if (activeTab) {
+                bootstrap.ListGroup.getOrCreateInstance(activeTab).show();
+            }
+        }
+
+        // Guardar el hash en la URL cada vez que cambies de pestaña
+        const triggerTabList = document.querySelectorAll('#list-tab a');
+        triggerTabList.forEach(triggerEl => {
+            triggerEl.addEventListener('click', function (event) {
+                window.location.hash = this.getAttribute('href');
+            });
+        });
+
+        // --- 2. PERSISTENCIA DE DATOS DE MAPAS ---
+        const inputMaps = document.getElementById('inputMapsConfig');
+        if (inputMaps && inputMaps.value.trim() !== "") {
+            extraerCoordenadasConfig(inputMaps, true); 
+        }
+    });
+
     function validarPassword() {
         var p1 = document.getElementById("pass1").value;
         var p2 = document.getElementById("pass2").value;
-        var errorDiv = document.getElementById("passError");
-        var input2 = document.getElementById("pass2");
-
+        
         if (p1 !== p2) {
-            errorDiv.classList.remove("d-none");
-            input2.classList.add("is-invalid");
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de validación',
+                text: 'Las contraseñas no coinciden.',
+                borderRadius: '15px',
+                confirmButtonColor: '#ff6b81'
+            });
             return false;
-        } else {
-            errorDiv.classList.add("d-none");
-            input2.classList.remove("is-invalid");
-            return true;
         }
+        return true;
     }
 
     function actualizarVistaPrevia() {
@@ -725,52 +749,84 @@
         document.getElementById('prevEmpresa').innerText = empresa;
         document.getElementById('prevSlogan').innerText = slogan;
         document.getElementById('prevWeb').innerText = web;
-
         document.getElementById('prevFecha').innerText = new Date().toLocaleDateString();
 
         const modal = new bootstrap.Modal(document.getElementById('modalPreview'));
-
-        // Aplicar filtro Blanco y Negro si está activado
         const isBW = document.getElementById('checkTicketBW').checked;
         const previewEl = document.querySelector('.ticket-preview');
-        if (isBW) {
-            previewEl.classList.add('ticket-bw');
-        } else {
-            previewEl.classList.remove('ticket-bw');
-        }
+        
+        if (isBW) previewEl.classList.add('ticket-bw');
+        else previewEl.classList.remove('ticket-bw');
+        
         modal.show();
     }
 
-    // Función para extraer coordenadas en la configuración
-    function extraerCoordenadasConfig(input) {
+    // Función para extraer coordenadas con modo Silencioso (para carga inicial)
+    function extraerCoordenadasConfig(input, silencioso = false) {
         const url = input.value.trim();
         if (!url) return;
 
-        // Regex para buscar @lat,lng
         const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
         const match = url.match(regex);
-
-        // Regex alternativo ?q=lat,lng
         const regexQ = /q=(-?\d+\.\d+),(-?\d+\.\d+)/;
         const matchQ = url.match(regexQ);
-
         const matchFinal = match || matchQ;
 
         if (matchFinal) {
             document.getElementById('latConfig').value = matchFinal[1];
             document.getElementById('lngConfig').value = matchFinal[2];
-
             input.classList.remove('is-invalid');
             input.classList.add('is-valid');
-
-            // Efecto visual de éxito
-            input.style.borderColor = "#2ecc71";
         } else {
-            alert("⚠️ No pudimos detectar las coordenadas en ese link.\n\nAsegúrate de copiar el LINK LARGO de la barra de direcciones de Google Maps (el que tiene el @numeros...).");
-            input.classList.add('is-invalid');
+            if (!silencioso) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Link no válido',
+                    text: 'Asegúrate de copiar el LINK LARGO de la barra de direcciones de Google Maps (el que contiene la @latitud,longitud).',
+                    borderRadius: '15px',
+                    confirmButtonColor: '#ff6b81'
+                });
+                input.classList.add('is-invalid');
+            }
         }
     }
 
-</script>
+    // --- REEMPLAZO SEGURO DE RUTAS PARA ELIMINAR ZONA ---
+    // Usamos el mismo método de pasar la URL real de Flask
+    function confirmarEliminarZona(urlReal, nombreZona) {
+        Swal.fire({
+            title: '¿Eliminar zona?',
+            text: `Vas a borrar "${nombreZona}". Se perderán todas las tarifas de peso asociadas.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            borderRadius: '15px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Creamos un formulario dinámico para respetar tu método POST original
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ url_for('main.configuracion') }}";
 
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'delete_zone';
+
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'zone_id';
+                idInput.value = urlReal; // Pasamos el ID directamente
+
+                form.appendChild(actionInput);
+                form.appendChild(idInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+</script>
 {% endblock %}

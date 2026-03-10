@@ -171,7 +171,9 @@
             </button>
 
             <a class="navbar-brand fw-bold text-primary me-auto" href="{{ url_for('main.cotizador') }}">
-                <span style="color: var(--sian-pink);">🎨 {{ config['nombre_empresa'] }}</span>
+                <span style="color: var(--sian-pink);">
+                    🎨 {{ config['nombre_empresa'] if config and config['nombre_empresa'] else session.get('username', 'SianEffects') }}
+                </span>
             </a>
 
             {% if session.get('user_id') %}
@@ -232,13 +234,21 @@
 
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle d-flex align-items-center justify-content-start justify-content-lg-center gap-2 {% if 'inventory' in request.endpoint %}active fw-bold bg-light border{% endif %} rounded-pill px-3"
-                                href="#" role="button" data-bs-toggle="dropdown">📦 <span>Inventario</span></a>
+                                href="#" role="button" data-bs-toggle="dropdown">📦 
+                                <span>Inventario</span>
+                            </a>
                             <ul class="dropdown-menu border-0 shadow-sm text-center text-lg-start mt-2">
-                                <li><a class="dropdown-item py-2"
-                                        href="{{ url_for('inventory.materiales') }}">Materiales</a></li>
-                                <li><a class="dropdown-item py-2" href="{{ url_for('inventory.equipos') }}">Equipos</a>
+                                <li>
+                                    <a class="dropdown-item py-2"
+                                        href="{{ url_for('inventory.materiales') }}">Materiales</a>
+                                    </li>
+                                <li>
+                                    <a class="dropdown-item py-2" 
+                                    href="{{ url_for('inventory.equipos') }}">Equipos</a>
                                 </li>
-                                <li><a class="dropdown-item py-2" href="{{ url_for('inventory.recetas') }}">Recetas</a>
+                                <li>
+                                    <a class="dropdown-item py-2" 
+                                    href="{{ url_for('inventory.recetas') }}">Recetas</a>
                                 </li>
                             </ul>
                         </li>
@@ -368,9 +378,5 @@
         }
     </style>
     {% endif %}
-
-    <script src="..."></script>
-</body>
-</body>
 
 </html>

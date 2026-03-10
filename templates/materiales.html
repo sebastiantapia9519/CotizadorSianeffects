@@ -49,11 +49,10 @@
                             <i class="fas fa-pen" style="font-size: 0.8rem;"></i>
                         </button>
 
-                        <a href="{{ url_for('inventory.eliminar_material', id=mat['id']) }}"
-                            class="btn btn-light btn-sm text-danger rounded-circle border"
-                            onclick="return confirm('¿Seguro que quieres eliminar este material?')" title="Eliminar">
+                        <button type="button" class="btn btn-light btn-sm text-danger rounded-circle border"
+                            onclick="confirmarEliminar('{{ url_for('inventory.eliminar_material', id=mat['id']) }}', '{{ mat['nombre'] }}')" title="Eliminar">
                             <i class="fas fa-trash-alt" style="font-size: 0.8rem;"></i>
-                        </a>
+                        </button>
                     </div>
                 </div>
 
@@ -206,6 +205,8 @@
     </div>
 </div>
 
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // --- BÚSQUEDA ---
     function filtrarMateriales() {
@@ -242,10 +243,27 @@
         document.getElementById('nombre').value = mat.nombre;
         document.getElementById('precio_compra').value = mat.precio_compra;
         document.getElementById('cantidad_paquete').value = mat.cantidad_paquete || 1;
-
-        // Si no tiene unidad guardada, por defecto es p                      document.getElementById('unidad_medida').value = mat            dad_m            a || 'pieza';
-
+        document.getElementById('unidad_medida').value = mat.unidad_medida || 'pieza';
         modal.show();
+    }
+
+    // ✅ ELIMINAR RESPETANDO TU RUTA ORIGINAL
+    function confirmarEliminar(urlReal, nombre) {
+        Swal.fire({
+            title: '¿Eliminar material?',
+            text: `Vas a borrar "${nombre}". Esta acción no se puede deshacer.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            borderRadius: '15px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = urlReal;
+            }
+        });
     }
 
     // --- FUNCIONES DE STOCK ---
@@ -270,7 +288,10 @@
         const cant = document.getElementById('stock_cantidad').value;
         const precio = document.getElementById('stock_nuevo_precio').value;
 
-        if (!cant || cant <= 0) return alert("Ingresa una cantidad válida.");
+        if (!cant || cant <= 0) {
+            Swal.fire('Atención', 'Ingresa una cantidad válida.', 'info');
+            return;
+        }
 
         fetch('/api/registrar_compra', {
             method: 'POST',
@@ -281,15 +302,24 @@
                 nuevo_precio: precio
             })
         })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    location.reload();
-                } else {
-                    alert("Error: " + data.error);
-                }
-            })
-            .catch(e => alert("Error de conexión"));
+        .then(r => r.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: '¡Stock Actualizado!',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => location.reload());
+            } else {
+                Swal.fire('Error', data.error, 'error');
+            }
+        })
+        .catch(e => {
+            Swal.fire('Error', 'Error de conexión al servidor.', 'error');
+        });
     }
 </script>
+{% endblock %}
+
 {% endblock %}

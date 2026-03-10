@@ -126,12 +126,11 @@
                             <i class="fas fa-pen"></i>
                         </button>
 
-                        <a href="{{ url_for('inventory.eliminar_receta', id=receta['id']) }}"
-                            class="btn btn-sm btn-light text-danger rounded-circle shadow-sm"
-                            onclick="return confirm('¿Borrar esta receta permanentemente? No podrás deshacerlo.')"
+                        <button type="button" class="btn btn-sm btn-light text-danger rounded-circle shadow-sm"
+                            onclick="confirmarEliminarReceta('{{ url_for('inventory.eliminar_receta', id=receta['id']) }}', '{{ receta['nombre'] }}')" 
                             title="Eliminar">
                             <i class="fas fa-trash-alt"></i>
-                        </a>
+                        </button>
                     </td>
                 </tr>
                 {% else %}
@@ -208,6 +207,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     function editarReceta(r) {
         document.getElementById('inputId').value = r.id;
@@ -217,35 +217,30 @@
 
     function filtrarTabla() {
         const filter = document.getElementById('buscador').value.toUpperCase();
-        // Ajuste para buscar solo en el cuerpo de la tabla
         const tbody = document.querySelector("#tablaRecetas tbody");
         const tr = tbody.getElementsByTagName("tr");
 
         for (let i = 0; i < tr.length; i++) {
-            // Ignorar fila si es la de "No hay datos" (que tiene colspan)
             if (tr[i].cells.length === 1) continue;
-
-            const tdName = tr[i].getElementsByTagName("td")[0]; // Columna Nombre
+            const tdName = tr[i].getElementsByTagName("td")[0];
             if (tdName) {
                 const txtValue = tdName.textContent || tdName.innerText;
                 tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
             }
         }
     }
+
     function verDetallesReceta(receta) {
         document.getElementById('detallesNombreReceta').textContent = receta.nombre;
         const lista = document.getElementById('listaIngredientes');
         lista.innerHTML = '';
 
         try {
-            // Ahora leemos 'ingredientes_reales' que armamos en Python
             const items = JSON.parse(receta.ingredientes_reales || '[]');
-
             if (items.length === 0) {
                 lista.innerHTML = '<li class="text-muted fst-italic text-center py-2">No hay ingredientes registrados.</li>';
             } else {
                 items.forEach(item => {
-                    // Como Python ya nos mandó 'item.nombre' y 'item.cantidad', solo lo imprimimos
                     lista.innerHTML += `
                     <li class="d-flex align-items-center mb-2 text-secondary" style="font-size: 0.9rem;">
                         <i class="fas fa-circle me-2" style="font-size: 0.35rem; color: var(--sian-teal);"></i>
@@ -257,9 +252,27 @@
             console.error("Error al procesar ingredientes:", e);
             lista.innerHTML = '<li class="text-danger">No se pudieron cargar los detalles.</li>';
         }
-
         new bootstrap.Modal(document.getElementById('modalDetallesReceta')).show();
     }
 
+    // ✅ ELIMINACIÓN SEGURA CON SWEETALERT
+    function confirmarEliminarReceta(urlReal, nombre) {
+        Swal.fire({
+            title: '¿Eliminar receta?',
+            text: `Vas a borrar permanentemente "${nombre}". No podrás recuperarla después.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar permanentemente',
+            cancelButtonText: 'Cancelar',
+            borderRadius: '15px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Navegamos a la URL exacta que Flask nos dio
+                window.location.href = urlReal;
+            }
+        });
+    }
 </script>
 {% endblock %}

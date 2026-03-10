@@ -160,7 +160,7 @@
                     <div class="tab-pane fade show active" id="panelReceta" role="tabpanel">
                         <div class="d-flex justify-content-end mb-3">
                             <button class="btn btn-sm btn-outline-danger rounded-pill px-3"
-                                onclick="limpiarCalculadora()">
+                                onclick="confirmarLimpiarTodo()">
                                 <i class="fas fa-eraser me-1"></i> Limpiar Todo
                             </button>
                         </div>
@@ -556,6 +556,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     let precioVentaCalculado = 0;
     let costoProduccionCalculado = 0;
@@ -572,14 +573,17 @@
 
         if (!concepto) {
             document.getElementById('expressConcepto').focus();
-            return alert("Escribe qué estás vendiendo.");
+            Swal.fire({ icon: 'warning', title: 'Falta concepto', text: 'Escribe qué estás vendiendo.', borderRadius: '15px' });
+            return;
         }
         if (isNaN(precio) || precio <= 0) {
             document.getElementById('expressPrecio').focus();
-            return alert("Ponle un precio válido.");
+            Swal.fire({ icon: 'warning', title: 'Precio inválido', text: 'Ponle un precio válido.', borderRadius: '15px' });
+            return;
         }
         if (isNaN(cantidad) || cantidad < 1) {
-            return alert("Cantidad mínima 1.");
+            Swal.fire({ icon: 'warning', title: 'Cantidad inválida', text: 'La cantidad mínima es 1.', borderRadius: '15px' });
+            return;
         }
 
         carrito.push({
@@ -768,6 +772,23 @@
         return '$' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
 
+function confirmarLimpiarTodo() {
+        Swal.fire({
+            title: '¿Limpiar todo?',
+            text: "Se borrarán los materiales y ajustes de la receta actual.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ff4757',
+            confirmButtonText: 'Sí, borrar',
+            cancelButtonText: 'Cancelar',
+            borderRadius: '20px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                limpiarCalculadora();
+            }
+        });
+    }
+
     function limpiarCalculadora() {
         document.getElementById('listaMateriales').innerHTML = '';
         document.getElementById('nombreProductoActual').value = '';
@@ -856,12 +877,27 @@
     }
 
     function eliminarDelCarrito(x) {
-        carrito.splice(x, 1);
-        renderizarCarrito();
+        Swal.fire({
+            title: '¿Quitar del carrito?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#ff4757',
+            confirmButtonText: 'Eliminar',
+            cancelButtonText: 'Volver',
+            borderRadius: '15px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                carrito.splice(x, 1);
+                renderizarCarrito();
+            }
+        });
     }
 
     function finalizarCompra(tipo) {
-        if (carrito.length === 0) return alert("El carrito está vacío.");
+        if (carrito.length === 0) {
+            Swal.fire({ icon: 'info', title: 'Carrito vacío', text: 'Agrega productos antes de finalizar.', borderRadius: '15px' });
+            return;
+        }
         const cli = document.getElementById('nombreCliente').value || "Cliente General";
 
         let subtotal = 0;
@@ -887,7 +923,10 @@
             estado = 'anticipo';
             const inputPago = document.getElementById('inputPagoInicial').value;
             pago_inicial = parseFloat(inputPago) || 0;
-            if (!inputPago || pago_inicial <= 0) return alert("Ingresa un monto válido.");
+            if (!inputPago || pago_inicial <= 0) {
+                Swal.fire({ icon: 'error', title: 'Monto inválido', text: 'Ingresa cuánto estás recibiendo de anticipo.', borderRadius: '15px' });
+                return;
+            }
             if (pago_inicial >= total) estado = 'pagado';
         }
 
@@ -968,8 +1007,10 @@
             maquinaria.push({ id: parseInt(c.getAttribute('data-id')) });
         });
 
-        if (materiales.length === 0) return alert("Agrega al menos un material.");
-
+        if (materiales.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'Sin materiales', text: 'Agrega al menos un material a la receta.', borderRadius: '15px' });
+            return;
+        }
         fetch('/guardar_receta', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -978,10 +1019,11 @@
             .then(async response => {
                 const data = await response.json();
                 if (!response.ok) return Promise.reject(data.error || response.statusText);
-                alert("¡Receta guardada!");
-                location.reload();
+                
+                Swal.fire({ icon: 'success', title: '¡Receta guardada!', showConfirmButton: false, timer: 1500 })
+                .then(() => location.reload());
             })
-            .catch(error => alert("Error: " + error));
+            .catch(error => Swal.fire('Error', error, 'error'));
     }
 
     function cargarProductoDB(idOpcional = null) {

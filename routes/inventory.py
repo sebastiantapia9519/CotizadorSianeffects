@@ -6,37 +6,41 @@ from utils.datetime_utils import now_utc
 
 inventory_bp = Blueprint('inventory', __name__)
 
-# =========================
-# MATERIALES
-# =========================
+# ==========================================
+# GESTIÓN DE MATERIALES (INVENTARIO)
+# ==========================================
 @inventory_bp.route('/materiales', methods=['GET', 'POST'])
 @login_required
 def materiales():
     conn = get_db()
+    user_id = session['user_id']
 
-    # --- GUARDAR O EDITAR ---
+    # --- LÓGICA PARA GUARDAR O EDITAR (MÉTODO POST) ---
     if request.method == 'POST':
         try:
+            # Recibimos los datos del formulario del modal
             id_actualizar = request.form.get('id_actualizar')
             nombre = request.form.get('nombre', '').strip()
             tipo = request.form.get('tipo_entrada', 'paquete')
-            unidad_medida = request.form.get('unidad_medida', 'pieza') # <-- Atrapamos la nueva unidad
+            unidad_medida = request.form.get('unidad_medida', 'pieza') 
             
+            # Validación de duplicados: revisamos que el nombre no exista ya para este usuario
             if id_actualizar:
                 duplicado = conn.execute(
                     "SELECT id FROM materiales WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", 
-                    (nombre, session['user_id'], id_actualizar)
+                    (nombre, user_id, id_actualizar)
                 ).fetchone()
             else:
                 duplicado = conn.execute(
                     "SELECT id FROM materiales WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", 
-                    (nombre, session['user_id'])
+                    (nombre, user_id)
                 ).fetchone()
 
             if duplicado:
                 conn.close()
                 return f"""<script>alert('Error: Ya tienes un material llamado "{nombre}".'); window.history.back();</script>"""
 
+            # Conversión de valores numéricos con manejo de errores
             try:
                 precio_compra = float(request.form.get('precio_compra') or 0)
                 cantidad_paquete = float(request.form.get('cantidad_paquete') or 1)
@@ -44,29 +48,29 @@ def materiales():
                 precio_compra = 0
                 cantidad_paquete = 1
             
+            # Calculamos el precio unitario (Costo total / Cantidad del paquete)
             es_paquete = 1 if tipo == 'paquete' else 0
             if cantidad_paquete > 0:
                 precio_unitario = precio_compra / cantidad_paquete
             else:
                 precio_unitario = 0
 
+            # Ejecutamos la actualización si existe ID, o la inserción si es nuevo
             if id_actualizar:
-                #
                 conn.execute("""
                     UPDATE materiales 
                     SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?, unidad_medida=?
                     WHERE id=? AND user_id=?
-                """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, id_actualizar, session['user_id']))
+                """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, id_actualizar, user_id))
             else:
-                # <-- Agregamos unidad_medida al INSERT
                 conn.execute("""
                     INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (session['user_id'], nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida))
+                """, (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida))
             
             conn.commit()
             
-            # --- REDIRECCIÓN AL INVENTARIO ---
+            # Redirigimos a la misma página para ver los cambios
             return redirect(url_for('inventory.materiales'))
             
         except Exception as e:
@@ -74,18 +78,33 @@ def materiales():
         finally:
             conn.close()
 
-    # --- VER LISTA (GET) ---
-    rows = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (session['user_id'],)).fetchall()
+    # --- LÓGICA PARA CARGAR LA VISTA (MÉTODO GET) ---
     
-    # AQUÍ ESTÁ EL CAMBIO CLAVE: LEER LA CONFIGURACIÓN
-    config = conn.execute("SELECT inventario_activo FROM configuracion WHERE user_id = ?", (session['user_id'],)).fetchone()
+    # 1. Obtenemos todos los materiales del usuario
+    rows = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (user_id,)).fetchall()
+    materiales_lista = [dict(row) for row in rows]
+    
+    # 2. CARGA DE CONFIGURACIÓN (Solución al error del nombre en el Navbar)
+    # Buscamos la configuración para pasar el nombre de la empresa y el estado del inventario
+    config_row = conn.execute("SELECT * FROM configuracion WHERE user_id = ?", (user_id,)).fetchone()
+    
+    # Si no existe configuración, creamos un diccionario por defecto para evitar errores en el layout
+    if config_row:
+        config_dict = dict(config_row)
+    else:
+        # Si el SELECT falla, usamos el company_name de la tabla usuarios o uno genérico
+        user_info = conn.execute("SELECT company_name FROM usuarios WHERE id = ?", (user_id,)).fetchone()
+        config_dict = {
+            'nombre_empresa': user_info['company_name'] if user_info['company_name'] else 'Mi Negocio',
+            'inventario_activo': 0
+        }
     
     conn.close()
 
-    materiales_lista = [dict(row) for row in rows]
-    
-    # Pasamos 'config' a la plantilla
-    return render_template('materiales.html', materiales=materiales_lista, config=config)
+    # Renderizamos la plantilla enviando los materiales y el objeto config (Navbar)
+    return render_template('materiales.html', 
+                           materiales=materiales_lista, 
+                           config=config_dict)
 
 @inventory_bp.route('/materiales/eliminar/<int:id>')
 @login_required

@@ -15,13 +15,24 @@ hoy = hoy_sqlite()
 # ==========================================
 # DECORADORES DE SEGURIDAD
 # ==========================================
-
 def planner_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if session.get('user_type') != 'planner' or 'planner_id' not in session:
             flash("Debes iniciar sesión como Planner para acceder.", "warning")
             return redirect(url_for('invitaciones_clientes.login_cliente'))
+        
+        # 🛡️ VERIFICACIÓN EN BASE DE DATOS CONTRA EL ESTADO
+        conn = get_db_connection()
+        planner = conn.execute("SELECT estado FROM planners WHERE id = ?", (session['planner_id'],)).fetchone()
+        conn.close()
+
+        # Si no existe o su estado no es 'activo', lo expulsamos
+        if not planner or planner['estado'] != 'activo':
+            session.clear() 
+            flash("Tu cuenta no está activa. Contacta al administrador.", "danger")
+            return redirect(url_for('invitaciones_clientes.login_cliente'))
+
         return f(*args, **kwargs)
     return decorated_function
 
@@ -38,12 +49,17 @@ def login_cliente():
             # --- CASO 1: ES UN PLANNER (PLAN-XXXXX) ---
             if codigo.startswith('PLAN-'):
                 planner = conn.execute("""
-                    SELECT id, nombre_contacto, nombre_empresa 
+                    SELECT id, nombre_contacto, nombre_empresa, estado 
                     FROM planners WHERE codigo_acceso_planner = ?
                 """, (codigo,)).fetchone()
                 
                 if planner:
-                    session.clear() # Limpiamos basura
+                    # Bloqueo de entrada
+                    if planner['estado'] != 'activo':
+                        flash("Esta cuenta se encuentra suspendida.", "danger")
+                        return render_template('clientes/login.html')
+
+                    session.clear()
                     session['planner_id'] = planner['id']
                     session['planner_nombre'] = planner['nombre_contacto']
                     session['user_type'] = 'planner'
@@ -84,7 +100,7 @@ def dashboard_planner():
     conn = get_db_connection()
     
     try:
-        # 1. Obtener Créditos Disponibles (Saldo Total sumado)
+        # 1. Obtener Saldo Total Neto (Solo lo vigente y activo)
         creditos_info = conn.execute("""
             SELECT SUM(cantidad_total - cantidad_usada) as saldo
             FROM planner_paquetes 
@@ -95,15 +111,50 @@ def dashboard_planner():
         
         saldo = creditos_info['saldo'] if creditos_info['saldo'] else 0
 
-        # 2. Obtener la lista de paquetes individuales para mostrar vencimientos
-        paquetes_db = conn.execute("""
-            SELECT id, cantidad_total, cantidad_usada, fecha_vencimiento
+        # 2. Obtener Movimientos (Ordenados por fecha de compra para calcular el histórico)
+        paquetes_raw = conn.execute("""
+            SELECT id, cantidad_total, cantidad_usada, fecha_vencimiento, notas, fecha_compra
             FROM planner_paquetes
             WHERE planner_id = ? AND activo = 1
-            ORDER BY fecha_vencimiento ASC
+            ORDER BY fecha_compra ASC
         """, (planner_id,)).fetchall()
 
-        # 3. Obtener Invitaciones creadas por este Planner
+        # Buscar créditos que vencen en los próximos 15 días
+        # Solo buscamos paquetes donde aún queden créditos (cantidad_total > cantidad_usada)
+        proximos_vencimientos = conn.execute("""
+            SELECT id, (cantidad_total - cantidad_usada) as remanente, fecha_vencimiento
+            FROM planner_paquetes
+            WHERE planner_id = ? 
+            AND activo = 1 
+            AND (cantidad_total - cantidad_usada) > 0
+            AND fecha_vencimiento BETWEEN ? AND date(?, '+15 days')
+            ORDER BY fecha_vencimiento ASC
+        """, (planner_id, hoy, hoy)).fetchall()
+
+        paquetes_procesados = []
+        saldo_acumulado = 0
+        
+        for p in paquetes_raw:
+            # El cambio es la diferencia entre lo que entró y lo que se marcó como usado en ese registro
+            cambio = p['cantidad_total'] - p['cantidad_usada']
+            saldo_acumulado += cambio
+            
+            p_dict = dict(p)
+            p_dict['cambio'] = cambio
+            p_dict['saldo_posterior'] = saldo_acumulado
+            
+            # Lógica de Expiración clara: Si es una resta (cambio negativo), no expira.
+            if not p['fecha_vencimiento'] or cambio < 0:
+                p_dict['vence_display'] = "---"
+            else:
+                p_dict['vence_display'] = p['fecha_vencimiento'][:10]
+            
+            paquetes_procesados.append(p_dict)
+
+        # Invertimos para que el último movimiento (el más nuevo) salga arriba
+        paquetes_procesados.reverse()
+
+        # 3. Obtener Invitaciones (Historial de consumo)
         invitaciones_db = conn.execute("""
             SELECT id, slug, datos_cliente_json, fecha_evento, created_at, 
                    codigo_acceso_cliente, tipo_evento, tiene_modulo_invitados, camara_premium
@@ -115,7 +166,6 @@ def dashboard_planner():
         invitaciones = []
         for inv in invitaciones_db:
             item = dict(inv)
-            # Decodificamos el JSON para mostrar el nombre de los novios en la tabla
             try:
                 item['datos_cliente'] = json.loads(inv['datos_cliente_json'])
             except:
@@ -124,8 +174,9 @@ def dashboard_planner():
 
         return render_template('clientes/dashboard_planner.html', 
                                saldo=saldo, 
-                               paquetes=paquetes_db,
-                               invitaciones=invitaciones)
+                               paquetes=paquetes_procesados,
+                               invitaciones=invitaciones,
+                               alertas_vencimiento=proximos_vencimientos)
     finally:
         conn.close()
 

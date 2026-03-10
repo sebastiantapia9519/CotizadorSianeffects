@@ -1176,13 +1176,21 @@ def regenerar_codigo():
 @invitaciones_bp.route('/suspender_planner', methods=['POST'])
 @admin_required
 def suspender_planner():
-    """Banea a un planner del sistema sin borrar sus datos."""
+    """Maneja la activación o suspensión de un planner."""
     planner_id = request.form.get('planner_id')
+    accion = request.form.get('accion') # Recibimos la instrucción del botón
+    
     conn = get_db_connection()
-    conn.execute("UPDATE planners SET estado = 'suspendido' WHERE id = ?", (planner_id,))
+    
+    if accion == 'activar':
+        conn.execute("UPDATE planners SET estado = 'activo' WHERE id = ?", (planner_id,))
+        flash('Socio activado correctamente.', 'success')
+    else:
+        conn.execute("UPDATE planners SET estado = 'suspendido' WHERE id = ?", (planner_id,))
+        flash('Socio suspendido. Se le negará el acceso.', 'danger')
+        
     conn.commit()
     conn.close()
-    flash('Socio suspendido.', 'danger')
     return redirect(url_for('invitaciones_admin.gestionar_socios'))
 
 @invitaciones_bp.route('/api/socios/<int:id>/auditoria')

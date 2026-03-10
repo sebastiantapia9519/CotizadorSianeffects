@@ -379,26 +379,23 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
+    // --- 1. VER DETALLES (Mantiene tu lógica, solo pulimos el modal) ---
     function verDetalles(id) {
         const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
         document.getElementById('modalFolio').innerText = id;
-
-        // Loader
         document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="6" class="text-center p-4 text-muted"><i class="fas fa-spinner fa-spin me-2"></i>Cargando datos...</td></tr>';
         document.getElementById('panelFinanciero').innerHTML = '';
-
         modal.show();
 
         fetch('/api/obtener_detalles/' + id)
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // Datos básicos
                     document.getElementById('modalFolio').innerText = data.folio;
                     document.getElementById('modalCliente').innerText = data.cliente;
-
-                    // Estado
                     const estadoDiv = document.getElementById('modalEstadoDiv');
                     let badgeClass = '', icon = '', label = data.estado.toUpperCase();
                     if (data.estado === 'pagado') { badgeClass = 'bg-success'; icon = 'check-circle'; }
@@ -407,33 +404,21 @@
                     else { badgeClass = 'bg-secondary'; icon = 'file-alt'; label = 'COTIZACIÓN'; }
                     estadoDiv.innerHTML = `<span class="badge ${badgeClass} fs-6 px-3 py-2 rounded-pill shadow-sm"><i class="fas fa-${icon} me-1"></i> ${label}</span>`;
 
-                    // Tabla y Cálculos Reales
                     const tbody = document.getElementById('modalTablaCuerpo');
                     tbody.innerHTML = '';
-
-                    let sumaCostos = 0;
-                    let sumaGanancias = 0; // NUEVO: Acumulador de ganancia real
+                    let sumaCostos = 0, sumaGanancias = 0;
 
                     data.items.forEach(item => {
                         let cant = item.cantidad % 1 === 0 ? Math.round(item.cantidad) : item.cantidad;
-
-                        // --- PROTECCIÓN PARA REGISTROS CON EL BUG VIEJO ---
                         let ventaTotalItem = parseFloat(item.subtotal) || 0;
                         let costoUnitarioBD = parseFloat(item.costo_unitario) || 0;
                         let precioUnitarioBD = parseFloat(item.precio_unitario) || 0;
-
-                        // Si el precio unitario viene en 0, lo calculamos "al revés" (Importe / Cantidad)
-                        if (precioUnitarioBD === 0 && cant > 0) {
-                            precioUnitarioBD = ventaTotalItem / cant;
-                        }
-
+                        if (precioUnitarioBD === 0 && cant > 0) precioUnitarioBD = ventaTotalItem / cant;
                         let costoTotalItem = costoUnitarioBD * cant;
                         let gananciaTotalItem = ventaTotalItem - costoTotalItem;
-
                         sumaCostos += costoTotalItem;
                         sumaGanancias += gananciaTotalItem;
 
-                        // Composición (Ingredientes)
                         let htmlIngredientes = '';
                         if (item.composicion) {
                             try {
@@ -445,7 +430,6 @@
                             } catch (e) { }
                         }
 
-                        // RENDERIZADO DE FILA
                         tbody.innerHTML += `
                             <tr>
                                 <td class="ps-3" style="min-width: 220px; white-space: normal;">
@@ -453,179 +437,129 @@
                                     ${htmlIngredientes}
                                 </td>
                                 <td class="text-center align-middle">${cant}</td>
-                                
-                                <td class="text-end text-muted align-middle small text-nowrap">
-                                    $${precioUnitarioBD.toFixed(2)} unit.
-                                </td>
-
-                                <td class="text-end text-dark fw-bold align-middle text-nowrap">
-                                    $${ventaTotalItem.toFixed(2)}
-                                </td>
-
-                                <td class="text-end text-danger text-opacity-75 align-middle small text-nowrap">
-                                    - $${costoTotalItem.toFixed(2)}
-                                </td>
-
-                                <td class="text-end pe-3 fw-bold text-success bg-success bg-opacity-10 align-middle text-nowrap">
-                                    $${gananciaTotalItem.toFixed(2)}
-                                </td>
-                            </tr>
-                        `;
+                                <td class="text-end text-muted align-middle small text-nowrap">$${precioUnitarioBD.toFixed(2)} unit.</td>
+                                <td class="text-end text-dark fw-bold align-middle text-nowrap">$${ventaTotalItem.toFixed(2)}</td>
+                                <td class="text-end text-danger text-opacity-75 align-middle small text-nowrap">- $${costoTotalItem.toFixed(2)}</td>
+                                <td class="text-end pe-3 fw-bold text-success bg-success bg-opacity-10 align-middle text-nowrap">$${gananciaTotalItem.toFixed(2)}</td>
+                            </tr>`;
                     });
 
-                    // --- PANEL FINANCIERO ---
-                    const totalVenta = parseFloat(data.total || 0);
-                    const impuestos = parseFloat(data.impuestos || 0);
-                    const descuento = parseFloat(data.descuento_monto || 0);
-
-                    // Si subtotal viene vacío o es 0 (posible en migraciones viejas), usamos el total base
-                    const subtotal = parseFloat(data.subtotal || totalVenta);
-
-                    const pagado = parseFloat(data.monto_pagado || 0);
-                    const pendiente = parseFloat(data.saldo_pendiente || 0);
-
-                    const costoProduccion = sumaCostos;
-
-                    // CORRECCIÓN MATEMÁTICA: Usamos la suma acumulada de las filas - descuento
+                    const totalVenta = parseFloat(data.total || 0), impuestos = parseFloat(data.impuestos || 0), descuento = parseFloat(data.descuento_monto || 0);
+                    const pagado = parseFloat(data.monto_pagado || 0), pendiente = parseFloat(data.saldo_pendiente || 0);
                     const gananciaReal = sumaGanancias - descuento;
 
-                    let colorResta = pendiente > 0.1 ? "text-danger" : "text-success";
-                    let textoResta = pendiente > 0.1 ? `$${pendiente.toFixed(2)}` : "$0.00";
-
-                    // Construcción del HTML del panel
-                    let infoImpuestosHTML = '';
-                    if (impuestos > 0) {
-                        infoImpuestosHTML = `
-                            <div class="col-4 border-end">
-                                <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Impuestos</small>
-                                <span class="h6 text-muted">+ $${impuestos.toFixed(2)}</span>
-                            </div>
-                        `;
-                    }
-
-                    const panelHTML = `
+                    document.getElementById('panelFinanciero').innerHTML = `
                         <div class="col-12 border-bottom pb-2 mb-2">
                             <div class="row">
-                                <div class="col-4 border-end">
-                                    <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Total Venta</small>
-                                    <span class="h5 fw-bold text-dark">$${totalVenta.toFixed(2)}</span>
-                                </div>
-                                <div class="col-4 border-end">
-                                    <small class="text-primary fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Abonado</small>
-                                    <span class="h5 fw-bold text-primary">$${pagado.toFixed(2)}</span>
-                                </div>
-                                <div class="col-4">
-                                    <small class="text-danger fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Resta por Pagar</small>
-                                    <span class="h5 fw-bold ${colorResta}">${textoResta}</span>
-                                </div>
+                                <div class="col-4 border-end"><small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Total</small><span class="h5 fw-bold text-dark">$${totalVenta.toFixed(2)}</span></div>
+                                <div class="col-4 border-end"><small class="text-primary fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Abonado</small><span class="h5 fw-bold text-primary">$${pagado.toFixed(2)}</span></div>
+                                <div class="col-4"><small class="text-danger fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Resta</small><span class="h5 fw-bold ${pendiente > 0.1 ? 'text-danger' : 'text-success'}">$${pendiente.toFixed(2)}</span></div>
                             </div>
                         </div>
-
-                        ${impuestos > 0 || descuento > 0 ? `
-                        <div class="col-12 border-bottom pb-2 mb-2 bg-white rounded-3 py-2">
-                            <div class="row justify-content-center">
-                                <div class="col-4 border-end">
-                                    <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Subtotal</small>
-                                    <span class="h6 text-muted">$${(totalVenta - impuestos + descuento).toFixed(2)}</span>
-                                </div>
-                                ${descuento > 0 ? `
-                                <div class="col-4 border-end">
-                                    <small class="text-danger fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Descuento</small>
-                                    <span class="h6 text-danger">- $${descuento.toFixed(2)}</span>
-                                </div>` : ''}
-                                ${infoImpuestosHTML}
-                            </div>
-                        </div>` : ''}
-
-                        <div class="col-12">
-                            <div class="row justify-content-center">
-                                <div class="col-5 border-end">
-                                    <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Costo Producción</small>
-                                    <span class="h6 fw-bold text-secondary">$${costoProduccion.toFixed(2)}</span>
-                                </div>
-                                <div class="col-5">
-                                    <small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Tu Ganancia Neta</small>
-                                    <span class="h4 fw-bold text-success">$${gananciaReal.toFixed(2)}</span>
-                                </div>
-                            </div>
-                        </div>
-                    `;
-
-                    document.getElementById('panelFinanciero').innerHTML = panelHTML;
+                        <div class="col-12"><small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Ganancia Neta Estimada</small><span class="h4 fw-bold text-success">$${gananciaReal.toFixed(2)}</span></div>`;
 
                     const aviso = document.getElementById('avisoCotizacion');
                     if (data.estado === 'cotizacion') aviso.classList.remove('d-none');
                     else aviso.classList.add('d-none');
-
-                } else {
-                    alert("Error al cargar detalles.");
-                    modal.hide();
                 }
-            })
-            .catch(err => {
-                console.error(err);
-                alert("Error de conexión.");
             });
     }
 
-    // --- RECARGAR EN COTIZADOR ---
+    // --- 2. RECARGAR / EDITAR (CON SWEET ALERT) ---
     function recargarCotizacion(id) {
-        if (!confirm("¿Quieres cargar esta cotización en el editor?\n\nSe borrará lo que tengas en pantalla actualmente.")) return;
-        fetch('/api/obtener_detalles/' + id)
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    sessionStorage.setItem('recarga_cotizacion', JSON.stringify(data.items));
-                    sessionStorage.setItem('recarga_cliente', data.cliente);
-
-                    // --- NUEVO: GUARDAMOS EL ID ---
-                    sessionStorage.setItem('recarga_id', id);
-
-                    // --- NUEVO: GUARDAMOS IMPUESTOS SI EXISTEN ---
-                    if (data.impuestos > 0) {
-                        // Intentamos deducir el porcentaje aprox para prellenar el input
-                        // (Impuestos / SubtotalDescontado) * 100
-                        let subDescontado = data.subtotal - data.descuento_monto;
-                        let pct = Math.round((data.impuestos / subDescontado) * 100);
-                        sessionStorage.setItem('recarga_tax_percent', pct);
-                        sessionStorage.setItem('recarga_tax_active', 'true');
-                    }
-
-                    window.location.href = "{{ url_for('main.cotizador') }}";
-                } else {
-                    alert("No se pudo obtener la información.");
-                }
-            });
+        Swal.fire({
+            title: '¿Editar / Reutilizar?',
+            text: "Se cargará esta información en el cotizador y se borrará lo que tengas actualmente en pantalla.",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            confirmButtonText: 'Sí, cargar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/api/obtener_detalles/' + id)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            sessionStorage.setItem('recarga_cotizacion', JSON.stringify(data.items));
+                            sessionStorage.setItem('recarga_cliente', data.cliente);
+                            sessionStorage.setItem('recarga_id', id);
+                            if (data.impuestos > 0) {
+                                let subDescontado = data.subtotal - data.descuento_monto;
+                                let pct = Math.round((data.impuestos / subDescontado) * 100);
+                                sessionStorage.setItem('recarga_tax_percent', pct);
+                                sessionStorage.setItem('recarga_tax_active', 'true');
+                            }
+                            window.location.href = "{{ url_for('main.cotizador') }}";
+                        }
+                    });
+            }
+        });
     }
 
-    // --- ABONAR ---
+    // --- 3. REGISTRAR ABONO (CON SWEET ALERT INPUT) ---
     function abonar(id, saldo, estado) {
-        let msg = estado === 'cotizacion' ? `📄 COTIZACIÓN\nTotal a Pagar: $${saldo.toFixed(2)}\n\n¿Cuánto recibes de anticipo?` : `💰 ABONO\nSaldo Pendiente: $${saldo.toFixed(2)}\n\n¿Cuánto recibes?`;
-        const abono = prompt(msg);
-        if (abono && parseFloat(abono) > 0) {
-            fetch('/api/actualizar_venta', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: id, abono: abono })
-            }).then(r => r.json()).then(d => {
-                if (d.success) { alert("✅ Pago registrado."); location.reload(); }
-                else alert("❌ Error: " + d.message);
-            });
-        }
+        const titulo = estado === 'cotizacion' ? 'Convertir a Venta' : 'Registrar Abono';
+        const sub = estado === 'cotizacion' ? 'Monto del anticipo:' : 'Monto que recibe:';
+
+        Swal.fire({
+            title: titulo,
+            text: `Saldo pendiente: $${saldo.toFixed(2)}`,
+            input: 'number',
+            inputAttributes: { min: 0, step: 0.01 },
+            inputLabel: sub,
+            inputPlaceholder: '0.00',
+            showCancelButton: true,
+            confirmButtonText: 'Registrar Pago',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#198754',
+            inputValidator: (value) => {
+                if (!value || value <= 0) return 'Por favor ingresa un monto válido';
+                if (value > (saldo + 0.01)) return 'El abono no puede ser mayor a la deuda';
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/api/actualizar_venta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id, abono: result.value })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) {
+                        Swal.fire('¡Éxito!', 'El pago ha sido registrado.', 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', d.message, 'error');
+                    }
+                });
+            }
+        });
     }
 
-    // --- CANCELAR ---
+    // --- 4. ANULAR VENTA (CON SWEET ALERT WARNING) ---
     function cancelarVenta(id) {
-        if (confirm("🛑 ¿ANULAR VENTA?\n\nEsta acción no se puede deshacer.")) {
-            fetch('/api/cancelar_venta', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ id: id })
-            }).then(r => r.json()).then(d => {
-                if (d.success) location.reload();
-                else alert("Error: " + d.message);
-            });
-        }
+        Swal.fire({
+            title: '¿Anular esta venta?',
+            text: "Esta acción descontará el dinero de tu caja y no se puede deshacer.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, anular folio #' + id,
+            cancelButtonText: 'Regresar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch('/api/cancelar_venta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id })
+                }).then(r => r.json()).then(d => {
+                    if (d.success) {
+                        Swal.fire('Anulada', 'La venta ha sido cancelada.', 'success').then(() => location.reload());
+                    } else {
+                        Swal.fire('Error', d.message, 'error');
+                    }
+                });
+            }
+        });
     }
 </script>
 {% endblock %}

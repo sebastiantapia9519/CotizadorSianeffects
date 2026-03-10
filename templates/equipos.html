@@ -46,11 +46,12 @@
                             onclick='editarEquipo({{ eq|tojson }})' title="Editar">
                             <i class="fas fa-pen"></i>
                         </button>
-                        <a href="{{ url_for('inventory.eliminar_equipo', id=eq['id']) }}"
+                        <button type="button" 
                             class="btn btn-light text-danger border rounded-circle btn-sm shadow-sm"
-                            onclick="return confirm('¿Borrar este equipo?')" title="Eliminar">
+                            onclick="confirmarEliminarEquipo('{{ url_for('inventory.eliminar_equipo', id=eq['id']) }}', '{{ eq['nombre'] }}')" 
+                            title="Eliminar">
                             <i class="fas fa-trash-alt"></i>
-                        </a>
+                        </button>
                     </td>
                 </tr>
                 {% else %}
@@ -101,6 +102,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     const modalEl = document.getElementById('modalEquipo');
     const modal = new bootstrap.Modal(modalEl);
@@ -132,5 +134,25 @@
             }
         }
     }
+
+    function confirmarEliminarEquipo(urlReal, nombre) {
+            Swal.fire({
+                title: '¿Eliminar equipo?',
+                text: `Vas a borrar "${nombre}". Esta acción no se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, borrar equipo',
+                cancelButtonText: 'Cancelar',
+                borderRadius: '16px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // ✅ USAMOS LA RUTA GENERADA POR FLASK
+                    window.location.href = urlReal;
+                }
+            });
+        }
+
 </script>
 {% endblock %}

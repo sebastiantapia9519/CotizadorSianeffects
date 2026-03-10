@@ -323,7 +323,7 @@
     </div>
 
     <div class="no-print">
-        <button id="btnShare" onclick="generarTicket()" class="btn-accion btn-share">
+        <button id="btnShare" onclick="generarYCompartir()" class="btn-accion btn-share">
             <i class="fas fa-share-alt"></i> Compartir
         </button>
 
@@ -336,46 +336,58 @@
         </button>
     </div>
 
-    <script>
-        let ticketFile = null;
+ <script>
+    async function generarYCompartir() {
+        const btn = document.getElementById("btnShare");
+        
+        // Evitar múltiples clics mientras procesa
+        if (btn.disabled) return;
+        
+        const originalContent = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+        btn.disabled = true;
 
-        async function generarTicket() {
-            const btn = document.getElementById("btnShare");
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
-
-            // Usamos html2canvas para crear la imagen
+        try {
+            // 1. Generamos el Canvas con mayor calidad (scale 2)
             const canvas = await html2canvas(document.getElementById("ticketVisual"), {
                 scale: 2,
-                backgroundColor: "#ffffff"
+                backgroundColor: "#ffffff",
+                useCORS: true // Útil si llegas a meter imágenes externas (logos)
             });
 
+            // 2. Convertimos el canvas a un archivo real
             const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            ticketFile = new File([blob], "ticket.png", { type: "image/png" });
+            const ticketFile = new File([blob], "ticket.png", { type: "image/png" });
 
-            btn.innerHTML = '<i class="fas fa-share-alt"></i> Compartir';
-            btn.onclick = compartirTicket;
-        }
-
-        async function compartirTicket() {
-            if (!ticketFile) return;
-
-            // Intentamos usar la API nativa de compartir (celulares)
+            // 3. Activamos el menú de compartir (Share API)
             if (navigator.share && navigator.canShare({ files: [ticketFile] })) {
-                try {
-                    await navigator.share({
-                        files: [ticketFile],
-                        title: 'Ticket de Compra'
-                    });
-                } catch (_) { }
+                await navigator.share({
+                    files: [ticketFile],
+                    title: 'Ticket SianEffects',
+                    text: 'Aquí tienes tu ticket de compra.'
+                });
             } else {
-                // Si no, forzamos descarga (PC)
+                // 4. Si es PC o no soporta compartir archivos, lo descarga
                 const a = document.createElement("a");
                 a.href = URL.createObjectURL(ticketFile);
-                a.download = "ticket.png";
+                a.download = "ticket_SianEffects.png";
+                document.body.appendChild(a);
                 a.click();
+                document.body.removeChild(a);
             }
+        } catch (error) {
+            console.error("Error al compartir:", error);
+            alert("No se pudo generar la imagen para compartir.");
+        } finally {
+            // Restauramos el botón
+            btn.innerHTML = originalContent;
+            btn.disabled = false;
         }
-    </script>
+    }
+
+    // Actualizamos el ID del botón en el HTML para que use esta nueva función
+    document.getElementById("btnShare").setAttribute("onclick", "generarYCompartir()");
+</script>
 
 </body>
 

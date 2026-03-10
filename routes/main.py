@@ -617,7 +617,6 @@ def configuracion():
             'inventario_activo': 0
         }
     
-    # AQUI ESTÁ EL TRUCO: 
     # Sobrescribimos 'nombre_empresa' con lo que diga la tabla de usuarios ('company_name').
     config['nombre_empresa'] = user_raw['company_name'] if user_raw['company_name'] else ''
 
@@ -646,14 +645,14 @@ def configuracion():
             z_dict['states_str'] = z['states_included']
 
         zones.append(z_dict)
-
-
+    shipping_config_row = conn.execute("SELECT * FROM shipping_configs WHERE user_id = ?", (uid,)).fetchone()
+    shipping_config = dict(shipping_config_row) if shipping_config_row else None
 
     conn.close()
     return render_template('configuracion.html', 
                            config=config, 
                            usuario=user_display, 
-                           shipping_config=shipping_config,
+                           shipping_config=shipping_config, # Ahora sí lleva datos
                            zones=zones)
 
 

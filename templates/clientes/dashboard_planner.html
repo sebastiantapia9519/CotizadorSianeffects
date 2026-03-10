@@ -8,7 +8,7 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
+
     <style>
         :root {
             --sian-pink: #ff6b81;
@@ -38,45 +38,59 @@
             transform: translateY(-5px);
         }
 
-        /* --- REDISEÑO MÓVIL ESTILO APP --- */
+        /* --- ANIMACIÓN DE ALERTA --- */
+        .pulse-warning {
+            animation: shadow-pulse 2s infinite;
+        }
+        @keyframes shadow-pulse {
+            0% { box-shadow: 0 0 0 0 rgba(252, 196, 25, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(252, 196, 25, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(252, 196, 25, 0); }
+        }
+
+        /* --- REDISEÑO MÓVIL ESTILO APP (SOLO INVITACIONES) --- */
         @media (max-width: 768px) {
-            .planner-table thead { display: none; }
-            .planner-table tr {
-                display: flex; 
-                flex-direction: column;
-                background: white; 
-                border-radius: 15px;
-                margin-bottom: 1rem; 
-                padding: 15px; 
-                border: 1px solid #eee;
-                box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            .planner-table thead {
+                display: none;
             }
+
+            .planner-table tr.fila-invitacion {
+                display: flex;
+                flex-direction: column;
+                background: white;
+                border-radius: 15px;
+                margin-bottom: 1rem;
+                padding: 15px;
+                border: 1px solid #eee;
+                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+            }
+
             .planner-table td {
-                display: flex; 
-                justify-content: space-between; 
+                display: flex;
+                justify-content: space-between;
                 align-items: center;
-                border: none !important; 
+                border: none !important;
                 padding: 10px 0 !important;
             }
-            /* Solo ponemos etiqueta a la Fecha y al Acceso */
+
             .planner-table td[data-label="Fecha"]::before,
             .planner-table td[data-label="Acceso"]::before {
                 content: attr(data-label);
-                font-weight: 800; 
-                color: #adb5bd; 
-                font-size: 0.7rem; 
+                font-weight: 800;
+                color: #adb5bd;
+                font-size: 0.7rem;
                 text-transform: uppercase;
                 letter-spacing: 0.5px;
             }
-            /* La primera celda (Nombre/Evento) abarca todo el ancho */
+
             .planner-table td:first-child {
-                flex-direction: column; 
+                flex-direction: column;
                 align-items: flex-start;
-                border-bottom: 1px solid #f1f3f5 !important; 
+                border-bottom: 1px solid #f1f3f5 !important;
                 margin-bottom: 10px;
                 padding-bottom: 15px !important;
             }
-            /* Botones de Acción al 100% de ancho y centrados */
+
             .planner-table td.mobile-actions {
                 width: 100%;
                 justify-content: center !important;
@@ -84,6 +98,9 @@
                 padding-top: 15px !important;
                 border-top: 1px solid #f1f3f5 !important;
             }
+            
+            /* Ajuste para que los créditos en celular sean una lista compacta */
+            .hide-mobile { display: none !important; }
         }
     </style>
 </head>
@@ -91,38 +108,37 @@
 <body>
 
     {% with messages = get_flashed_messages(with_categories=true) %}
-        {% if messages %}
-            <script>
-                document.addEventListener("DOMContentLoaded", function() {
-                    {% for category, message in messages %}
-                        let icono = 'info';
-                        {% if category == 'success' %} icono = 'success';
-                        {% elif category == 'danger' or category == 'error' %} icono = 'error';
-                        {% elif category == 'warning' %} icono = 'warning';
-                        {% endif %}
+    {% if messages %}
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            {% for category, message in messages %}
+            let icono = 'info';
+            {% if category == 'success' %} icono = 'success';
+            {% elif category == 'danger' or category == 'error' %} icono = 'error';
+            {% elif category == 'warning' %} icono = 'warning';
+            {% endif %}
 
-                        const Toast = Swal.mixin({
-                            toast: true,
-                            position: 'top-end',
-                            showConfirmButton: false,
-                            timer: 4000,
-                            timerProgressBar: true,
-                            didOpen: (toast) => {
-                                toast.addEventListener('mouseenter', Swal.stopTimer)
-                                toast.addEventListener('mouseleave', Swal.resumeTimer)
-                            }
-                        });
+            const Toast = Swal.mixin({
+                toast: true,
+                position: 'top-end',
+                showConfirmButton: false,
+                timer: 4000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer)
+                    toast.addEventListener('mouseleave', Swal.resumeTimer)
+                }
+            });
 
-                        Toast.fire({
-                            icon: icono,
-                            title: '{{ message }}'
-                        });
-                    {% endfor %}
-                });
-            </script>
-        {% endif %}
+            Toast.fire({
+                icon: icono,
+                title: '{{ message }}'
+            });
+            {% endfor %}
+        });
+    </script>
+    {% endif %}
     {% endwith %}
-
 
     <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4 py-3 navbar-socio">
         <div class="container d-flex justify-content-between">
@@ -130,16 +146,38 @@
                 <span style="color: var(--sian-pink);">🎨 Panel de Socios</span>
             </span>
             <div class="d-flex gap-2">
-                <a href="{{ url_for('invitaciones_clientes.ayuda_planner') }}" class="btn btn-outline-info btn-sm rounded-pill px-3">
+                <a href="{{ url_for('invitaciones_clientes.ayuda_planner') }}"
+                    class="btn btn-outline-info btn-sm rounded-pill px-3">
                     <i class="fas fa-question-circle me-1"></i> Ayuda
                 </a>
-                
-                <a href="{{ url_for('invitaciones_clientes.logout_cliente') }}" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+
+                <a href="{{ url_for('invitaciones_clientes.logout_cliente') }}"
+                    class="btn btn-outline-danger btn-sm rounded-pill px-3">
                     <i class="fas fa-sign-out-alt me-1"></i> Salir
                 </a>
             </div>
         </div>
     </nav>
+
+    <div class="container">
+        {% if alertas_vencimiento %}
+            {% for alerta in alertas_vencimiento %}
+            <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center rounded-4 mb-4 pulse-warning" role="alert" style="background-color: #fff9db; border-left: 5px solid #fcc419 !important;">
+                <div class="me-3 bg-warning bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                    <i class="fas fa-exclamation-triangle text-warning fs-5"></i>
+                </div>
+                <div class="flex-grow-1">
+                    <h6 class="alert-heading mb-1 fw-bold text-dark" style="font-size: 0.9rem;">Créditos por vencer</h6>
+                    <p class="mb-0 small text-muted">
+                        El próximo <strong>{{ alerta.fecha_vencimiento[:10] }}</strong> vencerán <strong>{{ alerta.remanente }} créditos</strong>. 
+                        ¡Aprovéchalos antes de que expiren!
+                    </p>
+                </div>
+                <button type="button" class="btn-close small" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            {% endfor %}
+        {% endif %}
+    </div>
 
     <div class="container">
         <div class="row align-items-center mb-4">
@@ -149,7 +187,8 @@
             </div>
             <div class="col-md-5 text-md-end">
                 {% if saldo > 0 %}
-                <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}" class="btn btn-dark rounded-pill shadow px-4 py-2">
+                <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}"
+                    class="btn btn-dark rounded-pill shadow px-4 py-2">
                     <i class="fas fa-plus-circle me-2"></i>Nueva Invitación
                 </a>
                 {% else %}
@@ -174,49 +213,69 @@
             <div class="col-md-8">
                 <div class="card card-stats shadow-sm bg-white h-100">
                     <div class="card-header bg-transparent border-0 pt-3">
-                        <h6 class="fw-bold m-0"><i class="fas fa-history me-2 text-warning"></i>Mis Paquetes Comprados</h6>
+                        <h6 class="fw-bold m-0"><i class="fas fa-history me-2 text-warning"></i>Historial de Movimientos</h6>
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-2 p-md-3">
                         <div class="table-responsive">
-                            <table class="table table-sm align-middle mb-0">
+                            <table class="table table-sm align-middle mb-0" id="tablaPaquetes">
                                 <thead class="text-muted small">
                                     <tr>
-                                        <th>ID Pack</th>
-                                        <th class="text-center">Uso</th>
-                                        <th class="text-end">Expira el</th>
+                                        <th>Concepto / ID</th>
+                                        <th class="text-center">Movimiento</th>
+                                        <th class="text-center">Saldo</th>
+                                        <th class="text-end hide-mobile">Expira</th>
                                     </tr>
                                 </thead>
-                                <tbody>
+                                <tbody id="cuerpoPaquetes">
                                     {% for p in paquetes %}
-                                    <tr>
-                                        <td><small class="fw-bold text-dark">#{{ p.id }}</small></td>
-                                        <td class="text-center">
-                                            <span class="badge bg-light text-dark border">{{ p.cantidad_usada }} / {{ p.cantidad_total }}</span>
+                                    <tr class="fila-paquete">
+                                        <td>
+                                            <small class="fw-bold text-dark">
+                                                {{ p.notas if p.notas else 'Carga de Paquete' }}
+                                            </small><br>
+                                            <small class="text-muted" style="font-size: 0.65rem;">Ref: #{{ p.id }}</small>
                                         </td>
-                                        <td class="text-end">
-                                            <small class="text-muted">{{ p.fecha_vencimiento }}</small>
+                                        <td class="text-center">
+                                            {% if p.cambio > 0 %}
+                                            <span class="badge bg-success bg-opacity-10 text-success border">+{{ p.cambio }}</span>
+                                            {% else %}
+                                            <span class="badge bg-danger bg-opacity-10 text-danger border">{{ p.cambio }}</span>
+                                            {% endif %}
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="fw-bold text-dark">{{ p.saldo_posterior }}</span>
+                                        </td>
+                                        <td class="text-end hide-mobile">
+                                            <small class="text-muted">{{ p.vence_display }}</small>
                                         </td>
                                     </tr>
                                     {% else %}
-                                    <tr><td colspan="3" class="text-center text-muted small py-3">No tienes paquetes registrados.</td></tr>
+                                    <tr>
+                                        <td colspan="4" class="text-center text-muted small py-3">Sin movimientos registrados.</td>
+                                    </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
                         </div>
+                        <div id="paginacionPaquetes" class="d-flex justify-content-center gap-2 mt-3"></div>
                     </div>
                 </div>
             </div>
         </div>
 
         <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-header bg-white py-3 border-bottom-0">
+            <div class="card-header bg-white py-3 border-bottom-0 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
                 <h5 class="m-0 fw-bold text-dark"><i class="fas fa-envelope-open-text me-2 text-primary"></i>Mis Invitaciones Creadas</h5>
+                <div class="position-relative" style="width: 100%; max-width: 300px;">
+                    <i class="fas fa-search position-absolute text-muted" style="left: 15px; top: 50%; transform: translateY(-50%);"></i>
+                    <input type="text" id="buscadorInvitaciones" class="form-control form-control-sm rounded-pill ps-5 border-light-subtle shadow-sm" placeholder="Buscar evento o novios...">
+                </div>
             </div>
-            
+
             <div class="card-body p-0">
                 {% if invitaciones|length > 0 %}
                 <div class="table-responsive">
-                    <table class="table align-middle mb-0 planner-table">
+                    <table class="table align-middle mb-0 planner-table" id="tablaInvitaciones">
                         <thead class="bg-light text-muted small text-uppercase">
                             <tr>
                                 <th class="ps-4">Evento / Festejados</th>
@@ -225,69 +284,85 @@
                                 <th class="text-end pe-4">Acciones</th>
                             </tr>
                         </thead>
-                        <tbody>
+                        <tbody id="cuerpoInvitaciones">
                             {% for inv in invitaciones %}
-                            <tr>
+                            <tr class="fila-invitacion">
                                 <td class="ps-4" data-label="Evento">
                                     <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-2" style="font-size: 1.1rem;">
-                                        {{ inv.datos_cliente.get('novios', 'Evento sin nombre') }}
-                                        
+                                        <span class="nombre-evento">{{ inv.datos_cliente.get('novios', 'Evento sin nombre') }}</span>
+
                                         {% if inv.tipo_evento == 'xv' %}
-                                            <span class="badge bg-warning text-dark border align-middle" style="font-size: 0.7rem; height: fit-content;">👑 XV Años</span>
+                                        <span class="badge bg-warning text-dark border align-middle" style="font-size: 0.7rem; height: fit-content;">👑 XV Años</span>
                                         {% else %}
-                                            <span class="badge bg-primary bg-opacity-10 text-primary border align-middle" style="font-size: 0.7rem; height: fit-content;">💍 Boda</span>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border align-middle" style="font-size: 0.7rem; height: fit-content;">💍 Boda</span>
                                         {% endif %}
                                     </div>
                                     <small class="text-muted d-block mt-1 text-truncate" style="max-width: 250px;">Slug: /invitacion/{{ inv.slug }}</small>
                                 </td>
-                                
+
                                 <td class="text-center" data-label="Fecha">
                                     <span class="fw-bold text-dark">{{ inv.fecha_evento[:10] }}</span>
                                 </td>
-                                
+
                                 <td class="text-center" data-label="Acceso">
-                                    <button type="button" class="btn btn-sm btn-light border-primary text-primary fw-bold px-3 rounded-pill transition-all" 
-                                            onclick="copiarCodigo('{{ inv.codigo_acceso_cliente }}', this)" 
-                                            title="Clic para copiar código">
+                                    <button type="button" class="btn btn-sm btn-light border-primary text-primary fw-bold px-3 rounded-pill transition-all"
+                                        onclick="copiarCodigoSocio('{{ inv.codigo_acceso_cliente }}', this)" title="Clic para copiar código">
                                         <i class="fas fa-copy me-1"></i> <span>{{ inv.codigo_acceso_cliente }}</span>
                                     </button>
                                 </td>
-                                
+
                                 <td class="text-end pe-md-4 mobile-actions">
                                     <div class="d-flex justify-content-md-end justify-content-center gap-2 flex-wrap">
-                                        
-                                        <a href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv.id) }}" class="btn btn-light border rounded-circle text-warning shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Editar">
+                                        <a href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv.id) }}"
+                                            class="btn btn-light border rounded-circle text-warning shadow-sm d-inline-flex align-items-center justify-content-center"
+                                            style="width: 38px; height: 38px;" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </a>
-                                        
+
                                         {% if inv.tiene_modulo_invitados %}
-                                        <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv.id) }}" class="btn btn-light border rounded-circle text-info shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Lista de Invitados">
+                                        <a href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv.id) }}"
+                                            class="btn btn-light border rounded-circle text-info shadow-sm d-inline-flex align-items-center justify-content-center"
+                                            style="width: 38px; height: 38px;" title="Lista de Invitados">
                                             <i class="fas fa-users"></i>
                                         </a>
                                         {% endif %}
 
                                         {% if inv.camara_premium %}
-                                        <a href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv.id) }}" class="btn btn-light border rounded-circle text-danger shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Ver Álbum de Fotos">
+                                        <a href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv.id) }}"
+                                            class="btn btn-light border rounded-circle text-danger shadow-sm d-inline-flex align-items-center justify-content-center"
+                                            style="width: 38px; height: 38px;" title="Ver Álbum de Fotos">
                                             <i class="fas fa-camera-retro"></i>
                                         </a>
                                         {% endif %}
-                                        
-                                        <a href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv.slug) }}" target="_blank" class="btn btn-light border rounded-circle text-primary shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 38px; height: 38px;" title="Ver Link">
+
+                                        <a href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv.slug) }}"
+                                            target="_blank"
+                                            class="btn btn-light border rounded-circle text-primary shadow-sm d-inline-flex align-items-center justify-content-center"
+                                            style="width: 38px; height: 38px;" title="Ver Link">
                                             <i class="fas fa-external-link-alt"></i>
                                         </a>
-
                                     </div>
                                 </td>
                             </tr>
                             {% endfor %}
+
+                            <tr id="filaSinResultados" style="display: none; background: transparent; border: none !important; box-shadow: none;">
+                                <td colspan="4" class="text-center py-5 text-muted border-0 d-flex flex-column align-items-center w-100">
+                                    <i class="fas fa-search fa-2x mb-3 opacity-25"></i>
+                                    <span class="fw-bold">No se encontraron eventos con esa búsqueda.</span>
+                                </td>
+                            </tr>
+
                         </tbody>
                     </table>
                 </div>
+                <div id="paginacionInvitaciones" class="d-flex justify-content-center gap-2 py-3"></div>
 
                 {% else %}
                 <div class="text-center py-5">
                     <div class="mb-4">
-                        <span class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width: 100px; height: 100px;">
+                        <span class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center"
+                            style="width: 100px; height: 100px;">
                             <i class="fas fa-magic fa-3x"></i>
                         </span>
                     </div>
@@ -295,8 +370,9 @@
                     <p class="text-muted mb-4 mx-auto" style="max-width: 450px;">
                         Aún no has creado ninguna invitación. Haz clic en el botón de arriba para comenzar a diseñar y sorprender a tus clientes.
                     </p>
-                    
-                    <a href="{{ url_for('invitaciones_clientes.ayuda_planner') }}" class="btn btn-light border rounded-pill px-4 text-muted fw-bold shadow-sm">
+
+                    <a href="{{ url_for('invitaciones_clientes.ayuda_planner') }}"
+                        class="btn btn-light border rounded-pill px-4 text-muted fw-bold shadow-sm">
                         <i class="fas fa-play-circle me-1 text-info"></i> ¿No sabes por dónde empezar? Ve la guía
                     </a>
                 </div>
@@ -309,41 +385,125 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        function copiarCodigo(texto, btnElement) {
-            // API del navegador para copiar
-            navigator.clipboard.writeText(texto).then(function() {
-                
+        function copiarCodigoSocio(texto, btnElement) {
+            navigator.clipboard.writeText(texto).then(function () {
                 const spanText = btnElement.querySelector('span');
                 const icon = btnElement.querySelector('i');
                 const textoOriginal = spanText.innerText;
-                
-                // Efecto visual: Cambiamos a verde y palomita
+
                 btnElement.style.transition = "all 0.3s ease";
                 btnElement.classList.replace('btn-light', 'btn-success');
                 btnElement.classList.replace('border-primary', 'border-success');
                 btnElement.classList.replace('text-primary', 'text-white');
                 icon.className = 'fas fa-check me-1';
                 spanText.innerText = '¡Copiado!';
-                
-                // Regresamos a la normalidad después de 2.5 segundos
+
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: 'Código copiado'
+                });
+
                 setTimeout(() => {
                     btnElement.classList.replace('btn-success', 'btn-light');
                     btnElement.classList.replace('border-success', 'border-primary');
                     btnElement.classList.replace('text-white', 'text-primary');
                     icon.className = 'fas fa-copy me-1';
                     spanText.innerText = textoOriginal;
-                }, 2500);
+                }, 2000);
 
-            }).catch(function(err) {
-                console.error('Error al copiar: ', err);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Oops...',
-                    text: 'Tu navegador no permite copiar automáticamente.',
-                    confirmButtonColor: '#333'
-                });
+            }).catch(function () {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo copiar.', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
             });
         }
+
+        // LÓGICA DE PAGINACIÓN Y BUSCADOR
+        document.addEventListener("DOMContentLoaded", function () {
+            
+            function inicializarPaginacion(bodyId, navId, limitePorPagina, claseFilas, inputBuscadorId) {
+                const cuerpo = document.getElementById(bodyId);
+                const nav = document.getElementById(navId);
+                if (!cuerpo || !nav) return;
+
+                const buscador = document.getElementById(inputBuscadorId);
+                const filaVacia = document.getElementById('filaSinResultados');
+
+                function actualizarVista(pagina) {
+                    const todasLasFilas = Array.from(cuerpo.getElementsByClassName(claseFilas));
+                    let filasActivas = todasLasFilas;
+
+                    // Filtrado en tiempo real
+                    if (buscador) {
+                        const texto = buscador.value.toLowerCase();
+                        let contadorCoincidencias = 0;
+                        
+                        todasLasFilas.forEach(f => {
+                            const titulo = f.querySelector('.nombre-evento') ? f.querySelector('.nombre-evento').innerText.toLowerCase() : "";
+                            if (titulo.includes(texto)) {
+                                f.dataset.ocultoPorFiltro = "false";
+                                contadorCoincidencias++;
+                            } else {
+                                f.dataset.ocultoPorFiltro = "true";
+                            }
+                        });
+
+                        filasActivas = todasLasFilas.filter(f => f.dataset.ocultoPorFiltro !== "true");
+                        
+                        if (filaVacia) {
+                            filaVacia.style.display = contadorCoincidencias === 0 ? "flex" : "none";
+                        }
+                    }
+
+                    // Paginación matemática
+                    const totalPaginas = Math.ceil(filasActivas.length / limitePorPagina);
+                    nav.innerHTML = "";
+
+                    // Ocultar todas las filas primero
+                    todasLasFilas.forEach(f => f.style.display = "none");
+
+                    if (totalPaginas <= 1) {
+                        filasActivas.forEach(f => f.style.display = "");
+                        return; // No se ocupan botones si cabe en 1 hoja
+                    }
+
+                    // Mostrar las que tocan en la hoja actual
+                    const inicio = (pagina - 1) * limitePorPagina;
+                    const fin = inicio + limitePorPagina;
+                    filasActivas.slice(inicio, fin).forEach(f => f.style.display = "");
+
+                    // Crear botones
+                    for (let i = 1; i <= totalPaginas; i++) {
+                        const btn = document.createElement("button");
+                        btn.innerText = i;
+                        btn.className = (i === pagina) 
+                            ? "btn btn-sm btn-primary rounded-circle mx-1 shadow-sm" 
+                            : "btn btn-sm btn-outline-secondary rounded-circle mx-1";
+                        btn.style.width = "32px";
+                        btn.style.height = "32px";
+                        btn.onclick = () => actualizarVista(i);
+                        nav.appendChild(btn);
+                    }
+                }
+
+                // Disparador del buscador
+                if (buscador) {
+                    buscador.addEventListener('input', () => actualizarVista(1));
+                }
+
+                // Iniciar
+                actualizarVista(1);
+            }
+
+            // Ejecutamos para Créditos (4) y para Invitaciones (5)
+            inicializarPaginacion('cuerpoPaquetes', 'paginacionPaquetes', 4, 'fila-paquete', null);
+            inicializarPaginacion('cuerpoInvitaciones', 'paginacionInvitaciones', 5, 'fila-invitacion', 'buscadorInvitaciones');
+        });
     </script>
 </body>
 
