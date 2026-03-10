@@ -6,6 +6,7 @@
 <style>
     /* --- ESTILOS MÓVILES PARA LA TABLA DE PLANNERS Y BOTONES --- */
     @media (max-width: 768px) {
+
         /* 1. Botones Superiores 100% Ancho en Móvil */
         .admin-header-actions {
             display: flex;
@@ -14,13 +15,14 @@
             width: 100%;
             margin-top: 15px;
         }
-        
+
         .admin-header-actions .btn {
             width: 100%;
             display: flex;
             justify-content: center;
             align-items: center;
-            padding: 12px 20px; /* Botones más altos y fáciles de tocar */
+            padding: 12px 20px;
+            /* Botones más altos y fáciles de tocar */
         }
 
         /* 2. Pestañas de Filtro (Pills) Scrollables */
@@ -30,12 +32,13 @@
             padding-bottom: 5px;
             /* Ocultar barra de scroll en móviles */
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: none; 
+            scrollbar-width: none;
         }
+
         #filtros-autor::-webkit-scrollbar {
             display: none;
         }
-        
+
         #filtros-autor .nav-item {
             white-space: nowrap;
         }
@@ -44,12 +47,12 @@
         .planner-table thead {
             display: none;
         }
-        
+
         /* 4. Destrabamos el contenedor para que los menús puedan salir */
         .table-responsive {
             overflow: visible !important;
         }
-        
+
         /* 5. Diseño de la Tarjeta */
         .planner-table tr {
             display: flex;
@@ -57,11 +60,12 @@
             background: #ffffff;
             border-radius: 16px;
             margin-bottom: 1.5rem;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06);
-            border: 1px solid rgba(0,0,0,0.05);
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            border: 1px solid rgba(0, 0, 0, 0.05);
             padding: 15px;
             position: relative;
-            z-index: 1; /* Nivel base */
+            z-index: 1;
+            /* Nivel base */
         }
 
         /* ✨ LA MAGIA: Si la tarjeta tiene un menú abierto, la pasamos al frente ✨ */
@@ -106,13 +110,13 @@
             margin-top: 5px;
             justify-content: center;
         }
-        
+
         /* 7. Estilo premium para el menú flotante en móvil */
         .planner-table td:last-child .dropdown-menu {
             width: 100%;
             text-align: center;
             border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
             margin-top: 5px !important;
         }
     }
@@ -120,18 +124,21 @@
 
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
-        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-envelope-open-text text-primary me-2"></i>Mis Invitaciones</h4>
+        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-envelope-open-text text-primary me-2"></i>Mis Invitaciones
+        </h4>
         <small class="text-muted">Administra los micro-sitios de Bodas y XV Años</small>
     </div>
-    
+
     <div class="admin-header-actions d-md-flex gap-2 mt-3 mt-md-0">
         {% if session.get('role', 0) >= 1 %}
-        <a href="{{ url_for('invitaciones_admin.gestionar_socios') }}" class="btn btn-warning rounded-pill px-4 shadow-sm fw-bold">
+        <a href="{{ url_for('invitaciones_admin.gestionar_socios') }}"
+            class="btn btn-warning rounded-pill px-4 shadow-sm fw-bold">
             <i class="fas fa-handshake me-2"></i>Planners
         </a>
         {% endif %}
 
-        <a href="{{ url_for('invitaciones_publicas.scanner_global') }}" class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
+        <a href="{{ url_for('invitaciones_publicas.scanner_global') }}"
+            class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
             <i class="fas fa-qrcode me-2"></i>Escáner Maestro
         </a>
         <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}" class="btn btn-dark rounded-pill px-4 shadow-sm">
@@ -141,7 +148,7 @@
 </div>
 
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-3">
-    
+
     <ul class="nav nav-pills gap-2 mb-0" id="filtros-autor">
         <li class="nav-item">
             <button class="nav-link active rounded-pill px-4 fw-bold border" data-filter="all">Todas</button>
@@ -158,7 +165,9 @@
         </li>
     </ul>
 
-    <select id="filtro-planner-select" class="form-select border-info text-info fw-bold w-100 w-md-auto bg-info bg-opacity-10 shadow-sm" style="display: none; max-width: 300px;">
+    <select id="filtro-planner-select"
+        class="form-select border-info text-info fw-bold w-100 w-md-auto bg-info bg-opacity-10 shadow-sm"
+        style="display: none; max-width: 300px;">
         <option value="all">👑 Todos los Planners</option>
     </select>
 
@@ -180,48 +189,54 @@
                 </thead>
                 <tbody>
                     {% for inv in invitaciones %}
-                    <tr class="fila-invitacion" data-author="{{ 'planners' if inv.planner_id else 'staff' }}" data-planner-name="{{ inv.planner_nombre }}">
+                    <tr class="fila-invitacion" data-author="{{ 'planners' if inv.planner_id else 'staff' }}"
+                        data-planner-name="{{ inv.planner_nombre }}">
                         <td class="ps-md-4 py-3" data-label="Evento">
                             <div class="d-flex justify-content-between align-items-start w-100 mb-1">
                                 <div class="fw-bold text-dark d-flex align-items-center gap-2">
                                     {% if inv.get('tipo_evento') == 'xv' %}
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-crown"></i> XV</span>
+                                    <span class="badge bg-warning text-dark"><i class="fas fa-crown"></i> XV</span>
                                     {% else %}
-                                        <span class="badge bg-light border text-secondary"><i class="fas fa-ring"></i> Boda</span>
+                                    <span class="badge bg-light border text-secondary"><i class="fas fa-ring"></i>
+                                        Boda</span>
                                     {% endif %}
-                                    <span style="font-size: 1.1rem;">{{ inv['datos_cliente'].get('novios', 'Sin Nombre') }}</span>
+                                    <span style="font-size: 1.1rem;">{{ inv['datos_cliente'].get('novios', 'Sin Nombre')
+                                        }}</span>
                                 </div>
-                                
+
                                 {% if inv.get('codigo_acceso_cliente') %}
                                 <button onclick="copiarAnimado('{{ inv['codigo_acceso_cliente'] }}', this)"
-                                    class="btn btn-sm btn-light border rounded-circle text-primary shadow-sm d-md-none transition-all ms-2" 
+                                    class="btn btn-sm btn-light border rounded-circle text-primary shadow-sm d-md-none transition-all ms-2"
                                     title="Copiar Código">
                                     <i class="fas fa-key"></i>
                                 </button>
                                 {% endif %}
                             </div>
-                            
+
                             <div class="mb-2">
                                 {% if inv.planner_id %}
-                                    <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle">
-                                        <i class="fas fa-handshake"></i> Planner: {{ inv.planner_nombre }}
-                                    </span>
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle">
+                                    <i class="fas fa-handshake"></i> Planner: {{ inv.planner_nombre }}
+                                </span>
                                 {% else %}
-                                    <span class="badge bg-dark bg-opacity-10 text-dark border border-dark-subtle">
-                                        <i class="fas fa-shield-alt"></i> Staff SianEffects
-                                    </span>
+                                <span class="badge bg-dark bg-opacity-10 text-dark border border-dark-subtle">
+                                    <i class="fas fa-shield-alt"></i> Staff SianEffects
+                                </span>
                                 {% endif %}
                             </div>
-                            
+
                             <div class="mt-1 d-flex flex-wrap align-items-center gap-2">
-                                <small class="text-muted bg-light px-2 py-1 rounded">Estilo: <span class="text-capitalize fw-bold">{{ inv['estilo_fuente'] }}</span></small>
-                                
+                                <small class="text-muted bg-light px-2 py-1 rounded">Estilo: <span
+                                        class="text-capitalize fw-bold">{{ inv['estilo_fuente'] }}</span></small>
+
                                 {% if inv.get('tiene_modulo_invitados') or inv.get('camara_premium') %}
-                                <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle py-1 transition-all d-none d-md-inline-flex align-items-center" 
-                                    style="cursor: pointer;" 
+                                <span
+                                    class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle py-1 transition-all d-none d-md-inline-flex align-items-center"
+                                    style="cursor: pointer;"
                                     onclick="copiarAnimado('{{ inv.get('codigo_acceso_cliente') }}', this)"
                                     title="Click para copiar código">
-                                    <i class="fas fa-key me-1"></i> <span>{{ inv.get('codigo_acceso_cliente', 'Sin código') }}</span>
+                                    <i class="fas fa-key me-1"></i> <span>{{ inv.get('codigo_acceso_cliente', 'Sin
+                                        código') }}</span>
                                 </span>
                                 {% endif %}
                             </div>
@@ -240,7 +255,8 @@
                         <td data-label="Fecha Evento">
                             <div class="fw-bold text-dark text-end text-md-start">
                                 {% if inv['fecha_evento'] %}
-                                {{ inv['fecha_evento'][:10] }} <br class="d-md-none"><small class="text-muted">{{ inv['fecha_evento'][11:16] }}</small>
+                                {{ inv['fecha_evento'][:10] }} <br class="d-md-none"><small class="text-muted">{{
+                                    inv['fecha_evento'][11:16] }}</small>
                                 {% else %}
                                 <span class="text-muted">-</span>
                                 {% endif %}
@@ -267,26 +283,30 @@
 
                         <td class="text-md-end pe-md-4" data-label="Opciones">
                             <div class="dropdown w-100 text-center text-md-end">
-                                <button class="btn btn-light border rounded-pill px-4 btn-sm w-100 w-md-auto" type="button"
-                                    data-bs-toggle="dropdown">
+                                <button class="btn btn-light border rounded-pill px-4 btn-sm w-100 w-md-auto"
+                                    type="button" data-bs-toggle="dropdown">
                                     Gestionar <i class="fas fa-chevron-down ms-1"></i>
                                 </button>
-                                
+
                                 <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv['slug']) }}" target="_blank">
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv['slug']) }}"
+                                            target="_blank">
                                             <i class="fas fa-external-link-alt me-2 text-primary"></i> Ver Sitio
                                         </a>
                                     </li>
 
                                     {% if inv.get('tiene_modulo_invitados') %}
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}">
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}">
                                             <i class="fas fa-users me-2 text-info"></i> Gestionar Invitados
                                         </a>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv['slug']) }}">
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv['slug']) }}">
                                             <i class="fas fa-qrcode me-2 text-dark"></i> Escáner Recepción
                                         </a>
                                     </li>
@@ -294,23 +314,30 @@
 
                                     {% if inv.get('camara_premium') %}
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv['id']) }}">
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv['id']) }}">
                                             <i class="fas fa-camera-retro me-2 text-success"></i> Ver Fotos Rollo
                                         </a>
                                     </li>
                                     {% endif %}
 
-                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <hr class="dropdown-divider">
+                                    </li>
 
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}">
-                                            <i class="fas fa-edit me-2 text-warning"></i> 
-                                            {% if inv.get('tipo_evento') == 'xv' %} Editar XV Años {% else %} Editar Boda {% endif %}
+                                        <a class="dropdown-item"
+                                            href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}">
+                                            <i class="fas fa-edit me-2 text-warning"></i>
+                                            {% if inv.get('tipo_evento') == 'xv' %} Editar XV Años {% else %} Editar
+                                            Boda {% endif %}
                                         </a>
                                     </li>
                                     <li>
-                                        <form action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}" method="POST" class="form-eliminar-invitacion">
-                                            <button type="button" class="dropdown-item text-danger btn-eliminar" data-nombre="{{ inv['datos_cliente'].get('novios', 'este evento') }}">
+                                        <form action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}" 
+                                              method="POST" 
+                                              onsubmit="return confirmarEliminacionForm(event, this, '{{ inv['datos_cliente'].get('novios', 'este evento') }}')">
+                                            <button type="submit" class="dropdown-item text-danger">
                                                 <i class="fas fa-trash-alt me-2"></i> Eliminar
                                             </button>
                                         </form>
@@ -334,156 +361,152 @@
 </div>
 
 <script>
-function copiarAnimado(texto, elemento, soloIcono = false) {
-    if (!texto || texto === 'None') return;
-    
-    navigator.clipboard.writeText(texto).then(() => {
-        const icon = elemento.querySelector('i');
-        const spanText = elemento.querySelector('span');
-        const originalIconClass = icon.className;
-        let originalText = "";
-        
-        if (spanText) originalText = spanText.innerText;
+    function copiarAnimado(texto, elemento, soloIcono = false) {
+        if (!texto || texto === 'None') return;
 
-        elemento.style.transition = "all 0.3s ease";
-        elemento.classList.remove('text-primary', 'bg-primary');
-        elemento.classList.add('text-success');
-        
-        if (!soloIcono) {
-            elemento.classList.add('bg-success');
-        }
+        navigator.clipboard.writeText(texto).then(() => {
+            const icon = elemento.querySelector('i');
+            const spanText = elemento.querySelector('span');
+            const originalIconClass = icon.className;
+            let originalText = "";
 
-        icon.className = 'fas fa-check text-success';
-        if (spanText) {
-            spanText.innerText = ' ¡Copiado!';
-            icon.classList.remove('text-success');
-        }
+            if (spanText) originalText = spanText.innerText;
 
-        setTimeout(() => {
-            elemento.classList.remove('text-success', 'bg-success');
-            elemento.classList.add('text-primary');
-            if (!soloIcono && spanText) elemento.classList.add('bg-primary');
-            
-            icon.className = originalIconClass;
-            if (spanText) spanText.innerText = originalText;
-        }, 2000);
+            elemento.style.transition = "all 0.3s ease";
+            elemento.classList.remove('text-primary', 'bg-primary');
+            elemento.classList.add('text-success');
 
-    }).catch(err => {
-        console.error('Error al copiar: ', err);
-        alert("No se pudo copiar automáticamente.");
-    });
-}
-
-function copiarLink(url) {
-    navigator.clipboard.writeText(url).then(() => {
-        Swal.fire({
-            toast: true,
-            position: 'top-end',
-            icon: 'success',
-            title: '¡Enlace copiado!',
-            showConfirmButton: false,
-            timer: 2000
-        });
-    });
-}
-
-// --- LÓGICA DE FILTROS POR AUTOR Y PLANNER ---
-document.addEventListener("DOMContentLoaded", function() {
-    const botonesFiltro = document.querySelectorAll('#filtros-autor .nav-link');
-    const filas = document.querySelectorAll('.fila-invitacion');
-    const selectPlanner = document.getElementById('filtro-planner-select');
-
-    const plannerNames = new Set();
-    filas.forEach(fila => {
-        if (fila.getAttribute('data-author') === 'planners') {
-            const name = fila.getAttribute('data-planner-name');
-            if (name && name !== 'None') plannerNames.add(name);
-        }
-    });
-
-    plannerNames.forEach(name => {
-        const option = document.createElement('option');
-        option.value = name;
-        option.textContent = "👤 " + name;
-        selectPlanner.appendChild(option);
-    });
-
-    function aplicarFiltros() {
-        const pastillaActiva = document.querySelector('#filtros-autor .nav-link.active').getAttribute('data-filter');
-        const plannerSeleccionado = selectPlanner.value;
-
-        filas.forEach(fila => {
-            const autorFila = fila.getAttribute('data-author');
-            const plannerFila = fila.getAttribute('data-planner-name');
-            let mostrar = false;
-
-            if (pastillaActiva === 'all') {
-                mostrar = true;
-            } else if (pastillaActiva === 'staff' && autorFila === 'staff') {
-                mostrar = true;
-            } else if (pastillaActiva === 'planners' && autorFila === 'planners') {
-                if (plannerSeleccionado === 'all' || plannerSeleccionado === plannerFila) {
-                    mostrar = true;
-                }
+            if (!soloIcono) {
+                elemento.classList.add('bg-success');
             }
 
-            fila.style.display = mostrar ? '' : 'none';
-        });
+            icon.className = 'fas fa-check text-success';
+            if (spanText) {
+                spanText.innerText = ' ¡Copiado!';
+                icon.classList.remove('text-success');
+            }
 
-        if (pastillaActiva === 'planners' && plannerNames.size > 0) {
-            selectPlanner.style.display = 'inline-block';
-        } else {
-            selectPlanner.style.display = 'none';
-        }
+            setTimeout(() => {
+                elemento.classList.remove('text-success', 'bg-success');
+                elemento.classList.add('text-primary');
+                if (!soloIcono && spanText) elemento.classList.add('bg-primary');
+
+                icon.className = originalIconClass;
+                if (spanText) spanText.innerText = originalText;
+            }, 2000);
+
+        }).catch(err => {
+            console.error('Error al copiar: ', err);
+            alert("No se pudo copiar automáticamente.");
+        });
     }
 
-    botonesFiltro.forEach(boton => {
-        boton.addEventListener('click', function() {
-            botonesFiltro.forEach(b => {
-                b.classList.remove('active', 'text-white');
-                b.classList.add('text-muted');
+    function copiarLink(url) {
+        navigator.clipboard.writeText(url).then(() => {
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: 'success',
+                title: '¡Enlace copiado!',
+                showConfirmButton: false,
+                timer: 2000
             });
-            this.classList.add('active', 'text-white');
-            this.classList.remove('text-muted');
-
-            selectPlanner.value = 'all';
-            aplicarFiltros();
         });
-    });
+    }
 
-    selectPlanner.addEventListener('change', aplicarFiltros);
-});
+    // --- LÓGICA DE FILTROS POR AUTOR Y PLANNER ---
+    document.addEventListener("DOMContentLoaded", function () {
+        const botonesFiltro = document.querySelectorAll('#filtros-autor .nav-link');
+        const filas = document.querySelectorAll('.fila-invitacion');
+        const selectPlanner = document.getElementById('filtro-planner-select');
+
+        const plannerNames = new Set();
+        filas.forEach(fila => {
+            if (fila.getAttribute('data-author') === 'planners') {
+                const name = fila.getAttribute('data-planner-name');
+                if (name && name !== 'None') plannerNames.add(name);
+            }
+        });
+
+        plannerNames.forEach(name => {
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = "👤 " + name;
+            selectPlanner.appendChild(option);
+        });
+
+        function aplicarFiltros() {
+            const pastillaActiva = document.querySelector('#filtros-autor .nav-link.active').getAttribute('data-filter');
+            const plannerSeleccionado = selectPlanner.value;
+
+            filas.forEach(fila => {
+                const autorFila = fila.getAttribute('data-author');
+                const plannerFila = fila.getAttribute('data-planner-name');
+                let mostrar = false;
+
+                if (pastillaActiva === 'all') {
+                    mostrar = true;
+                } else if (pastillaActiva === 'staff' && autorFila === 'staff') {
+                    mostrar = true;
+                } else if (pastillaActiva === 'planners' && autorFila === 'planners') {
+                    if (plannerSeleccionado === 'all' || plannerSeleccionado === plannerFila) {
+                        mostrar = true;
+                    }
+                }
+
+                fila.style.display = mostrar ? '' : 'none';
+            });
+
+            if (pastillaActiva === 'planners' && plannerNames.size > 0) {
+                selectPlanner.style.display = 'inline-block';
+            } else {
+                selectPlanner.style.display = 'none';
+            }
+        }
+
+        botonesFiltro.forEach(boton => {
+            boton.addEventListener('click', function () {
+                botonesFiltro.forEach(b => {
+                    b.classList.remove('active', 'text-white');
+                    b.classList.add('text-muted');
+                });
+                this.classList.add('active', 'text-white');
+                this.classList.remove('text-muted');
+
+                selectPlanner.value = 'all';
+                aplicarFiltros();
+            });
+        });
+
+        selectPlanner.addEventListener('change', aplicarFiltros);
+    });
 
 
 
 // --- LÓGICA DE SWEETALERT PARA ELIMINAR INVITACIÓN ---
-document.addEventListener("DOMContentLoaded", function() {
-    const botonesEliminar = document.querySelectorAll('.btn-eliminar');
+function confirmarEliminacionForm(event, formulario, nombreEvento) {
+    event.preventDefault(); // Frenamos el POST en seco
+    event.stopPropagation(); // Evitamos que el dropdown haga cosas raras
 
-    botonesEliminar.forEach(boton => {
-        boton.addEventListener('click', function(e) {
-            e.preventDefault(); // Evitamos que el formulario se envíe de inmediato
-            
-            const form = this.closest('form');
-            const nombreEvento = this.getAttribute('data-nombre');
-
-            Swal.fire({
-                title: '¿Eliminar invitación?',
-                html: `Estás a punto de borrar la invitación de <strong>${nombreEvento}</strong>.<br><br><span class="text-danger small"><i class="fas fa-exclamation-triangle"></i> ¡Advertencia! Se borrarán permanentemente todos los pases y fotos de R2 asociados a este evento.</span>`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, eliminar definitivamente',
-                cancelButtonText: 'Cancelar',
-                borderRadius: '15px'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    form.submit(); // Si confirma, enviamos el formulario
-                }
-            });
-        });
+    Swal.fire({
+        title: '¿Eliminar invitación?',
+        html: `Estás a punto de borrar la invitación de <strong>${nombreEvento}</strong>.<br><br><span class="text-danger small"><i class="fas fa-exclamation-triangle"></i> ¡Advertencia! Se borrarán permanentemente todos los pases y fotos de R2 (Cámara fotográfica) asociados a este evento.</span>`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        confirmButtonText: 'Sí, eliminar',
+        cancelButtonText: 'Cancelar',
+        customClass: {
+            popup: 'rounded-4'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            formulario.submit(); // Si el usuario confirma, soltamos el POST a Flask
+        }
     });
-});
+
+    return false;
+}
 </script>
 {% endblock %}
