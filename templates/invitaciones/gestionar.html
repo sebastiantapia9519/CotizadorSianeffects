@@ -309,8 +309,8 @@
                                         </a>
                                     </li>
                                     <li>
-                                        <form action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}" method="POST" onsubmit="return confirm('¿Estás seguro? Se borrarán todas las fotos de R2 también.')">
-                                            <button type="submit" class="dropdown-item text-danger">
+                                        <form action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}" method="POST" class="form-eliminar-invitacion">
+                                            <button type="button" class="dropdown-item text-danger btn-eliminar" data-nombre="{{ inv['datos_cliente'].get('novios', 'este evento') }}">
                                                 <i class="fas fa-trash-alt me-2"></i> Eliminar
                                             </button>
                                         </form>
@@ -454,5 +454,36 @@ document.addEventListener("DOMContentLoaded", function() {
     selectPlanner.addEventListener('change', aplicarFiltros);
 });
 
+
+
+// --- LÓGICA DE SWEETALERT PARA ELIMINAR INVITACIÓN ---
+document.addEventListener("DOMContentLoaded", function() {
+    const botonesEliminar = document.querySelectorAll('.btn-eliminar');
+
+    botonesEliminar.forEach(boton => {
+        boton.addEventListener('click', function(e) {
+            e.preventDefault(); // Evitamos que el formulario se envíe de inmediato
+            
+            const form = this.closest('form');
+            const nombreEvento = this.getAttribute('data-nombre');
+
+            Swal.fire({
+                title: '¿Eliminar invitación?',
+                html: `Estás a punto de borrar la invitación de <strong>${nombreEvento}</strong>.<br><br><span class="text-danger small"><i class="fas fa-exclamation-triangle"></i> ¡Advertencia! Se borrarán permanentemente todos los pases y fotos de R2 asociados a este evento.</span>`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: 'Sí, eliminar definitivamente',
+                cancelButtonText: 'Cancelar',
+                borderRadius: '15px'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    form.submit(); // Si confirma, enviamos el formulario
+                }
+            });
+        });
+    });
+});
 </script>
 {% endblock %}
