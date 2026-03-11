@@ -42,10 +42,19 @@
         .pulse-warning {
             animation: shadow-pulse 2s infinite;
         }
+
         @keyframes shadow-pulse {
-            0% { box-shadow: 0 0 0 0 rgba(252, 196, 25, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(252, 196, 25, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(252, 196, 25, 0); }
+            0% {
+                box-shadow: 0 0 0 0 rgba(252, 196, 25, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(252, 196, 25, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(252, 196, 25, 0);
+            }
         }
 
         /* --- REDISEÑO MÓVIL ESTILO APP (SOLO INVITACIONES) --- */
@@ -98,9 +107,11 @@
                 padding-top: 15px !important;
                 border-top: 1px solid #f1f3f5 !important;
             }
-            
+
             /* Ajuste para que los créditos en celular sean una lista compacta */
-            .hide-mobile { display: none !important; }
+            .hide-mobile {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -160,22 +171,47 @@
     </nav>
 
     <div class="container">
-        {% if alertas_vencimiento %}
+        {% if alertas_vencimiento and saldo > 0 %}
+            
+            {% set total_en_riesgo = alertas_vencimiento | sum(attribute='remanente') %}
+            {% set en_riesgo_real = total_en_riesgo if total_en_riesgo <= saldo else saldo %}
+            
+            {% set fecha_mas_proxima = alertas_vencimiento[0].fecha_vencimiento[:10] %}
+            
+            {% set conteo = namespace(total=0) %}
             {% for alerta in alertas_vencimiento %}
-            <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center rounded-4 mb-4 pulse-warning" role="alert" style="background-color: #fff9db; border-left: 5px solid #fcc419 !important;">
-                <div class="me-3 bg-warning bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center" style="width: 45px; height: 45px;">
+                {% if alerta.fecha_vencimiento[:10] == fecha_mas_proxima %}
+                    {% set conteo.total = conteo.total + alerta.remanente %}
+                {% endif %}
+            {% endfor %}
+            
+            {% set primer_vencimiento_real = conteo.total if conteo.total <= en_riesgo_real else en_riesgo_real %}
+
+            <div class="alert alert-warning border-0 shadow-sm d-flex align-items-center rounded-4 mb-4 pulse-warning"
+                role="alert" style="background-color: #fff9db; border-left: 5px solid #fcc419 !important;">
+                
+                <div class="me-3 bg-warning bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center"
+                    style="width: 45px; height: 45px;">
                     <i class="fas fa-exclamation-triangle text-warning fs-5"></i>
                 </div>
+                
                 <div class="flex-grow-1">
-                    <h6 class="alert-heading mb-1 fw-bold text-dark" style="font-size: 0.9rem;">Créditos por vencer</h6>
+                    <h6 class="alert-heading mb-1 fw-bold text-dark" style="font-size: 0.9rem;">¡Atención con tus créditos!</h6>
                     <p class="mb-0 small text-muted">
-                        El próximo <strong>{{ alerta.fecha_vencimiento[:10] }}</strong> vencerán <strong>{{ alerta.remanente }} créditos</strong>. 
-                        ¡Aprovéchalos antes de que expiren!
+                        Tienes <strong>{{ en_riesgo_real }} créditos</strong> en riesgo de expirar. 
+                        
+                        {% if en_riesgo_real == primer_vencimiento_real %}
+                            Todos ellos vencerán el próximo <strong>{{ fecha_mas_proxima }}</strong>.
+                        {% else %}
+                            El primer corte es el <strong>{{ fecha_mas_proxima }}</strong>, donde vencerán <strong>{{ primer_vencimiento_real }} créditos</strong>.
+                        {% endif %}
+                        
+                        Revisa tu historial abajo y aprovéchalos.
                     </p>
                 </div>
+                
                 <button type="button" class="btn-close small" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-            {% endfor %}
         {% endif %}
     </div>
 
@@ -213,40 +249,75 @@
             <div class="col-md-8">
                 <div class="card card-stats shadow-sm bg-white h-100">
                     <div class="card-header bg-transparent border-0 pt-3">
-                        <h6 class="fw-bold m-0"><i class="fas fa-history me-2 text-warning"></i>Historial de Movimientos</h6>
+                        <h6 class="fw-bold m-0"><i class="fas fa-history me-2 text-warning"></i>Historial de Movimientos
+                        </h6>
                     </div>
                     <div class="card-body p-2 p-md-3">
                         <div class="table-responsive">
                             <table class="table table-sm align-middle mb-0" id="tablaPaquetes">
                                 <thead class="text-muted small">
                                     <tr>
-                                        <th>Concepto / ID</th>
-                                        <th class="text-center">Movimiento</th>
-                                        <th class="text-center">Saldo</th>
-                                        <th class="text-end hide-mobile">Expira</th>
+                                        <th>Concepto / Ref</th>
+                                        <th class="text-center">Total Cargado</th>
+                                        <th class="text-center">Disponibles</th>
+                                        <th class="text-end hide-mobile">Estado / Vigencia</th>
                                     </tr>
                                 </thead>
                                 <tbody id="cuerpoPaquetes">
+                                    {% set pool = namespace(restante=saldo) %}
+                                    
                                     {% for p in paquetes %}
+                                    
+                                    {% set remanente_bruto = p.cantidad_total - p.cantidad_usada %}
+                                    {% set remanente_neto = 0 %}
+                                    
+                                    {% if p.cantidad_total > 0 and remanente_bruto > 0 and pool.restante > 0 %}
+                                        {% set remanente_neto = remanente_bruto if remanente_bruto <= pool.restante else pool.restante %}
+                                        {% set pool.restante = pool.restante - remanente_neto %}
+                                    {% endif %}
+
                                     <tr class="fila-paquete">
                                         <td>
                                             <small class="fw-bold text-dark">
-                                                {{ p.notas if p.notas else 'Carga de Paquete' }}
+                                                {{ p.notas if p.notas else 'Paquete de Créditos' }}
                                             </small><br>
-                                            <small class="text-muted" style="font-size: 0.65rem;">Ref: #{{ p.id }}</small>
+                                            <small class="text-muted" style="font-size: 0.65rem;">Ref: #{{ p.id }} | {{ p.fecha_compra[:10] }}</small>
                                         </td>
+
                                         <td class="text-center">
-                                            {% if p.cambio > 0 %}
-                                            <span class="badge bg-success bg-opacity-10 text-success border">+{{ p.cambio }}</span>
+                                            {% if p.cantidad_total > 0 %}
+                                                <span class="badge bg-success bg-opacity-10 text-success border">+{{ p.cantidad_total }}</span>
                                             {% else %}
-                                            <span class="badge bg-danger bg-opacity-10 text-danger border">{{ p.cambio }}</span>
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border">{{ p.cantidad_total }}</span>
                                             {% endif %}
                                         </td>
+
                                         <td class="text-center">
-                                            <span class="fw-bold text-dark">{{ p.saldo_posterior }}</span>
+                                            {% if p.cantidad_total < 0 %}
+                                                <span class="text-muted">-</span>
+                                            {% elif remanente_neto > 0 and p.vence_display != "---" and p.vence_display >= hoy_local %}
+                                                <span class="fw-bold text-primary">{{ remanente_neto }}</span>
+                                            {% else %}
+                                                <span class="fw-bold text-muted" style="opacity: 0.5;">0</span>
+                                            {% endif %}
                                         </td>
+
                                         <td class="text-end hide-mobile">
-                                            <small class="text-muted">{{ p.vence_display }}</small>
+                                            {% if p.cantidad_total < 0 %}
+                                                <small class="text-muted fw-bold">N/A</small>
+                                                
+                                            {% elif p.vence_display != "---" and p.vence_display < hoy_local %}
+                                                <span class="badge bg-danger">Caducado</span><br>
+                                                <small class="text-muted text-decoration-line-through" style="font-size: 0.65rem;">{{ p.vence_display }}</small>
+                                                
+                                            {% elif remanente_neto <= 0 %}
+                                                <span class="badge bg-secondary">Agotado / Descontado</span><br>
+                                                <small class="text-muted" style="font-size: 0.65rem;">Completado</small>
+                                                
+                                            {% else %}
+                                                <span class="badge bg-warning text-dark border border-warning-subtle">Activo</span><br>
+                                                <small class="text-muted fw-bold" style="font-size: 0.65rem;">Hasta {{ p.vence_display }}</small>
+                                            {% endif %}
                                         </td>
                                     </tr>
                                     {% else %}
@@ -264,11 +335,16 @@
         </div>
 
         <div class="card border-0 shadow-sm rounded-4">
-            <div class="card-header bg-white py-3 border-bottom-0 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                <h5 class="m-0 fw-bold text-dark"><i class="fas fa-envelope-open-text me-2 text-primary"></i>Mis Invitaciones Creadas</h5>
+            <div
+                class="card-header bg-white py-3 border-bottom-0 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <h5 class="m-0 fw-bold text-dark"><i class="fas fa-envelope-open-text me-2 text-primary"></i>Mis
+                    Invitaciones Creadas</h5>
                 <div class="position-relative" style="width: 100%; max-width: 300px;">
-                    <i class="fas fa-search position-absolute text-muted" style="left: 15px; top: 50%; transform: translateY(-50%);"></i>
-                    <input type="text" id="buscadorInvitaciones" class="form-control form-control-sm rounded-pill ps-5 border-light-subtle shadow-sm" placeholder="Buscar evento o novios...">
+                    <i class="fas fa-search position-absolute text-muted"
+                        style="left: 15px; top: 50%; transform: translateY(-50%);"></i>
+                    <input type="text" id="buscadorInvitaciones"
+                        class="form-control form-control-sm rounded-pill ps-5 border-light-subtle shadow-sm"
+                        placeholder="Buscar evento o novios...">
                 </div>
             </div>
 
@@ -288,16 +364,21 @@
                             {% for inv in invitaciones %}
                             <tr class="fila-invitacion">
                                 <td class="ps-4" data-label="Evento">
-                                    <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-2" style="font-size: 1.1rem;">
-                                        <span class="nombre-evento">{{ inv.datos_cliente.get('novios', 'Evento sin nombre') }}</span>
+                                    <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-2"
+                                        style="font-size: 1.1rem;">
+                                        <span class="nombre-evento">{{ inv.datos_cliente.get('novios', 'Evento sin
+                                            nombre') }}</span>
 
                                         {% if inv.tipo_evento == 'xv' %}
-                                        <span class="badge bg-warning text-dark border align-middle" style="font-size: 0.7rem; height: fit-content;">👑 XV Años</span>
+                                        <span class="badge bg-warning text-dark border align-middle"
+                                            style="font-size: 0.7rem; height: fit-content;">👑 XV Años</span>
                                         {% else %}
-                                        <span class="badge bg-primary bg-opacity-10 text-primary border align-middle" style="font-size: 0.7rem; height: fit-content;">💍 Boda</span>
+                                        <span class="badge bg-primary bg-opacity-10 text-primary border align-middle"
+                                            style="font-size: 0.7rem; height: fit-content;">💍 Boda</span>
                                         {% endif %}
                                     </div>
-                                    <small class="text-muted d-block mt-1 text-truncate" style="max-width: 250px;">Slug: /invitacion/{{ inv.slug }}</small>
+                                    <small class="text-muted d-block mt-1 text-truncate" style="max-width: 250px;">Slug:
+                                        /invitacion/{{ inv.slug }}</small>
                                 </td>
 
                                 <td class="text-center" data-label="Fecha">
@@ -305,8 +386,10 @@
                                 </td>
 
                                 <td class="text-center" data-label="Acceso">
-                                    <button type="button" class="btn btn-sm btn-light border-primary text-primary fw-bold px-3 rounded-pill transition-all"
-                                        onclick="copiarCodigoSocio('{{ inv.codigo_acceso_cliente }}', this)" title="Clic para copiar código">
+                                    <button type="button"
+                                        class="btn btn-sm btn-light border-primary text-primary fw-bold px-3 rounded-pill transition-all"
+                                        onclick="copiarCodigoSocio('{{ inv.codigo_acceso_cliente }}', this)"
+                                        title="Clic para copiar código">
                                         <i class="fas fa-copy me-1"></i> <span>{{ inv.codigo_acceso_cliente }}</span>
                                     </button>
                                 </td>
@@ -346,8 +429,10 @@
                             </tr>
                             {% endfor %}
 
-                            <tr id="filaSinResultados" style="display: none; background: transparent; border: none !important; box-shadow: none;">
-                                <td colspan="4" class="text-center py-5 text-muted border-0 d-flex flex-column align-items-center w-100">
+                            <tr id="filaSinResultados"
+                                style="display: none; background: transparent; border: none !important; box-shadow: none;">
+                                <td colspan="4"
+                                    class="text-center py-5 text-muted border-0 d-flex flex-column align-items-center w-100">
                                     <i class="fas fa-search fa-2x mb-3 opacity-25"></i>
                                     <span class="fw-bold">No se encontraron eventos con esa búsqueda.</span>
                                 </td>
@@ -361,14 +446,16 @@
                 {% else %}
                 <div class="text-center py-5">
                     <div class="mb-4">
-                        <span class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center"
+                        <span
+                            class="bg-primary bg-opacity-10 text-primary rounded-circle d-inline-flex align-items-center justify-content-center"
                             style="width: 100px; height: 100px;">
                             <i class="fas fa-magic fa-3x"></i>
                         </span>
                     </div>
                     <h4 class="fw-bold text-dark mb-2">Tu lienzo está en blanco</h4>
                     <p class="text-muted mb-4 mx-auto" style="max-width: 450px;">
-                        Aún no has creado ninguna invitación. Haz clic en el botón de arriba para comenzar a diseñar y sorprender a tus clientes.
+                        Aún no has creado ninguna invitación. Haz clic en el botón de arriba para comenzar a diseñar y
+                        sorprender a tus clientes.
                     </p>
 
                     <a href="{{ url_for('invitaciones_clientes.ayuda_planner') }}"
@@ -425,7 +512,7 @@
 
         // LÓGICA DE PAGINACIÓN Y BUSCADOR
         document.addEventListener("DOMContentLoaded", function () {
-            
+
             function inicializarPaginacion(bodyId, navId, limitePorPagina, claseFilas, inputBuscadorId) {
                 const cuerpo = document.getElementById(bodyId);
                 const nav = document.getElementById(navId);
@@ -442,7 +529,7 @@
                     if (buscador) {
                         const texto = buscador.value.toLowerCase();
                         let contadorCoincidencias = 0;
-                        
+
                         todasLasFilas.forEach(f => {
                             const titulo = f.querySelector('.nombre-evento') ? f.querySelector('.nombre-evento').innerText.toLowerCase() : "";
                             if (titulo.includes(texto)) {
@@ -454,7 +541,7 @@
                         });
 
                         filasActivas = todasLasFilas.filter(f => f.dataset.ocultoPorFiltro !== "true");
-                        
+
                         if (filaVacia) {
                             filaVacia.style.display = contadorCoincidencias === 0 ? "flex" : "none";
                         }
@@ -481,8 +568,8 @@
                     for (let i = 1; i <= totalPaginas; i++) {
                         const btn = document.createElement("button");
                         btn.innerText = i;
-                        btn.className = (i === pagina) 
-                            ? "btn btn-sm btn-primary rounded-circle mx-1 shadow-sm" 
+                        btn.className = (i === pagina)
+                            ? "btn btn-sm btn-primary rounded-circle mx-1 shadow-sm"
                             : "btn btn-sm btn-outline-secondary rounded-circle mx-1";
                         btn.style.width = "32px";
                         btn.style.height = "32px";

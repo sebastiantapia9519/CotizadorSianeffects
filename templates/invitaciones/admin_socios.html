@@ -141,8 +141,7 @@
                                     <td class="text-md-center" data-label="Código de Acceso">
                                         <code id="cp-{{ socio.id }}"
                                             class="fw-bold text-primary px-3 py-2 bg-primary bg-opacity-10 rounded-pill border border-primary-subtle"
-                                            style="font-size: 0.85rem; cursor: pointer;" 
-                                            title="Clic para copiar"
+                                            style="font-size: 0.85rem; cursor: pointer;" title="Clic para copiar"
                                             onclick="copiarCodigo('{{ socio.codigo_acceso_planner }}', this)">
                                             {{ socio.codigo_acceso_planner }}
                                         </code>
@@ -228,17 +227,29 @@
                                                         <button class="dropdown-item py-2 fw-bold text-success"
                                                             onclick="confirmarAccionSocio({{ socio.id }}, '{{ socio.nombre_empresa }}', 'activar')">
                                                             <i class="fas fa-user-check text-success bg-success bg-opacity-10 rounded p-1 me-2"
-                                                                style="width: 26px; text-align: center;"></i>
-                                                            Activar Cuenta
+                                                                style="width: 26px; text-align: center;"></i> Activar
+                                                            Cuenta
                                                         </button>
                                                         {% else %}
-                                                        <button class="dropdown-item py-2 fw-bold text-danger"
+                                                        <button class="dropdown-item py-2 fw-bold text-warning"
                                                             onclick="confirmarAccionSocio({{ socio.id }}, '{{ socio.nombre_empresa }}', 'suspender')">
-                                                            <i class="fas fa-ban text-danger bg-danger bg-opacity-10 rounded p-1 me-2"
-                                                                style="width: 26px; text-align: center;"></i>
-                                                            Suspender Cuenta
+                                                            <i class="fas fa-ban text-warning bg-warning bg-opacity-10 rounded p-1 me-2"
+                                                                style="width: 26px; text-align: center;"></i> Suspender
+                                                            Cuenta
                                                         </button>
                                                         {% endif %}
+                                                    </li>
+
+                                                    <li>
+                                                        <hr class="dropdown-divider my-2">
+                                                    </li>
+                                                    <li>
+                                                        <button class="dropdown-item py-2 fw-bold text-danger"
+                                                            onclick="confirmarEliminacionDefinitiva({{ socio.id }}, '{{ socio.nombre_empresa }}', {{ socio.creditos_disponibles or 0 }})">
+                                                            <i class="fas fa-trash-alt text-danger bg-danger bg-opacity-10 rounded p-1 me-2"
+                                                                style="width: 26px; text-align: center;"></i> Eliminar
+                                                            Definitivo
+                                                        </button>
                                                     </li>
                                                 </ul>
                                             </div>
@@ -461,11 +472,11 @@
 
     function confirmarAccionSocio(id, empresa, accion) {
         const esActivar = (accion === 'activar');
-        
+
         Swal.fire({
             title: esActivar ? '¿Activar Socio?' : '¿Suspender Socio?',
-            text: esActivar 
-                ? `¿Quieres dar acceso de nuevo a ${empresa}? Podrá entrar a su panel inmediatamente.` 
+            text: esActivar
+                ? `¿Quieres dar acceso de nuevo a ${empresa}? Podrá entrar a su panel inmediatamente.`
                 : `¿Estás seguro de suspender a ${empresa}? Se le cerrará la sesión y no podrá crear más invitaciones.`,
             icon: esActivar ? 'question' : 'warning',
             showCancelButton: true,
@@ -479,7 +490,7 @@
                 // Creamos el formulario dinámicamente para mandarlo al servidor
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ url_for('invitaciones_admin.suspender_planner') }}"; 
+                form.action = "{{ url_for('invitaciones_admin.suspender_planner') }}";
 
                 const inputId = document.createElement('input');
                 inputId.type = 'hidden';
@@ -488,7 +499,7 @@
 
                 const inputAccion = document.createElement('input');
                 inputAccion.type = 'hidden';
-                inputAccion.name = 'accion'; 
+                inputAccion.name = 'accion';
                 inputAccion.value = accion;
 
                 form.appendChild(inputId);
@@ -530,17 +541,17 @@
         document.getElementById('auditSaldo').innerHTML = '<i class="fas fa-spinner fa-spin text-muted fs-4"></i>';
         document.getElementById('tablaMovimientos').innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Cargando...</td></tr>';
         document.getElementById('tablaConsumos').innerHTML = '<tr><td colspan="2" class="text-center text-muted py-3">Cargando...</td></tr>';
-        
+
         new bootstrap.Modal(document.getElementById('modalAuditoria')).show();
 
         fetch('/api/socios/' + id + '/auditoria')
             .then(response => response.json())
             .then(data => {
-                if(data.success) {
+                if (data.success) {
                     document.getElementById('auditSaldo').innerText = data.saldo;
-                    
+
                     let htmlMovs = '';
-                    if(data.movimientos.length === 0) {
+                    if (data.movimientos.length === 0) {
                         htmlMovs = '<tr><td colspan="3" class="text-center text-muted py-3">No hay recargas.</td></tr>';
                     } else {
                         data.movimientos.forEach(m => {
@@ -562,7 +573,7 @@
                     document.getElementById('tablaMovimientos').innerHTML = htmlMovs;
 
                     let htmlCons = '';
-                    if(data.consumos.length === 0) {
+                    if (data.consumos.length === 0) {
                         htmlCons = '<tr><td colspan="2" class="text-center text-muted py-3">No ha creado invitaciones.</td></tr>';
                     } else {
                         data.consumos.forEach(c => {
@@ -581,10 +592,10 @@
                     document.getElementById('tablaConsumos').innerHTML = htmlCons;
                 }
             });
-    
-        }
 
-        function copiarCodigo(texto, elemento) {
+    }
+
+    function copiarCodigo(texto, elemento) {
         // 1. Copiar al portapapeles
         navigator.clipboard.writeText(texto).then(() => {
             // 2. Efecto visual rápido en el elemento
@@ -615,6 +626,45 @@
             }, 1000);
         }).catch(err => {
             console.error('Error al copiar: ', err);
+        });
+    }
+
+    // --- NUEVA LÓGICA: ELIMINAR PLANNER DEFINITIVAMENTE ---
+    function confirmarEliminacionDefinitiva(id, empresa, saldo) {
+        let mensajeAdvertencia = `Estás a punto de borrar permanentemente a <strong>${empresa}</strong> de la base de datos. <br><br> Se borrarán en cascada todas sus invitaciones, pases QR y gigabytes de fotos en Cloudflare.`;
+
+        // Si tiene saldo, le advertimos que el dinero "se quema"
+        if (saldo > 0) {
+            mensajeAdvertencia += `<br><br><span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> ¡ATENCIÓN! Este planner tiene ${saldo} créditos a favor. Al borrarlo, estos créditos se perderán sin opción a reembolso.</span>`;
+        }
+
+        Swal.fire({
+            title: '¿Eliminación Total?',
+            html: mensajeAdvertencia,
+            icon: 'error', // Icono rojo
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545', // Rojo peligro
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, borrar todo',
+            cancelButtonText: 'Cancelar',
+            borderRadius: '16px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Creamos el formulario dinámico y lo enviamos a la nueva ruta
+                const form = document.createElement('form');
+                form.method = 'POST';
+                // Esta es la ruta que creamos hace rato en Flask
+                form.action = "{{ url_for('invitaciones_admin.eliminar_planner') }}";
+
+                const inputId = document.createElement('input');
+                inputId.type = 'hidden';
+                inputId.name = 'planner_id';
+                inputId.value = id;
+
+                form.appendChild(inputId);
+                document.body.appendChild(form);
+                form.submit();
+            }
         });
     }
 

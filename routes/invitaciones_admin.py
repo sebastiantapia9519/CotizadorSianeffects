@@ -8,7 +8,7 @@ import random
 import requests
 from flask import request, redirect, url_for, flash
 from datetime import datetime, timedelta
-from utils.datetime_utils import fecha_mas_dias, sumar_dias_a_fecha, hoy_local
+from utils.datetime_utils import fecha_mas_dias, sumar_dias_a_fecha, hoy_local, ahora_sql
 from flask import send_file
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
 from helpers import admin_required
@@ -1103,10 +1103,20 @@ def gestionar_socios():
 @invitaciones_bp.route('/admin/socios/cargar-paquete', methods=['POST'])
 @admin_required
 def cargar_paquete():
-    """Recarga de inventario manual al Planner (Otorgar créditos). Tienen caducidad."""
+    """Recarga de inventario manual al Planner (Otorgar créditos). Tienen caducidad escalonada."""
     planner_id = request.form.get('planner_id')
     cantidad = int(request.form.get('cantidad', 0))
-    vencimiento = fecha_mas_dias(60)
+    
+    # --- VIGENCIA ESCALONADA USANDO TU UTILS ---
+    if cantidad <= 3:
+        vencimiento = ahora_sql(meses=1)
+    elif cantidad <= 9:
+        vencimiento = ahora_sql(meses=3)
+    elif cantidad <= 15:
+        vencimiento = ahora_sql(meses=6)
+    else:
+        vencimiento = ahora_sql(meses=12) # 1 año para paquetes grandes
+    # -------------------------------------------
     
     conn = get_db_connection()
     try:
@@ -1115,7 +1125,8 @@ def cargar_paquete():
             VALUES (?, ?, ?)
         """, (planner_id, cantidad, vencimiento))
         conn.commit()
-        flash(f"Se cargaron {cantidad} créditos exitosamente.", "success")
+        # Mostramos los primeros 10 caracteres (YYYY-MM-DD) para que el flash se vea limpio
+        flash(f"Se cargaron {cantidad} créditos exitosamente. Vigencia hasta {vencimiento[:10]}.", "success")
     except Exception as e:
         flash(f"Error al cargar créditos: {e}", "danger")
     finally:
@@ -1137,6 +1148,77 @@ def editar_planner():
     conn.close()
 
     flash(f'Perfil de {empresa} actualizado.', 'success')
+    return redirect(url_for('invitaciones_admin.gestionar_socios'))
+
+@invitaciones_bp.route('/admin/socios/eliminar', methods=['POST'])
+@admin_required
+def eliminar_planner():
+    """Borrado definitivo de un planner. Purga SQLite y Cloudflare R2."""
+    planner_id = request.form.get('planner_id')
+    
+    conn = get_db_connection()
+    try:
+        # 1. Validaciones (Saldo e Invitaciones Vigentes)
+        saldo_row = conn.execute("""
+            SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as saldo
+            FROM planner_paquetes 
+            WHERE planner_id = ? AND activo = 1 AND datetime(fecha_vencimiento) > datetime('now')
+        """, (planner_id,)).fetchone()
+        
+        saldo = saldo_row['saldo'] if saldo_row else 0
+
+        invitaciones_activas = conn.execute("""
+            SELECT COUNT(id) as total_activas
+            FROM invitaciones
+            WHERE planner_id = ? AND datetime(vigencia) >= datetime('now')
+        """, (planner_id,)).fetchone()['total_activas']
+
+        # 2. Decisión
+        if saldo > 0 or invitaciones_activas > 0:
+            conn.execute("UPDATE planners SET estado = 'suspendido' WHERE id = ?", (planner_id,))
+            conn.commit()
+            flash(f"Cuenta suspendida preventivamente. No se puede eliminar: tiene {saldo} créditos o {invitaciones_activas} eventos vigentes.", "warning")
+            return redirect(url_for('invitaciones_admin.gestionar_socios'))
+
+        # 3. EL GRAN BORRADO (SQLite + Cloudflare R2)
+        # Obtenemos TODAS las invitaciones (vencidas/limbo) del planner
+        invs_a_borrar = conn.execute("SELECT id, foto_portada_url, url_fondo, fotos_json FROM invitaciones WHERE planner_id = ?", (planner_id,)).fetchall()
+        
+        for inv in invs_a_borrar:
+            inv_id = inv['id']
+            
+            # A) Limpieza Física en Cloudflare R2 (Igual que en tu ruta eliminar_invitacion)
+            if inv['foto_portada_url']: delete_from_cloudflare(inv['foto_portada_url'])
+            if inv['url_fondo']: delete_from_cloudflare(inv['url_fondo'])
+            if inv['fotos_json']:
+                fotos_galeria = json.loads(inv['fotos_json'])
+                for foto_url in fotos_galeria: delete_from_cloudflare(foto_url)
+                
+            fotos_invitados = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,)).fetchall()
+            for foto in fotos_invitados:
+                if foto['url']: delete_from_cloudflare(foto['url'])
+
+            # B) Limpieza en SQLite (Hijos)
+            conn.execute("DELETE FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,))
+            conn.execute("DELETE FROM pases_invitados WHERE invitacion_id = ?", (inv_id,))
+            conn.execute("DELETE FROM buenos_deseos WHERE invitacion_id = ?", (inv_id,)) # Limpiamos los deseos
+
+            # C) Borrado de la Invitación
+            conn.execute("DELETE FROM invitaciones WHERE id = ?", (inv_id,))
+
+        # 4. Limpieza Final del Planner
+        conn.execute("DELETE FROM planner_paquetes WHERE planner_id = ?", (planner_id,))
+        conn.execute("DELETE FROM planners WHERE id = ?", (planner_id,))
+        
+        conn.commit()
+        flash("Planner y todo su rastro (BD e Imágenes) eliminados permanentemente.", "success")
+            
+    except Exception as e:
+        conn.rollback() # Si algo falla en R2 o BD, deshacemos todo para evitar inconsistencias
+        flash(f"Error crítico al intentar eliminar: {str(e)}", "danger")
+    finally:
+        conn.close()
+
     return redirect(url_for('invitaciones_admin.gestionar_socios'))
 
 @invitaciones_bp.route('/ajustar_saldo', methods=['POST'])

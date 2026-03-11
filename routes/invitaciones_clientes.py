@@ -4,7 +4,7 @@ import zipfile
 import uuid
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
 from db import get_db_connection
-from utils.datetime_utils import hoy_sqlite
+from utils.datetime_utils import hoy_sqlite, hoy_local, ahora_sql
 from functools import wraps # Necesario para los decoradores
 from routes.invitaciones_publicas import s3_client, BUCKET_NAME
 
@@ -120,16 +120,19 @@ def dashboard_planner():
         """, (planner_id,)).fetchall()
 
         # Buscar créditos que vencen en los próximos 15 días
-        # Solo buscamos paquetes donde aún queden créditos (cantidad_total > cantidad_usada)
+        # Calculamos ambas fechas en Python. Esto es 100% compatible con SQLite y PostgreSQL.
+        fecha_hoy = hoy_local()[:10] # Ej: 2026-03-10
+        fecha_limite = ahora_sql(dias=70)[:10] # Ej: 2026-03-25
+
         proximos_vencimientos = conn.execute("""
             SELECT id, (cantidad_total - cantidad_usada) as remanente, fecha_vencimiento
             FROM planner_paquetes
             WHERE planner_id = ? 
             AND activo = 1 
             AND (cantidad_total - cantidad_usada) > 0
-            AND fecha_vencimiento BETWEEN ? AND date(?, '+15 days')
+            AND substring(fecha_vencimiento, 1, 10) BETWEEN ? AND ?
             ORDER BY fecha_vencimiento ASC
-        """, (planner_id, hoy, hoy)).fetchall()
+        """, (planner_id, fecha_hoy, fecha_limite)).fetchall()
 
         paquetes_procesados = []
         saldo_acumulado = 0
@@ -176,7 +179,8 @@ def dashboard_planner():
                                saldo=saldo, 
                                paquetes=paquetes_procesados,
                                invitaciones=invitaciones,
-                               alertas_vencimiento=proximos_vencimientos)
+                               alertas_vencimiento=proximos_vencimientos,
+                               hoy_local=hoy_local()[:10])
     finally:
         conn.close()
 
