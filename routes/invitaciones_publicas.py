@@ -170,12 +170,22 @@ def validar_qr():
     conn.commit()
     conn.close()
 
+    # --- NUEVA LÓGICA: Extraer los nombres de forma segura ---
+    nombres_lista = []
+    if invitado['nombres_acompanantes_json']:
+        try:
+            nombres_lista = json.loads(invitado['nombres_acompanantes_json'])
+        except:
+            nombres_lista = []
+    # ---------------------------------------------------------
+
     return jsonify({
         'success': True,
         'familia': invitado['nombre_familia'],
         'pases': invitado['pases_totales'],
         'mesa': invitado['mesa'] if invitado['mesa'] else '0',
-        'evento': invitado['boda_nombre']
+        'evento': invitado['boda_nombre'],
+        'nombres_acompanantes': nombres_lista # <--- SE ENVÍA AL ESCÁNER
     })
 
 # =========================================================

@@ -2,6 +2,8 @@ from functools import wraps
 from flask import session, redirect, url_for, flash
 from db import get_db_connection
 from datetime import datetime, timezone, timedelta
+import json
+import uuid
 
 # ========================================================
 # DECORADORES DE PROTECCIÓN
@@ -35,7 +37,7 @@ def subscription_required(f):
             return redirect(url_for('auth.login'))
         
         # -----------------------------------------------------------
-        # 🛡️ BLINDAJE SUPREMO PARA DUEÑOS (NIVEL 2) Y ADMINS (NIVEL 1)
+        # BLINDAJE PARA DUEÑOS (NIVEL 2) Y ADMINS (NIVEL 1)
         # -----------------------------------------------------------
         # Verificamos la sesión DIRECTAMENTE. Si dice que eres jefe, pasas.
         # No consultamos fecha, no consultamos DB. Pase VIP inmediato.
@@ -134,3 +136,50 @@ def obtener_alertas(user_id):
         conn.close()
         
     return alertas
+
+# ========================================================
+# GESTIÓN UNIFICADA DE INVITADOS (RSVP VIP)
+# ========================================================
+def guardar_pase_bd(inv_id, form_data, pase_id=None):
+    """
+    Función maestra para guardar o editar invitados.
+    Recibe el ID de la invitación y el diccionario request.form.
+    Si se envía un pase_id, hace UPDATE; si no, hace INSERT.
+    """
+    nombre_familia = form_data.get('nombre_familia')
+    pases = form_data.get('pases_totales', 2)
+    telefono = form_data.get('telefono', '')
+    mesa = form_data.get('mesa') or '0'
+    
+    # Procesar el arreglo de nombres de acompañantes
+    nombres_lista = form_data.getlist('nombres_acompanantes[]')
+    # Filtrar campos vacíos y convertir a JSON solo si hay nombres
+    nombres_json = json.dumps([n for n in nombres_lista if n.strip()]) if nombres_lista else None
+
+    conn = get_db_connection()
+    try:
+        if pase_id:
+            # MODO EDICIÓN
+            conn.execute("""
+                UPDATE pases_invitados 
+                SET nombre_familia=?, pases_totales=?, telefono=?, mesa=?, nombres_acompanantes_json=?
+                WHERE id=? AND invitacion_id=?
+            """, (nombre_familia, pases, telefono, mesa, nombres_json, pase_id, inv_id))
+            mensaje = f"Datos de {nombre_familia} actualizados."
+        else:
+            # MODO CREACIÓN
+            codigo_unico = str(uuid.uuid4())[:8].upper()
+            conn.execute("""
+                INSERT INTO pases_invitados 
+                (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique, telefono, mesa, nombres_acompanantes_json) 
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (inv_id, nombre_familia, pases, codigo_unico, telefono, mesa, nombres_json))
+            mensaje = f"Pase para {nombre_familia} generado con éxito."
+            
+        conn.commit()
+        return True, str(mensaje)
+    except Exception as e:
+        conn.rollback()
+        return False, str(e)
+    finally:
+        conn.close()

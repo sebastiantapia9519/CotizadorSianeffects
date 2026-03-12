@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from utils.datetime_utils import fecha_mas_dias, sumar_dias_a_fecha, hoy_local, ahora_sql
 from flask import send_file
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
-from helpers import admin_required
+from helpers import admin_required, guardar_pase_bd
 from db import get_db_connection  # Gestor centralizado de base de datos SQLite
 from services.cloudflare_service import upload_to_cloudflare, delete_from_cloudflare # Integración con R2
 
@@ -1066,24 +1066,13 @@ def gestionar_pases(id):
         return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
     if request.method == 'POST':
-        nombre_familia = request.form.get('nombre_familia')
-        pases = request.form.get('pases_totales', 2)
-        telefono = request.form.get('telefono')
-        mesa = request.form.get('mesa', '0') 
+        exito, msj = guardar_pase_bd(id, request.form)
+        if exito:
+            flash(msj, "success")
+        else:
+            flash(f"Error al guardar: {msj}", "danger")
 
-        codigo_unico = str(uuid.uuid4())[:8].upper() # Token para generar el QR único
-        
-        try:
-            conn.execute("""
-                INSERT INTO pases_invitados (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique, telefono, mesa)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (id, nombre_familia, pases, codigo_unico, telefono, mesa)) 
-            conn.commit()
-            flash(f"Pase para {nombre_familia} generado con éxito.", "success")
-        except Exception as e:
-            flash(f"Error: {str(e)}", "danger")
-
-    inv = conn.execute("SELECT slug, id, codigo_acceso_cliente FROM invitaciones WHERE id = ?", (id,)).fetchone()
+    inv = conn.execute("SELECT slug, id, codigo_acceso_cliente, datos_cliente_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
     invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY id DESC", (id,)).fetchall()
     conn.close()
     

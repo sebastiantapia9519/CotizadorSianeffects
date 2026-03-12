@@ -1156,8 +1156,21 @@
                                 </div>
                                 <div>
                                     <span class="ticket-label">Mesa</span>
-                                    <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] and datos_pase['mesa']|string != '0' else 'Por asignar' }}</span>
+                                    <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span>
                                 </div>
+
+                                {% if datos_pase['nombres_acompanantes_json'] %}
+                                {% set acompanantes = datos_pase['nombres_acompanantes_json'] | from_json %}
+                                <div style="grid-column: span 2; background: rgba(150,150,150,0.05); padding: 15px; border-radius: 10px; border-left: 3px solid var(--color-oro);">
+                                    <span class="ticket-label"><i class="fas fa-user-check me-1"></i> Pases Asignados A:</span>
+                                    <ul style="margin: 5px 0 0 0; padding-left: 20px; font-family: var(--font-body); font-size: 0.95rem; opacity: 0.9;">
+                                        {% for nombre in acompanantes %}
+                                        <li style="margin-bottom: 3px;">{{ nombre }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+
                                 <div style="grid-column: span 2;">
                                     <span class="ticket-label">Estado</span>
                                     {% if datos_pase['pases_usados'] >= datos_pase['pases_totales'] %}

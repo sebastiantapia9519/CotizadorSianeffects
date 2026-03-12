@@ -55,16 +55,33 @@
             .then(res => res.json())
                 .then(data => {
                 if (data.success) {
+                    // 1. Armamos el HTML de los acompañantes (si es que hay)
+                    let htmlAcompanantes = '';
+                    if (data.nombres_acompanantes && data.nombres_acompanantes.length > 0) {
+                        htmlAcompanantes = `
+                            <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #D4AF37;">
+                                <small style="color: #888; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Lista Estricta:</small>
+                                <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 1rem; color: #111; font-weight: 600;">
+                                    ${data.nombres_acompanantes.map(nombre => `<li>${nombre}</li>`).join('')}
+                                </ul>
+                            </div>
+                        `;
+                    }
+
+                    // 2. Lanzamos la alerta con la nueva información inyectada
                     Swal.fire({
                         title: '¡Acceso Garantizado! ✅',
                         html: `
-                            <div style="text-align: left; font-size: 1.1rem;">
-                                <p><b>Familia:</b> ${data.familia}</p>
-                                <p><b>Pases:</b> ${data.pases}</p>
-                                <p><b>Mesa:</b> <span style="color: #D4AF37; font-weight: bold;">${data.mesa}</span></p>
-                                ${data.evento ? `<hr><p class="small text-muted">Evento: ${data.evento}</p>` : ''}
-                                <hr>
-                                <p style="color: #D4AF37; text-align: center;">¡Bienvenidos!</p>
+                            <div style="text-align: left; font-size: 1.1rem; color: #333;">
+                                <p style="margin-bottom: 8px;"><b>Familia:</b> ${data.familia}</p>
+                                <p style="margin-bottom: 8px;"><b>Pases Totales:</b> ${data.pases}</p>
+                                <p style="margin-bottom: 8px;"><b>Mesa:</b> <span style="color: #D4AF37; font-weight: bold; font-size: 1.2rem;">${data.mesa}</span></p>
+                                ${data.evento ? `<p class="small text-muted mb-0">Evento: ${data.evento}</p>` : ''}
+                                
+                                ${htmlAcompanantes}
+                                
+                                <hr style="margin: 15px 0;">
+                                <p style="color: #D4AF37; text-align: center; font-weight: bold; margin-bottom: 0;">¡Bienvenidos!</p>
                             </div>
                         `,
                         icon: 'success',

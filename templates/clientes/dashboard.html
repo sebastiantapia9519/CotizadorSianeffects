@@ -256,9 +256,24 @@
                                         
                                         <td class="ps-md-4" data-label="Invitado">
                                             <div class="fw-bold text-dark text-truncate" style="max-width: 100%; font-size: 0.95rem;">{{ invitado.nombre_familia }}</div>
+                                            {% if invitado.nombres_acompanantes_json %}
+                                            {% set lista_acompanantes = invitado.nombres_acompanantes_json | from_json %}
+                                            <div class="mt-1 mb-2 text-start w-100">
+                                                <small class="text-primary fw-bold" style="font-size: 0.7rem;"><i class="fas fa-list-ul me-1"></i>Lista Estricta:</small>
+                                                <ul class="text-muted mb-0 ps-3 mt-1" style="font-size: 0.75rem; list-style-type: square; text-align: left;">
+                                                    {% for nombre in lista_acompanantes %}
+                                                    <li>{{ nombre }}</li>
+                                                    {% endfor %}
+                                                </ul>
+                                            </div>
+                                            {% endif %}
                                             {% if invitado.telefono %}
                                                 <div class="mt-1 d-flex align-items-center gap-2">
-                                                    <a href="https://wa.me/{{ invitado.telefono|replace('+', '')|replace(' ', '') }}?text=¡Hola%20*{{ invitado.nombre_familia|urlencode }}*!%20💍%0A%0ANos%20encantaría%20que%20nos%20acompañen%20en%20nuestro%20gran%20día.%0A%0APueden%20ver%20toda%20la%20información%20y%20su%20pase%20de%20acceso%20aquí:%0A{{ (request.host_url + 'invitacion/' + inv.slug + '?pass=' + invitado.codigo_qr_unique)|urlencode }}"
+{% set mensaje_custom = (inv.datos_cliente_json | from_json) if inv.datos_cliente_json else {} %}
+                                        {% set mensaje_wpp = mensaje_custom.get('mensaje_envio_pases', '¡Hola! Te compartimos la invitación a nuestro evento. Aquí tienes tu pase de acceso personal:') %}
+                                        {% set url_pase = request.host_url ~ 'invitacion/' ~ inv.slug ~ '?pass=' ~ invitado.codigo_qr_unique %}
+
+                                                    <a href="https://wa.me/{{ invitado.telefono|replace('+', '')|replace(' ', '') }}?text={{ (mensaje_wpp ~ ' ' ~ url_pase) | urlencode }}"
                                                         target="_blank" class="btn btn-sm btn-outline-success rounded-pill py-0 px-2" style="font-size: 0.7rem;">
                                                         <i class="fab fa-whatsapp"></i> <span class="d-none d-sm-inline ms-1">Enviar</span>
                                                     </a>
@@ -330,7 +345,7 @@
                                                         <div class="row g-3 mb-4">
                                                             <div class="col-4">
                                                                 <label class="form-label small fw-bold">Pases</label>
-                                                                <input type="number" name="pases_totales" class="form-control bg-light border-0" value="{{ invitado.pases_totales }}" min="1" required>
+                                                                <input type="number" name="pases_totales" id="pasesEdit_{{ invitado.id }}" class="form-control bg-light border-0" value="{{ invitado.pases_totales }}" min="1" required>
                                                             </div>
                                                             <div class="col-4">
                                                                 <label class="form-label small fw-bold"># Mesa</label>
@@ -339,6 +354,39 @@
                                                             <div class="col-4">
                                                                 <label class="form-label small fw-bold">Teléfono</label>
                                                                 <input type="text" name="telefono" class="form-control bg-light border-0" value="{{ invitado.telefono if invitado.telefono else '' }}">
+                                                            </div>
+                                                        </div>
+                                                        <div class="mb-4 w-100 bg-white border rounded-3 p-3 shadow-sm">
+                                                            <div class="form-check form-switch m-0">
+                                                                <input class="form-check-input" type="checkbox" 
+                                                                       id="checkNombresEdit_{{ invitado.id }}" 
+                                                                       {% if invitado.nombres_acompanantes_json %}checked{% endif %}
+                                                                       onchange="generarInputsAcompanantes('checkNombresEdit_{{ invitado.id }}', 'contenedorAcompanantesEdit_{{ invitado.id }}', 'pasesEdit_{{ invitado.id }}')">
+                                                                <label class="form-check-label small fw-bold text-primary ms-1" for="checkNombresEdit_{{ invitado.id }}">
+                                                                    <i class="fas fa-list-ol me-1"></i> Especificar nombres
+                                                                </label>
+                                                            </div>
+                                                            
+                                                            <div id="contenedorAcompanantesEdit_{{ invitado.id }}" class="mt-3 {% if not invitado.nombres_acompanantes_json %}d-none{% endif %}">
+                                                                {% if invitado.nombres_acompanantes_json %}
+                                                                    <small class="text-muted mb-2 d-block" style="font-size: 0.75rem;">Modifica el nombre de cada persona:</small>
+                                                                    {% set nombres_guardados = invitado.nombres_acompanantes_json | from_json %}
+                                                                    {% for nombre in nombres_guardados %}
+                                                                    <div class="input-group input-group-sm mb-2 shadow-sm">
+                                                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                                                                        <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0" value="{{ nombre }}" required>
+                                                                    </div>
+                                                                    {% endfor %}
+                                                                    
+                                                                    {% if invitado.pases_totales > nombres_guardados|length %}
+                                                                        {% for i in range((invitado.pases_totales - nombres_guardados|length)) %}
+                                                                        <div class="input-group input-group-sm mb-2 shadow-sm">
+                                                                            <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                                                                            <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0" placeholder="Nuevo acompañante" required>
+                                                                        </div>
+                                                                        {% endfor %}
+                                                                    {% endif %}
+                                                                {% endif %}
                                                             </div>
                                                         </div>
                                                         <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 shadow-sm">Guardar Cambios</button>
@@ -473,7 +521,7 @@
                         <div class="row g-3 mb-4">
                             <div class="col-4">
                                 <label class="form-label small fw-bold">Pases</label>
-                                <input type="number" name="pases_totales" class="form-control bg-light border-0" value="2" min="1" required>
+                                <input type="number" name="pases_totales" id="pasesTotalesInput" class="form-control bg-light border-0" value="2" min="1" required>
                             </div>
                             <div class="col-4">
                                 <label class="form-label small fw-bold"># Mesa</label>
@@ -483,6 +531,16 @@
                                 <label class="form-label small fw-bold">WhatsApp</label>
                                 <input type="text" name="telefono" class="form-control bg-light border-0" placeholder="81...">
                             </div>
+                        </div>
+                        <div class="mb-4 bg-white border rounded-3 p-3 shadow-sm">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="checkNombresAcompanantes" onchange="generarInputsAcompanantes('checkNombresAcompanantes', 'contenedorAcompanantes', 'pasesTotalesInput')">
+                                <label class="form-check-label small fw-bold text-primary ms-1" for="checkNombresAcompanantes">
+                                    <i class="fas fa-user-shield me-1"></i> Especificar nombres de Invitados
+                                </label>
+                            </div>
+                            <div id="contenedorAcompanantes" class="mt-3 d-none">
+                                </div>
                         </div>
                         <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 shadow-sm">Guardar en la Lista</button>
                     </form>
@@ -661,6 +719,63 @@
                 if(infoE) infoE.style.display = 'none';
             }
         });
+
+        // --- LÓGICA ANTI-COLADOS (GENERAR INPUTS DINÁMICOS) ---
+        function generarInputsAcompanantes(switchId, contenedorId, inputPasesId) {
+            const switchNombres = document.getElementById(switchId);
+            const contenedor = document.getElementById(contenedorId);
+            const inputPases = document.getElementById(inputPasesId);
+            
+            if (!switchNombres || !contenedor || !inputPases) return;
+
+            if (switchNombres.checked) {
+                contenedor.classList.remove('d-none');
+                
+                const numPases = parseInt(inputPases.value) || 1;
+                
+                const inputsActuales = contenedor.querySelectorAll('input[name="nombres_acompanantes[]"]');
+                let valoresPrevios = [];
+                inputsActuales.forEach(inp => valoresPrevios.push(inp.value));
+
+                let html = '<small class="text-muted mb-2 d-block" style="font-size: 0.75rem;">Escribe el nombre de cada persona contemplada:</small>';
+                for (let i = 1; i <= numPases; i++) {
+                    let valor = valoresPrevios[i-1] ? valoresPrevios[i-1] : '';
+                    html += `
+                        <div class="input-group input-group-sm mb-2 shadow-sm">
+                            <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                            <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0" placeholder="Acompañante ${i}" value="${valor}" required>
+                        </div>
+                    `;
+                }
+                contenedor.innerHTML = html;
+            } else {
+                contenedor.classList.add('d-none');
+                contenedor.innerHTML = '';
+            }
+        }
+
+        // Escuchar cambios de número en el Modal de Creación
+        const inputPasesCrear = document.getElementById('pasesTotalesInput');
+        if (inputPasesCrear) {
+            inputPasesCrear.addEventListener('input', function() {
+                const switchNombres = document.getElementById('checkNombresAcompanantes');
+                if (switchNombres && switchNombres.checked) {
+                    generarInputsAcompanantes('checkNombresAcompanantes', 'contenedorAcompanantes', 'pasesTotalesInput');
+                }
+            });
+        }
+
+        // Escuchar cambios de número en los Modales de Edición (Delegación de eventos)
+        document.body.addEventListener('input', function(e) {
+            if (e.target && e.target.id && e.target.id.startsWith('pasesEdit_')) {
+                const idUnico = e.target.id.split('_')[1];
+                const switchNombres = document.getElementById('checkNombresEdit_' + idUnico);
+                if (switchNombres && switchNombres.checked) {
+                    generarInputsAcompanantes('checkNombresEdit_' + idUnico, 'contenedorAcompanantesEdit_' + idUnico, e.target.id);
+                }
+            }
+        });
+
     </script>
 </body>
 </html>

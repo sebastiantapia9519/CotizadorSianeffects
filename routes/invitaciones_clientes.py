@@ -2,6 +2,7 @@ import json
 import io
 import zipfile
 import uuid
+from helpers import guardar_pase_bd
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
 from db import get_db_connection
 from utils.datetime_utils import hoy_sqlite, hoy_local, ahora_sql
@@ -253,72 +254,44 @@ def edicion_permitida(inv_id, conn):
     inv = conn.execute("SELECT bloquear_edicion_invitados FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
     return not inv['bloquear_edicion_invitados']
 
-# 1. AGREGAR (Actualizado con seguridad de candado)
+# 1. AGREGAR (Actualizado con función unificada)
 @clientes_bp.route('/mi-evento/agregar-invitado', methods=['POST'])
 def agregar_invitado_cliente():
     if 'cliente_inv_id' not in session: return redirect(url_for('invitaciones_clientes.login_cliente'))
     
     inv_id = session['cliente_inv_id']
     conn = get_db_connection()
-    try:
-        if not edicion_permitida(inv_id, conn):
-            flash("La edición está bloqueada para este evento.", "danger")
-            return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
+    permitido = edicion_permitida(inv_id, conn)
+    conn.close()
 
-        nombre_familia = request.form.get('nombre_familia')
-        pases = request.form.get('pases_totales', 2)
-        telefono = request.form.get('telefono')
-        # Capturamos la mesa del formulario, si viene vacío ponemos '0'
-        mesa = request.form.get('mesa') or '0' 
-        codigo_unico = str(uuid.uuid4())[:8].upper()
-        
-        # Agregamos 'mesa' al INSERT
-        conn.execute("""
-            INSERT INTO pases_invitados 
-            (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique, telefono, mesa) 
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (inv_id, nombre_familia, pases, codigo_unico, telefono, mesa))
-        
-        conn.commit()
-        flash(f"¡{nombre_familia} se agregó a la lista!", "success")
-    except Exception as e:
-        print(f"Error: {e}")
-        flash("Error al agregar al invitado.", "danger")
-    finally:
-        conn.close()
+    if not permitido:
+        flash("La edición está bloqueada para este evento.", "danger")
+        return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
+
+    # Llamamos a la función maestra (Modo Crear)
+    exito, msj = guardar_pase_bd(inv_id, request.form)
+    flash(msj, "success" if exito else "danger")
+    
     return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
-# 2. EDITAR INVITADO (NUEVO)
+# 2. EDITAR INVITADO (Actualizado con función unificada)
 @clientes_bp.route('/mi-evento/editar-invitado/<int:pase_id>', methods=['POST'])
 def editar_invitado_cliente(pase_id):
     if 'cliente_inv_id' not in session: return redirect(url_for('invitaciones_clientes.login_cliente'))
     
     inv_id = session['cliente_inv_id']
     conn = get_db_connection()
-    try:
-        if not edicion_permitida(inv_id, conn):
-            flash("La edición está bloqueada para este evento.", "danger")
-            return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
+    permitido = edicion_permitida(inv_id, conn)
+    conn.close()
 
-        nombre_familia = request.form.get('nombre_familia')
-        pases = request.form.get('pases_totales')
-        telefono = request.form.get('telefono')
-        # Capturamos la mesa del formulario
-        mesa = request.form.get('mesa') or '0'
-        
-        # Agregamos 'mesa' al UPDATE
-        conn.execute("""
-            UPDATE pases_invitados SET nombre_familia = ?, pases_totales = ?, telefono = ?, mesa = ? 
-            WHERE id = ? AND invitacion_id = ?
-        """, (nombre_familia, pases, telefono, mesa, pase_id, inv_id))
-        
-        conn.commit()
-        flash(f"Datos de {nombre_familia} actualizados.", "success")
-    except Exception as e:
-        print(f"Error: {e}")
-        flash("Error al actualizar.", "danger")
-    finally:
-        conn.close()
+    if not permitido:
+        flash("La edición está bloqueada para este evento.", "danger")
+        return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
+
+    # Llamamos a la función maestra pasándole el pase_id (Modo Editar)
+    exito, msj = guardar_pase_bd(inv_id, request.form, pase_id)
+    flash(msj, "success" if exito else "danger")
+    
     return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
     
