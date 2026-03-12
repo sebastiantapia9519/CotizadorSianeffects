@@ -175,12 +175,17 @@ def dashboard_planner():
                 item['datos_cliente'] = {"novios": "Evento sin nombre"}
             invitaciones.append(item)
 
+        # Revisar si ya gastó su carta del Demo
+        demo_db = conn.execute("SELECT id FROM invitaciones WHERE planner_id = ? AND es_demo = 1", (planner_id,)).fetchone()
+        tiene_demo = True if demo_db else False
+
         return render_template('clientes/dashboard_planner.html', 
                                saldo=saldo, 
                                paquetes=paquetes_procesados,
                                invitaciones=invitaciones,
                                alertas_vencimiento=proximos_vencimientos,
-                               hoy_local=hoy_local()[:10])
+                               hoy_local=hoy_local()[:10],
+                               tiene_demo=tiene_demo)
     finally:
         conn.close()
 

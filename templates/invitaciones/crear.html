@@ -302,11 +302,17 @@
                 </button>
                 {% endif %}
 
+                {% if not edit_mode and session.get('user_type') == 'planner' and saldo <= 0 %}
+                <button type="button" class="btn btn-secondary rounded-pill px-4 shadow fw-bold d-flex align-items-center justify-content-center" disabled title="Necesitas recargar saldo para publicar una invitación real." style="max-width: fit-content; opacity: 0.7;">
+                    <i class="fas fa-lock me-2"></i>Sin Créditos Premium
+                </button>
+                {% else %}
                 <button type="button" class="btn btn-dark rounded-pill px-4 shadow fw-bold d-flex align-items-center justify-content-center"
                         style="max-width: fit-content;"
                         onclick="validarYContinuar({{ 'true' if edit_mode else 'false' }}, false)">
                     <i class="fas fa-{{ 'save' if edit_mode else 'cloud-upload-alt' }} me-2"></i>{{ 'Guardar Cambios' if edit_mode else 'Publicar Premium' }}
                 </button>
+                {% endif %}
             </div>
         </div>
 
