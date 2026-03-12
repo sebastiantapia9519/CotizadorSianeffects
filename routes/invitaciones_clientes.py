@@ -22,7 +22,7 @@ def planner_required(f):
             flash("Debes iniciar sesión como Planner para acceder.", "warning")
             return redirect(url_for('invitaciones_clientes.login_cliente'))
         
-        # 🛡️ VERIFICACIÓN EN BASE DE DATOS CONTRA EL ESTADO
+        # VERIFICACIÓN EN BASE DE DATOS CONTRA EL ESTADO
         conn = get_db_connection()
         planner = conn.execute("SELECT estado FROM planners WHERE id = ?", (session['planner_id'],)).fetchone()
         conn.close()
@@ -122,7 +122,7 @@ def dashboard_planner():
         # Buscar créditos que vencen en los próximos 15 días
         # Calculamos ambas fechas en Python. Esto es 100% compatible con SQLite y PostgreSQL.
         fecha_hoy = hoy_local()[:10] # Ej: 2026-03-10
-        fecha_limite = ahora_sql(dias=70)[:10] # Ej: 2026-03-25
+        fecha_limite = ahora_sql(dias=15)[:10] # Cuantos dias antes te avisará que expiran tus creditos
 
         proximos_vencimientos = conn.execute("""
             SELECT id, (cantidad_total - cantidad_usada) as remanente, fecha_vencimiento

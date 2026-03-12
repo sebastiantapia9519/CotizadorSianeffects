@@ -182,7 +182,7 @@ def crear_invitacion():
             musica_id = request.form.get('musica_id')
             fecha_evento_raw = request.form.get('fecha_evento') 
             
-            # --- 4. PARSEO DE FECHAS (Reparación del Bug 'T') ---
+            # --- 4. PARSEO DE FECHAS ---
             # Los inputs <input type="datetime-local"> envían la fecha con una 'T' intermedia
             # Ej: "2026-03-07T18:00". SQLite y Python necesitan "2026-03-07 18:00:00".
             fecha_evento_limpia = None
@@ -222,6 +222,55 @@ def crear_invitacion():
             codigo_cliente = generar_codigo_cliente() 
             bloquear_edicion = 1 if 'bloquear_edicion_invitados' in request.form else 0
             estilo_apertura = request.form.get('estilo_apertura', 'simple')
+
+            # --- DETECTAR QUÉ BOTÓN SE PRESIONÓ ---
+            es_demo = 1 if request.form.get('action') == 'demo' else 0
+
+            # --- LÓGICA DE SLUG Y FECHAS SEGÚN EL BOTÓN ---
+            if es_demo and es_planner:
+                # 1. Obtenemos el nombre de la empresa para armar el link
+                planner_data = conn.execute("SELECT nombre_empresa FROM planners WHERE id = ?", (planner_id,)).fetchone()
+                empresa_str = planner_data['nombre_empresa'] if planner_data else 'agencia'
+                
+                # 2. Limpiamos el nombre (Ej: "Eventos Monterrey!" -> "eventos-monterrey")
+                slug_base = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', empresa_str.lower()))
+                slug = f"demo-{slug_base}"
+                
+                # Prevenir colisión (por si hay 2 agencias con el mismo nombre)
+                while conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug,)).fetchone():
+                    slug = f"demo-{slug_base}-{str(uuid.uuid4())[:3]}"
+
+                # 3. Fechas mágicas: Evento en 2 meses, vence en 3 meses
+                fecha_obj = datetime.now() + timedelta(days=60)
+                fecha_evento_limpia = fecha_obj.strftime('%Y-%m-%d %H:%M:%S')
+                vigencia = (fecha_obj + timedelta(days=30)).strftime('%Y-%m-%d')
+
+            else:
+                # SI FUE EL BOTÓN NORMAL DE PUBLICAR
+                raw_slug = request.form.get('slug', '').strip()
+                slug = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
+                
+                # Escudo anti-colisión
+                if conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug,)).fetchone():
+                    flash("Ese enlace ya está ocupado por otro evento. Elige uno diferente.", "danger")
+                    conn.close()
+                    return redirect(url_for('invitaciones_admin.crear_invitacion'))
+
+                # Fechas normales del input
+                fecha_evento_raw = request.form.get('fecha_evento') 
+                if fecha_evento_raw:
+                    fecha_str = fecha_evento_raw.replace('T', ' ')[:16] 
+                    try:
+                        fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d %H:%M')
+                        fecha_evento_limpia = fecha_obj.strftime('%Y-%m-%d %H:%M:%S')
+                    except ValueError:
+                        fecha_evento_limpia = fecha_evento_raw
+                else:
+                    fecha_obj = datetime.now()
+
+                vigencia = request.form.get('vigencia')
+                if not vigencia:
+                    vigencia = (fecha_obj + timedelta(days=30)).strftime('%Y-%m-%d')
 
             # --- 7. CONSTRUCCIÓN DE ESTRUCTURAS DINÁMICAS (Listas a JSON) ---
             # A) Historia de XV Años (Combina texto con fotos subidas al vuelo)
@@ -317,23 +366,23 @@ def crear_invitacion():
                 dress_code, hospedaje_json, album_url, camara_premium, tiene_modulo_invitados, 
                 codigo_acceso_cliente, color_acentos, padres_novia, padres_novio, padrinos, 
                 frase_final, bloquear_edicion_invitados, template_id, estilo_apertura, 
-                tipo_evento, historia_json, planner_id, creado_por_id, tipo_creador, created_at) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                tipo_evento, historia_json, planner_id, created_at, es_demo) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """, (
                 slug, json.dumps(orden_items), musica_id or None, 
                 fecha_evento_limpia, vigencia, json.dumps(datos_cliente), 
-                json.dumps(urls_galeria), url_portada, request.form.get('estilo_fuente'), 
+                json.dumps(urls_finales_galeria if 'urls_finales_galeria' in locals() else urls_galeria), url_portada, request.form.get('estilo_fuente'), 
                 request.form.get('color_fondo'), url_fondo, json.dumps(mesas_regalos), 
                 dress_code, json.dumps(hoteles_sugeridos), album_url, camara_premium, 
                 tiene_modulo_invitados, codigo_cliente, color_acentos, padres_novia, 
                 padres_novio, padrinos, frase_final, bloquear_edicion, template_id, 
-                estilo_apertura, tipo_evento, json.dumps(historia_lista), planner_id, id_creador_registrado, tipo_creador,
-                fecha_creacion_local
+                estilo_apertura, tipo_evento, json.dumps(historia_lista), planner_id, 
+                fecha_creacion_local, es_demo
             ))
             
             # --- 12. COBRO FINAL AL PLANNER ---
             # Si el INSERT no tronó, ahora sí descontamos el crédito permanentemente.
-            if es_planner:
+            if es_planner and not es_demo:
                 usar_credito_planner(planner_id)
 
             conn.commit()
@@ -353,8 +402,10 @@ def crear_invitacion():
 
     # --- MÉTODO GET: RENDERIZAR FORMULARIO DE CREACIÓN ---
     saldo_real = 0
-    # Obtenemos el saldo real del planner para inyectarlo en el Modal HTML de confirmación
+    tiene_demo = False # <--- VARIABLE NUEVA
+    
     if es_planner:
+        # Calcular saldo real
         saldo_row = conn.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as s 
             FROM planner_paquetes 
@@ -363,8 +414,12 @@ def crear_invitacion():
         """, (session.get('planner_id'),)).fetchone()
         if saldo_row:
             saldo_real = saldo_row['s']
+            
+        # Revisar si ya gastó su carta del Demo
+        demo_db = conn.execute("SELECT id FROM invitaciones WHERE planner_id = ? AND es_demo = 1", (session.get('planner_id'),)).fetchone()
+        if demo_db:
+            tiene_demo = True
 
-    # Traemos el catálogo de música general
     canciones = conn.execute("SELECT id, nombre_cancion FROM lista_musica WHERE activa = 1 ORDER BY nombre_cancion ASC").fetchall()
     conn.close()
     
@@ -375,7 +430,8 @@ def crear_invitacion():
                            hoteles=[], 
                            canciones=canciones, 
                            edit_mode=False,
-                           saldo=saldo_real)
+                           saldo=saldo_real,
+                           tiene_demo=tiene_demo)
 
 
 # ==============================================================================
@@ -597,6 +653,7 @@ def editar_invitacion(id):
             tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
             bloquear_edicion = 1 if 'bloquear_edicion_invitados' in request.form else 0
             estilo_apertura = request.form.get('estilo_apertura', 'simple')
+            es_demo = 1 if 'es_demo' in request.form else 0
 
             # Manejo avanzado de la historia de XV (Mezclando fotos viejas con nuevas)
             anios_hist = request.form.getlist('anio_historia[]')
@@ -696,7 +753,7 @@ def editar_invitacion(id):
                 dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?,
                 padres_novia=?, padres_novio=?, padrinos=?, frase_final=?, template_id=?,
                 tiene_modulo_invitados=?, codigo_acceso_cliente=?, bloquear_edicion_invitados=?, estilo_apertura=?,
-                tipo_evento=?, historia_json=? 
+                tipo_evento=?, historia_json=?, es_demo=?
                 WHERE id=?
             """, (
                 slug, json.dumps(orden_items), musica_id or None, fecha_evento_limpia, vigencia, json.dumps(datos_cliente), 
@@ -704,7 +761,7 @@ def editar_invitacion(id):
                 dress_code, json.dumps(hoteles_sugeridos), album_url, camara_premium, color_acentos,
                 padres_novia, padres_novio, padrinos, frase_final, template_id, tiene_modulo_invitados,
                 codigo_cliente, bloquear_edicion, estilo_apertura,
-                tipo_evento, json.dumps(historia_lista),
+                tipo_evento, json.dumps(historia_lista), es_demo,
                 id               
             ))
             conn.commit()
@@ -1167,10 +1224,11 @@ def eliminar_planner():
         
         saldo = saldo_row['saldo'] if saldo_row else 0
 
+        # Cuenta solo las invitaciones reales (NO demos) que estén vigentes
         invitaciones_activas = conn.execute("""
             SELECT COUNT(id) as total_activas
             FROM invitaciones
-            WHERE planner_id = ? AND datetime(vigencia) >= datetime('now')
+            WHERE planner_id = ? AND datetime(vigencia) >= datetime('now') AND es_demo = 0
         """, (planner_id,)).fetchone()['total_activas']
 
         # 2. Decisión
@@ -1281,6 +1339,7 @@ def api_auditoria_planner(id):
     """Devuelve JSON histórico con todos los paquetes recargados y las invitaciones cobradas"""
     conn = get_db_connection()
     try:
+        # 1. Saldo real consolidado directo de la BD (SQLite usa UTC en 'now')
         saldo_row = conn.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as saldo
             FROM planner_paquetes 
@@ -1288,23 +1347,70 @@ def api_auditoria_planner(id):
         """, (id,)).fetchone()
         saldo = saldo_row['saldo'] if saldo_row else 0
 
+        # 2. Movimientos y cálculo de saldos teóricos
         movs_db = conn.execute("SELECT * FROM planner_paquetes WHERE planner_id = ? ORDER BY fecha_compra DESC", (id,)).fetchall()
-        movimientos = [{'fecha_compra': str(dict(m).get('fecha_compra'))[:10], **dict(m)} for m in movs_db]
+        
+        movimientos = []
+        saldo_paquetes = 0
+        saldo_ajustes = 0
+        
+        # AQUÍ ESTÁ LA MAGIA: Usamos tu utilidad para tener el UTC exacto formateado
+        now_str = ahora_sql() 
 
+        for m in movs_db:
+            m_dict = dict(m)
+            
+            ct = m_dict.get('cantidad_total', 0)
+            cu = m_dict.get('cantidad_usada', 0)
+            restantes = ct - cu 
+            
+            fecha_venc = m_dict.get('fecha_vencimiento')
+            
+            # Determinar si está expirado comparando manzanas con manzanas (UTC vs UTC)
+            expirado = False
+            if m_dict.get('activo') == 0:
+                expirado = True
+            elif fecha_venc and str(fecha_venc) < now_str:
+                expirado = True
+
+            m_dict['fecha_compra'] = str(m_dict.get('fecha_compra'))[:10] if m_dict.get('fecha_compra') else ''
+            m_dict['restantes'] = restantes
+            m_dict['expirado'] = expirado
+            
+            movimientos.append(m_dict)
+            
+            # Separar el saldo teórico si el paquete sigue vivo
+            if not expirado:
+                notas = str(m_dict.get('notas', '')).lower()
+                if ct < 0 or 'ajuste' in notas or 'reembolso' in notas or 'error' in notas:
+                    saldo_ajustes += restantes
+                else:
+                    saldo_paquetes += restantes
+
+        # 3. Consumos (Invitaciones creadas)
         cons_db = conn.execute("SELECT id, slug, created_at, fecha_evento, datos_cliente_json FROM invitaciones WHERE planner_id = ? ORDER BY id DESC", (id,)).fetchall()
         consumos = []
         for c in cons_db:
             c_dict = dict(c)
+            # Solo tomamos los primeros 10 caracteres (YYYY-MM-DD) para la vista limpia
             c_dict['created_at'] = str(c_dict.get('created_at') or c_dict.get('fecha_evento'))[:10]
             try:
-                datos = json.loads(c_dict['datos_cliente_json']) if c_dict['datos_cliente_json'] else {}
+                datos = json.loads(c_dict['datos_cliente_json']) if c_dict.get('datos_cliente_json') else {}
                 c_dict['nombres'] = datos.get('novios', 'Sin nombre')
             except:
-                c_dict['nombres'] = 'Error'
+                c_dict['nombres'] = 'Error al leer datos'
+                
             c_dict.pop('datos_cliente_json', None)
             consumos.append(c_dict)
 
-        return jsonify({'success': True, 'saldo': saldo, 'movimientos': movimientos, 'consumos': consumos})
+        return jsonify({
+            'success': True, 
+            'saldo': saldo, 
+            'saldo_paquetes': saldo_paquetes,
+            'saldo_ajustes': saldo_ajustes,
+            'movimientos': movimientos, 
+            'consumos': consumos
+        })
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
     finally:

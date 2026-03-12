@@ -330,6 +330,7 @@ def init_db():
         padrinos TEXT,
         frase_final TEXT,
         historia_json TEXT,
+        es_demo INTEGER DEFAULT 0,
         tipo_evento TEXT DEFAULT 'boda',
         bloquear_edicion_invitados BOOLEAN DEFAULT 0,
         template_id TEXT DEFAULT 'clasico',

@@ -414,9 +414,16 @@
 
             <div class="modal-body p-4 pt-2">
                 <div class="text-center mb-4 bg-light rounded-4 py-3 border border-light shadow-sm">
-                    <small class="text-uppercase fw-bold text-muted" style="letter-spacing: 1px;">Saldo Actual
-                        Real</small>
+                    <small class="text-uppercase fw-bold text-muted" style="letter-spacing: 1px;">Saldo Final
+                        Disponible</small>
                     <h1 class="display-3 fw-bold m-0 text-dark" id="auditSaldo">-</h1>
+                    <div class="mt-2 text-muted small">
+                        <span
+                            class="badge bg-success bg-opacity-10 text-success border border-success-subtle me-1">Créditos
+                            Comprados: <span id="auditSaldoPaquetes">0</span></span> <span
+                            class="badge bg-warning bg-opacity-10 text-warning border border-warning-subtle ms-1">Ajustes:
+                            <span id="auditAjustes">0</span></span>
+                    </div>
                 </div>
 
                 <div class="row g-4">
@@ -430,6 +437,7 @@
                                         <th>Fecha</th>
                                         <th>Concepto</th>
                                         <th class="text-center">Créditos</th>
+                                        <th class="text-center text-primary">Quedan</th>
                                     </tr>
                                 </thead>
                                 <tbody id="tablaMovimientos"></tbody>
@@ -487,7 +495,6 @@
             borderRadius: '16px'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Creamos el formulario dinámicamente para mandarlo al servidor
                 const form = document.createElement('form');
                 form.method = 'POST';
                 form.action = "{{ url_for('invitaciones_admin.suspender_planner') }}";
@@ -510,7 +517,6 @@
         });
     }
 
-    // ---FUNCIONES (AUDITORÍA Y REGENERAR) ---
     function regenerarCodigo(id, empresa) {
         Swal.fire({
             title: '¿Regenerar Código?',
@@ -538,8 +544,11 @@
 
     function abrirAuditoria(id, empresa) {
         document.getElementById('auditEmpresa').innerText = empresa;
+        // Reiniciamos los valores visuales
         document.getElementById('auditSaldo').innerHTML = '<i class="fas fa-spinner fa-spin text-muted fs-4"></i>';
-        document.getElementById('tablaMovimientos').innerHTML = '<tr><td colspan="3" class="text-center text-muted py-3">Cargando...</td></tr>';
+        document.getElementById('auditSaldoPaquetes').innerText = '...';
+        document.getElementById('auditAjustes').innerText = '...';
+        document.getElementById('tablaMovimientos').innerHTML = '<tr><td colspan="4" class="text-center text-muted py-3">Cargando...</td></tr>';
         document.getElementById('tablaConsumos').innerHTML = '<tr><td colspan="2" class="text-center text-muted py-3">Cargando...</td></tr>';
 
         new bootstrap.Modal(document.getElementById('modalAuditoria')).show();
@@ -549,23 +558,35 @@
             .then(data => {
                 if (data.success) {
                     document.getElementById('auditSaldo').innerText = data.saldo;
+                    // Actualizamos los saldos teóricos (asegúrate de que el backend los envíe o ajusta según lo que tengas)
+                    document.getElementById('auditSaldoPaquetes').innerText = data.saldo_paquetes !== undefined ? data.saldo_paquetes : data.saldo;
+                    document.getElementById('auditAjustes').innerText = data.saldo_ajustes !== undefined ? data.saldo_ajustes : '0';
 
                     let htmlMovs = '';
                     if (data.movimientos.length === 0) {
-                        htmlMovs = '<tr><td colspan="3" class="text-center text-muted py-3">No hay recargas.</td></tr>';
+                        htmlMovs = '<tr><td colspan="4" class="text-center text-muted py-3">No hay recargas.</td></tr>';
                     } else {
                         data.movimientos.forEach(m => {
                             let fecha = m.fecha_compra.substring(0, 10);
                             let concepto = m.notas ? m.notas : 'Compra de Paquete';
                             let cantClass = m.cantidad_total > 0 ? 'text-success bg-success' : 'text-danger bg-danger';
                             let signo = m.cantidad_total > 0 ? '+' : '';
+
+                            // AJUSTE 1 y 2: Lógica de Quedan y Expirado
+                            // Asume que el backend manda m.restantes y m.expirado
+                            let quedan = m.restantes !== undefined ? m.restantes : '-';
+                            let badgeExpirado = m.expirado ? `<span class="badge bg-danger ms-2" style="font-size: 0.6rem;">EXPIRADO</span>` : '';
+
                             htmlMovs += `<tr>
                                 <td class="text-muted fw-bold">${fecha}</td>
-                                <td><small class="fw-bold text-dark">${concepto}</small></td>
+                                <td><small class="fw-bold text-dark">${concepto}</small>${badgeExpirado}</td>
                                 <td class="text-center">
                                     <span class="badge ${cantClass} bg-opacity-10 text-dark border rounded-pill px-2">
                                         ${signo}${m.cantidad_total}
                                     </span>
+                                </td>
+                                <td class="text-center fw-bold text-primary">
+                                    ${quedan}
                                 </td>
                             </tr>`;
                         });
@@ -596,15 +617,12 @@
     }
 
     function copiarCodigo(texto, elemento) {
-        // 1. Copiar al portapapeles
         navigator.clipboard.writeText(texto).then(() => {
-            // 2. Efecto visual rápido en el elemento
             const colorOriginal = elemento.style.backgroundColor;
             elemento.classList.remove('bg-primary', 'bg-opacity-10');
-            elemento.style.backgroundColor = "#2ec4b6"; // Color Teal de tu marca
+            elemento.style.backgroundColor = "#2ec4b6";
             elemento.style.color = "white";
 
-            // 3. Notificación tipo Toast
             const Toast = Swal.mixin({
                 toast: true,
                 position: 'top-end',
@@ -618,7 +636,6 @@
                 title: 'Código copiado: ' + texto
             });
 
-            // 4. Revertir efecto visual después de 1 segundo
             setTimeout(() => {
                 elemento.style.backgroundColor = "";
                 elemento.style.color = "";
@@ -629,11 +646,9 @@
         });
     }
 
-    // --- NUEVA LÓGICA: ELIMINAR PLANNER DEFINITIVAMENTE ---
     function confirmarEliminacionDefinitiva(id, empresa, saldo) {
         let mensajeAdvertencia = `Estás a punto de borrar permanentemente a <strong>${empresa}</strong> de la base de datos. <br><br> Se borrarán en cascada todas sus invitaciones, pases QR y gigabytes de fotos en Cloudflare.`;
 
-        // Si tiene saldo, le advertimos que el dinero "se quema"
         if (saldo > 0) {
             mensajeAdvertencia += `<br><br><span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> ¡ATENCIÓN! Este planner tiene ${saldo} créditos a favor. Al borrarlo, estos créditos se perderán sin opción a reembolso.</span>`;
         }
@@ -641,19 +656,17 @@
         Swal.fire({
             title: '¿Eliminación Total?',
             html: mensajeAdvertencia,
-            icon: 'error', // Icono rojo
+            icon: 'error',
             showCancelButton: true,
-            confirmButtonColor: '#dc3545', // Rojo peligro
+            confirmButtonColor: '#dc3545',
             cancelButtonColor: '#6c757d',
             confirmButtonText: 'Sí, borrar todo',
             cancelButtonText: 'Cancelar',
             borderRadius: '16px'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Creamos el formulario dinámico y lo enviamos a la nueva ruta
                 const form = document.createElement('form');
                 form.method = 'POST';
-                // Esta es la ruta que creamos hace rato en Flask
                 form.action = "{{ url_for('invitaciones_admin.eliminar_planner') }}";
 
                 const inputId = document.createElement('input');
@@ -667,7 +680,6 @@
             }
         });
     }
-
 
 </script>
 {% endblock %}

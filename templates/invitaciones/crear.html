@@ -278,6 +278,8 @@
     <form action="{% if edit_mode %}{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}{% else %}{{ url_for('invitaciones_admin.crear_invitacion') }}{% endif %}"
         method="POST" enctype="multipart/form-data" id="formInvitacion">
 
+        <input type="hidden" id="formActionInput" name="action" value="publicar">
+
         <div class="builder-header d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 p-3 bg-white rounded-4 shadow-sm">
 
             <h4 class="fw-bold m-0 mb-3 mb-md-0 text-dark">
@@ -285,16 +287,25 @@
                 {{ 'Editar' if edit_mode else 'Crear Nueva' }} Invitación
             </h4>
 
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap justify-content-md-end">
                 <a href="{% if session.get('user_type') == 'planner' %}{{ url_for('invitaciones_clientes.dashboard_planner') }}{% else %}{{ url_for('invitaciones_admin.gestionar_invitaciones') }}{% endif %}"
-                    class="btn btn-outline-secondary rounded-pill px-3 fw-bold w-100 d-flex align-items-center justify-content-center"
+                    class="btn btn-outline-secondary rounded-pill px-3 fw-bold d-flex align-items-center justify-content-center"
                     style="max-width: fit-content;">
                     Cancelar
                 </a>
-                <button type="button" class="btn btn-dark rounded-pill px-4 shadow fw-bold w-100 d-flex align-items-center justify-content-center"
+
+                {% if session.get('user_type') == 'planner' and not edit_mode and not tiene_demo %}
+                <button type="button" class="btn btn-info text-white rounded-pill px-4 shadow fw-bold d-flex align-items-center justify-content-center"
                         style="max-width: fit-content;"
-                        onclick="validarYContinuar({{ 'true' if edit_mode else 'false' }})">
-                    <i class="fas fa-{{ 'save' if edit_mode else 'cloud-upload-alt' }} me-2"></i>{{ 'Guardar Cambios' if edit_mode else 'Publicar Invitación' }}
+                        onclick="validarYContinuar(false, true)">
+                    <i class="fas fa-magic me-2"></i>Publicar Demo <span class="badge bg-white text-info ms-2">Gratis</span>
+                </button>
+                {% endif %}
+
+                <button type="button" class="btn btn-dark rounded-pill px-4 shadow fw-bold d-flex align-items-center justify-content-center"
+                        style="max-width: fit-content;"
+                        onclick="validarYContinuar({{ 'true' if edit_mode else 'false' }}, false)">
+                    <i class="fas fa-{{ 'save' if edit_mode else 'cloud-upload-alt' }} me-2"></i>{{ 'Guardar Cambios' if edit_mode else 'Publicar Premium' }}
                 </button>
             </div>
         </div>
@@ -1092,6 +1103,8 @@
 {% endblock %} 
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
     // --- DRAG AND DROP ---
     var el = document.getElementById('sortable-list');
@@ -1406,23 +1419,47 @@
     });
 
     // --- ESCUDO: VALIDAR ANTES DE ABRIR MODAL O GUARDAR ---
-    function validarYContinuar(isEditMode) {
+    function validarYContinuar(isEditMode, isDemo = false) {
         const form = document.getElementById('formInvitacion');
+        const actionInput = document.getElementById('formActionInput');
+        const slugInput = document.getElementById('slugInput');
+        const fechaInput = document.querySelector('input[name="fecha_evento"]');
         
-        // 1. Verificamos que los campos obligatorios estén llenos
+        // TRUCO MÁGICO: Si es demo, inyectamos basura temporal para pasar la validación HTML5
+        // El backend lo va a sobreescribir de todos modos con "demo-agencia" y fecha 2 meses futuro
+        if (isDemo) {
+            actionInput.value = 'demo';
+            if (slugInput && !slugInput.value) slugInput.value = "demo-temp";
+            if (fechaInput && !fechaInput.value) fechaInput.value = "2099-12-31T12:00";
+        } else {
+            actionInput.value = 'publicar';
+            // Si antes le picó a demo y se arrepintió, limpiamos la basura
+            if (slugInput && slugInput.value === "demo-temp") slugInput.value = "";
+        }
+
+        // 1. Verificamos que los campos obligatorios estén llenos (Ej. la foto de portada)
         if (!form.checkValidity()) {
-            // Muestra el globito nativo de "Completa este campo" sin que el modal lo tape
             form.reportValidity();
+            // Revertir limpieza temporal si falla
+            if (isDemo) {
+                if (slugInput && slugInput.value === "demo-temp") slugInput.value = "";
+                if (fechaInput && fechaInput.value === "2099-12-31T12:00") fechaInput.value = "";
+            }
             return;
         }
 
         // 2. Si todo está completo, decidimos qué hacer
-        if (isEditMode) {
-            // Si es edición, guardamos directo mostrando pantalla de carga
+        if (isDemo) {
+            // Es un demo: Se va directo, sin preguntar por saldo.
+            document.getElementById('loadingOverlay').style.display = 'flex';
+            document.querySelector('.loading-text').innerText = 'Creando tu Demo de Portafolio...';
+            form.submit();
+        } else if (isEditMode) {
+            // Es edición: Se va directo
             document.getElementById('loadingOverlay').style.display = 'flex';
             form.submit();
         } else {
-            // Si es nueva, abrimos el modal de confirmación de créditos
+            // Es invitación Premium nueva: Abrimos modal para advertir que cobra 1 crédito
             const modalConfirmacion = new bootstrap.Modal(document.getElementById('confirmarPublicacionModal'));
             modalConfirmacion.show();
         }
