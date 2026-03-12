@@ -202,10 +202,10 @@ def guardar_buen_deseo():
         conn = get_db()
         conn.execute(
             """
-            INSERT INTO buenos_deseos (invitacion_id, nombre, mensaje, created_at)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO buenos_deseos (invitacion_id, nombre, mensaje)
+            VALUES (?, ?, ?)
             """,
-            (invitacion_id, nombre_limpio, mensaje_limpio, ahora_sql())
+            (invitacion_id, nombre_limpio, mensaje_limpio)
         )
         conn.commit()
         conn.close()
