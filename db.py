@@ -330,6 +330,7 @@ def init_db():
         padrinos TEXT,
         frase_final TEXT,
         historia_json TEXT,
+        mesas_json TEXT DEFAULT '[]',
         es_demo INTEGER DEFAULT 0,
         tipo_evento TEXT DEFAULT 'boda',
         bloquear_edicion_invitados BOOLEAN DEFAULT 0,
@@ -337,6 +338,7 @@ def init_db():
         tiene_modulo_invitados BOOLEAN DEFAULT 0,
         estilo_apertura TEXT DEFAULT 'simple',
         codigo_acceso_cliente TEXT UNIQUE,
+        mesas_json TEXT DEFAULT '[]',
         planner_id INTEGER,
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );

@@ -32,12 +32,12 @@
         <p id="status" class="text-muted small">Iniciando cámara automáticamente...</p>
     </div>
 
-    <script>
-            const invitacionId = {{ inv.id if inv else 'null' }};
+ <script>
+        const invitacionId = {{ inv.id if inv else 'null' }};
         let isScanning = true;
-            const html5QrCode = new Html5Qrcode("reader");
+        const html5QrCode = new Html5Qrcode("reader");
 
-            const qrCodeSuccessCallback = (decodedText, decodedResult) => {
+        const qrCodeSuccessCallback = (decodedText, decodedResult) => {
             if (!isScanning) return;
             isScanning = false; 
 
@@ -53,45 +53,94 @@
                 })
             })
             .then(res => res.json())
-                .then(data => {
-                if (data.success) {
-                    // 1. Armamos el HTML de los acompañantes (si es que hay)
+            .then(data => {
+                // CASO 1: LEYÓ EL QR CORRECTAMENTE, PREGUNTAR CUÁNTOS ENTRAN
+                if (data.success && data.requiere_confirmacion) {
+                    
                     let htmlAcompanantes = '';
                     if (data.nombres_acompanantes && data.nombres_acompanantes.length > 0) {
                         htmlAcompanantes = `
                             <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-top: 15px; border-left: 4px solid #D4AF37;">
-                                <small style="color: #888; font-weight: 800; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Lista Estricta:</small>
-                                <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 1rem; color: #111; font-weight: 600;">
+                                <small style="color: #888; font-weight: 800; font-size: 0.75rem; text-transform: uppercase;">Lista Estricta:</small>
+                                <ul style="margin: 8px 0 0 0; padding-left: 20px; font-size: 1rem; color: #111; font-weight: 600; text-align: left;">
                                     ${data.nombres_acompanantes.map(nombre => `<li>${nombre}</li>`).join('')}
                                 </ul>
                             </div>
                         `;
                     }
 
-                    // 2. Lanzamos la alerta con la nueva información inyectada
                     Swal.fire({
-                        title: '¡Acceso Garantizado! ✅',
+                        title: 'Verificación de Acceso',
                         html: `
                             <div style="text-align: left; font-size: 1.1rem; color: #333;">
                                 <p style="margin-bottom: 8px;"><b>Familia:</b> ${data.familia}</p>
-                                <p style="margin-bottom: 8px;"><b>Pases Totales:</b> ${data.pases}</p>
-                                <p style="margin-bottom: 8px;"><b>Mesa:</b> <span style="color: #D4AF37; font-weight: bold; font-size: 1.2rem;">${data.mesa}</span></p>
+                                <p style="margin-bottom: 8px;"><b>Disponibles:</b> <span style="color: #28a745; font-weight: bold; font-size: 1.2rem;">${data.pases_disponibles}</span> de ${data.pases_totales}</p>
+                                <p style="margin-bottom: 15px;"><b>Mesa:</b> <span style="color: #D4AF37; font-weight: bold; font-size: 1.2rem;">${data.mesa}</span></p>
                                 ${data.evento ? `<p class="small text-muted mb-0">Evento: ${data.evento}</p>` : ''}
                                 
                                 ${htmlAcompanantes}
                                 
                                 <hr style="margin: 15px 0;">
-                                <p style="color: #D4AF37; text-align: center; font-weight: bold; margin-bottom: 0;">¡Bienvenidos!</p>
+                                <label for="swal-ingresan" style="font-weight: bold; display: block; text-align: center; margin-bottom: 10px; color: #D4AF37;">¿Cuántas personas entran AHORA?</label>
+                                <input type="number" id="swal-ingresan" class="swal2-input" value="${data.pases_disponibles}" min="1" max="${data.pases_disponibles}" style="width: 120px; text-align: center; margin: 0 auto; display: block; font-size: 1.8rem; font-weight: bold;">
                             </div>
                         `,
-                        icon: 'success',
-                        confirmButtonText: 'Siguiente invitado',
-                        confirmButtonColor: '#D4AF37'
-                    }).then(() => {
-                        isScanning = true;
-                        document.getElementById('status').innerText = "Apunte al código QR";
+                        icon: 'question',
+                        showCancelButton: true,
+                        confirmButtonText: 'Registrar Ingreso ✅',
+                        cancelButtonText: 'Cancelar',
+                        confirmButtonColor: '#D4AF37',
+                        cancelButtonColor: '#6c757d',
+                        preConfirm: () => {
+                            // Validar que la hostess no ponga un número mayor a los disponibles
+                            const cant = parseInt(document.getElementById('swal-ingresan').value);
+                            if (!cant || cant <= 0 || cant > data.pases_disponibles) {
+                                Swal.showValidationMessage(`Solo puedes ingresar entre 1 y ${data.pases_disponibles} personas.`);
+                            }
+                            return cant;
+                        }
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            const cantIngresan = result.value;
+                            
+                            // SEGUNDA LLAMADA: Confirma el descuento en la BD
+                            fetch('/api/validar-qr', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ 
+                                    codigo: decodedText, 
+                                    invitacion_id: invitacionId,
+                                    pases_a_ingresar: cantIngresan // Mandamos los pases descontados
+                                })
+                            })
+                            .then(res2 => res2.json())
+                            .then(data2 => {
+                                if(data2.success) {
+                                    Swal.fire({
+                                        title: '¡Acceso Garantizado!',
+                                        text: data2.mensaje,
+                                        icon: 'success',
+                                        confirmButtonColor: '#D4AF37'
+                                    }).then(() => {
+                                        isScanning = true;
+                                        document.getElementById('status').innerText = "Apunte al código QR";
+                                    });
+                                } else {
+                                    Swal.fire('Error', data2.error, 'error').then(() => { isScanning = true; });
+                                }
+                            }).catch(err => {
+                                console.error(err);
+                                Swal.fire('Error', 'Problema de conexión', 'error').then(() => { isScanning = true; });
+                            });
+                        } else {
+                            // Si la hostess canceló el cuadro
+                            isScanning = true;
+                            document.getElementById('status').innerText = "Apunte al código QR";
+                        }
                     });
-                } else {
+                
+                // CASO 2: EL QR NO EXISTE O YA NO TIENE PASES
+                } else if (data.success === false) {
                     Swal.fire({
                         title: 'Acceso Denegado',
                         text: data.error,
@@ -107,20 +156,20 @@
                 console.error(err);
                 Swal.fire('Error', 'Problema de conexión', 'error').then(() => { isScanning = true; });
             });
-        };
+        }; // <--- ¡Esta es la llave y punto y coma que se nos perdieron en la batalla!
 
-            // Configuración para arranque automático
-            const config = { fps: 15, qrbox: { width: 250, height: 250 } };
+        // Configuración para arranque automático
+        const config = { fps: 15, qrbox: { width: 250, height: 250 } };
 
-            // Iniciar con la cámara trasera (environment)
-            html5QrCode.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
-                .then(() => {
-                    document.getElementById('status').innerText = "Apunte al código QR";
-                })
-                .catch(err => {
-                    document.getElementById('status').innerText = "Error: Permita el acceso a la cámara";
-                    console.error("No se pudo iniciar la cámara", err);
-                });
+        // Iniciar con la cámara trasera (environment)
+        html5QrCode.start({ facingMode: "environment" }, config, qrCodeSuccessCallback)
+            .then(() => {
+                document.getElementById('status').innerText = "Apunte al código QR";
+            })
+            .catch(err => {
+                document.getElementById('status').innerText = "Error: Permita el acceso a la cámara";
+                console.error("No se pudo iniciar la cámara", err);
+            });
     </script>
 </body>
 </html>

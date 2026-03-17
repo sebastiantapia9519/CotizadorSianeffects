@@ -57,18 +57,22 @@
             <h4 class="fw-bold m-0"><i class="fas fa-ticket-alt text-primary me-2"></i>Gestión de Pases</h4>
             <small class="text-muted">Lista de invitados para: <span class="fw-bold text-dark">{{ inv['slug'] }}</span></small>
         </div>
-        <div class="d-flex gap-2 w-100 w-md-auto">
+        <div class="d-flex gap-2 w-100 w-md-auto flex-wrap flex-md-nowrap justify-content-end">
             {% if session.get('user_type') == 'planner' %}
-            <a href="{{ url_for('invitaciones_clientes.dashboard_planner') }}" class="btn btn-outline-secondary rounded-pill shadow-sm px-3 flex-grow-1 flex-md-grow-0 text-center">
+            <a href="{{ url_for('invitaciones_clientes.dashboard_planner') }}" class="btn btn-outline-secondary rounded-pill shadow-sm px-3 text-center">
                 <i class="fas fa-arrow-left me-1"></i> Volver
             </a>
             {% else %}
-            <a href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}" class="btn btn-outline-secondary rounded-pill shadow-sm px-3 flex-grow-1 flex-md-grow-0 text-center">
+            <a href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}" class="btn btn-outline-secondary rounded-pill shadow-sm px-3 text-center">
                 <i class="fas fa-arrow-left me-1"></i> Volver
             </a>
             {% endif %}
             
-            <button class="btn btn-dark rounded-pill px-4 shadow-sm flex-grow-1 flex-md-grow-0" data-bs-toggle="modal" data-bs-target="#modalAgregarAdmin">
+            <button class="btn btn-light border shadow-sm rounded-pill px-4 fw-bold text-dark" data-bs-toggle="modal" data-bs-target="#modalConfigurarMesas">
+                <i class="fas fa-layer-group text-primary me-1"></i> Mesas
+            </button>
+            
+            <button class="btn btn-dark rounded-pill px-4 shadow-sm" data-bs-toggle="modal" data-bs-target="#modalAgregarAdmin">
                 <i class="fas fa-plus me-1"></i> Agregar
             </button>
         </div>
@@ -118,7 +122,7 @@
                                     <code class="text-primary bg-primary bg-opacity-10 px-2 py-1 rounded small fw-bold">{{ invitado.codigo_qr_unique }}</code>
                                     
                                     {% if invitado.telefono %}
-{% set mensaje_custom = (inv.datos_cliente_json | from_json) if inv.datos_cliente_json else {} %}
+                                        {% set mensaje_custom = (inv.datos_cliente_json | from_json) if inv.datos_cliente_json else {} %}
                                         {% set mensaje_wpp = mensaje_custom.get('mensaje_envio_pases', '¡Hola! Te compartimos la invitación a nuestro evento. Aquí tienes tu pase de acceso personal:') %}
                                         {% set url_pase = request.host_url ~ 'invitacion/' ~ inv.slug ~ '?pass=' ~ invitado.codigo_qr_unique %}
                                         
@@ -160,6 +164,10 @@
                             <td class="text-end pe-md-4 mobile-actions">
                                 <button class="btn btn-light border text-primary rounded-circle shadow-sm d-inline-flex align-items-center justify-content-center" style="width: 35px; height: 35px;" onclick="copiarLink('{{ inv.slug }}', '{{ invitado.codigo_qr_unique }}')" title="Copiar Link">
                                     <i class="fas fa-copy"></i>
+                                </button>
+
+                                <button class="btn btn-light border text-primary rounded-circle shadow-sm ms-2 d-inline-flex align-items-center justify-content-center" style="width: 35px; height: 35px;" data-bs-toggle="modal" data-bs-target="#modalEditarAdmin{{ invitado.id }}" title="Editar Pase">
+                                    <i class="fas fa-edit"></i>
                                 </button>
                                 
                                 <form action="{{ url_for('invitaciones_admin.eliminar_pase', inv_id=inv.id, pase_id=invitado.id) }}" method="POST" class="d-inline" onsubmit="return confirm('¿Estás seguro de que deseas eliminar este pase? El link actual de la familia dejará de funcionar.');">
@@ -208,8 +216,21 @@
                             <input type="number" name="pases_totales" id="pasesTotalesInput" class="form-control bg-light border-0 py-2 text-center fw-bold" value="2" min="1" required>
                         </div>
                         <div class="col-6 col-md-4">
-                            <label class="form-label small fw-bold text-muted text-uppercase mb-1"># Mesa</label>
-                            <input type="text" name="mesa" class="form-control bg-light border-0 py-2 text-center fw-bold" value="0">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Mesa Asignada</label>
+                            {% if mesas_status %}
+                            <select name="mesa" id="mesaSelectCrear" class="form-select bg-light border-0 py-2 fw-bold text-center">
+                                <option value="0">Sin asignar</option>
+                                {% for m in mesas_status %}
+                                    <option value="{{ m.nombre }}" 
+                                        data-disponibles="{{ m.disponibles }}"
+                                        {% if m.disponibles <= 0 %}disabled style="color:red;"{% endif %}>
+                                        {{ m.nombre }} {% if m.disponibles <= 0 %}(Llena){% else %}(Quedan {{ m.disponibles }}){% endif %}
+                                    </option>
+                                {% endfor %}
+                            </select>
+                            {% else %}
+                            <input type="text" name="mesa" class="form-control bg-light border-0 py-2 text-center fw-bold" value="0" title="Configura tus mesas en el botón superior dorado.">
+                            {% endif %}
                         </div>
                         <div class="col-12 col-md-4">
                             <label class="form-label small fw-bold text-muted text-uppercase mb-1">WhatsApp</label>
@@ -235,6 +256,176 @@
     </div>
 </div>
 
+<!-- Modal Configurar Mesas -->
+<div class="modal fade" id="modalConfigurarMesas" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header bg-light border-bottom-0 rounded-top-4 pb-3 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-layer-group text-primary me-2"></i>Distribución de Mesas</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 bg-white">
+                <p class="small text-muted mb-4">Define la capacidad de cada mesa. El sistema bloqueará asignaciones si detecta sobrecupo.</p>
+                
+                <div class="bg-light p-3 rounded-4 mb-4 border shadow-sm">
+                    <label class="form-label small fw-bold text-dark mb-3"><i class="fas fa-magic text-primary me-1"></i> Creación Rápida</label>
+                    <div class="row g-2 align-items-end">
+                        <div class="col-4">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem; line-height: 1;">N° de Mesas</small>
+                            <input type="number" id="genCantidadMesas" class="form-control form-control-sm border-0 shadow-sm text-center fw-bold" placeholder="Ej. 20" min="1">
+                        </div>
+                        <div class="col-4">
+                            <small class="text-muted d-block mb-1" style="font-size: 0.7rem; line-height: 1;">Sillas x Mesa</small>
+                            <input type="number" id="genSillasMesa" class="form-control form-control-sm border-0 shadow-sm text-center fw-bold" placeholder="Ej. 10" min="1">
+                        </div>
+                        <div class="col-4">
+                            <button type="button" class="btn btn-primary btn-sm w-100 fw-bold shadow-sm" onclick="generarMesasMasivas()" style="height: 31px;">
+                                Generar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <form action="{{ url_for('invitaciones_admin.guardar_configuracion_mesas', id=inv.id) }}" method="POST" id="formMesas">
+                    
+                    <div id="contenedorListaMesas" style="max-height: 35vh; overflow-y: auto; overflow-x: hidden; padding-right: 5px;">
+                        {% if mesas_status %}
+                            {% for m in mesas_status %}
+                            <div class="d-flex mb-2 gap-2 w-100 align-items-center">
+                                <div class="input-group input-group-sm flex-grow-1 shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0 fw-bold text-muted">Mesa</span>
+                                    <input type="text" name="nombre_mesa[]" class="form-control border-start-0 text-center fw-bold" value="{{ m.nombre }}" placeholder="Ej: 1 o VIP" required>
+                                </div>
+                                <div class="input-group input-group-sm flex-grow-1 shadow-sm">
+                                    <input type="number" name="capacidad_mesa[]" class="form-control border-end-0 text-center fw-bold" value="{{ m.capacidad }}" min="1" required>
+                                    <span class="input-group-text bg-white border-start-0 text-muted">Sillas</span>
+                                </div>
+                                <button type="button" class="btn btn-white border text-danger btn-sm rounded-3 shadow-sm flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="d-flex mb-2 gap-2 w-100 align-items-center">
+                                <div class="input-group input-group-sm flex-grow-1 shadow-sm">
+                                    <span class="input-group-text bg-white border-end-0 fw-bold text-muted">Mesa</span>
+                                    <input type="text" name="nombre_mesa[]" class="form-control border-start-0 text-center fw-bold" value="1" placeholder="Ej: 1 o VIP" required>
+                                </div>
+                                <div class="input-group input-group-sm flex-grow-1 shadow-sm">
+                                    <input type="number" name="capacidad_mesa[]" class="form-control border-end-0 text-center fw-bold" value="10" min="1" required>
+                                    <span class="input-group-text bg-white border-start-0 text-muted">Sillas</span>
+                                </div>
+                                <button type="button" class="btn btn-white border text-danger btn-sm rounded-3 shadow-sm flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="button" class="btn btn-light w-100 border text-secondary fw-bold mt-3 shadow-sm rounded-pill" onclick="agregarFilaMesa()">
+                        <i class="fas fa-plus me-1"></i> Agregar fila manual
+                    </button>
+                    
+                    <hr class="my-4 border-secondary opacity-25">
+                    <button type="submit" class="btn btn-dark w-100 rounded-pill py-3 fw-bold shadow-sm">
+                        <i class="fas fa-save me-2"></i> Guardar Distribución
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Pase -->
+ {% if invitados %}
+    {% for invitado in invitados %}
+    <div class="modal fade text-start" id="modalEditarAdmin{{ invitado.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg">
+                <div class="modal-header bg-light border-bottom-0 rounded-top-4 pb-3 pt-4 px-4">
+                    <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit text-primary me-2"></i>Editar Invitado</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-4 bg-white">
+                    <form action="{{ url_for('invitaciones_admin.editar_pase_admin', inv_id=inv.id, pase_id=invitado.id) }}" method="POST">
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold text-muted text-uppercase mb-1">Nombre / Familia</label>
+                            <input type="text" name="nombre_familia" class="form-control bg-light border-0 py-2 fw-bold" value="{{ invitado.nombre_familia }}" required>
+                        </div>
+                        
+                        <div class="row g-3 mb-4">
+                            <div class="col-6 col-md-4">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-1">Pases</label>
+                                <input type="number" name="pases_totales" id="pasesEdit_{{ invitado.id }}" class="form-control bg-light border-0 py-2 text-center fw-bold val-capacidad-input" data-target-select="mesaSelectEdit_{{ invitado.id }}" value="{{ invitado.pases_totales }}" min="1" required>
+                            </div>
+                            <div class="col-6 col-md-4">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-1">Mesa</label>
+                                {% if mesas_status %}
+                                <select name="mesa" id="mesaSelectEdit_{{ invitado.id }}" class="form-select bg-light border-0 py-2 fw-bold text-center val-capacidad-select" data-target-input="pasesEdit_{{ invitado.id }}">
+                                    <option value="0" {% if not invitado.mesa or invitado.mesa|string == '0' %}selected{% endif %}>Sin asignar</option>
+                                    {% for m in mesas_status %}
+                                        {% set disponibles_reales = m.disponibles + (invitado.pases_totales if invitado.mesa|string == m.nombre|string else 0) %}
+                                        
+                                        <option value="{{ m.nombre }}" 
+                                            data-disponibles="{{ disponibles_reales }}"
+                                            {% if invitado.mesa|string == m.nombre|string %}selected{% endif %}
+                                            {% if disponibles_reales <= 0 and invitado.mesa|string != m.nombre|string %}disabled style="color:red;"{% endif %}>
+                                            {{ m.nombre }} {% if disponibles_reales <= 0 and invitado.mesa|string != m.nombre|string %}(Llena){% else %}(Quedan {{ disponibles_reales }}){% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% else %}
+                                <input type="text" name="mesa" class="form-control bg-light border-0 py-2 text-center fw-bold" value="{{ invitado.mesa if invitado.mesa else '0' }}">
+                                {% endif %}
+                            </div>
+                            <div class="col-12 col-md-4">
+                                <label class="form-label small fw-bold text-muted text-uppercase mb-1">WhatsApp</label>
+                                <input type="number" name="telefono" class="form-control bg-light border-0 py-2 fw-bold" value="{{ invitado.telefono }}">
+                            </div>
+                        </div>
+
+                        <div class="mb-4 bg-light border rounded-3 p-3 shadow-sm">
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input check-nombres-edit" type="checkbox" 
+                                        id="checkNombresEdit_{{ invitado.id }}" 
+                                        {% if invitado.nombres_acompanantes_json %}checked{% endif %}
+                                        onchange="generarInputsAcompanantes('checkNombresEdit_{{ invitado.id }}', 'contenedorAcompanantesEdit_{{ invitado.id }}', 'pasesEdit_{{ invitado.id }}')">
+                                <label class="form-check-label small fw-bold text-primary ms-1" for="checkNombresEdit_{{ invitado.id }}">
+                                    <i class="fas fa-list-ol me-1"></i> Especificar nombres
+                                </label>
+                            </div>
+                            
+                            <div id="contenedorAcompanantesEdit_{{ invitado.id }}" class="mt-3 {% if not invitado.nombres_acompanantes_json %}d-none{% endif %}">
+                                {% if invitado.nombres_acompanantes_json %}
+                                    <small class="text-muted mb-2 d-block" style="font-size: 0.75rem;">Modifica los nombres:</small>
+                                    {% set nombres_guardados = invitado.nombres_acompanantes_json | from_json %}
+                                    {% for nombre in nombres_guardados %}
+                                    <div class="input-group input-group-sm mb-2 shadow-sm">
+                                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                                        <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0 fw-bold" value="{{ nombre }}" required>
+                                    </div>
+                                    {% endfor %}
+                                    
+                                    {% if invitado.pases_totales > nombres_guardados|length %}
+                                        {% for i in range((invitado.pases_totales - nombres_guardados|length)) %}
+                                        <div class="input-group input-group-sm mb-2 shadow-sm">
+                                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                                            <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0 fw-bold" placeholder="Nuevo acompañante" required>
+                                        </div>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-dark w-100 rounded-pill py-3 fw-bold shadow-sm">
+                            <i class="fas fa-save me-2"></i> Guardar Cambios
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+{% endif %}
+
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
 function copiarLink(slug, codigo) {
@@ -258,7 +449,37 @@ function copiarLink(slug, codigo) {
         });
     });
 }
-// --- LÓGICA ANTI-COLADOS (GENERAR INPUTS DINÁMICOS) ---
+
+// =======================================================
+// --- LÓGICA ANTI-COLADOS BLINDADA (CREAR Y EDITAR) ---
+// =======================================================
+
+// 1. Escuchador Global: Detecta cuando cambia CUALQUIER número de pases
+document.body.addEventListener('input', function(e) {
+    
+    // CASO A: Es el modal de "Crear Nuevo"
+    if (e.target.id === 'pasesTotalesInput') {
+        const switchNombres = document.getElementById('checkNombresAcompanantes');
+        if (switchNombres && switchNombres.checked) {
+            generarInputsAcompanantes('checkNombresAcompanantes', 'contenedorAcompanantes', 'pasesTotalesInput');
+        }
+    }
+    
+    // CASO B: Es alguno de los modales de "Editar"
+    if (e.target && e.target.id && e.target.id.startsWith('pasesEdit_')) {
+        const idUnico = e.target.id.split('_')[1];
+        const switchNombres = document.getElementById('checkNombresEdit_' + idUnico);
+        if (switchNombres && switchNombres.checked) {
+            generarInputsAcompanantes('checkNombresEdit_' + idUnico, 'contenedorAcompanantesEdit_' + idUnico, e.target.id);
+        }
+    }
+});
+
+
+// =======================================================
+// --- LÓGICA ANTI-COLADOS QUIRÚRGICA (A PRUEBA DE FALLOS) ---
+// =======================================================
+
 function generarInputsAcompanantes(switchId, contenedorId, inputPasesId) {
     const switchNombres = document.getElementById(switchId);
     const contenedor = document.getElementById(contenedorId);
@@ -266,34 +487,57 @@ function generarInputsAcompanantes(switchId, contenedorId, inputPasesId) {
     
     if (!switchNombres || !contenedor || !inputPases) return;
 
-    if (switchNombres.checked) {
-        contenedor.classList.remove('d-none');
-        
-        const numPases = parseInt(inputPases.value) || 1;
-        
-        // Guardar valores previos por si el usuario le pica a la flechita de bajar/subir pases
-        const inputsActuales = contenedor.querySelectorAll('input[name="nombres_acompanantes[]"]');
-        let valoresPrevios = [];
-        inputsActuales.forEach(inp => valoresPrevios.push(inp.value));
-
-        let html = '<small class="text-muted mb-2 d-block" style="font-size: 0.75rem;">Escribe el nombre de cada persona contemplada:</small>';
-        for (let i = 1; i <= numPases; i++) {
-            let valor = valoresPrevios[i-1] ? valoresPrevios[i-1] : '';
-            html += `
-                <div class="input-group input-group-sm mb-2 shadow-sm">
-                    <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-user"></i></span>
-                    <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0" placeholder="Acompañante ${i}" value="${valor}" required>
-                </div>
-            `;
-        }
-        contenedor.innerHTML = html;
-    } else {
+    // Si apagan el switch, escondemos el contenedor y desactivamos los inputs para que no se guarden por accidente
+    if (!switchNombres.checked) {
         contenedor.classList.add('d-none');
-        contenedor.innerHTML = '';
+        const inputs = contenedor.querySelectorAll('input[name="nombres_acompanantes[]"]');
+        inputs.forEach(inp => inp.disabled = true);
+        return;
+    }
+
+    // Si prenden el switch, mostramos y reactivamos
+    contenedor.classList.remove('d-none');
+    const inputsActuales = contenedor.querySelectorAll('input[name="nombres_acompanantes[]"]');
+    inputsActuales.forEach(inp => inp.disabled = false);
+
+    // Si la caja está vacía (porque el usuario está borrando para teclear), no hacemos nada
+    if (inputPases.value.trim() === '') return;
+
+    const numPases = parseInt(inputPases.value);
+    if (isNaN(numPases) || numPases <= 0) return;
+
+    const cantidadActual = inputsActuales.length;
+
+    // CASO A: Faltan cajas (Ej. Subió de 2 a 4 pases) -> Agregamos las nuevas al final
+    if (numPases > cantidadActual) {
+        // Aseguramos que tenga el título si era la primera vez
+        if (cantidadActual === 0) {
+            contenedor.innerHTML = '<small class="text-muted mb-2 d-block" style="font-size: 0.75rem;">Modifica los nombres:</small>';
+        }
+        
+        for (let i = cantidadActual + 1; i <= numPases; i++) {
+            const div = document.createElement('div');
+            div.className = 'input-group input-group-sm mb-2 shadow-sm fila-acompanante';
+            div.innerHTML = `
+                <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0 fw-bold" placeholder="Acompañante ${i}" required>
+            `;
+            contenedor.appendChild(div);
+        }
+    } 
+    // CASO B: Sobran cajas (Ej. Bajó de 4 a 2 pases) -> Eliminamos solo las últimas
+    else if (numPases < cantidadActual) {
+        // Buscamos todas las filas actuales
+        const filas = contenedor.querySelectorAll('.input-group');
+        // Empezamos a borrar desde la última hacia atrás, hasta llegar al número deseado
+        for (let i = cantidadActual - 1; i >= numPases; i--) {
+            if (filas[i]) filas[i].remove();
+        }
     }
 }
 
-// Escuchar cambios de número en el Modal de Creación
+
+// Escuchar cambios de número en el Modal de Creación (Anti-colados)
 document.getElementById('pasesTotalesInput').addEventListener('input', function() {
     const switchNombres = document.getElementById('checkNombresAcompanantes');
     if (switchNombres && switchNombres.checked) {
@@ -301,5 +545,155 @@ document.getElementById('pasesTotalesInput').addEventListener('input', function(
     }
 });
 
+// Escuchar cambios de número en los Modales de Edición (Anti-colados dinámico)
+document.body.addEventListener('input', function(e) {
+    // Si el elemento que cambió tiene un ID que empieza con "pasesEdit_"
+    if (e.target && e.target.id && e.target.id.startsWith('pasesEdit_')) {
+        // Extraemos el ID único del invitado (ej. 15)
+        const idUnico = e.target.id.split('_')[1];
+        const switchNombres = document.getElementById('checkNombresEdit_' + idUnico);
+        
+        // Si el switch está prendido, regeneramos las cajas
+        if (switchNombres && switchNombres.checked) {
+            generarInputsAcompanantes('checkNombresEdit_' + idUnico, 'contenedorAcompanantesEdit_' + idUnico, e.target.id);
+        }
+    }
+});
+
+
+// =======================================================
+// --- LÓGICA INTELIGENTE DE MESAS (CREAR Y EDITAR) ---
+// =======================================================
+
+// 1. Validar Sobrecupo al escribir el número de pases
+document.body.addEventListener('input', function(e) {
+    if (e.target.classList.contains('val-capacidad-input') || e.target.id === 'pasesTotalesInput') {
+        const selectId = e.target.getAttribute('data-target-select') || 'mesaSelectCrear';
+        validarSobrecupoGeneral(document.getElementById(selectId), e.target);
+    }
+});
+
+// 2. Validar Sobrecupo al elegir la mesa en el menú
+document.body.addEventListener('change', function(e) {
+    if (e.target.classList.contains('val-capacidad-select') || e.target.id === 'mesaSelectCrear') {
+        const inputId = e.target.getAttribute('data-target-input') || 'pasesTotalesInput';
+        validarSobrecupoGeneral(e.target, document.getElementById(inputId));
+    }
+});
+
+function validarSobrecupoGeneral(selectElement, inputPasesElement) {
+    if(!selectElement || !inputPasesElement) return;
+    
+    const opcionSeleccionada = selectElement.options[selectElement.selectedIndex];
+    const pasesPedidos = parseInt(inputPasesElement.value) || 0;
+    
+    // Si eligió "Sin asignar", no validamos nada
+    if(opcionSeleccionada.value === "0") return;
+    
+    const lugaresDisponibles = parseInt(opcionSeleccionada.getAttribute('data-disponibles')) || 0;
+    
+    if (pasesPedidos > lugaresDisponibles) {
+        Swal.fire({
+            icon: 'warning',
+            title: '¡Sobrecupo en Mesa!',
+            text: `Estás intentando meter a ${pasesPedidos} personas en la Mesa ${opcionSeleccionada.value}, pero solo le quedan ${lugaresDisponibles} sillas disponibles.`,
+            confirmButtonColor: '#333'
+        });
+        selectElement.value = "0"; // Lo regresamos a "Sin asignar"
+    }
+}
+
+// =======================================================
+// --- LÓGICA DEL GENERADOR DE MESAS (MODAL DE CONFIG) ---
+// =======================================================
+
+function agregarFilaMesa() {
+    const contenedor = document.getElementById('contenedorListaMesas');
+    const numMesasActuales = contenedor.children.length;
+    const sugerencia = numMesasActuales + 1;
+    
+    const div = document.createElement('div');
+    div.className = 'd-flex mb-2 gap-2 w-100 align-items-center';
+    div.innerHTML = `
+        <div class="input-group input-group-sm flex-grow-1 shadow-sm">
+            <span class="input-group-text bg-white border-end-0 fw-bold text-muted">Mesa</span>
+            <input type="text" name="nombre_mesa[]" class="form-control border-start-0 text-center fw-bold" value="${sugerencia}" placeholder="Ej: 1 o VIP" required>
+        </div>
+        <div class="input-group input-group-sm flex-grow-1 shadow-sm">
+            <input type="number" name="capacidad_mesa[]" class="form-control border-end-0 text-center fw-bold" value="10" min="1" required>
+            <span class="input-group-text bg-white border-start-0 text-muted">Sillas</span>
+        </div>
+        <button type="button" class="btn btn-white border text-danger btn-sm rounded-3 shadow-sm flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
+    `;
+    contenedor.appendChild(div);
+}
+
+function generarMesasMasivas() {
+    const inputCantidad = document.getElementById('genCantidadMesas');
+    const inputSillas = document.getElementById('genSillasMesa');
+    const contenedor = document.getElementById('contenedorListaMesas');
+
+    const cantidad = parseInt(inputCantidad.value);
+    const sillas = parseInt(inputSillas.value);
+
+    if (!cantidad || cantidad <= 0 || !sillas || sillas <= 0) {
+        Swal.fire({ icon: 'error', title: 'Faltan datos', text: 'Por favor ingresa la cantidad de mesas y cuántas sillas tendrá cada una.', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+        return;
+    }
+
+    if (contenedor.children.length > 0) {
+        Swal.fire({
+            title: '¿Reemplazar o Agregar?',
+            text: "Ya tienes mesas en la lista. ¿Quieres borrarlas y empezar de cero, o agregar estas nuevas al final?",
+            icon: 'question',
+            showDenyButton: true,
+            showCancelButton: true,
+            confirmButtonText: 'Borrar y reemplazar',
+            denyButtonText: 'Agregar al final',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#dc3545',
+            denyButtonColor: '#333'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                contenedor.innerHTML = ''; 
+                crearLoteMesas(cantidad, sillas, 1);
+            } else if (result.isDenied) {
+                const numMesasActuales = contenedor.children.length;
+                crearLoteMesas(cantidad, sillas, numMesasActuales + 1);
+            }
+        });
+    } else {
+        crearLoteMesas(cantidad, sillas, 1);
+    }
+}
+
+function crearLoteMesas(cantidad, sillas, inicio) {
+    const contenedor = document.getElementById('contenedorListaMesas');
+    let htmlFragmento = '';
+    
+    for (let i = 0; i < cantidad; i++) {
+        const numeroMesa = inicio + i;
+        htmlFragmento += `
+            <div class="d-flex mb-2 gap-2 w-100 align-items-center">
+                <div class="input-group input-group-sm flex-grow-1 shadow-sm">
+                    <span class="input-group-text bg-white border-end-0 fw-bold text-muted">Mesa</span>
+                    <input type="text" name="nombre_mesa[]" class="form-control border-start-0 text-center fw-bold" value="${numeroMesa}" placeholder="Ej: 1 o VIP" required>
+                </div>
+                <div class="input-group input-group-sm flex-grow-1 shadow-sm">
+                    <input type="number" name="capacidad_mesa[]" class="form-control border-end-0 text-center fw-bold" value="${sillas}" min="1" required>
+                    <span class="input-group-text bg-white border-start-0 text-muted">Sillas</span>
+                </div>
+                <button type="button" class="btn btn-white border text-danger btn-sm rounded-3 shadow-sm flex-shrink-0" onclick="this.parentElement.remove()"><i class="fas fa-trash"></i></button>
+            </div>
+        `;
+    }
+    
+    contenedor.insertAdjacentHTML('beforeend', htmlFragmento);
+    
+    document.getElementById('genCantidadMesas').value = '';
+    document.getElementById('genSillasMesa').value = '';
+    
+    contenedor.scrollTop = contenedor.scrollHeight;
+}
 </script>
 {% endblock %}

@@ -2,7 +2,7 @@ import json
 import io
 import zipfile
 import uuid
-from helpers import guardar_pase_bd
+from helpers import guardar_pase_bd, obtener_estado_mesas
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
 from db import get_db_connection
 from utils.datetime_utils import hoy_sqlite, hoy_local, ahora_sql
@@ -233,17 +233,20 @@ def dashboard_cliente():
                 ORDER BY fecha DESC
             """, (inv_id,)).fetchall()
 
+        estado_mesas = obtener_estado_mesas(inv_id)
+
         return render_template(
             'clientes/dashboard.html',
             inv=inv,
             invitados=invitados,
             fotos=fotos,
-            deseos=buenos_deseos,       # Mandamos los mensajes
-            modulos=config_modulos,     # Mandamos la config para los botones
+            deseos=buenos_deseos,
+            modulos=config_modulos,
             nombre_evento=session.get('cliente_nombre'),
             page=page,
             per_page=PER_PAGE,
-            total_fotos=total_fotos
+            total_fotos=total_fotos,
+            mesas_status=estado_mesas
         )
 
     finally:

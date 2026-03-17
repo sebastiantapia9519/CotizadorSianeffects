@@ -183,3 +183,51 @@ def guardar_pase_bd(inv_id, form_data, pase_id=None):
         return False, str(e)
     finally:
         conn.close()
+
+def obtener_estado_mesas(inv_id):
+    """
+    Calcula la ocupación en tiempo real de las mesas del evento.
+    Retorna una lista de diccionarios con: nombre, capacidad, ocupados y disponibles.
+    """
+    conn = get_db_connection()
+    try:
+        inv = conn.execute("SELECT mesas_json FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+        
+        # Leemos la configuración de mesas (si está vacío, devuelve lista vacía)
+        mesas_config = []
+        if inv and inv['mesas_json']:
+            try:
+                mesas_config = json.loads(inv['mesas_json'])
+            except:
+                pass
+        
+        # Contamos cuántos pases totales están asignados a cada mesa
+        ocupacion_db = conn.execute("""
+            SELECT mesa, SUM(pases_totales) as ocupados 
+            FROM pases_invitados 
+            WHERE invitacion_id = ? AND mesa != '0' AND mesa IS NOT NULL AND mesa != ''
+            GROUP BY mesa
+        """, (inv_id,)).fetchall()
+        
+        # Convertimos a un diccionario fácil de leer: {'1': 8, 'VIP': 10}
+        ocupacion = {str(row['mesa']).strip(): row['ocupados'] for row in ocupacion_db}
+        
+        resultado = []
+        for m in mesas_config:
+            m_nombre = str(m.get('nombre', '')).strip()
+            capacidad = int(m.get('capacidad', 10))
+            ocupados = ocupacion.get(m_nombre, 0)
+            
+            resultado.append({
+                'nombre': m_nombre,
+                'capacidad': capacidad,
+                'ocupados': ocupados,
+                'disponibles': capacidad - ocupados
+            })
+            
+        return resultado
+    except Exception as e:
+        print(f"Error calculando mesas: {e}")
+        return []
+    finally:
+        conn.close()

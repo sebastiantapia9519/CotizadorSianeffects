@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from utils.datetime_utils import fecha_mas_dias, sumar_dias_a_fecha, hoy_local, ahora_sql
 from flask import send_file
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
-from helpers import admin_required, guardar_pase_bd
+from helpers import admin_required, guardar_pase_bd, obtener_estado_mesas
 from db import get_db_connection  # Gestor centralizado de base de datos SQLite
 from services.cloudflare_service import upload_to_cloudflare, delete_from_cloudflare # Integración con R2
 
@@ -330,7 +330,8 @@ def crear_invitacion():
                 "itinerario": itinerario,
                 # Detectamos si el switch de "No Niños" estaba activado (Drag and Drop)
                 "no_ninos": 'no_ninos' in request.form.getlist('orden_items[]'),
-                "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip()  
+                "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip(),
+                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip() # <--- GUARDADO DEL MENSAJE WHATSAPP
             }
             
             # --- 9. SUBIDA DE IMÁGENES MAESTRAS A CLOUDFLARE R2 ---
@@ -425,7 +426,7 @@ def crear_invitacion():
     
     return render_template('invitaciones/crear.html', 
                            inv=None, 
-                           datos=None, 
+                           datos={},  # <--- CAMBIA 'None' POR '{}'
                            mesas=[], 
                            hoteles=[], 
                            canciones=canciones, 
@@ -709,7 +710,8 @@ def editar_invitacion(id):
                 "info_transporte": request.form.get('info_transporte'),
                 "itinerario": itinerario,
                 "no_ninos": 'no_ninos' in request.form.getlist('orden_items[]'),
-                "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip()
+                "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip(),
+                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip() # <--- GUARDADO DEL MENSAJE WHATSAPP
             }
             
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -762,7 +764,7 @@ def editar_invitacion(id):
                 padres_novia, padres_novio, padrinos, frase_final, template_id, tiene_modulo_invitados,
                 codigo_cliente, bloquear_edicion, estilo_apertura,
                 tipo_evento, json.dumps(historia_lista), es_demo,
-                id               
+                id                
             ))
             conn.commit()
             flash("¡Invitación actualizada exitosamente! ✏️", "success")
@@ -1075,8 +1077,12 @@ def gestionar_pases(id):
     inv = conn.execute("SELECT slug, id, codigo_acceso_cliente, datos_cliente_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
     invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY id DESC", (id,)).fetchall()
     conn.close()
+
+    estado_mesas = obtener_estado_mesas(id)
     
-    return render_template('invitaciones/pases_admin.html', inv=inv, invitados=invitados)
+    return render_template('invitaciones/pases_admin.html', inv=inv, invitados=invitados, mesas_status=estado_mesas)
+
+
 
 @invitaciones_bp.route('/admin/invitacion/<int:inv_id>/eliminar-pase/<int:pase_id>', methods=['POST'])
 def eliminar_pase(inv_id, pase_id):
@@ -1470,3 +1476,85 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
         return jsonify({"success": False, "error": str(e)}), 500
     finally:
         conn.close()
+
+
+# ==============================================================================
+# GESTIÓN DE CONFIGURACIÓN DE MESAS (SEATING PLAN)
+# ==============================================================================
+@invitaciones_bp.route('/admin/invitacion/<int:id>/mesas', methods=['POST'])
+def guardar_configuracion_mesas(id):
+    """Atrapa el arreglo de mesas y sillas del Modal y lo guarda como JSON"""
+    es_admin_master = session.get('role', 0) >= 1
+    es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
+
+    if not es_admin_master and not es_planner:
+        flash('Acceso denegado.', 'danger')
+        return redirect(url_for('auth.login'))
+
+    conn = get_db_connection()
+    try:
+        # Validación de seguridad: Que el planner no edite mesas de otro
+        inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
+            flash("Permiso denegado.", "danger")
+            return redirect(url_for('invitaciones_clientes.dashboard_planner'))
+
+        # Recibimos las listas que mandó el HTML
+        nombres = request.form.getlist('nombre_mesa[]')
+        capacidades = request.form.getlist('capacidad_mesa[]')
+
+        # Las juntamos (zip) y las empaquetamos
+        mesas_config = []
+        for nombre, cap in zip(nombres, capacidades):
+            if nombre.strip() and cap.strip():
+                mesas_config.append({
+                    'nombre': nombre.strip(),
+                    'capacidad': int(cap)
+                })
+
+        # Convertimos a texto JSON
+        mesas_json = json.dumps(mesas_config)
+
+        # Actualizamos la Base de Datos
+        conn.execute("UPDATE invitaciones SET mesas_json = ? WHERE id = ?", (mesas_json, id))
+        conn.commit()
+        
+        flash(f"Distribución actualizada. ({len(mesas_config)} mesas configuradas)", "success")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Error al guardar configuración de mesas: {str(e)}", "danger")
+    finally:
+        conn.close()
+
+    # Lo regresamos a la pantalla de invitados
+    return redirect(url_for('invitaciones_admin.gestionar_pases', id=id))
+
+
+@invitaciones_bp.route('/admin/invitacion/<int:inv_id>/editar-pase/<int:pase_id>', methods=['POST'])
+def editar_pase_admin(inv_id, pase_id):
+    """Permite al Planner o Admin editar un pase existente."""
+    es_admin_master = session.get('role', 0) >= 1
+    es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
+
+    if not es_admin_master and not es_planner: 
+        return redirect(url_for('auth.login'))
+
+    conn = get_db_connection()
+    try:
+        inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+        if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
+            flash("Permiso denegado.", "danger")
+            return redirect(url_for('invitaciones_clientes.dashboard_planner'))
+
+        # Llamamos a nuestra poderosa función unificada
+        from helpers import guardar_pase_bd
+        exito, msj = guardar_pase_bd(inv_id, request.form, pase_id)
+        
+        if exito:
+            flash(msj, "success")
+        else:
+            flash(f"Error al editar: {msj}", "danger")
+    finally:
+        conn.close()
+        
+    return redirect(url_for('invitaciones_admin.gestionar_pases', id=inv_id))

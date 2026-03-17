@@ -269,9 +269,9 @@
                                             {% endif %}
                                             {% if invitado.telefono %}
                                                 <div class="mt-1 d-flex align-items-center gap-2">
-{% set mensaje_custom = (inv.datos_cliente_json | from_json) if inv.datos_cliente_json else {} %}
-                                        {% set mensaje_wpp = mensaje_custom.get('mensaje_envio_pases', '¡Hola! Te compartimos la invitación a nuestro evento. Aquí tienes tu pase de acceso personal:') %}
-                                        {% set url_pase = request.host_url ~ 'invitacion/' ~ inv.slug ~ '?pass=' ~ invitado.codigo_qr_unique %}
+                                                    {% set mensaje_custom = (inv.datos_cliente_json | from_json) if inv.datos_cliente_json else {} %}
+                                                    {% set mensaje_wpp = mensaje_custom.get('mensaje_envio_pases', '¡Hola! Te compartimos la invitación a nuestro evento. Aquí tienes tu pase de acceso personal:') %}
+                                                    {% set url_pase = request.host_url ~ 'invitacion/' ~ inv.slug ~ '?pass=' ~ invitado.codigo_qr_unique %}
 
                                                     <a href="https://wa.me/{{ invitado.telefono|replace('+', '')|replace(' ', '') }}?text={{ (mensaje_wpp ~ ' ' ~ url_pase) | urlencode }}"
                                                         target="_blank" class="btn btn-sm btn-outline-success rounded-pill py-0 px-2" style="font-size: 0.7rem;">
@@ -327,76 +327,6 @@
                                         </td>
                                         {% endif %}
                                     </tr>
-
-                                    {% if not inv.bloquear_edicion_invitados %}
-                                    <div class="modal fade" id="modalEditar{{ invitado.id }}" tabindex="-1" aria-hidden="true">
-                                        <div class="modal-dialog modal-dialog-centered">
-                                            <div class="modal-content border-0 rounded-4 shadow">
-                                                <div class="modal-header border-bottom-0 pb-0">
-                                                    <h5 class="modal-title fw-bold">Editar Invitado</h5>
-                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                                                </div>
-                                                <div class="modal-body pt-2 text-start">
-                                                    <form action="{{ url_for('invitaciones_clientes.editar_invitado_cliente', pase_id=invitado.id) }}" method="POST">
-                                                        <div class="mb-3">
-                                                            <label class="form-label small fw-bold">Nombre / Familia</label>
-                                                            <input type="text" name="nombre_familia" class="form-control bg-light border-0" value="{{ invitado.nombre_familia }}" required>
-                                                        </div>
-                                                        <div class="row g-3 mb-4">
-                                                            <div class="col-4">
-                                                                <label class="form-label small fw-bold">Pases</label>
-                                                                <input type="number" name="pases_totales" id="pasesEdit_{{ invitado.id }}" class="form-control bg-light border-0" value="{{ invitado.pases_totales }}" min="1" required>
-                                                            </div>
-                                                            <div class="col-4">
-                                                                <label class="form-label small fw-bold"># Mesa</label>
-                                                                <input type="text" name="mesa" class="form-control bg-light border-0" value="{{ invitado.mesa if invitado.mesa else '0' }}">
-                                                            </div>
-                                                            <div class="col-4">
-                                                                <label class="form-label small fw-bold">Teléfono</label>
-                                                                <input type="text" name="telefono" class="form-control bg-light border-0" value="{{ invitado.telefono if invitado.telefono else '' }}">
-                                                            </div>
-                                                        </div>
-                                                        <div class="mb-4 w-100 bg-white border rounded-3 p-3 shadow-sm">
-                                                            <div class="form-check form-switch m-0">
-                                                                <input class="form-check-input" type="checkbox" 
-                                                                       id="checkNombresEdit_{{ invitado.id }}" 
-                                                                       {% if invitado.nombres_acompanantes_json %}checked{% endif %}
-                                                                       onchange="generarInputsAcompanantes('checkNombresEdit_{{ invitado.id }}', 'contenedorAcompanantesEdit_{{ invitado.id }}', 'pasesEdit_{{ invitado.id }}')">
-                                                                <label class="form-check-label small fw-bold text-primary ms-1" for="checkNombresEdit_{{ invitado.id }}">
-                                                                    <i class="fas fa-list-ol me-1"></i> Especificar nombres
-                                                                </label>
-                                                            </div>
-                                                            
-                                                            <div id="contenedorAcompanantesEdit_{{ invitado.id }}" class="mt-3 {% if not invitado.nombres_acompanantes_json %}d-none{% endif %}">
-                                                                {% if invitado.nombres_acompanantes_json %}
-                                                                    <small class="text-muted mb-2 d-block" style="font-size: 0.75rem;">Modifica el nombre de cada persona:</small>
-                                                                    {% set nombres_guardados = invitado.nombres_acompanantes_json | from_json %}
-                                                                    {% for nombre in nombres_guardados %}
-                                                                    <div class="input-group input-group-sm mb-2 shadow-sm">
-                                                                        <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-user"></i></span>
-                                                                        <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0" value="{{ nombre }}" required>
-                                                                    </div>
-                                                                    {% endfor %}
-                                                                    
-                                                                    {% if invitado.pases_totales > nombres_guardados|length %}
-                                                                        {% for i in range((invitado.pases_totales - nombres_guardados|length)) %}
-                                                                        <div class="input-group input-group-sm mb-2 shadow-sm">
-                                                                            <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-user"></i></span>
-                                                                            <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0" placeholder="Nuevo acompañante" required>
-                                                                        </div>
-                                                                        {% endfor %}
-                                                                    {% endif %}
-                                                                {% endif %}
-                                                            </div>
-                                                        </div>
-                                                        <button type="submit" class="btn btn-primary w-100 rounded-pill py-2 shadow-sm">Guardar Cambios</button>
-                                                    </form>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    {% endif %}
-                                    
                                     {% else %}
                                     <tr id="emptyStateRow">
                                         <td colspan="6" class="text-center py-5 text-muted" style="width: 100%; display: block; border: none;">
@@ -502,9 +432,95 @@
             </div>
             {% endif %}
 
-        </div> 
-    </div> 
-    
+        </div> </div> {% if not inv.bloquear_edicion_invitados %}
+        {% for invitado in invitados %}
+        <div class="modal fade text-start" id="modalEditar{{ invitado.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 rounded-4 shadow">
+                    <div class="modal-header border-bottom-0 pb-0">
+                        <h5 class="modal-title fw-bold">Editar Invitado</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body pt-2 text-start">
+                        <form action="{{ url_for('invitaciones_clientes.editar_invitado_cliente', pase_id=invitado.id) }}" method="POST">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold">Nombre / Familia</label>
+                                <input type="text" name="nombre_familia" class="form-control bg-light border-0" value="{{ invitado.nombre_familia }}" required>
+                            </div>
+                            
+                            <div class="row g-3 mb-4">
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">Pases</label>
+                                    <input type="number" name="pases_totales" id="pasesEdit_{{ invitado.id }}" class="form-control bg-light border-0 val-capacidad-input" data-target-select="mesaSelectEdit_{{ invitado.id }}" value="{{ invitado.pases_totales }}" min="1" required>
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">Mesa</label>
+                                    {% if mesas_status %}
+                                    <select name="mesa" id="mesaSelectEdit_{{ invitado.id }}" class="form-select bg-light border-0 val-capacidad-select" data-target-input="pasesEdit_{{ invitado.id }}">
+                                        <option value="0" {% if not invitado.mesa or invitado.mesa|string == '0' %}selected{% endif %}>Sin asignar</option>
+                                        {% for m in mesas_status %}
+                                            {% set disponibles_reales = m.disponibles + (invitado.pases_totales if invitado.mesa|string == m.nombre|string else 0) %}
+                                            <option value="{{ m.nombre }}" 
+                                                data-disponibles="{{ disponibles_reales }}"
+                                                {% if invitado.mesa|string == m.nombre|string %}selected{% endif %}
+                                                {% if disponibles_reales <= 0 and invitado.mesa|string != m.nombre|string %}disabled style="color:red;"{% endif %}>
+                                                {{ m.nombre }} {% if disponibles_reales <= 0 and invitado.mesa|string != m.nombre|string %}(Llena){% else %}(Quedan {{ disponibles_reales }}){% endif %}
+                                            </option>
+                                        {% endfor %}
+                                    </select>
+                                    {% else %}
+                                    <input type="text" name="mesa" class="form-control bg-light border-0" value="{{ invitado.mesa if invitado.mesa else '0' }}">
+                                    {% endif %}
+                                </div>
+                                <div class="col-4">
+                                    <label class="form-label small fw-bold">WhatsApp</label>
+                                    <input type="text" name="telefono" class="form-control bg-light border-0" value="{{ invitado.telefono if invitado.telefono else '' }}">
+                                </div>
+                            </div>
+
+                            <div class="mb-4 bg-light border rounded-3 p-3 shadow-sm">
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input check-nombres-edit" type="checkbox" 
+                                            id="checkNombresEdit_{{ invitado.id }}" 
+                                            {% if invitado.nombres_acompanantes_json %}checked{% endif %}
+                                            onchange="generarInputsAcompanantes('checkNombresEdit_{{ invitado.id }}', 'contenedorAcompanantesEdit_{{ invitado.id }}', 'pasesEdit_{{ invitado.id }}')">
+                                    <label class="form-check-label small fw-bold text-primary ms-1" for="checkNombresEdit_{{ invitado.id }}">
+                                        <i class="fas fa-list-ol me-1"></i> Especificar nombres
+                                    </label>
+                                </div>
+                                
+                                <div id="contenedorAcompanantesEdit_{{ invitado.id }}" class="mt-3 {% if not invitado.nombres_acompanantes_json %}d-none{% endif %}">
+                                    {% if invitado.nombres_acompanantes_json %}
+                                        <small class="text-muted mb-2 d-block" style="font-size: 0.75rem;">Modifica los nombres:</small>
+                                        {% set nombres_guardados = invitado.nombres_acompanantes_json | from_json %}
+                                        {% for nombre in nombres_guardados %}
+                                        <div class="input-group input-group-sm mb-2 shadow-sm">
+                                            <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                                            <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0 fw-bold" value="{{ nombre }}" required>
+                                        </div>
+                                        {% endfor %}
+                                        
+                                        {% if invitado.pases_totales > nombres_guardados|length %}
+                                            {% for i in range((invitado.pases_totales - nombres_guardados|length)) %}
+                                            <div class="input-group input-group-sm mb-2 shadow-sm">
+                                                <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                                                <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0 fw-bold" placeholder="Nuevo acompañante" required>
+                                            </div>
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 shadow-sm">Guardar Cambios</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% endif %}
+
     <div class="modal fade" id="modalAgregarInvitado" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 rounded-4 shadow">
@@ -521,11 +537,24 @@
                         <div class="row g-3 mb-4">
                             <div class="col-4">
                                 <label class="form-label small fw-bold">Pases</label>
-                                <input type="number" name="pases_totales" id="pasesTotalesInput" class="form-control bg-light border-0" value="2" min="1" required>
+                                <input type="number" name="pases_totales" id="pasesTotalesInput" class="form-control bg-light border-0 val-capacidad-input" data-target-select="mesaSelectCrear" value="2" min="1" required>
                             </div>
                             <div class="col-4">
-                                <label class="form-label small fw-bold"># Mesa</label>
+                                <label class="form-label small fw-bold">Mesa</label>
+                                {% if mesas_status %}
+                                <select name="mesa" id="mesaSelectCrear" class="form-select bg-light border-0 val-capacidad-select" data-target-input="pasesTotalesInput">
+                                    <option value="0">Sin asignar</option>
+                                    {% for m in mesas_status %}
+                                        <option value="{{ m.nombre }}" 
+                                            data-disponibles="{{ m.disponibles }}"
+                                            {% if m.disponibles <= 0 %}disabled style="color:red;"{% endif %}>
+                                            {{ m.nombre }} {% if m.disponibles <= 0 %}(Llena){% else %}(Quedan {{ m.disponibles }}){% endif %}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                {% else %}
                                 <input type="text" name="mesa" class="form-control bg-light border-0" value="0">
+                                {% endif %}
                             </div>
                             <div class="col-4">
                                 <label class="form-label small fw-bold">WhatsApp</label>
@@ -540,7 +569,7 @@
                                 </label>
                             </div>
                             <div id="contenedorAcompanantes" class="mt-3 d-none">
-                                </div>
+                            </div>
                         </div>
                         <button type="submit" class="btn btn-dark w-100 rounded-pill py-2 shadow-sm">Guardar en la Lista</button>
                     </form>
@@ -551,29 +580,27 @@
 
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <script>
         // --- LÓGICA DE LAS PESTAÑAS (TABS) ---
         function mostrarSeccion(idSeccion, botonPresionado) {
-            // 1. Ocultar todas las secciones
             document.querySelectorAll('.seccion-panel').forEach(function(seccion) {
                 seccion.style.display = 'none';
             });
             
-            // 2. Mostrar la sección seleccionada
             const seccionAMostrar = document.getElementById('seccion-' + idSeccion);
             if (seccionAMostrar) {
                 seccionAMostrar.style.display = 'block';
             }
 
-            // 3. Quitar clase 'active' de todos los botones y ponerla en el presionado
             document.querySelectorAll('.nav-pills .nav-link').forEach(function(btn) {
                 btn.classList.remove('active');
             });
             botonPresionado.classList.add('active');
         }
         
-        // --- NUEVO: CARGA INFINITA DE FOTOS (AJAX) ---
+        // --- CARGA INFINITA DE FOTOS (AJAX) ---
         async function cargarMasFotos() {
             const btn = document.getElementById('btnCargarMas');
             const galeria = document.getElementById('galeria-fotos');
@@ -583,13 +610,10 @@
             const paginaSiguiente = parseInt(btn.getAttribute('data-siguiente'));
             const totalPaginas = parseInt(btn.getAttribute('data-total'));
             
-            // Cambiar estado visual del botón
             btn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Cargando...';
             btn.disabled = true;
 
             try {
-                // Hacer petición a una ruta especial que devuelva JSON con las fotos
-                // (Asegúrate de que tu backend esté configurado para devolver JSON si detecta fetch/AJAX)
                 const response = await fetch(`{{ url_for('invitaciones_clientes.dashboard_cliente') }}?page=${paginaSiguiente}`, {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest'
@@ -598,17 +622,14 @@
                 
                 const htmlTexto = await response.text();
                 
-                // Parsear la respuesta y extraer solo las imágenes nuevas
                 const parser = new DOMParser();
                 const htmlDOM = parser.parseFromString(htmlTexto, 'text/html');
                 const fotosNuevas = htmlDOM.querySelectorAll('#galeria-fotos .col-4');
                 
-                // Inyectar al final de la galería actual
                 fotosNuevas.forEach(foto => {
                     galeria.appendChild(foto);
                 });
                 
-                // Actualizar contadores
                 if (paginaSiguiente >= totalPaginas) {
                     document.getElementById('contenedor-btn-cargar').style.display = 'none';
                 } else {
@@ -624,8 +645,7 @@
             }
         }
 
-
-        // --- LÓGICA DE TABLA DE INVITADOS ---
+        // --- LÓGICA DE TABLA DE INVITADOS (BUSCADOR Y PAGINACIÓN) ---
         const filasPorPagina = 10;
         let paginaActual = 1;
         let filasFiltradas = [];
@@ -720,53 +740,17 @@
             }
         });
 
-        // --- LÓGICA ANTI-COLADOS (GENERAR INPUTS DINÁMICOS) ---
-        function generarInputsAcompanantes(switchId, contenedorId, inputPasesId) {
-            const switchNombres = document.getElementById(switchId);
-            const contenedor = document.getElementById(contenedorId);
-            const inputPases = document.getElementById(inputPasesId);
-            
-            if (!switchNombres || !contenedor || !inputPases) return;
+        // =======================================================
+        // --- LÓGICA ANTI-COLADOS QUIRÚRGICA (CREAR Y EDITAR) ---
+        // =======================================================
 
-            if (switchNombres.checked) {
-                contenedor.classList.remove('d-none');
-                
-                const numPases = parseInt(inputPases.value) || 1;
-                
-                const inputsActuales = contenedor.querySelectorAll('input[name="nombres_acompanantes[]"]');
-                let valoresPrevios = [];
-                inputsActuales.forEach(inp => valoresPrevios.push(inp.value));
-
-                let html = '<small class="text-muted mb-2 d-block" style="font-size: 0.75rem;">Escribe el nombre de cada persona contemplada:</small>';
-                for (let i = 1; i <= numPases; i++) {
-                    let valor = valoresPrevios[i-1] ? valoresPrevios[i-1] : '';
-                    html += `
-                        <div class="input-group input-group-sm mb-2 shadow-sm">
-                            <span class="input-group-text bg-light border-end-0 text-muted"><i class="fas fa-user"></i></span>
-                            <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0" placeholder="Acompañante ${i}" value="${valor}" required>
-                        </div>
-                    `;
-                }
-                contenedor.innerHTML = html;
-            } else {
-                contenedor.classList.add('d-none');
-                contenedor.innerHTML = '';
-            }
-        }
-
-        // Escuchar cambios de número en el Modal de Creación
-        const inputPasesCrear = document.getElementById('pasesTotalesInput');
-        if (inputPasesCrear) {
-            inputPasesCrear.addEventListener('input', function() {
+        document.body.addEventListener('input', function(e) {
+            if (e.target.id === 'pasesTotalesInput') {
                 const switchNombres = document.getElementById('checkNombresAcompanantes');
                 if (switchNombres && switchNombres.checked) {
                     generarInputsAcompanantes('checkNombresAcompanantes', 'contenedorAcompanantes', 'pasesTotalesInput');
                 }
-            });
-        }
-
-        // Escuchar cambios de número en los Modales de Edición (Delegación de eventos)
-        document.body.addEventListener('input', function(e) {
+            }
             if (e.target && e.target.id && e.target.id.startsWith('pasesEdit_')) {
                 const idUnico = e.target.id.split('_')[1];
                 const switchNombres = document.getElementById('checkNombresEdit_' + idUnico);
@@ -776,6 +760,90 @@
             }
         });
 
+        function generarInputsAcompanantes(switchId, contenedorId, inputPasesId) {
+            const switchNombres = document.getElementById(switchId);
+            const contenedor = document.getElementById(contenedorId);
+            const inputPases = document.getElementById(inputPasesId);
+            
+            if (!switchNombres || !contenedor || !inputPases) return;
+
+            if (!switchNombres.checked) {
+                contenedor.classList.add('d-none');
+                const inputs = contenedor.querySelectorAll('input[name="nombres_acompanantes[]"]');
+                inputs.forEach(inp => inp.disabled = true);
+                return;
+            }
+
+            contenedor.classList.remove('d-none');
+            const inputsActuales = contenedor.querySelectorAll('input[name="nombres_acompanantes[]"]');
+            inputsActuales.forEach(inp => inp.disabled = false);
+
+            if (inputPases.value.trim() === '') return;
+
+            const numPases = parseInt(inputPases.value);
+            if (isNaN(numPases) || numPases <= 0) return;
+
+            const cantidadActual = inputsActuales.length;
+
+            if (numPases > cantidadActual) {
+                if (cantidadActual === 0) {
+                    contenedor.innerHTML = '<small class="text-muted mb-2 d-block" style="font-size: 0.75rem;">Nombres:</small>';
+                }
+                for (let i = cantidadActual + 1; i <= numPases; i++) {
+                    const div = document.createElement('div');
+                    div.className = 'input-group input-group-sm mb-2 shadow-sm fila-acompanante';
+                    div.innerHTML = `
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-user"></i></span>
+                        <input type="text" name="nombres_acompanantes[]" class="form-control border-start-0 fw-bold" placeholder="Acompañante ${i}" required>
+                    `;
+                    contenedor.appendChild(div);
+                }
+            } else if (numPases < cantidadActual) {
+                const filas = contenedor.querySelectorAll('.input-group');
+                for (let i = cantidadActual - 1; i >= numPases; i--) {
+                    if (filas[i]) filas[i].remove();
+                }
+            }
+        }
+
+        // =======================================================
+        // --- LÓGICA INTELIGENTE DE MESAS (CREAR Y EDITAR) ---
+        // =======================================================
+        
+        document.body.addEventListener('input', function(e) {
+            if (e.target.classList.contains('val-capacidad-input') || e.target.id === 'pasesTotalesInput') {
+                const selectId = e.target.getAttribute('data-target-select') || 'mesaSelectCrear';
+                validarSobrecupoGeneral(document.getElementById(selectId), e.target);
+            }
+        });
+
+        document.body.addEventListener('change', function(e) {
+            if (e.target.classList.contains('val-capacidad-select') || e.target.id === 'mesaSelectCrear') {
+                const inputId = e.target.getAttribute('data-target-input') || 'pasesTotalesInput';
+                validarSobrecupoGeneral(e.target, document.getElementById(inputId));
+            }
+        });
+
+        function validarSobrecupoGeneral(selectElement, inputPasesElement) {
+            if(!selectElement || !inputPasesElement) return;
+            
+            const opcionSeleccionada = selectElement.options[selectElement.selectedIndex];
+            const pasesPedidos = parseInt(inputPasesElement.value) || 0;
+            
+            if(opcionSeleccionada.value === "0") return;
+            
+            const lugaresDisponibles = parseInt(opcionSeleccionada.getAttribute('data-disponibles')) || 0;
+            
+            if (pasesPedidos > lugaresDisponibles) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: '¡Sobrecupo en Mesa!',
+                    text: `La Mesa ${opcionSeleccionada.value} solo tiene ${lugaresDisponibles} sillas disponibles.`,
+                    confirmButtonColor: '#333'
+                });
+                selectElement.value = "0"; 
+            }
+        }
     </script>
 </body>
 </html>

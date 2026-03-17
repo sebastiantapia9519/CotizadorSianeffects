@@ -120,6 +120,60 @@
             margin-top: 5px !important;
         }
     }
+
+    /* --- BOTONES PREMIUM DINÁMICOS (Micro-interacciones) --- */
+        .btn-dynamic {
+            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            letter-spacing: 0.3px;
+        }
+        
+        /* Efecto táctil (Hundimiento) al hacer clic */
+        .btn-dynamic:active {
+            transform: scale(0.95) translateY(0) !important;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
+        }
+        
+        /* El ícono cobra vida al pasar el mouse */
+        .btn-dynamic i {
+            transition: transform 0.3s ease;
+        }
+        .btn-dynamic:hover i {
+            transform: scale(1.15) rotate(-5deg); 
+        }
+
+        /* Variante: Botones Secundarios Claros */
+        .btn-dynamic-light {
+            background-color: #ffffff;
+            border: 2px solid #f1f3f5; /* Borde gris ultra suave por defecto */
+            color: #495057;
+        }
+
+        .btn-dynamic-light:hover {
+            border-color: #cfe2ff; /* Al pasar el mouse, el borde se ilumina sutilmente */
+            background-color: #fcfcfd;
+            color: #111;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.06) !important;
+            transform: translateY(-3px); /* Se levanta suavemente */
+        }
+
+        /* Variante: Botón Principal Oscuro */
+        .btn-dynamic-dark {
+            background: linear-gradient(145deg, #2b3035 0%, #1a1d20 100%);
+            border: 2px solid transparent;
+            color: #ffffff;
+        }
+
+        .btn-dynamic-dark:hover {
+            background: linear-gradient(145deg, #212529 0%, #000000 100%);
+            box-shadow: 0 10px 25px rgba(33, 37, 41, 0.3) !important;
+            transform: translateY(-3px);
+            color: #ffffff;
+        }
 </style>
 
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
@@ -129,21 +183,25 @@
         <small class="text-muted">Administra los micro-sitios de Bodas y XV Años</small>
     </div>
 
-    <div class="admin-header-actions d-md-flex gap-2 mt-3 mt-md-0">
+<div class="admin-header-actions d-md-flex gap-2 mt-3 mt-md-0">
+        
         {% if session.get('role', 0) >= 1 %}
         <a href="{{ url_for('invitaciones_admin.gestionar_socios') }}"
-            class="btn btn-warning rounded-pill px-4 shadow-sm fw-bold">
-            <i class="fas fa-handshake me-2"></i>Planners
+            class="btn btn-dynamic btn-dynamic-light rounded-pill px-4 shadow-sm">
+            <i class="fas fa-handshake text-primary me-2"></i> Planners
         </a>
         {% endif %}
 
         <a href="{{ url_for('invitaciones_publicas.scanner_global') }}"
-            class="btn btn-outline-dark rounded-pill px-4 shadow-sm">
-            <i class="fas fa-qrcode me-2"></i>Escáner Maestro
+            class="btn btn-dynamic btn-dynamic-light rounded-pill px-4 shadow-sm">
+            <i class="fas fa-qrcode text-secondary me-2"></i> Escáner Maestro
         </a>
-        <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}" class="btn btn-dark rounded-pill px-4 shadow-sm">
-            <i class="fas fa-plus-circle me-2"></i>Crear Nueva
+        
+        <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}" 
+           class="btn btn-dynamic btn-dynamic-dark rounded-pill px-4 shadow-sm">
+            <i class="fas fa-plus-circle text-warning me-2"></i> Crear Nueva
         </a>
+        
     </div>
 </div>
 

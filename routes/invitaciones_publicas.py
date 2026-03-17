@@ -128,16 +128,19 @@ def scanner_global(): # <--- Este nombre debe coincidir con url_for('invitacione
     return render_template('invitaciones/scanner.html', inv=None)
 
 # --- API DE VALIDACIÓN QR ---
+# --- API DE VALIDACIÓN QR (CON CHECK-IN PARCIAL) ---
 @invitaciones_publicas_bp.route('/api/validar-qr', methods=['POST'])
 def validar_qr():
+    import json
     data = request.get_json()
     codigo = data.get('codigo')
     invitacion_id = data.get('invitacion_id') # Viene null desde el Scanner Maestro
+    pases_a_ingresar = data.get('pases_a_ingresar') # <--- NUEVA VARIABLE
 
     conn = get_db()
     
+    # 1. Buscamos al invitado según el modo
     if invitacion_id:
-        # MODO CLIENTE: Solo valida pases de SU propia boda
         invitado = conn.execute("""
             SELECT p.*, i.slug as boda_nombre 
             FROM pases_invitados p
@@ -145,7 +148,6 @@ def validar_qr():
             WHERE p.codigo_qr_unique = ? AND p.invitacion_id = ?
         """, (codigo, invitacion_id)).fetchone()
     else:
-        # MODO ADMIN: Valida cualquier código de cualquier boda en el sistema
         invitado = conn.execute("""
             SELECT p.*, i.slug as boda_nombre 
             FROM pases_invitados p
@@ -157,35 +159,65 @@ def validar_qr():
         conn.close()
         return jsonify({'success': False, 'error': 'Código QR no válido para este evento'})
 
-    # Verificar si ya marcaron entrada
-    if invitado['pases_usados'] >= invitado['pases_totales']:
+    # 2. Calculamos los pases disponibles reales
+    pases_totales = invitado['pases_totales']
+    pases_usados = invitado['pases_usados']
+    pases_disponibles = pases_totales - pases_usados
+
+    # Si ya entraron todos, bloqueamos
+    if pases_disponibles <= 0:
         conn.close()
         return jsonify({
             'success': False, 
-            'error': f"¡ALERTA! {invitado['nombre_familia']} ya ingresó. Evento: {invitado['boda_nombre']}"
+            'error': f"¡ALERTA! La familia {invitado['nombre_familia']} ya ingresó todos sus pases ({pases_totales}/{pases_totales}). Evento: {invitado['boda_nombre']}"
         })
 
-    # Marcar entrada (pases_usados = pases_totales)
-    conn.execute("UPDATE pases_invitados SET pases_usados = pases_totales WHERE id = ?", (invitado['id'],))
-    conn.commit()
-    conn.close()
-
-    # --- NUEVA LÓGICA: Extraer los nombres de forma segura ---
+    # Extraer nombres de acompañantes de forma segura
     nombres_lista = []
     if invitado['nombres_acompanantes_json']:
         try:
             nombres_lista = json.loads(invitado['nombres_acompanantes_json'])
         except:
             nombres_lista = []
+
     # ---------------------------------------------------------
+    # MODO A: Solo Consulta (Cuando escanean el QR por primera vez)
+    # ---------------------------------------------------------
+    if not pases_a_ingresar:
+        conn.close()
+        return jsonify({
+            'success': True,
+            'requiere_confirmacion': True, # Le avisa al frontend que debe preguntar cuántos entran
+            'familia': invitado['nombre_familia'],
+            'pases_totales': pases_totales,
+            'pases_usados': pases_usados,
+            'pases_disponibles': pases_disponibles,
+            'mesa': invitado['mesa'] if invitado['mesa'] else '0',
+            'evento': invitado['boda_nombre'],
+            'nombres_acompanantes': nombres_lista
+        })
+
+    # ---------------------------------------------------------
+    # MODO B: Confirmación (Cuando la hostess dice "entran 3")
+    # ---------------------------------------------------------
+    pases_a_ingresar = int(pases_a_ingresar)
+    
+    # Validamos que no intenten meter a más gente de la que tienen disponible
+    if pases_a_ingresar > pases_disponibles:
+        conn.close()
+        return jsonify({'success': False, 'error': f'Solo le quedan {pases_disponibles} pases disponibles.'})
+
+    # Sumamos los nuevos ingresos a los que ya estaban adentro
+    nuevo_usados = pases_usados + pases_a_ingresar
+    
+    conn.execute("UPDATE pases_invitados SET pases_usados = ? WHERE id = ?", (nuevo_usados, invitado['id']))
+    conn.commit()
+    conn.close()
 
     return jsonify({
         'success': True,
-        'familia': invitado['nombre_familia'],
-        'pases': invitado['pases_totales'],
-        'mesa': invitado['mesa'] if invitado['mesa'] else '0',
-        'evento': invitado['boda_nombre'],
-        'nombres_acompanantes': nombres_lista # <--- SE ENVÍA AL ESCÁNER
+        'requiere_confirmacion': False,
+        'mensaje': f'Se registraron {pases_a_ingresar} accesos. Quedan {pases_totales - nuevo_usados} pases libres.'
     })
 
 # =========================================================
