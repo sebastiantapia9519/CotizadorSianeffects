@@ -16,16 +16,16 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # Puede ser email o username
-        login_input = request.form['email_or_user'].strip()
+        # 1. Bajamos a minúsculas en Python, no en la Base de Datos (Más rápido y seguro)
+        login_input = request.form['email_or_user'].strip().lower()
         password = request.form['password']
         
         conn = get_db()
 
-        # Buscar usuario por email o username
+        # 2. Simplificamos el Query. La base de datos debe buscar texto exacto si ya lo normalizamos
         user = conn.execute('''
             SELECT * FROM usuarios
-            WHERE LOWER(email) = LOWER(?) OR LOWER(username) = LOWER(?)
+            WHERE email = ? OR username = ?
         ''', (login_input, login_input)).fetchone()
 
         conn.close()
@@ -38,13 +38,17 @@ def login():
             session['role'] = user['role']
 
             # Actualizar último login con UTC
-            conn = get_db()
-            conn.execute(
-                'UPDATE usuarios SET last_login = ? WHERE id = ?',
-                (now_utc(), user['id'])  # <--- CAMBIO AQUÍ
-            )
-            conn.commit()
-            conn.close()
+            try:
+                conn = get_db()
+                conn.execute(
+                    'UPDATE usuarios SET last_login = ? WHERE id = ?',
+                    (now_utc(), user['id'])
+                )
+                conn.commit()
+            except Exception as e:
+                print(f"Error actualizando last_login: {e}")
+            finally:
+                conn.close()
 
             return redirect(url_for('main.index'))
         else:
@@ -100,7 +104,7 @@ def registro():
             flash('Por seguridad, no aceptamos correos temporales. Usa un correo real (Gmail, Outlook, Empresa).', 'error')
             return render_template('registro.html')
 
-        # Teléfono opcional, solo números
+# Teléfono opcional, solo números
         if telefono:
             telefono_limpio = re.sub(r'\D', '', telefono)
             if len(telefono_limpio) < 10:
@@ -114,9 +118,9 @@ def registro():
         hashed_pw = generate_password_hash(password)
         
         # Usamos now_utc() para garantizar consistencia
-        created_at = now_utc()       # <--- CAMBIO AQUÍ
-        last_login = now_utc()       # <--- CAMBIO AQUÍ
-        subscription_end = created_at + timedelta(days=7) # <--- Calcula sobre UTC
+        created_at = now_utc()       
+        last_login = now_utc()       
+        subscription_end = created_at + timedelta(days=7) # Calcula sobre UTC
 
         conn = get_db()
         try:
@@ -133,24 +137,42 @@ def registro():
                 username, email, hashed_pw, telefono, company_name,
                 0,  # SIEMPRE 0 (Usuario Normal)
                 subscription_end, created_at, last_login,
-                1   # SIEMPRE 1 (Aceptó términos)
+                1   # SIEMPRE 1 (Asumimos que el front validó el checkbox, pero idealmente se recibe por POST)
             ))
 
-            # ID del usuario recién creado
+            # --- 🚨 NOTA DE MIGRACIÓN A POSTGRESQL 🚨 ---
+            # SQLite usa .lastrowid. Postgres NO lo soporta así.
+            # Cuando migres, el INSERT de arriba debe terminar en "RETURNING id"
+            # y cambiarás esta línea a: user_id = cursor.fetchone()[0]
             user_id = cursor.lastrowid
 
             # -----------------------------
             # 5. CREAR CONFIGURACIÓN DEFAULT
             # -----------------------------
+            # A) Configuración general del negocio
             conn.execute('''
                 INSERT INTO configuracion (
-                    user_id,
-                    margen_ganancia
+                    user_id, margen_ganancia, inventario_activo, ticket_bw
                 )
-                VALUES (?, ?)
+                VALUES (?, ?, ?, ?)
             ''', (
                 user_id,
-                100  # Margen inicial garantizado
+                100, # Margen inicial garantizado (100%)
+                0,   # inventario_activo (Apagado por defecto)
+                0    # ticket_bw (Apagado por defecto)
+            ))
+
+            # B) Configuración de logística y envíos
+            conn.execute('''
+                INSERT INTO shipping_configs (
+                    user_id, local_base_rate, local_km_rate, safety_margin_percent
+                )
+                VALUES (?, ?, ?, ?)
+            ''', (
+                user_id, 
+                35.00,  # Tarifa base (banderazo)
+                8.00,   # Costo por KM
+                10      # Margen de seguridad (10%)
             ))
 
             conn.commit()

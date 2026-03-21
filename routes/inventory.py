@@ -2,7 +2,7 @@ from flask import Blueprint, request, session, jsonify, render_template, redirec
 import json
 from helpers import login_required
 from db import get_db_connection as get_db
-from utils.datetime_utils import now_utc
+from utils.datetime_utils import now_utc, ahora_sql
 
 inventory_bp = Blueprint('inventory', __name__)
 
@@ -230,13 +230,18 @@ def guardar_receta():
         if duplicado:
             return jsonify({'error': f'Ya existe una receta llamada "{nombre_receta}".'}), 400
 
-        conn.execute('BEGIN')
+        # POSTGRES READY: Quitamos el conn.execute('BEGIN') explícito porque el conector ya maneja la transacción.
+        
         items_json = json.dumps(data.get('materiales', []))
         cur = conn.execute("INSERT INTO productos (user_id, nombre, items) VALUES (?, ?, ?)", (session['user_id'], nombre_receta, items_json))
+        
+        # --- 🚨 NOTA DE MIGRACIÓN A POSTGRESQL 🚨 ---
+        # Cambiar el INSERT a: "... VALUES (?, ?, ?) RETURNING id"
+        # Y esta línea a: pid = cur.fetchone()[0]
         pid = cur.lastrowid
 
         for m in data.get('materiales', []):
-            conn.execute("INSERT INTO producto_detalles (producto_id, material_id, cantidad) VALUES (?, ?, ?)", (pid, m['id'], m['cantidad']))
+            conn.execute("INSERT INTO producto_detalles (producto_id, material_id, cantidad) VALUES (?, ?, ?)", (pid, m['id'], float(m.get('cantidad', 0))))
         for e in data.get('maquinaria', []):
             conn.execute("INSERT INTO producto_maquinaria (producto_id, maquinaria_id) VALUES (?, ?)", (pid, e['id']))
 
@@ -254,7 +259,7 @@ def guardar_receta():
 def eliminar_receta(id):
     conn = get_db()
     try:
-        conn.execute("BEGIN")
+        # POSTGRES READY: Quitamos el 'BEGIN'
         conn.execute("DELETE FROM producto_detalles WHERE producto_id=?", (id,))
         conn.execute("DELETE FROM producto_maquinaria WHERE producto_id=?", (id,))
         conn.execute("DELETE FROM productos WHERE id=? AND user_id=?", (id, session['user_id']))
@@ -273,11 +278,17 @@ def eliminar_receta(id):
 def registrar_compra():
     data = request.get_json()
     material_id = data.get('id')
-    cantidad_compra = float(data.get('cantidad', 0))
-    nuevo_precio = float(data.get('nuevo_precio', 0))
     
-    if not material_id or cantidad_compra <= 0:
-        return jsonify({'success': False, 'error': 'Datos inválidos'}), 400
+    # 1. BLINDAJE NUMÉRICO: Evitar que metan basura
+    try:
+        cantidad_compra = float(data.get('cantidad', 0))
+        nuevo_precio = float(data.get('nuevo_precio', 0))
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Cantidad o precio inválidos'}), 400
+    
+    # 2. ANTI-HACK: No pueden comprar cantidades negativas ni precios negativos
+    if not material_id or cantidad_compra <= 0 or nuevo_precio < 0:
+        return jsonify({'success': False, 'error': 'Datos inválidos o negativos'}), 400
 
     conn = get_db()
     try:
@@ -285,27 +296,37 @@ def registrar_compra():
         if not mat:
             return jsonify({'success': False, 'error': 'Material no encontrado'}), 404
 
+        # 3. LÓGICA DE PAQUETES: Multiplicador seguro
         cantidad_a_sumar = cantidad_compra
-        if mat['es_paquete'] and mat['cantidad_paquete'] > 1:
+        if mat['es_paquete'] and mat['cantidad_paquete'] > 0: # <-- BLINDAJE DIVISIÓN POR CERO
             cantidad_a_sumar = cantidad_compra * mat['cantidad_paquete']
 
         sql_update = "UPDATE materiales SET stock_actual = stock_actual + ?"
         params = [cantidad_a_sumar]
 
+        # 4. ACTUALIZACIÓN DE PRECIOS SINCRONIZADA
         if nuevo_precio > 0:
             sql_update += ", precio_compra = ?"
             params.append(nuevo_precio)
-            if mat['cantidad_paquete'] > 0:
+            
+            # Si es paquete y tiene cantidad válida, calculamos el unitario
+            if mat['es_paquete'] and mat['cantidad_paquete'] > 0:
                 nuevo_unitario = nuevo_precio / mat['cantidad_paquete']
-                sql_update += ", precio_unitario = ?"
-                params.append(nuevo_unitario)
+            else:
+                # Si no es paquete (se vende por pieza), el precio unitario es el mismo de compra
+                nuevo_unitario = nuevo_precio
+                
+            sql_update += ", precio_unitario = ?"
+            params.append(nuevo_unitario)
 
         sql_update += " WHERE id = ?"
         params.append(material_id)
 
         conn.execute(sql_update, params)
 
+        # 5. REGISTRO DE HISTORIAL SEGURO
         try:
+            # Usamos ahora_sql() en lugar de now_utc() directo para compatibilidad con el formato
             conn.execute("""
                 INSERT INTO movimientos_inventario 
                 (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
@@ -318,9 +339,11 @@ def registrar_compra():
                 material_id,
                 cantidad_a_sumar,
                 material_id,
-                now_utc()
+                ahora_sql()
             ))
-        except:
+        except Exception as aud_error:
+            # Imprimimos el error de auditoría para depuración sin tumbar la compra
+            print(f"Error en auditoría de compra: {aud_error}")
             pass 
 
         conn.commit()

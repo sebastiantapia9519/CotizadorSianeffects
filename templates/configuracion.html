@@ -253,7 +253,7 @@
                         </div>
                         <div class="card-body p-4">
 
-                            <form method="POST" action="{{ url_for('main.configuracion') }}#list-envios" onsubmit="return confirm('¿Borrar zona?')">
+                            <form method="POST" action="{{ url_for('main.configuracion') }}#list-envios">
                                 <input type="hidden" name="action" value="update_shipping">
 
                                 <h6 class="fw-bold text-muted mb-3">📍 ¿Desde dónde envías? (Origen)</h6>
@@ -387,15 +387,11 @@
                                                         <td class="text-success fw-bold">${{
                                                             "{:.2f}".format(rate['price']) }}</td>
                                                         <td class="text-end pe-3">
-                                                            <form method="POST"
-                                                                action="{{ url_for('main.configuracion') }}"
-                                                                style="display:inline;">
-                                                                <input type="hidden" name="action" value="delete_rate">
-                                                                <input type="hidden" name="rate_id"
-                                                                    value="{{ rate['id'] }}">
-                                                                <button class="btn btn-link p-0 text-muted"
-                                                                    style="font-size:0.7rem">❌</button>
-                                                            </form>
+                                                            <button type="button" class="btn btn-link p-0 text-muted text-decoration-none"
+                                                                style="font-size:0.7rem"
+                                                                onclick="confirmarEliminarTarifa('{{ rate['id'] }}')">
+                                                                ❌
+                                                            </button>
                                                         </td>
                                                     </tr>
                                                     {% else %}
@@ -820,6 +816,41 @@ document.addEventListener('DOMContentLoaded', function() {
                 idInput.type = 'hidden';
                 idInput.name = 'zone_id';
                 idInput.value = urlReal; // Pasamos el ID directamente
+
+                form.appendChild(actionInput);
+                form.appendChild(idInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    function confirmarEliminarTarifa(idTarifa) {
+        Swal.fire({
+            title: '¿Eliminar tarifa?',
+            text: "Esta acción no se puede deshacer.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            borderRadius: '15px'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ url_for('main.configuracion') }}#list-envios";
+
+                const actionInput = document.createElement('input');
+                actionInput.type = 'hidden';
+                actionInput.name = 'action';
+                actionInput.value = 'delete_rate';
+
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'rate_id';
+                idInput.value = idTarifa;
 
                 form.appendChild(actionInput);
                 form.appendChild(idInput);

@@ -64,17 +64,19 @@ def subscription_required(f):
             return redirect(url_for('main.plan_vencido')) 
             
         try:
-            # Manejo robusto de fechas (corta milisegundos si existen)
-            fecha_str = str(user['subscription_end'])[:19] 
-            fecha_fin = datetime.strptime(fecha_str, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+            # BLINDAJE SQLITE/POSTGRES
+            f_end = user['subscription_end']
+            if isinstance(f_end, str):
+                fecha_fin = datetime.strptime(f_end[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+            else:
+                fecha_fin = f_end if f_end.tzinfo else f_end.replace(tzinfo=timezone.utc)
             
             # Comparamos con la hora actual en UTC
             if datetime.now(timezone.utc) > fecha_fin:
                 flash('Tu suscripción ha vencido. Renueva para continuar.', 'error')
                 return redirect(url_for('main.plan_vencido')) 
         except Exception as e:
-            print(f"Error verificando fecha: {e}")
-            # Si hay error de fecha, por seguridad lo dejamos pasar pero logueamos el error
+            print(f"Error verificando fecha de sub: {e}")
             pass
 
         return f(*args, **kwargs)
@@ -107,7 +109,7 @@ def obtener_alertas(user_id):
                     'tipo': color,
                     'icono': 'box-open',
                     'msg': f"Stock bajo: <b>{mat['nombre']}</b> ({float(mat['stock_actual']):g} restantes)",
-                    'url': '/inventario' # Ajusté la URL a /inventario (o /materiales según tu ruta)
+                    'url': '/inventario' 
                 })
 
         # 2. REVISAR SUSCRIPCIÓN (SOLO PARA MORTALES - ROL 0)
@@ -116,8 +118,13 @@ def obtener_alertas(user_id):
         # El filtro user['role'] == 0 asegura que a TI no te salgan avisos de pago
         if user and user['role'] == 0 and user['subscription_end']:
             try:
-                fecha_str = str(user['subscription_end'])[:19]
-                fecha_fin = datetime.strptime(fecha_str, '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                # BLINDAJE SQLITE/POSTGRES
+                f_end = user['subscription_end']
+                if isinstance(f_end, str):
+                    fecha_fin = datetime.strptime(f_end[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                else:
+                    fecha_fin = f_end if f_end.tzinfo else f_end.replace(tzinfo=timezone.utc)
+                    
                 dias_restantes = (fecha_fin - datetime.now(timezone.utc)).days
                 
                 if 0 <= dias_restantes <= 5:
@@ -127,7 +134,8 @@ def obtener_alertas(user_id):
                         'msg': f"Tu plan vence en <b>{dias_restantes} días</b>. Renueva pronto.",
                         'url': '/configuracion'
                     })
-            except:
+            except Exception as e:
+                print(f"Error obteniendo alerta de fecha: {e}")
                 pass
 
     except Exception as e:
@@ -147,7 +155,13 @@ def guardar_pase_bd(inv_id, form_data, pase_id=None):
     Si se envía un pase_id, hace UPDATE; si no, hace INSERT.
     """
     nombre_familia = form_data.get('nombre_familia')
-    pases = form_data.get('pases_totales', 2)
+    
+    # BLINDAJE DE TIPOS (A prueba de capa 8 y de Postgres)
+    try:
+        pases = int(form_data.get('pases_totales', 2))
+    except ValueError:
+        pases = 2
+        
     telefono = form_data.get('telefono', '')
     mesa = form_data.get('mesa') or '0'
     

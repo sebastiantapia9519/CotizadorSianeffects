@@ -105,6 +105,13 @@
         background-color: #f1f2f6;
         color: var(--sian-pink);
     }
+
+    /* Fix para que los menús no se corten en la tabla en celulares */
+    .table-responsive {
+        overflow: visible;
+    }
+    
+
 </style>
 {% endblock %}
 
@@ -131,7 +138,7 @@
     </div>
 </div>
 
-<div class="card card-custom overflow-hidden">
+<div class="card card-custom">
     <div class="table-responsive">
         <table class="table table-hover align-middle mb-0">
             <thead class="bg-light text-secondary small text-uppercase">
@@ -206,7 +213,8 @@
                     <td class="text-end pe-4">
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm rounded-circle shadow-sm border" type="button"
-                                data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
+                                data-bs-toggle="dropdown" data-bs-boundary="window" aria-expanded="false"
+                                style="width: 32px; height: 32px;">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
 
@@ -561,5 +569,25 @@
             }
         });
     }
+
+    // --- FIX PARA MENÚS CORTADOS EN TABLAS (CELULARES) ---
+    // Cuando se abre cualquier menú de 3 puntitos...
+    document.addEventListener('show.bs.dropdown', function (e) {
+        let tabla = e.target.closest('.table-responsive');
+        if (tabla) {
+            // Le damos un "colchón" invisible de 260px para que el menú quepa completo
+            tabla.style.transition = 'padding-bottom 0.2s ease';
+            tabla.style.paddingBottom = '260px'; 
+        }
+    });
+
+    // Cuando se cierra el menú...
+    document.addEventListener('hide.bs.dropdown', function (e) {
+        let tabla = e.target.closest('.table-responsive');
+        if (tabla) {
+            // Le quitamos el colchón para que la tabla regrese a la normalidad
+            setTimeout(() => { tabla.style.paddingBottom = '0px'; }, 200);
+        }
+    });
 </script>
 {% endblock %}

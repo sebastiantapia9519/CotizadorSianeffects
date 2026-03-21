@@ -6,82 +6,68 @@ import zipfile
 import string
 import random
 import requests
-from flask import request, redirect, url_for, flash
-from datetime import datetime, timedelta
-from utils.datetime_utils import fecha_mas_dias, sumar_dias_a_fecha, hoy_local, ahora_sql
-from flask import send_file
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, send_file
+from datetime import datetime, timedelta, timezone
+from utils.datetime_utils import hoy_local, ahora_sql
 from helpers import admin_required, guardar_pase_bd, obtener_estado_mesas
-from db import get_db_connection  # Gestor centralizado de base de datos SQLite
-from services.cloudflare_service import upload_to_cloudflare, delete_from_cloudflare # Integración con R2
+from db import get_db_connection  
+from services.cloudflare_service import upload_to_cloudflare, delete_from_cloudflare 
 
 # ==============================================================================
-# INICIALIZACIÓN DEL BLUEPRINT
+# INICIALIZACION DEL BLUEPRINT
 # ==============================================================================
-# Define este archivo como un módulo conectable a la app principal de Flask
 invitaciones_bp = Blueprint('invitaciones_admin', __name__)
 
 # ==============================================================================
-# CONFIGURACIÓN MAESTRA DE PLANTILLAS
+# CONFIGURACION MAESTRA DE PLANTILLAS
 # ==============================================================================
-# Este diccionario actúa como la "fuente de la verdad" para los diseños rápidos.
-# Si el usuario elige 'rustico', el sistema lee de aquí los colores y tipografías
-# para inyectarlos en la invitación generada.
 PLANTILLAS_CONFIG = {
     'rustico': {
         'fuente_titulo': 'Cormorant',
         'fuente_cuerpo': 'Proza Libre',
-        'color_acento': '#5d6d5a', # Verde Eucalipto
-        'color_fondo': '#f4f1ea',  # Crema Papel
+        'color_acento': '#5d6d5a', 
+        'color_fondo': '#f4f1ea',  
         'frase_default': "Hoy celebramos el amor que nos une..."
     },
     'romantico': {
         'fuente_titulo': 'Great Vibes',
         'fuente_cuerpo': 'Montserrat',
-        'color_acento': '#d48b9b', # Rosa Viejo
+        'color_acento': '#d48b9b', 
         'color_fondo': '#fff9f9',
         'frase_default': "Dos corazones, un mismo camino."
     }
 }
 
 # ==============================================================================
-# FUNCIONES HELPER (UTILERÍAS INTERNAS)
+# FUNCIONES HELPER (UTILERIAS INTERNAS)
 # ==============================================================================
 
 def generar_codigo_cliente():
-    """
-    Genera un código alfanumérico único para la invitación.
-    Se usa para que los novios/quinceañera puedan acceder a ver su lista de invitados 
-    sin necesidad de tener una cuenta formal en el sistema.
-    Ejemplo de salida: SIA-X9K2A
-    """
+    """Genera un codigo alfanumerico unico para acceso del cliente final."""
     suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
     return f"SIA-{suffix}"
 
 def generar_codigo_planner():
-    """
-    Genera una contraseña única de acceso para los Planners (Socios B2B).
-    Ejemplo de salida: PLAN-B7V1M
-    """
+    """Genera una contrasena unica de acceso para los Planners (Socios B2B)."""
     suffix = ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
     return f"PLAN-{suffix}"
 
 def usar_credito_planner(planner_id):
     """
-    Lógica de facturación de Planners.
-    1. Busca en la BD el paquete de créditos que caduque más pronto y que aún tenga saldo.
-    2. Si lo encuentra, le suma 1 al contador de 'cantidad_usada' (consumiendo el crédito).
-    3. Retorna True si tuvo éxito, False si no tiene saldo.
+    Logica de facturacion B2B. 
+    Busca el paquete mas proximo a vencer que tenga saldo y le descuenta 1 credito.
     """
     conn = get_db_connection()
+    now_str = ahora_sql() # Blindaje Postgres: Evaluamos la fecha en Python, no en SQL
+    
     paquete = conn.execute("""
         SELECT id, cantidad_total, cantidad_usada 
         FROM planner_paquetes 
         WHERE planner_id = ? AND activo = 1 
-        AND datetime(fecha_vencimiento) > datetime('now')
+        AND fecha_vencimiento > ?
         AND cantidad_usada < cantidad_total
         ORDER BY fecha_vencimiento ASC LIMIT 1
-    """, (planner_id,)).fetchone()
+    """, (planner_id, now_str)).fetchone()
 
     if paquete:
         conn.execute("UPDATE planner_paquetes SET cantidad_usada = cantidad_usada + 1 WHERE id = ?", (paquete['id'],))
@@ -93,74 +79,59 @@ def usar_credito_planner(planner_id):
     return False
 
 # ==============================================================================
-# API REST: VALIDACIÓN DE URL EN TIEMPO REAL (AJAX)
+# API REST: VALIDACION DE URL EN TIEMPO REAL
 # ==============================================================================
 @invitaciones_bp.route('/admin/api/verificar-slug', methods=['POST'])
 def verificar_slug():
-    """
-    Endpoint consumido por el Frontend mediante fetch().
-    Recibe el string que el usuario escribe en "URL del Evento" y verifica en tiempo 
-    real si esa URL ya está ocupada por otra invitación en la Base de Datos.
-    """
+    """Verifica mediante AJAX si la URL personalizada (slug) ya esta registrada."""
     data = request.get_json()
     slug = data.get('slug', '').strip()
     
-    # Limpiamos caracteres especiales y espacios para evitar URLs inválidas (Ej. "Mi Boda" -> "mi-boda")
     slug_limpio = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', slug.lower()))
     
     conn = get_db_connection()
     existente = conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug_limpio,)).fetchone()
     conn.close()
     
-    # Retorna JSON. 'disponible' será True si 'existente' es None (no se encontró nada)
     return jsonify({'disponible': existente is None, 'slug_sugerido': slug_limpio})
-
 
 # ==============================================================================
 # RUTA PRINCIPAL 1: CONSTRUCTOR DE INVITACIONES (CREAR)
 # ==============================================================================
 @invitaciones_bp.route('/admin/nueva-invitacion', methods=['GET', 'POST'])
 def crear_invitacion():
-    """
-    Motor principal para ensamblar una nueva invitación. 
-    Maneja subida de archivos a Cloudflare R2, armado de JSONs dinámicos y validaciones de seguridad.
-    """
-    
-    # --- 1. SEGURIDAD DE ACCESO (Doble Rol) ---
-    # Permite entrar tanto al dueño (Admin) como a los clientes B2B (Planners)
+    """Motor principal para ensamblar una nueva invitacion premium."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
     if not es_admin_master and not es_planner:
-        flash('Acceso denegado. Se requiere una sesión válida.', 'danger')
+        flash('Acceso denegado. Se requiere una sesion valida.', 'danger')
         return redirect(url_for('invitaciones_clientes.login_cliente'))
 
     conn = get_db_connection()
     
-    # --- PROCESAMIENTO DEL FORMULARIO (POST) ---
     if request.method == 'POST':
         try:
             id_creador_registrado = None
             tipo_creador = 'staff'
             planner_id = None
+            now_str = ahora_sql()
             
-            # --- 2. VALIDACIÓN DE CRÉDITOS (Solo Planners) ---
             if es_planner:
                 planner_id = session.get('planner_id')
                 id_creador_registrado = planner_id
                 tipo_creador = 'planner'
                 
-                # Verificamos si tiene saldo ANTES de procesar imágenes para no saturar el servidor en vano
                 paquete_disp = conn.execute("""
                     SELECT id FROM planner_paquetes 
                     WHERE planner_id = ? AND activo = 1 
-                    AND datetime(fecha_vencimiento) > datetime('now')
+                    AND fecha_vencimiento > ?
                     AND cantidad_usada < cantidad_total
                     LIMIT 1
-                """, (planner_id,)).fetchone()
+                """, (planner_id, now_str)).fetchone()
                 
                 if not paquete_disp:
-                    flash("No tienes créditos disponibles o tus paquetes han vencido.", "danger")
+                    flash("No tienes creditos disponibles o tus paquetes han vencido.", "danger")
                     conn.close()
                     return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
@@ -168,23 +139,18 @@ def crear_invitacion():
                 id_creador_registrado = session.get('user_id') 
                 tipo_creador = 'admin'
 
-            # --- 3. LIMPIEZA DE SLUG Y ANTI-COLISIÓN DE URLS ---
             raw_slug = request.form.get('slug', '').strip()
             slug = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
             
-            # Escudo de servidor: Por si falló la validación JS en el frontend
             slug_existente = conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug,)).fetchone()
             if slug_existente:
-                flash("Ese enlace ya está ocupado por otro evento. Por favor, elige uno diferente.", "danger")
+                flash("Ese enlace ya esta ocupado por otro evento. Por favor, elige uno diferente.", "danger")
                 conn.close()
                 return redirect(url_for('invitaciones_admin.crear_invitacion'))
 
             musica_id = request.form.get('musica_id')
             fecha_evento_raw = request.form.get('fecha_evento') 
             
-            # --- 4. PARSEO DE FECHAS ---
-            # Los inputs <input type="datetime-local"> envían la fecha con una 'T' intermedia
-            # Ej: "2026-03-07T18:00". SQLite y Python necesitan "2026-03-07 18:00:00".
             fecha_evento_limpia = None
             if fecha_evento_raw:
                 fecha_str = fecha_evento_raw.replace('T', ' ')[:16] 
@@ -192,25 +158,20 @@ def crear_invitacion():
                     fecha_obj = datetime.strptime(fecha_str, '%Y-%m-%d %H:%M')
                     fecha_evento_limpia = fecha_obj.strftime('%Y-%m-%d %H:%M:%S')
                 except ValueError:
-                    print(f"Error parseando fecha: {fecha_str}")
                     fecha_evento_limpia = fecha_evento_raw
             else:
                 fecha_obj = datetime.now()
 
-            # --- 5. CÁLCULO DE EXPIRACIÓN (VIGENCIA) ---
-            # La regla de negocio indica que la invitación vive 30 días después de la fiesta.
             if es_planner:
                 vigencia = (fecha_obj + timedelta(days=30)).strftime('%Y-%m-%d')
             else:
-                # El admin puede forzar una vigencia manual o dejar que se calcule sola
                 vigencia = request.form.get('vigencia')
                 if not vigencia:
                      vigencia = (fecha_obj + timedelta(days=30)).strftime('%Y-%m-%d')
 
-            # --- 6. CAPTURA DE CONFIGURACIÓN BÁSICA ---
             tipo_evento = request.form.get('tipo_evento', 'boda')
             dress_code = request.form.get('dress_code')
-            album_url = request.form.get('album_url') # Link externo a Google Drive/Photos
+            album_url = request.form.get('album_url') 
             camara_premium = 1 if 'camara_premium' in request.form else 0
             color_acentos = request.form.get('color_acentos', '#D4AF37')
             padres_novia = request.form.get('padres_novia')
@@ -223,40 +184,31 @@ def crear_invitacion():
             bloquear_edicion = 1 if 'bloquear_edicion_invitados' in request.form else 0
             estilo_apertura = request.form.get('estilo_apertura', 'simple')
 
-            # --- DETECTAR QUÉ BOTÓN SE PRESIONÓ ---
             es_demo = 1 if request.form.get('action') == 'demo' else 0
 
-            # --- LÓGICA DE SLUG Y FECHAS SEGÚN EL BOTÓN ---
             if es_demo and es_planner:
-                # 1. Obtenemos el nombre de la empresa para armar el link
                 planner_data = conn.execute("SELECT nombre_empresa FROM planners WHERE id = ?", (planner_id,)).fetchone()
                 empresa_str = planner_data['nombre_empresa'] if planner_data else 'agencia'
                 
-                # 2. Limpiamos el nombre (Ej: "Eventos Monterrey!" -> "eventos-monterrey")
                 slug_base = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', empresa_str.lower()))
                 slug = f"demo-{slug_base}"
                 
-                # Prevenir colisión (por si hay 2 agencias con el mismo nombre)
                 while conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug,)).fetchone():
                     slug = f"demo-{slug_base}-{str(uuid.uuid4())[:3]}"
 
-                # 3. Fechas mágicas: Evento en 2 meses, vence en 3 meses
                 fecha_obj = datetime.now() + timedelta(days=60)
                 fecha_evento_limpia = fecha_obj.strftime('%Y-%m-%d %H:%M:%S')
                 vigencia = (fecha_obj + timedelta(days=30)).strftime('%Y-%m-%d')
 
             else:
-                # SI FUE EL BOTÓN NORMAL DE PUBLICAR
                 raw_slug = request.form.get('slug', '').strip()
                 slug = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
                 
-                # Escudo anti-colisión
                 if conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug,)).fetchone():
-                    flash("Ese enlace ya está ocupado por otro evento. Elige uno diferente.", "danger")
+                    flash("Ese enlace ya esta ocupado por otro evento. Elige uno diferente.", "danger")
                     conn.close()
                     return redirect(url_for('invitaciones_admin.crear_invitacion'))
 
-                # Fechas normales del input
                 fecha_evento_raw = request.form.get('fecha_evento') 
                 if fecha_evento_raw:
                     fecha_str = fecha_evento_raw.replace('T', ' ')[:16] 
@@ -272,8 +224,6 @@ def crear_invitacion():
                 if not vigencia:
                     vigencia = (fecha_obj + timedelta(days=30)).strftime('%Y-%m-%d')
 
-            # --- 7. CONSTRUCCIÓN DE ESTRUCTURAS DINÁMICAS (Listas a JSON) ---
-            # A) Historia de XV Años (Combina texto con fotos subidas al vuelo)
             anios_hist = request.form.getlist('anio_historia[]')
             textos_hist = request.form.getlist('texto_historia[]')
             fotos_nuevas_hist = request.files.getlist('foto_historia_nueva[]')
@@ -282,7 +232,6 @@ def crear_invitacion():
             for i in range(len(anios_hist)):
                 if anios_hist[i] and textos_hist[i]:
                     foto_url = ""
-                    # Solo sube la imagen a R2 si el usuario seleccionó un archivo válido
                     if i < len(fotos_nuevas_hist) and fotos_nuevas_hist[i].filename != '':
                         foto_url = upload_to_cloudflare(fotos_nuevas_hist[i], folder=f"invitaciones/{slug}/historia")
                     
@@ -292,30 +241,23 @@ def crear_invitacion():
                         "foto": foto_url
                     })
             
-            # B) Mesa de Regalos y Links Bancarios
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
             links_tiendas = request.form.getlist('link_tienda[]')
-            # zip() une las dos listas. Ignoramos si viene vacío.
             mesas_regalos = [{'nombre': n, 'url': l} for n, l in zip(nombres_tiendas, links_tiendas) if n and l]
 
-            # C) Opciones de Hospedaje
             nombres_hoteles = request.form.getlist('nombre_hotel[]')
             links_hoteles = request.form.getlist('link_hotel[]')
             hoteles_sugeridos = [{'nombre': n, 'url': l} for n, l in zip(nombres_hoteles, links_hoteles) if n and l]
 
-            # D) Itinerario de Actividades
             horas_it = request.form.getlist('hora_itinerario[]')
             acts_it = request.form.getlist('actividad_itinerario[]')
             iconos_it = request.form.getlist('icono_itinerario[]')
             itinerario = [{'hora': h, 'actividad': a, 'icono': i} for h, a, i in zip(horas_it, acts_it, iconos_it) if h and a]
 
-            # E) Protocolo Familiar (Padres y Padrinos)
             roles_proto = request.form.getlist('rol_protocolo[]')
             nombres_proto = request.form.getlist('nombres_protocolo[]')
             protocolo_familiar = [{'rol': r, 'nombres': n} for r, n in zip(roles_proto, nombres_proto) if r and n]
 
-            # --- 8. EMPAQUETADO MAESTRO JSON ---
-            # Para evitar tener 50 columnas en SQL, guardamos toda la info del evento en un solo JSON estructurado.
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
                 "mensaje_bienvenida": request.form.get('mensaje_bienvenida', '').strip(),
@@ -328,36 +270,28 @@ def crear_invitacion():
                 "telefono_rsvp": request.form.get('telefono_rsvp'),
                 "info_transporte": request.form.get('info_transporte'),
                 "itinerario": itinerario,
-                # Detectamos si el switch de "No Niños" estaba activado (Drag and Drop)
                 "no_ninos": 'no_ninos' in request.form.getlist('orden_items[]'),
                 "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip(),
-                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip() # <--- GUARDADO DEL MENSAJE WHATSAPP
+                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip() 
             }
             
-            # --- 9. SUBIDA DE IMÁGENES MAESTRAS A CLOUDFLARE R2 ---
             foto_portada = request.files.get('foto_portada')
             url_portada = upload_to_cloudflare(foto_portada, folder=f"invitaciones/{slug}") if foto_portada and foto_portada.filename else None
 
             img_fondo = request.files.get('imagen_fondo')
             url_fondo = upload_to_cloudflare(img_fondo, folder=f"invitaciones/{slug}/bg") if img_fondo and img_fondo.filename else None
 
-            # Subida en lote (Múltiples fotos de galería)
             fotos_galeria = request.files.getlist('fotos_galeria')
             urls_galeria = [upload_to_cloudflare(f, folder=f"invitaciones/{slug}/galeria") for f in fotos_galeria if f and f.filename]
 
-            # --- 10. ORDENAMIENTO DINÁMICO (DRAG & DROP) ---
-            # Rescatamos el orden en que el usuario acomodó las tarjetas HTML
             orden_items = request.form.getlist('orden_items[]')
-            if not orden_items: orden_items = ['inicio', 'evento', 'galeria'] # Fallback por defecto
+            if not orden_items: orden_items = ['inicio', 'evento', 'galeria'] 
             
-            # Limpiamos duplicados manteniendo el orden
             orden_items = list(dict.fromkeys(orden_items))
 
-            # Inyectamos o quitamos la cámara del arreglo visual dependiendo del Switch
             if camara_premium and 'camara' not in orden_items: orden_items.append('camara')
             if not camara_premium and 'camara' in orden_items: orden_items.remove('camara')
 
-            # --- 11. INSERCIÓN EN BASE DE DATOS ---
             fecha_creacion_local = hoy_local() 
 
             conn.execute("""
@@ -381,42 +315,39 @@ def crear_invitacion():
                 fecha_creacion_local, es_demo
             ))
             
-            # --- 12. COBRO FINAL AL PLANNER ---
-            # Si el INSERT no tronó, ahora sí descontamos el crédito permanentemente.
             if es_planner and not es_demo:
                 usar_credito_planner(planner_id)
 
             conn.commit()
-            flash("Invitación Premium Creada ✨", "success")
+            flash("Invitacion Premium Creada", "success")
             
-            # Redirección dinámica según el rol
             if es_planner:
                 return redirect(url_for('invitaciones_clientes.dashboard_planner'))
             return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
             
         except Exception as e:
-            conn.rollback() # Revierte cambios en BD si algo falla
-            flash(f"Error al crear: Verifique que todos los datos estén completos. (Detalle: {str(e)})", "danger")
-            return redirect(url_for('invitaciones_admin.crear_invitacion')) # <--- ESTO EVITA EL CRASH
+            conn.rollback() 
+            flash(f"Error al crear: Verifique que todos los datos esten completos. (Detalle: {str(e)})", "danger")
+            return redirect(url_for('invitaciones_admin.crear_invitacion')) 
         finally:
             conn.close()
 
-    # --- MÉTODO GET: RENDERIZAR FORMULARIO DE CREACIÓN ---
+    # GET REQUEST RENDERING
     saldo_real = 0
-    tiene_demo = False # <--- VARIABLE NUEVA
+    tiene_demo = False 
     
     if es_planner:
-        # Calcular saldo real
+        now_str = ahora_sql()
         saldo_row = conn.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as s 
             FROM planner_paquetes 
             WHERE planner_id = ? AND activo = 1 
-            AND datetime(fecha_vencimiento) > datetime('now')
-        """, (session.get('planner_id'),)).fetchone()
+            AND fecha_vencimiento > ?
+        """, (session.get('planner_id'), now_str)).fetchone()
+        
         if saldo_row:
             saldo_real = saldo_row['s']
             
-        # Revisar si ya gastó su carta del Demo
         demo_db = conn.execute("SELECT id FROM invitaciones WHERE planner_id = ? AND es_demo = 1", (session.get('planner_id'),)).fetchone()
         if demo_db:
             tiene_demo = True
@@ -426,7 +357,7 @@ def crear_invitacion():
     
     return render_template('invitaciones/crear.html', 
                            inv=None, 
-                           datos={},  # <--- CAMBIA 'None' POR '{}'
+                           datos={},  
                            mesas=[], 
                            hoteles=[], 
                            canciones=canciones, 
@@ -436,66 +367,49 @@ def crear_invitacion():
 
 
 # ==============================================================================
-# API REST: SUBIR MÚSICA AL CATÁLOGO GLOBAL
+# API REST: SUBIR MUSICA AL CATALOGO GLOBAL
 # ==============================================================================
 @invitaciones_bp.route('/admin/api/subir-musica', methods=['POST'])
 @admin_required
 def api_subir_musica():
-    """
-    Recibe un archivo de audio (MP3, WAV) subido por el Admin mediante un modal,
-    lo procesa en R2 y lo guarda en la tabla `lista_musica` para que esté disponible
-    en el selector de canciones de todas las invitaciones.
-    """
+    """Permite al Admin subir audios globales para el selector de invitaciones."""
     nombre = request.form.get('nombre')
     archivo = request.files.get('archivo')
     
     if not nombre or not archivo:
         return jsonify({'success': False, 'error': 'Faltan datos o el archivo.'}), 400
         
-    # Validación estricta de seguridad: Evitar inyección de scripts disfrazados
     if not archivo.content_type.startswith('audio/'):
-        return jsonify({'success': False, 'error': 'Solo se permiten archivos de audio (MP3, WAV).'}), 400
+        return jsonify({'success': False, 'error': 'Solo se permiten archivos de audio.'}), 400
 
     try:
         url_audio = upload_to_cloudflare(archivo, folder="musica")
         if not url_audio:
-            return jsonify({'success': False, 'error': 'Error al subir a Cloudflare.'}), 500
+            return jsonify({'success': False, 'error': 'Error al subir a la nube.'}), 500
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Se inserta forzando activa = 1
         cursor.execute("INSERT INTO lista_musica (nombre_cancion, url_cloudflare, activa) VALUES (?, ?, 1)", (nombre.strip(), url_audio))
         nuevo_id = cursor.lastrowid
         conn.commit()
         conn.close()
         
-        # Retornamos los datos para que el JS agregue la canción al <select> al vuelo
-        return jsonify({
-            'success': True,
-            'id': nuevo_id,
-            'nombre': nombre.strip()
-        })
+        return jsonify({'success': True, 'id': nuevo_id, 'nombre': nombre.strip()})
         
     except Exception as e:
-        print(f"Error en API música: {e}")
+        print(f"Error en API musica: {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
 # ==============================================================================
-# FILTROS DE JINJA (Manipulación de datos en el HTML)
+# FILTROS DE JINJA (Manipulacion de datos en el HTML)
 # ==============================================================================
 @invitaciones_bp.app_template_filter('from_json')
 def from_json(value):
-    """Permite a las plantillas Jinja leer strings JSON de la base de datos como objetos reales"""
     return json.loads(value)
 
 @invitaciones_bp.app_template_filter('color_contraste')
 def color_contraste(hex_color):
-    """
-    Fórmula de luminancia relativa (W3C). 
-    Calcula si un color hexadecimal es oscuro o claro, y retorna blanco o negro respectivamente.
-    Sirve para que el texto siempre sea legible sin importar el color de fondo elegido.
-    """
     if not hex_color: return '#333333'
     hex_color = hex_color.lstrip('#')
     if len(hex_color) != 6: return '#333333'
@@ -505,7 +419,6 @@ def color_contraste(hex_color):
 
 @invitaciones_bp.app_template_filter('fondo_tarjeta')
 def fondo_tarjeta(hex_color):
-    """Calcula la opacidad de los componentes translúcidos basándose en el fondo"""
     if not hex_color: return 'rgba(255, 255, 255, 0.7)'
     hex_color = hex_color.lstrip('#')
     if len(hex_color) != 6: return 'rgba(255, 255, 255, 0.7)'
@@ -520,13 +433,9 @@ def fondo_tarjeta(hex_color):
 @invitaciones_bp.route('/admin/invitaciones')
 @admin_required
 def gestionar_invitaciones():
-    """
-    Panel central de SianEffects. Muestra una tabla con absolutamente todas 
-    las invitaciones creadas, independientemente del Planner que las hizo.
-    """
+    """Panel general administrativo que lista todas las invitaciones creadas."""
     conn = get_db_connection()
     try:
-        # Hacemos LEFT JOIN para traer el nombre de la agencia/planner si existe
         invs_db = conn.execute("""
             SELECT i.*, p.nombre_contacto as planner_nombre 
             FROM invitaciones i
@@ -538,7 +447,6 @@ def gestionar_invitaciones():
         for inv in invs_db:
             inv_dict = dict(inv) 
             try:
-                # Extraemos el nombre de los novios del JSON empaquetado
                 inv_dict['datos_cliente'] = json.loads(inv['datos_cliente_json'])
             except:
                 inv_dict['datos_cliente'] = {"novios": "Sin Nombre"}
@@ -554,40 +462,33 @@ def gestionar_invitaciones():
 
 
 # ==============================================================================
-# RUTA 5: EDITAR INVITACIÓN (Carga y procesa datos existentes)
+# RUTA 5: EDITAR INVITACION
 # ==============================================================================
 @invitaciones_bp.route('/admin/editar-invitacion/<int:id>', methods=['GET', 'POST'])
 def editar_invitacion(id):
-    """
-    Renderiza el mismo HTML del creador, pero pre-llena los inputs con la información actual.
-    Maneja la sustitución o eliminación de imágenes preservando las anteriores.
-    """
+    """Renderiza el constructor pre-llenado y actualiza registros y multimedia."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
     if not es_admin_master and not es_planner:
-        flash('Acceso denegado. Se requiere una sesión válida.', 'danger')
+        flash('Acceso denegado.', 'danger')
         return redirect(url_for('auth.login')) 
 
     conn = get_db_connection()
     
-    # --- SEGURIDAD: EVITAR EDICIÓN CRUZADA ---
-    # Un planner no puede adivinar el ID de una invitación en la URL y editarla si no es suya.
     inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
     if not inv_seguridad:
-        flash("Invitación no encontrada.", "danger")
+        flash("Invitacion no encontrada.", "danger")
         conn.close()
         return redirect(url_for('invitaciones_clientes.dashboard_planner') if es_planner else url_for('invitaciones_admin.gestionar_invitaciones'))
         
     if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
-        flash("No tienes permiso para editar esta invitación.", "danger")
+        flash("No tienes permiso para editar esta invitacion.", "danger")
         conn.close()
         return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
-    # --- GUARDAR CAMBIOS (POST) ---
     if request.method == 'POST':
         try:
-            # Rescatamos datos viejos que no pueden cambiar o que complementaremos
             inv_old = conn.execute("""
                 SELECT slug, tipo_evento, datos_cliente_json, foto_portada_url, fotos_json, url_fondo, codigo_acceso_cliente 
                 FROM invitaciones WHERE id=?
@@ -595,7 +496,6 @@ def editar_invitacion(id):
             
             datos_viejos = json.loads(inv_old['datos_cliente_json']) if inv_old['datos_cliente_json'] else {}
 
-            # Bloqueo de Slug y Evento (Planner no lo cambia, Admin sí)
             if es_planner:
                 slug = inv_old['slug']
                 tipo_evento = inv_old['tipo_evento']
@@ -604,10 +504,9 @@ def editar_invitacion(id):
                 raw_slug = request.form.get('slug', '').strip()
                 slug_limpio = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
                 
-                # Verificamos colisión EXCLUYENDO el ID actual (para que no choque consigo misma al editar)
                 slug_existente = conn.execute("SELECT id FROM invitaciones WHERE slug = ? AND id != ?", (slug_limpio, id)).fetchone()
                 if slug_existente:
-                    flash("Ese enlace ya está ocupado.", "danger")
+                    flash("Ese enlace ya esta ocupado.", "danger")
                     conn.close()
                     return redirect(url_for('invitaciones_admin.editar_invitacion', id=id))
                 
@@ -619,7 +518,6 @@ def editar_invitacion(id):
             estilo_fuente = request.form.get('estilo_fuente')
             color_fondo = request.form.get('color_fondo')
             
-            # Limpieza de fechas
             fecha_evento_raw = request.form.get('fecha_evento')
             fecha_evento_limpia = None
             
@@ -633,7 +531,6 @@ def editar_invitacion(id):
             else:
                 fecha_obj = datetime.now()
 
-            # Recálculo de expiración
             if es_planner:
                 vigencia = (fecha_obj + timedelta(days=30)).strftime('%Y-%m-%d')
             else:
@@ -641,7 +538,6 @@ def editar_invitacion(id):
                 if not vigencia:
                      vigencia = (fecha_obj + timedelta(days=30)).strftime('%Y-%m-%d')
             
-            # Variables sueltas
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url')
             camara_premium = 1 if 'camara_premium' in request.form else 0
@@ -656,21 +552,18 @@ def editar_invitacion(id):
             estilo_apertura = request.form.get('estilo_apertura', 'simple')
             es_demo = 1 if 'es_demo' in request.form else 0
 
-            # Manejo avanzado de la historia de XV (Mezclando fotos viejas con nuevas)
             anios_hist = request.form.getlist('anio_historia[]')
             textos_hist = request.form.getlist('texto_historia[]')
-            fotos_actuales_hist = request.form.getlist('foto_historia_actual[]') # Ocultas en HTML
+            fotos_actuales_hist = request.form.getlist('foto_historia_actual[]') 
             fotos_nuevas_hist = request.files.getlist('foto_historia_nueva[]')
             
             historia_lista = []
             for i in range(len(anios_hist)):
                 if anios_hist[i] and textos_hist[i]:
                     foto_url = ""
-                    # Si subió archivo nuevo, súbelo a R2
                     if i < len(fotos_nuevas_hist) and fotos_nuevas_hist[i] and fotos_nuevas_hist[i].filename:
                         foto_url = upload_to_cloudflare(fotos_nuevas_hist[i], folder=f"invitaciones/{slug}/historia")
                     else:
-                        # Si no subió nada, respeta la URL que ya tenía la tarjeta
                         if i < len(fotos_actuales_hist):
                             foto_url = fotos_actuales_hist[i]
                     
@@ -711,7 +604,7 @@ def editar_invitacion(id):
                 "itinerario": itinerario,
                 "no_ninos": 'no_ninos' in request.form.getlist('orden_items[]'),
                 "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip(),
-                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip() # <--- GUARDADO DEL MENSAJE WHATSAPP
+                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip() 
             }
             
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -729,15 +622,12 @@ def editar_invitacion(id):
             if camara_premium and 'camara' not in orden_items: orden_items.append('camara')
             if not camara_premium and 'camara' in orden_items: orden_items.remove('camara')
 
-            # --- MANEJO INTELIGENTE DE IMÁGENES ---
-            # Si se envía archivo, sube a R2. Si no, respeta la URL que ya estaba en BD
             foto_portada = request.files.get('foto_portada')
             url_portada = upload_to_cloudflare(foto_portada, folder=f"invitaciones/{slug}") if foto_portada and foto_portada.filename != '' else inv_old['foto_portada_url']
 
             img_fondo = request.files.get('imagen_fondo')
             url_fondo = upload_to_cloudflare(img_fondo, folder=f"invitaciones/{slug}/bg") if img_fondo and img_fondo.filename != '' else inv_old['url_fondo']
 
-            # Concatenar arreglo de fotos viejas con las fotos nuevas que subió
             fotos_viejas = json.loads(inv_old['fotos_json']) if inv_old and inv_old['fotos_json'] else []
             fotos_nuevas = request.files.getlist('fotos_galeria')
             
@@ -767,7 +657,7 @@ def editar_invitacion(id):
                 id                
             ))
             conn.commit()
-            flash("¡Invitación actualizada exitosamente! ✏️", "success")
+            flash("Invitacion actualizada exitosamente.", "success")
             
             if es_planner:
                 return redirect(url_for('invitaciones_clientes.dashboard_planner'))
@@ -775,35 +665,34 @@ def editar_invitacion(id):
             
         except Exception as e:
             conn.rollback()
-            flash(f"Error al actualizar: Verifique que los datos estén completos. (Detalle: {str(e)})", "danger")
-            return redirect(url_for('invitaciones_admin.editar_invitacion', id=id)) # <--- ESTO EVITA EL CRASH
+            flash(f"Error al actualizar. Verifique los datos. (Detalle: {str(e)})", "danger")
+            return redirect(url_for('invitaciones_admin.editar_invitacion', id=id)) 
         finally:
             conn.close()
 
-    # --- MÉTODO GET: RENDERIZAR DATOS EN HTML ---
     inv = conn.execute("SELECT * FROM invitaciones WHERE id = ?", (id,)).fetchone()
     canciones = conn.execute("SELECT id, nombre_cancion FROM lista_musica WHERE activa = 1 ORDER BY nombre_cancion ASC").fetchall()
     
     saldo_real = 0
     if es_planner:
+        now_str = ahora_sql()
         saldo_row = conn.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as s 
             FROM planner_paquetes 
             WHERE planner_id = ? AND activo = 1 
-            AND datetime(fecha_vencimiento) > datetime('now')
-        """, (session.get('planner_id'),)).fetchone()
+            AND fecha_vencimiento > ?
+        """, (session.get('planner_id'), now_str)).fetchone()
         if saldo_row:
             saldo_real = saldo_row['s']
             
     conn.close()
 
     if not inv:
-        flash("Invitación no encontrada.", "danger")
+        flash("Invitacion no encontrada.", "danger")
         if es_planner: return redirect(url_for('invitaciones_clientes.dashboard_planner'))
         return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
 
     inv = dict(inv)
-    # Exponemos los JSONs a objetos legibles para Jinja2
     datos = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
     mesas = json.loads(inv['mesas_regalos_json']) if inv['mesas_regalos_json'] else []
     hoteles = json.loads(inv['hospedaje_json']) if inv['hospedaje_json'] else []
@@ -817,40 +706,34 @@ def editar_invitacion(id):
                            edit_mode=True,
                            saldo=saldo_real)
 
+
 # ==============================================================================
-# ELIMINAR INVITACIÓN COMPLETA (Admin Only)
+# ELIMINAR INVITACION COMPLETA
 # ==============================================================================
 @invitaciones_bp.route('/admin/eliminar-invitacion/<int:id>', methods=['POST'])
 @admin_required
 def eliminar_invitacion(id):
-    """
-    Borra la invitación de la BD y purga TODAS sus imágenes del bucket R2.
-    Fundamental para mantener el almacenamiento limpio y barato.
-    """
+    """Purga la invitacion y libera todo el almacenamiento asociado en R2."""
     conn = get_db_connection()
     try:
         inv = conn.execute("SELECT foto_portada_url, url_fondo, fotos_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
         
         if inv:
-            # 1. Eliminar multimedia base del evento
             if inv['foto_portada_url']: delete_from_cloudflare(inv['foto_portada_url'])
             if inv['url_fondo']: delete_from_cloudflare(inv['url_fondo'])
             if inv['fotos_json']:
                 fotos_galeria = json.loads(inv['fotos_json'])
                 for foto_url in fotos_galeria: delete_from_cloudflare(foto_url)
 
-            # 2. Purgar fotos subidas por invitados a la cámara
             fotos_invitados = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (id,)).fetchall()
             for foto in fotos_invitados:
                 if foto['url']: delete_from_cloudflare(foto['url'])
             
-            # Borramos registros huérfanos
             conn.execute("DELETE FROM fotos_invitados WHERE invitacion_id = ?", (id,))
 
         conn.execute("DELETE FROM invitaciones WHERE id = ?", (id,))
         conn.commit()
-        
-        flash("Invitación y fotos eliminadas permanentemente 🧹", "success")
+        flash("Invitacion y fotos eliminadas permanentemente.", "success")
         
     except Exception as e:
         conn.rollback()
@@ -862,14 +745,11 @@ def eliminar_invitacion(id):
 
 
 # ==============================================================================
-# RUTA PÚBLICA: RENDERIZADO DEL EVENTO (/invitacion/slug)
+# RUTA PUBLICA: RENDERIZADO DEL EVENTO (/invitacion/slug)
 # ==============================================================================
 @invitaciones_bp.route('/invitacion/<slug>')
 def ver_invitacion(slug):
-    """
-    Controlador maestro que sirve la invitación pública a los usuarios finales.
-    Combina la lógica de plantillas (Boda/XV), colores, música y pases VIP.
-    """
+    """Renderiza el front-end final que ven los invitados (Boda o XV)."""
     conn = get_db_connection()
     try:
         inv = conn.execute("""
@@ -880,20 +760,15 @@ def ver_invitacion(slug):
         """, (slug,)).fetchone()
         
         if not inv:
-            return "<h1>404 - Invitación no encontrada 😢</h1>", 404
+            return "<h1>404 - Invitacion no encontrada</h1>", 404
 
-        # --- ESCUDO DE VIGENCIA (PROTECCIÓN DE ARCHIVO) ---
-        # Evita accesos después de 30 días del evento mostrando una landing de bloqueo
-        # Convertimos a string por seguridad y cortamos los primeros 10 caracteres (YYYY-MM-DD)
+        # Blindaje Date String Lexicografico (Seguro en SQLite y Postgres)
         hoy_str = str(hoy_local())[:10]
-        vigencia_invitacion = inv['vigencia']
+        vigencia_str = str(inv['vigencia'])[:10] if inv['vigencia'] else None
 
-        # Si hay fecha de vigencia y la fecha de hoy es mayor, bloqueamos
-        if vigencia_invitacion and hoy_str > str(vigencia_invitacion)[:10]:
+        if vigencia_str and hoy_str > vigencia_str:
             return render_template('invitaciones/expirada.html')
-        # --------------------------------------------------
 
-        # Lógica de Pases Personalizados (Código QR)
         codigo_pase = request.args.get('pass') 
         datos_pase = None
         if codigo_pase:
@@ -913,7 +788,6 @@ def ver_invitacion(slug):
             ORDER BY fecha DESC
         """, (inv['id'],)).fetchall()
 
-        # Resuelve la cascada de colores (Plantilla elegida VS Colores Manuales)
         template_colors = {}
         if inv['template_id'] and inv['template_id'] != 'personalizado':
             template = PLANTILLAS_CONFIG.get(inv['template_id'])
@@ -923,7 +797,6 @@ def ver_invitacion(slug):
                     'template_color_fondo': template['color_fondo']
                 }
 
-        # Renderiza vista distinta según el negocio (Boda o XV)
         plantilla_render = 'invitaciones/xv.html' if inv['tipo_evento'] == 'xv' else 'invitaciones/base_boda.html'
         
         return render_template(
@@ -945,11 +818,11 @@ def ver_invitacion(slug):
 
 
 # ==============================================================================
-# GESTIÓN DE ÁLBUM DE CÁMARA (DESCARGAR FOTOS)
+# GESTION DE ALBUM DE CAMARA (DESCARGAR FOTOS)
 # ==============================================================================
 @invitaciones_bp.route('/admin/ver-fotos/<int:id>')
 def ver_fotos_invitados(id):
-    """Muestra el mosaico de fotos que los invitados capturaron durante el evento."""
+    """Galeria administrativa de las fotos que tomaron los invitados."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -973,7 +846,7 @@ def ver_fotos_invitados(id):
         
         return render_template('invitaciones/galeria_admin.html', inv=inv, datos=datos, fotos=fotos, inv_id=id)
     except Exception as e:
-        flash(f"Error al cargar la galería: {str(e)}", "danger")
+        flash(f"Error al cargar la galeria: {str(e)}", "danger")
         return redirect(url_for('invitaciones_clientes.dashboard_planner') if es_planner else url_for('invitaciones_admin.gestionar_invitaciones'))
     finally:
         conn.close()
@@ -981,8 +854,8 @@ def ver_fotos_invitados(id):
 @invitaciones_bp.route('/admin/descargar-rollo/<int:id>')
 def descargar_rollo_zip(id):
     """
-    Genera un archivo .zip en memoria (RAM) descargando los objetos binarios
-    directamente de Cloudflare S3/R2 para entregarlos al Planner.
+    Genera un archivo .zip en memoria RAM extrayendo las fotos de la URL publica.
+    Blindaje: Evita usar la libreria boto3 y resuelve riesgos de importaciones circulares.
     """
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
@@ -1003,27 +876,23 @@ def descargar_rollo_zip(id):
             flash("No hay fotos para descargar.", "warning")
             return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
 
-        memory_file = io.BytesIO() # Contenedor RAM para el ZIP
-        fotos_añadidas = 0
+        memory_file = io.BytesIO() 
+        fotos_anadidas = 0
         
-        from routes.invitaciones_publicas import s3_client, BUCKET_NAME
-
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             for i, foto in enumerate(fotos):
                 try:
-                    # Extraer el Key exacto de la URL pública para pedirlo al SDK de boto3
-                    key = foto['url'].split('.dev/')[-1]
-                    objeto_s3 = s3_client.get_object(Bucket=BUCKET_NAME, Key=key)
-                    contenido = objeto_s3['Body'].read()
-                    
-                    if contenido:
-                        zf.writestr(f"foto_{i+1}.jpg", contenido)
-                        fotos_añadidas += 1
+                    # BLINDAJE R2: Descargamos por HTTP directamente de la URL publica
+                    # Evitamos usar s3_client que genera dependencias ciclicas
+                    respuesta = requests.get(foto['url'], timeout=10)
+                    if respuesta.status_code == 200:
+                        zf.writestr(f"foto_{i+1}.jpg", respuesta.content)
+                        fotos_anadidas += 1
                 except Exception as e:
-                    print(f"Error con boto3 en foto {i}: {e}")
+                    print(f"Error HTTP extrayendo foto {i}: {e}")
                     continue
 
-        if fotos_añadidas == 0:
+        if fotos_anadidas == 0:
             flash("No se pudo extraer ninguna imagen.", "danger")
             return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
 
@@ -1042,11 +911,11 @@ def descargar_rollo_zip(id):
         conn.close()
 
 # ==============================================================================
-# GESTIÓN DE PASES E INVITADOS VIP (RSVP)
+# GESTION DE PASES E INVITADOS VIP (RSVP)
 # ==============================================================================
 @invitaciones_bp.route('/admin/invitacion/<int:id>/invitados', methods=['GET', 'POST'])
 def gestionar_pases(id):
-    """Panel para crear boletos digitales QR por familia o invitado."""
+    """Crea o edita pases VIP y genera QRs."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -1058,7 +927,7 @@ def gestionar_pases(id):
     
     inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
     if not inv_seguridad:
-        flash("Invitación no encontrada.", "danger")
+        flash("Invitacion no encontrada.", "danger")
         conn.close()
         return redirect(url_for('invitaciones_clientes.dashboard_planner') if es_planner else url_for('invitaciones_admin.gestionar_invitaciones'))
         
@@ -1079,14 +948,13 @@ def gestionar_pases(id):
     conn.close()
 
     estado_mesas = obtener_estado_mesas(id)
-    
     return render_template('invitaciones/pases_admin.html', inv=inv, invitados=invitados, mesas_status=estado_mesas)
 
 
 
 @invitaciones_bp.route('/admin/invitacion/<int:inv_id>/eliminar-pase/<int:pase_id>', methods=['POST'])
 def eliminar_pase(inv_id, pase_id):
-    """Revoca el acceso de un invitado borrándolo de la BD."""
+    """Revoca un pase desde la base de datos."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -1110,14 +978,13 @@ def eliminar_pase(inv_id, pase_id):
         
     return redirect(url_for('invitaciones_admin.gestionar_pases', id=inv_id))
 
-
 # ==============================================================================
-# GESTIÓN B2B: SOCIOS COMERCIALES (PLANNERS)
+# GESTION B2B: SOCIOS COMERCIALES (PLANNERS)
 # ==============================================================================
 @invitaciones_bp.route('/admin/socios', methods=['GET', 'POST'])
 @admin_required
 def gestionar_socios():
-    """Registra y lista cuentas de Planner y calcula su saldo en tiempo real"""
+    """Lista el directorio de agencias y calcula la vigencia de creditos de forma segura."""
     conn = get_db_connection()
     
     if request.method == 'POST':
@@ -1132,11 +999,11 @@ def gestionar_socios():
                 VALUES (?, ?, ?, ?)
             """, (nombre, empresa, telefono, codigo_plan))
             conn.commit()
-            flash(f"Socio {nombre} registrado. Código: {codigo_plan}", "success")
+            flash(f"Socio {nombre} registrado. Codigo: {codigo_plan}", "success")
         except Exception as e:
             flash(f"Error al registrar socio: {e}", "danger")
 
-    # Calcula saldo deduciendo cantidad_usada de cantidad_total de paquetes vigentes
+    now_str = ahora_sql()
     socios = conn.execute("""
         SELECT p.*, 
                COALESCE(SUM(pp.cantidad_total - pp.cantidad_usada), 0) as creditos_disponibles
@@ -1144,10 +1011,10 @@ def gestionar_socios():
         LEFT JOIN planner_paquetes pp 
           ON p.id = pp.planner_id 
           AND pp.activo = 1 
-          AND datetime(pp.fecha_vencimiento) > datetime('now')
+          AND pp.fecha_vencimiento > ?
         GROUP BY p.id
         ORDER BY p.created_at DESC
-    """).fetchall()
+    """, (now_str,)).fetchall()
     
     conn.close()
     return render_template('invitaciones/admin_socios.html', socios=socios)
@@ -1155,11 +1022,10 @@ def gestionar_socios():
 @invitaciones_bp.route('/admin/socios/cargar-paquete', methods=['POST'])
 @admin_required
 def cargar_paquete():
-    """Recarga de inventario manual al Planner (Otorgar créditos). Tienen caducidad escalonada."""
+    """Recarga inventario de paquetes calculando vencimientos de forma dinamica."""
     planner_id = request.form.get('planner_id')
     cantidad = int(request.form.get('cantidad', 0))
     
-    # --- VIGENCIA ESCALONADA USANDO TU UTILS ---
     if cantidad <= 3:
         vencimiento = ahora_sql(meses=1)
     elif cantidad <= 9:
@@ -1167,8 +1033,7 @@ def cargar_paquete():
     elif cantidad <= 15:
         vencimiento = ahora_sql(meses=6)
     else:
-        vencimiento = ahora_sql(meses=12) # 1 año para paquetes grandes
-    # -------------------------------------------
+        vencimiento = ahora_sql(meses=12) 
     
     conn = get_db_connection()
     try:
@@ -1177,10 +1042,9 @@ def cargar_paquete():
             VALUES (?, ?, ?)
         """, (planner_id, cantidad, vencimiento))
         conn.commit()
-        # Mostramos los primeros 10 caracteres (YYYY-MM-DD) para que el flash se vea limpio
-        flash(f"Se cargaron {cantidad} créditos exitosamente. Vigencia hasta {vencimiento[:10]}.", "success")
+        flash(f"Se cargaron {cantidad} creditos exitosamente. Vigencia hasta {vencimiento[:10]}.", "success")
     except Exception as e:
-        flash(f"Error al cargar créditos: {e}", "danger")
+        flash(f"Error al cargar creditos: {e}", "danger")
     finally:
         conn.close()
         
@@ -1205,42 +1069,37 @@ def editar_planner():
 @invitaciones_bp.route('/admin/socios/eliminar', methods=['POST'])
 @admin_required
 def eliminar_planner():
-    """Borrado definitivo de un planner. Purga SQLite y Cloudflare R2."""
+    """Purga completa de Planners, liberando todo su espacio en Cloudflare R2."""
     planner_id = request.form.get('planner_id')
+    now_str = ahora_sql()
     
     conn = get_db_connection()
     try:
-        # 1. Validaciones (Saldo e Invitaciones Vigentes)
         saldo_row = conn.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as saldo
             FROM planner_paquetes 
-            WHERE planner_id = ? AND activo = 1 AND datetime(fecha_vencimiento) > datetime('now')
-        """, (planner_id,)).fetchone()
+            WHERE planner_id = ? AND activo = 1 AND fecha_vencimiento > ?
+        """, (planner_id, now_str)).fetchone()
         
         saldo = saldo_row['saldo'] if saldo_row else 0
 
-        # Cuenta solo las invitaciones reales (NO demos) que estén vigentes
         invitaciones_activas = conn.execute("""
             SELECT COUNT(id) as total_activas
             FROM invitaciones
-            WHERE planner_id = ? AND datetime(vigencia) >= datetime('now') AND es_demo = 0
-        """, (planner_id,)).fetchone()['total_activas']
+            WHERE planner_id = ? AND vigencia >= ? AND es_demo = 0
+        """, (planner_id, now_str[:10])).fetchone()['total_activas']
 
-        # 2. Decisión
         if saldo > 0 or invitaciones_activas > 0:
             conn.execute("UPDATE planners SET estado = 'suspendido' WHERE id = ?", (planner_id,))
             conn.commit()
-            flash(f"Cuenta suspendida preventivamente. No se puede eliminar: tiene {saldo} créditos o {invitaciones_activas} eventos vigentes.", "warning")
+            flash(f"Cuenta suspendida. No se puede eliminar: tiene {saldo} creditos o {invitaciones_activas} eventos vigentes.", "warning")
             return redirect(url_for('invitaciones_admin.gestionar_socios'))
 
-        # 3. EL GRAN BORRADO (SQLite + Cloudflare R2)
-        # Obtenemos TODAS las invitaciones (vencidas/limbo) del planner
         invs_a_borrar = conn.execute("SELECT id, foto_portada_url, url_fondo, fotos_json FROM invitaciones WHERE planner_id = ?", (planner_id,)).fetchall()
         
         for inv in invs_a_borrar:
             inv_id = inv['id']
             
-            # A) Limpieza Física en Cloudflare R2 (Igual que en tu ruta eliminar_invitacion)
             if inv['foto_portada_url']: delete_from_cloudflare(inv['foto_portada_url'])
             if inv['url_fondo']: delete_from_cloudflare(inv['url_fondo'])
             if inv['fotos_json']:
@@ -1251,24 +1110,21 @@ def eliminar_planner():
             for foto in fotos_invitados:
                 if foto['url']: delete_from_cloudflare(foto['url'])
 
-            # B) Limpieza en SQLite (Hijos)
             conn.execute("DELETE FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,))
             conn.execute("DELETE FROM pases_invitados WHERE invitacion_id = ?", (inv_id,))
-            conn.execute("DELETE FROM buenos_deseos WHERE invitacion_id = ?", (inv_id,)) # Limpiamos los deseos
+            conn.execute("DELETE FROM buenos_deseos WHERE invitacion_id = ?", (inv_id,)) 
 
-            # C) Borrado de la Invitación
             conn.execute("DELETE FROM invitaciones WHERE id = ?", (inv_id,))
 
-        # 4. Limpieza Final del Planner
         conn.execute("DELETE FROM planner_paquetes WHERE planner_id = ?", (planner_id,))
         conn.execute("DELETE FROM planners WHERE id = ?", (planner_id,))
         
         conn.commit()
-        flash("Planner y todo su rastro (BD e Imágenes) eliminados permanentemente.", "success")
+        flash("Planner y todo su rastro (BD e Imagenes) eliminados permanentemente.", "success")
             
     except Exception as e:
-        conn.rollback() # Si algo falla en R2 o BD, deshacemos todo para evitar inconsistencias
-        flash(f"Error crítico al intentar eliminar: {str(e)}", "danger")
+        conn.rollback() 
+        flash(f"Error critico al intentar eliminar: {str(e)}", "danger")
     finally:
         conn.close()
 
@@ -1277,26 +1133,28 @@ def eliminar_planner():
 @invitaciones_bp.route('/ajustar_saldo', methods=['POST'])
 @admin_required
 def ajustar_saldo():
-    """Permite agregar/quitar saldo forzadamente por quejas o bonos dejando nota de auditoría"""
+    """Genera ajustes de creditos arbitrarios registrando una huella de auditoria."""
     planner_id = request.form.get('planner_id')
     ajuste = int(request.form.get('ajuste'))
     motivo = request.form.get('motivo')
+    
+    fecha_hoy = ahora_sql()
+    fecha_venc = ahora_sql(meses=12)
 
     conn = get_db_connection()
     conn.execute('''
         INSERT INTO planner_paquetes (planner_id, cantidad_total, fecha_compra, fecha_vencimiento, notas)
-        VALUES (?, ?, CURRENT_TIMESTAMP, datetime('now', '+1 year'), ?)
-    ''', (planner_id, ajuste, f"AJUSTE MANUAL: {motivo}"))
+        VALUES (?, ?, ?, ?, ?)
+    ''', (planner_id, ajuste, fecha_hoy, fecha_venc, f"AJUSTE MANUAL: {motivo}"))
     conn.commit()
     conn.close()
     
-    flash(f'Saldo ajustado.', 'warning')
+    flash('Saldo ajustado.', 'warning')
     return redirect(url_for('invitaciones_admin.gestionar_socios'))
 
 @invitaciones_bp.route('/regenerar_codigo', methods=['POST'])
 @admin_required
 def regenerar_codigo():
-    """Restablecimiento de contraseña de acceso de Planner."""
     planner_id = request.form.get('planner_id')
     nuevo_codigo = "PLAN-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
     
@@ -1311,9 +1169,8 @@ def regenerar_codigo():
 @invitaciones_bp.route('/suspender_planner', methods=['POST'])
 @admin_required
 def suspender_planner():
-    """Maneja la activación o suspensión de un planner."""
     planner_id = request.form.get('planner_id')
-    accion = request.form.get('accion') # Recibimos la instrucción del botón
+    accion = request.form.get('accion') 
     
     conn = get_db_connection()
     
@@ -1322,7 +1179,7 @@ def suspender_planner():
         flash('Socio activado correctamente.', 'success')
     else:
         conn.execute("UPDATE planners SET estado = 'suspendido' WHERE id = ?", (planner_id,))
-        flash('Socio suspendido. Se le negará el acceso.', 'danger')
+        flash('Socio suspendido. Se le negara el acceso.', 'danger')
         
     conn.commit()
     conn.close()
@@ -1331,26 +1188,23 @@ def suspender_planner():
 @invitaciones_bp.route('/api/socios/<int:id>/auditoria')
 @admin_required
 def api_auditoria_planner(id):
-    """Devuelve JSON histórico con todos los paquetes recargados y las invitaciones cobradas"""
+    """API para consultar el historial de compras y gastos de un socio."""
     conn = get_db_connection()
     try:
-        # 1. Saldo real consolidado directo de la BD (SQLite usa UTC en 'now')
+        now_str = ahora_sql() 
+        
         saldo_row = conn.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as saldo
             FROM planner_paquetes 
-            WHERE planner_id = ? AND activo = 1 AND datetime(fecha_vencimiento) > datetime('now')
-        """, (id,)).fetchone()
+            WHERE planner_id = ? AND activo = 1 AND fecha_vencimiento > ?
+        """, (id, now_str)).fetchone()
         saldo = saldo_row['saldo'] if saldo_row else 0
 
-        # 2. Movimientos y cálculo de saldos teóricos
         movs_db = conn.execute("SELECT * FROM planner_paquetes WHERE planner_id = ? ORDER BY fecha_compra DESC", (id,)).fetchall()
         
         movimientos = []
         saldo_paquetes = 0
         saldo_ajustes = 0
-        
-        # AQUÍ ESTÁ LA MAGIA: Usamos tu utilidad para tener el UTC exacto formateado
-        now_str = ahora_sql() 
 
         for m in movs_db:
             m_dict = dict(m)
@@ -1361,7 +1215,6 @@ def api_auditoria_planner(id):
             
             fecha_venc = m_dict.get('fecha_vencimiento')
             
-            # Determinar si está expirado comparando manzanas con manzanas (UTC vs UTC)
             expirado = False
             if m_dict.get('activo') == 0:
                 expirado = True
@@ -1374,7 +1227,6 @@ def api_auditoria_planner(id):
             
             movimientos.append(m_dict)
             
-            # Separar el saldo teórico si el paquete sigue vivo
             if not expirado:
                 notas = str(m_dict.get('notas', '')).lower()
                 if ct < 0 or 'ajuste' in notas or 'reembolso' in notas or 'error' in notas:
@@ -1382,12 +1234,10 @@ def api_auditoria_planner(id):
                 else:
                     saldo_paquetes += restantes
 
-        # 3. Consumos (Invitaciones creadas)
         cons_db = conn.execute("SELECT id, slug, created_at, fecha_evento, datos_cliente_json FROM invitaciones WHERE planner_id = ? ORDER BY id DESC", (id,)).fetchall()
         consumos = []
         for c in cons_db:
             c_dict = dict(c)
-            # Solo tomamos los primeros 10 caracteres (YYYY-MM-DD) para la vista limpia
             c_dict['created_at'] = str(c_dict.get('created_at') or c_dict.get('fecha_evento'))[:10]
             try:
                 datos = json.loads(c_dict['datos_cliente_json']) if c_dict.get('datos_cliente_json') else {}
@@ -1412,13 +1262,13 @@ def api_auditoria_planner(id):
         conn.close()
 
 # ==============================================================================
-# ELIMINAR IMÁGENES AL VUELO DESDE EL FORMULARIO (Botón Papelera)
+# ELIMINAR IMAGENES AL VUELO DESDE EL FORMULARIO
 # ==============================================================================
 @invitaciones_bp.route('/admin/invitacion/<int:id>/eliminar-imagen/<string:tipo_imagen>', methods=['POST'])
 def eliminar_imagen_invitacion(id, tipo_imagen):
     """
-    Ruta AJAX: Si el usuario borra una foto de galería en el constructor, 
-    esta ruta la purga físicamente de Cloudflare R2 y actualiza el array JSON en la Base de Datos.
+    Elimina archivos de Cloudflare R2 usando el servicio importado para
+    mantener la logica estandarizada.
     """
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
@@ -1427,20 +1277,17 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
     conn = get_db_connection()
     try:
         inv = conn.execute("SELECT *, planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
-        if not inv: return jsonify({"success": False, "error": "Invitación no encontrada"}), 404
+        if not inv: return jsonify({"success": False, "error": "Invitacion no encontrada"}), 404
         if es_planner and str(inv['planner_id']) != str(session.get('planner_id')): return jsonify({"success": False, "error": "Permiso denegado"}), 403
 
-        from routes.invitaciones_publicas import s3_client, BUCKET_NAME
-        
-        # Eliminar un fragmento del arreglo de la galería
         if tipo_imagen == 'galeria':
             data = request.get_json()
             foto_url_a_borrar = data.get('foto_url')
             if not foto_url_a_borrar: return jsonify({"success": False, "error": "URL no proporcionada"}), 400
 
             try:
-                key = foto_url_a_borrar.split('.dev/')[-1]
-                s3_client.delete_object(Bucket=BUCKET_NAME, Key=key)
+                # BLINDAJE: Usamos el servicio oficial que tu ya creaste en services
+                delete_from_cloudflare(foto_url_a_borrar)
             except Exception as e:
                 print(f"Error R2 Galeria: {e}")
 
@@ -1452,18 +1299,17 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
             
             return jsonify({"success": True})
             
-        # Eliminar imagen única (Fondo o Portada)
         else:
             mapeo_columnas = {'portada': 'foto_portada_url', 'fondo': 'url_fondo'}
-            if tipo_imagen not in mapeo_columnas: return jsonify({"success": False, "error": "Tipo inválido"}), 400
+            if tipo_imagen not in mapeo_columnas: return jsonify({"success": False, "error": "Tipo invalido"}), 400
                 
             columna_db = mapeo_columnas[tipo_imagen]
             url_imagen_cloudflare = inv[columna_db]
             if not url_imagen_cloudflare: return jsonify({"success": False, "error": "Imagen ya eliminada"}), 400
 
             try:
-                key = url_imagen_cloudflare.split('.dev/')[-1]
-                s3_client.delete_object(Bucket=BUCKET_NAME, Key=key)
+                # BLINDAJE: Usamos el servicio oficial
+                delete_from_cloudflare(url_imagen_cloudflare)
             except Exception as e:
                 print(f"Error R2 {tipo_imagen}: {e}")
 
@@ -1477,13 +1323,12 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
     finally:
         conn.close()
 
-
 # ==============================================================================
-# GESTIÓN DE CONFIGURACIÓN DE MESAS (SEATING PLAN)
+# GESTION DE CONFIGURACION DE MESAS
 # ==============================================================================
 @invitaciones_bp.route('/admin/invitacion/<int:id>/mesas', methods=['POST'])
 def guardar_configuracion_mesas(id):
-    """Atrapa el arreglo de mesas y sillas del Modal y lo guarda como JSON"""
+    """Guarda la estructura dinamica del seating plan protegiendo los datos numéricos."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -1493,46 +1338,44 @@ def guardar_configuracion_mesas(id):
 
     conn = get_db_connection()
     try:
-        # Validación de seguridad: Que el planner no edite mesas de otro
         inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
         if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
             flash("Permiso denegado.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
-        # Recibimos las listas que mandó el HTML
         nombres = request.form.getlist('nombre_mesa[]')
         capacidades = request.form.getlist('capacidad_mesa[]')
 
-        # Las juntamos (zip) y las empaquetamos
         mesas_config = []
         for nombre, cap in zip(nombres, capacidades):
             if nombre.strip() and cap.strip():
+                # BLINDAJE: Evita crashear si el formulario envia texto en vez de numero
+                try:
+                    cap_int = int(cap)
+                except ValueError:
+                    cap_int = 10 
+                    
                 mesas_config.append({
                     'nombre': nombre.strip(),
-                    'capacidad': int(cap)
+                    'capacidad': cap_int
                 })
 
-        # Convertimos a texto JSON
         mesas_json = json.dumps(mesas_config)
 
-        # Actualizamos la Base de Datos
         conn.execute("UPDATE invitaciones SET mesas_json = ? WHERE id = ?", (mesas_json, id))
         conn.commit()
         
-        flash(f"Distribución actualizada. ({len(mesas_config)} mesas configuradas)", "success")
+        flash(f"Distribucion actualizada. ({len(mesas_config)} mesas configuradas)", "success")
     except Exception as e:
         conn.rollback()
-        flash(f"Error al guardar configuración de mesas: {str(e)}", "danger")
+        flash(f"Error al guardar configuracion de mesas: {str(e)}", "danger")
     finally:
         conn.close()
 
-    # Lo regresamos a la pantalla de invitados
     return redirect(url_for('invitaciones_admin.gestionar_pases', id=id))
-
 
 @invitaciones_bp.route('/admin/invitacion/<int:inv_id>/editar-pase/<int:pase_id>', methods=['POST'])
 def editar_pase_admin(inv_id, pase_id):
-    """Permite al Planner o Admin editar un pase existente."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -1546,7 +1389,6 @@ def editar_pase_admin(inv_id, pase_id):
             flash("Permiso denegado.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
-        # Llamamos a nuestra poderosa función unificada
         from helpers import guardar_pase_bd
         exito, msj = guardar_pase_bd(inv_id, request.form, pase_id)
         

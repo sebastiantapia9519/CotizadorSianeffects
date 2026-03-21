@@ -5,9 +5,10 @@ from flask import Response
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, send_from_directory, abort
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
-from db import get_db_connection
-from helpers import admin_required
+
+# IMPORTACIÓN DE BASE DE DATOS
 from db import get_db_connection as get_db
+from helpers import admin_required
 from utils.datetime_utils import now_utc, utc_to_local 
 
 admin_bp = Blueprint('admin', __name__)
@@ -16,13 +17,13 @@ admin_bp = Blueprint('admin', __name__)
 @admin_required
 def dashboard():
     # 1. Datos de la base de datos
-    conn = get_db_connection()
+    conn = get_db()
     users = conn.execute('SELECT * FROM usuarios ORDER BY created_at DESC').fetchall()
     conn.close()
     
     # 2. Configuración de tiempos LOCALES (Tu hora de Monterrey/CDMX)
     ahora_utc = now_utc()
-    ahora_local = utc_to_local(ahora_utc) # Requiere importar utc_to_local
+    ahora_local = utc_to_local(ahora_utc) 
     
     # Definimos la ventana de 24 horas en tu tiempo local
     hace_24h_local = ahora_local - timedelta(days=1)
@@ -52,8 +53,14 @@ def dashboard():
         # Lógica de Suscripción
         if u['subscription_end']:
             try:
-                # Convertimos fecha de DB a objeto local para comparar
-                f_utc = datetime.strptime(str(u['subscription_end'])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                # BLINDAJE SQLITE/POSTGRES: Si ya es datetime (Postgres), lo usamos. Si es texto (SQLite), lo parseamos.
+                f_end = u['subscription_end']
+                if isinstance(f_end, str):
+                    f_utc = datetime.strptime(f_end[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                else:
+                    # Asumimos que es objeto datetime nativo (Postgres)
+                    f_utc = f_end if f_end.tzinfo else f_end.replace(tzinfo=timezone.utc)
+                    
                 f_local = utc_to_local(f_utc)
                 
                 if f_local > ahora_local:
@@ -63,26 +70,34 @@ def dashboard():
                     # Riesgo de borrado (12 meses)
                     if u['role'] == 0 and f_local < proximos_a_borrar_local:
                         stats['en_riesgo'] += 1
-            except:
+            except Exception as e:
+                print(f"Error parseando subscription_end: {e}")
                 stats['vencidos'] += 1
         else:
             stats['vencidos'] += 1
 
-        # Lógica de Actividad (Last Login) - AQUÍ ESTABA EL ERROR
+        # Lógica de Actividad (Last Login)
         if u['last_login']:
             try:
-                log_utc = datetime.strptime(str(u['last_login'])[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                l_login = u['last_login']
+                if isinstance(l_login, str):
+                    log_utc = datetime.strptime(l_login[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                else:
+                    log_utc = l_login if l_login.tzinfo else l_login.replace(tzinfo=timezone.utc)
+                    
                 log_local = utc_to_local(log_utc)
+                
                 # Comparamos contra la variable correcta: hace_24h_local
                 if log_local > hace_24h_local:
                     stats['online_hoy'] += 1
-            except:
+            except Exception as e:
+                print(f"Error parseando last_login: {e}")
                 pass
 
     # 5. Envío a la plantilla
     return render_template('admin.html', 
                            users=users, 
-                           now=ahora_local, # El badge superior ahora dirá tu fecha (12/02/2026)
+                           now=ahora_local, # El badge superior ahora dirá tu fecha local
                            stats=stats, 
                            my_role=session.get('role'),
                            hace_24h_str=hace_24h_str,
@@ -100,7 +115,7 @@ def renovar(user_id, meses):
         return redirect(url_for('admin.dashboard'))
     
     nueva_fecha_fin = now_utc() + timedelta(days=meses*30)
-    conn = get_db_connection()
+    conn = get_db()
     conn.execute('UPDATE usuarios SET subscription_end = ? WHERE id = ?', (nueva_fecha_fin, user_id))
     conn.commit(); conn.close()
     flash(f'Suscripción renovada por {meses} meses.', 'success')
@@ -114,7 +129,7 @@ def cambiar_rol(user_id, nuevo_rol):
         flash('Solo el Dueño puede cambiar roles.', 'error')
         return redirect(url_for('admin.dashboard'))
     
-    conn = get_db_connection()
+    conn = get_db()
     conn.execute('UPDATE usuarios SET role = ? WHERE id = ?', (nuevo_rol, user_id))
     conn.commit(); conn.close()
     return redirect(url_for('admin.dashboard'))
@@ -127,7 +142,7 @@ def reset_password():
         flash('Solo el Dueño puede resetear passwords.', 'error')
         return redirect(url_for('admin.dashboard'))
     
-    conn = get_db_connection()
+    conn = get_db()
     conn.execute('UPDATE usuarios SET password = ? WHERE id = ?', 
                  (generate_password_hash(request.form['new_password']), request.form['user_id']))
     conn.commit(); conn.close()
@@ -153,39 +168,60 @@ def impersonate(user_id):
         flash(f'👻 Modo Fantasma: Ahora estás viendo el sistema como {user["username"]}', 'info')
         return redirect(url_for('main.index'))
     
-    return redirect(url_for('admin.panel'))
+    # CORRECCIÓN: Evita el BuildError si el usuario no existe
+    return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/delete_user', methods=['POST'])
 @admin_required
 def delete_user():
     user_id = request.form.get('user_id')
-    conn = get_db()
-    cursor = conn.cursor()
     
+    # 1. BLINDAJE DE SEGURIDAD (Evitar auto-borrado o borrado de dueños)
+    if not user_id or str(user_id) == str(session['user_id']):
+        flash('No puedes borrarte a ti mismo.', 'danger')
+        return redirect(url_for('admin.dashboard')) 
+        
+    conn = get_db()
+    
+    # Verificamos a quién intentan borrar
+    target_user = conn.execute("SELECT role FROM usuarios WHERE id = ?", (user_id,)).fetchone()
+    if not target_user:
+        conn.close()
+        flash('El usuario no existe.', 'danger')
+        return redirect(url_for('admin.dashboard'))
+        
+    # Si el que borra NO es dueño (rol 2), y la víctima es Admin (1) o Dueño (2), lo bloqueamos
+    if session.get('role') < 2 and target_user['role'] >= 1:
+        conn.close()
+        flash('No tienes permisos para borrar a este nivel de usuario.', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+    # 2. PROCESO DE BORRADO EN CASCADA
+    cursor = conn.cursor()
     try:
-        # 1. Borrar Configuración
+        # Borrar Configuración
         cursor.execute("DELETE FROM configuracion WHERE user_id = ?", (user_id,))
         
-        # 2. Borrar Detalles de Ventas y Ventas
+        # Borrar Detalles de Ventas y Ventas
         cursor.execute("DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id = ?)", (user_id,))
         cursor.execute("DELETE FROM ventas WHERE user_id = ?", (user_id,))
         
-        # 3. Borrar Inventario y Materiales
+        # Borrar Inventario y Materiales
+        cursor.execute("DELETE FROM movimientos_inventario WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM materiales WHERE user_id = ?", (user_id,))
-        try: cursor.execute("DELETE FROM movimientos_inventario WHERE user_id = ?", (user_id,))
-        except: pass
         
-        # 4. Borrar Maquinaria y Productos
+        # Borrar Maquinaria y Productos
+        cursor.execute("DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id = ?)", (user_id,))
+        cursor.execute("DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id = ?)", (user_id,))
         cursor.execute("DELETE FROM maquinaria WHERE user_id = ?", (user_id,))
         cursor.execute("DELETE FROM productos WHERE user_id = ?", (user_id,))
         
-        # 5. Borrar Logs de Envíos
-        try:
-            cursor.execute("DELETE FROM shipping_configs WHERE user_id = ?", (user_id,))
-            cursor.execute("DELETE FROM shipping_zones WHERE user_id = ?", (user_id,))
-        except: pass
+        # Borrar Logs de Envíos
+        cursor.execute("DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id = ?)", (user_id,))
+        cursor.execute("DELETE FROM shipping_zones WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM shipping_configs WHERE user_id = ?", (user_id,))
 
-        # 6. Finalmente borrar al usuario
+        # Finalmente borrar al usuario
         cursor.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
         
         conn.commit()
@@ -193,25 +229,22 @@ def delete_user():
         
     except Exception as e:
         conn.rollback()
-        flash(f'Error al eliminar: {str(e)}', 'danger')
+        print(f"Error borrando cascada user {user_id}: {e}")
+        flash('Error interno al eliminar el usuario. Intenta de nuevo.', 'danger')
     finally:
         conn.close()
 
-    return redirect(url_for('admin.panel'))
+    return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/descargar-log')
 @admin_required
 def descargar_log():
     # Solo permitimos a Admins (role >= 1)
-    # Usamos current_user.role porque es más seguro que la sesión
     if session.get('role') < 1:
         abort(403)
 
-    # Definimos la ruta del archivo. 
-    # Si configuraste el logging como lo hicimos antes, el archivo está en la raíz.
     log_path = os.path.join(current_app.root_path, 'limpieza.log')
     
-    # Verificamos si el archivo existe antes de intentar enviarlo
     if os.path.exists(log_path):
         return send_from_directory(
             directory=current_app.root_path, 
@@ -219,8 +252,6 @@ def descargar_log():
             as_attachment=True
         )
     else:
-        # Si el log no existe aún (porque la tarea no ha borrado a nadie), 
-        # devolvemos un mensaje amigable.
         return "El archivo de historial (limpieza.log) aún no se ha generado.", 404
 
 @admin_bp.route('/stop_impersonate')
@@ -256,13 +287,10 @@ def stop_impersonate():
 @admin_bp.route('/exportar-usuarios')
 @admin_required
 def exportar_usuarios():
-    # Bloqueo opcional: Puedes decidir si solo el Dueño (2) o también los Admins (1) pueden exportar.
-    # Aquí lo dejaré para Dueños y Admins, igual que descargar_log.
     if session.get('role') < 1:
         abort(403)
 
-    conn = get_db_connection()
-    # Traemos todos los usuarios ordenados por fecha de creación (los más nuevos primero)
+    conn = get_db()
     usuarios = conn.execute("""
         SELECT 
             id, username, email, company_name, 
@@ -272,15 +300,11 @@ def exportar_usuarios():
     """).fetchall()
     conn.close()
 
-    # Preparamos el archivo CSV en memoria
     si = StringIO()
-    
-    # Escribimos un byte order mark (BOM) para que Excel reconozca correctamente los acentos (UTF-8)
     si.write('\ufeff') 
     
     cw = csv.writer(si)
     
-    # Escribimos la fila de encabezados
     cw.writerow([
         'ID', 
         'Usuario', 
@@ -292,7 +316,6 @@ def exportar_usuarios():
         'Última Vez Visto'
     ])
     
-    # Escribimos los datos fila por fila
     for u in usuarios:
         cw.writerow([
             u['id'],
@@ -305,7 +328,6 @@ def exportar_usuarios():
             u['last_login'] if u['last_login'] else 'Nunca'
         ])
 
-    # Preparamos la respuesta para forzar la descarga del archivo
     output = si.getvalue()
     return Response(
         output,

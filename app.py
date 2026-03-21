@@ -1,5 +1,4 @@
 import os
-from flask import Flask
 from flask import Flask, session
 from flask_apscheduler import APScheduler
 import logging
@@ -7,6 +6,7 @@ import json
 from datetime import timedelta
 from dotenv import load_dotenv
 from services.cloudflare_service import delete_from_cloudflare
+import pytz
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -55,7 +55,6 @@ def tarea_limpieza():
         try:
             conn = get_db_connection()
             ahora = now_utc() 
-            # Formateamos a string para que empate perfecto con SQLite
             str_ahora = ahora.strftime('%Y-%m-%d %H:%M:%S')
             
             # -------------------------------------------------------------
@@ -70,10 +69,9 @@ def tarea_limpieza():
                 ids_ven = [v['id'] for v in vencidas]
                 placeholders = ', '.join(['?'] * len(ids_ven))
                 
-                # A) Borramos los productos del carrito (hijos)
-                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN ({placeholders})", ids_ven)
-                # B) Borramos la cotización (padre)
-                conn.execute(f"DELETE FROM ventas WHERE id IN ({placeholders})", ids_ven)
+                # POSTGRES READY: Convertimos la lista a tuple() para evitar errores de driver
+                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN ({placeholders})", tuple(ids_ven))
+                conn.execute(f"DELETE FROM ventas WHERE id IN ({placeholders})", tuple(ids_ven))
                 
                 logging.info(f"Cotizaciones expiradas eliminadas de raíz: {len(ids_ven)}")
 
@@ -92,12 +90,13 @@ def tarea_limpieza():
                 ids = [u['id'] for u in usuarios_out]
                 emails = [u['email'] for u in usuarios_out]
                 ph = ', '.join(['?'] * len(ids))
+                ids_tuple = tuple(ids) # POSTGRES READY
 
                 # --- A. BORRAR DETALLES (Hijos) ---
-                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id IN ({ph}))", ids)
-                conn.execute(f"DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({ph}))", ids)
-                conn.execute(f"DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({ph}))", ids)
-                conn.execute(f"DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id IN ({ph}))", ids)
+                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id IN ({ph}))", ids_tuple)
+                conn.execute(f"DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({ph}))", ids_tuple)
+                conn.execute(f"DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id IN ({ph}))", ids_tuple)
+                conn.execute(f"DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id IN ({ph}))", ids_tuple)
 
                 # --- B. BORRAR TABLAS PRINCIPALES (Padres) ---
                 tablas_directas = [
@@ -106,20 +105,18 @@ def tarea_limpieza():
                     'shipping_configs', 'shipping_zones'
                 ]
                 for tabla in tablas_directas:
-                    conn.execute(f"DELETE FROM {tabla} WHERE user_id IN ({ph})", ids)
+                    conn.execute(f"DELETE FROM {tabla} WHERE user_id IN ({ph})", ids_tuple)
 
                 # --- C. BORRAR AL USUARIO ---
-                conn.execute(f"DELETE FROM usuarios WHERE id IN ({ph})", ids)
+                conn.execute(f"DELETE FROM usuarios WHERE id IN ({ph})", ids_tuple)
                 
                 for email in emails:
                     logging.warning(f"CUENTA ELIMINADA POR INACTIVIDAD (12 MESES): {email}")
-                print(f"♻️ Limpieza UTC completada para {len(ids)} usuarios inactivos.")
+                print(f"Limpia UTC completada para {len(ids)} usuarios inactivos.")
 
             # -------------------------------------------------------------
-            # 3. PURGA DE INVITACIONES OBSOLETAS (NUEVO)
+            # 3. PURGA DE INVITACIONES OBSOLETAS
             # -------------------------------------------------------------
-            # Buscamos invitaciones cuya fecha de vigencia haya pasado hace más de 15 días
-            # (Ej. Si caducó el 1 de Mayo, se borrará definitivamente el 16 de Mayo)
             fecha_limite_purga = ahora - timedelta(days=15)
             str_fecha_purga = fecha_limite_purga.strftime('%Y-%m-%d')
 
@@ -141,13 +138,11 @@ def tarea_limpieza():
                     
                     if inv['fotos_json']:
                         try:
-                            import json # Por si acaso no está global
                             fotos_galeria = json.loads(inv['fotos_json'])
                             for foto_url in fotos_galeria:
                                 delete_from_cloudflare(foto_url)
                         except Exception as e:
                             logging.error(f"Error borrando galería R2 inv {inv_id}: {e}")
-                            pass
                             
                     # Borrar fotos subidas por los invitados
                     fotos_camara = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,)).fetchall()
@@ -155,16 +150,14 @@ def tarea_limpieza():
                         if fc['url']: delete_from_cloudflare(fc['url'])
 
                     # --- B) DESTRUCCIÓN LÓGICA EN BASE DE DATOS ---
-                    # Borramos en cascada manual (hijos primero, luego padre)
                     conn.execute("DELETE FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,))
                     conn.execute("DELETE FROM pases_invitados WHERE invitacion_id = ?", (inv_id,))
                     conn.execute("DELETE FROM buenos_deseos WHERE invitacion_id = ?", (inv_id,))
                     conn.execute("DELETE FROM invitaciones WHERE id = ?", (inv_id,))
                     
                     logging.info(f"PURGA COMPLETA: Invitación '{slug_inv}' (ID: {inv_id}) eliminada de BD y R2 por antigüedad.")
-                    print(f"🔥 Invitación '{slug_inv}' purgada del sistema liberando espacio.")
+                    print(f"Invitación '{slug_inv}' purgada del sistema liberando espacio.")
 
-            # Guardar todos los cambios (De cotizaciones, usuarios e invitaciones)
             conn.commit()
 
         except Exception as e:
@@ -186,14 +179,14 @@ def tarea_canceladas():
             if canceladas:
                 ids_canc = [c['id'] for c in canceladas]
                 placeholders = ', '.join(['?'] * len(ids_canc))
+                ids_tuple = tuple(ids_canc) # POSTGRES READY
                 
-                # Borrar items primero y luego la venta
-                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN ({placeholders})", ids_canc)
-                conn.execute(f"DELETE FROM ventas WHERE id IN ({placeholders})", ids_canc)
+                conn.execute(f"DELETE FROM venta_detalles WHERE venta_id IN ({placeholders})", ids_tuple)
+                conn.execute(f"DELETE FROM ventas WHERE id IN ({placeholders})", ids_tuple)
                 
                 conn.commit()
                 logging.info(f"Mantenimiento Mensual: {len(ids_canc)} ventas 'canceladas' borradas permanentemente.")
-                print(f"🧹 Mantenimiento: {len(ids_canc)} ventas basura eliminadas.")
+                print(f"Mantenimiento: {len(ids_canc)} ventas basura eliminadas.")
                 
         except Exception as e:
             logging.error(f"Error en tarea_canceladas: {str(e)}")
@@ -202,14 +195,10 @@ def tarea_canceladas():
 
 
 # =========================
-# BASE DE DATOS
+# BASE DE DATOS Y SCHEDULER
 # =========================
-# Se ejecuta una sola vez al arrancar la app
 init_db()
 
-# =========================
-# SCHEDULER
-# =========================
 scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
@@ -220,8 +209,8 @@ if not scheduler.get_job('Limpieza'):
         id='Limpieza',
         func=tarea_limpieza,
         trigger='cron',
-        hour='0, 12',   # 0 es la medianoche (12 AM) y 12 es el mediodía (12 PM)
-        minute=0,       # Exactamente en el minuto 0
+        hour='0, 12',   
+        minute=0,       
         replace_existing=True
     )
 
@@ -237,15 +226,6 @@ if not scheduler.get_job('LimpiezaCanceladas'):
         replace_existing=True
     )
 
-# Evitar duplicar el job (CRÍTICO cuando Flask recarga)
-if not scheduler.get_job('Limpieza'):
-    scheduler.add_job(
-        id='Limpieza',
-        func=tarea_limpieza,
-        trigger='interval',
-        hours=12,
-        replace_existing=True
-    )
 
 # =========================
 # CONTEXT PROCESSOR (GLOBAL)

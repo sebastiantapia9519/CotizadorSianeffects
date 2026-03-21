@@ -164,27 +164,64 @@ def guardar_venta():
             venta_id = int(venta_id)
 
 
+        # --- 1. RECIBIMOS DATOS (Confiamos en la intención, no en los totales) ---
         cliente = data.get('cliente', 'Cliente General')
         items = data.get('items', [])
-        subtotal = data.get('subtotal', 0)
-        descuento_pct = data.get('descuento_porcentaje', 0)
-        descuento_monto = data.get('descuento_monto', 0)
-        
-        tax_amount = float(data.get('tax_amount', 0))
+        descuento_pct = float(data.get('descuento_porcentaje', 0))
+        descuento_monto = float(data.get('descuento_monto', 0))
         tax_percent = float(data.get('tax_percent', 0))
-        
-        if tax_amount > 0:
-            tax_engine = f"IVA {int(tax_percent)}%" if tax_percent.is_integer() else f"IVA {tax_percent}%"
-        else:
-            tax_engine = "none"
-
-        total = data.get('total', 0)
-        costo_total = data.get('costo_total', 0)
         estado = data.get('estado', 'pagado')
-        monto_pagado = data.get('pago_inicial', total)
-        
-        saldo_pendiente = total - monto_pagado
-        if saldo_pendiente < 0: saldo_pendiente = 0
+        monto_pagado_request = float(data.get('pago_inicial', 0)) # Lo que el usuario dice que pagó
+
+        # --- 2. INICIO DEL BLINDAJE MATEMÁTICO ---
+        subtotal_calculado = 0.0
+        costo_total_calculado = 0.0
+
+        # Recalculamos línea por línea basándonos estrictamente en cantidad * precio
+        for item in items:
+            # Forzamos a que sean números para evitar inyecciones raras o errores de tipo
+            cantidad = float(item.get('cantidad', 0))
+            precio_u = float(item.get('precio_unitario', 0))
+            costo_u = float(item.get('costo_unitario', 0))
+            
+            # Validación de seguridad: no pueden vender cantidades negativas ni precios raros
+            if cantidad <= 0 or precio_u < 0:
+                return jsonify({'success': False, 'error': 'Cantidades o precios inválidos'}), 400
+                
+            # Ignoramos el subtotal del item que manda el frontend y lo calculamos nosotros
+            item_subtotal_real = cantidad * precio_u 
+            item['subtotal'] = item_subtotal_real # Actualizamos el diccionario con la verdad absoluta
+            
+            subtotal_calculado += item_subtotal_real
+            costo_total_calculado += (cantidad * costo_u)
+
+        # --- 3. APLICAMOS REGLAS DE NEGOCIO ---
+        # Tope de seguridad: no puedes descontar más de lo que cuesta
+        if descuento_monto > subtotal_calculado:
+            descuento_monto = subtotal_calculado 
+
+        subtotal_con_descuento = subtotal_calculado - descuento_monto
+
+        # Calculamos impuestos reales nosotros mismos
+        tax_amount_calculado = 0.0
+        tax_engine = "none"
+
+        if tax_percent > 0:
+            tax_amount_calculado = subtotal_con_descuento * (tax_percent / 100)
+            tax_engine = f"IVA {int(tax_percent)}%" if tax_percent.is_integer() else f"IVA {tax_percent}%"
+
+        # --- 4. EL TOTAL SAGRADO ---
+        total_calculado = subtotal_con_descuento + tax_amount_calculado
+
+        # --- 5. CUADRAMOS LOS PAGOS ---
+        # Si dice que pagó más del total, lo topamos al total real
+        monto_pagado_real = min(monto_pagado_request, total_calculado) 
+        saldo_pendiente_real = total_calculado - monto_pagado_real
+
+        # Si el saldo pendiente es muy cercano a 0 (por decimales), lo matamos
+        if saldo_pendiente_real < 0.05: 
+            saldo_pendiente_real = 0.0
+            estado = 'pagado'
 
         fecha_actual = ahora_sql()
         fecha_vencimiento = ahora_sql(dias=2) #Si la venta no se concreta en 2 dias se elimina
@@ -199,9 +236,10 @@ def guardar_venta():
                     total=?, costo_total=?, estado=?, monto_pagado=?, saldo_pendiente=?
                 WHERE id=? AND user_id=?
             ''', (
-                cliente, subtotal, descuento_pct, descuento_monto,
-                tax_amount, tax_engine,
-                total, costo_total, estado, monto_pagado, saldo_pendiente,
+                # AQUÍ ESTÁ EL CAMBIO: Usamos las variables _calculado y _real
+                cliente, subtotal_calculado, descuento_pct, descuento_monto,
+                tax_amount_calculado, tax_engine,
+                total_calculado, costo_total_calculado, estado, monto_pagado_real, saldo_pendiente_real,
                 venta_id, session['user_id']
             ))
             cursor.execute('DELETE FROM venta_detalles WHERE venta_id=?', (venta_id,))
@@ -216,15 +254,26 @@ def guardar_venta():
                 )
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                session['user_id'], fecha_actual, cliente, subtotal, 
+                # AQUÍ TAMBIÉN ACTUALIZAMOS LAS VARIABLES
+                session['user_id'], fecha_actual, cliente, subtotal_calculado, 
                 descuento_pct, descuento_monto, 
-                tax_amount, tax_engine,
-                total, costo_total, estado, 
-                monto_pagado, saldo_pendiente, fecha_vencimiento
+                tax_amount_calculado, tax_engine,
+                total_calculado, costo_total_calculado, estado, 
+                monto_pagado_real, saldo_pendiente_real, fecha_vencimiento
             ))
+            
+            # --- 🚨 NOTA DE MIGRACIÓN A POSTGRESQL 🚨 ---
+            # SQLite usa .lastrowid para obtener el ID recién creado. Postgres NO lo soporta así.
+            # Cuando migres, tu query de INSERT deberá terminar con: "... VALUES (...) RETURNING id"
+            # Y esta línea de abajo cambiará a: venta_id = cursor.fetchone()[0]
             venta_id = cursor.lastrowid
+        
+        # 1. Creamos variable en memoria para acumular las cantidades a descontar.
+        # Las llaves serán los ID de los materiales, y los valores la cantidad total a restar.
+        materiales_a_descontar = {}
 
         for item in items:
+            # Insertamos el detalle de la venta (una fila por producto)
             cursor.execute('''
                 INSERT INTO venta_detalles (
                     venta_id, concepto, cantidad, precio_unitario, 
@@ -241,8 +290,7 @@ def guardar_venta():
                 item.get('composicion', '[]')
             ))
 
-            print("VENTA_ID ANTES IF:", venta_id, type(venta_id))
-
+            # 2. Si usamos inventario y es una venta nueva (no edición)
             if usar_inventario and not data.get('id'): 
                 try:
                     composicion = json.loads(item.get('composicion', '[]'))
@@ -251,34 +299,49 @@ def guardar_venta():
                     for comp in composicion:
                         if comp.get('tipo') == 'material':
                             material_id = comp.get('id')
-                            cantidad_a_descontar = float(comp.get('cantidad', 0)) * cantidad_producto
+                            # Calculamos cuánto material requiere este producto en específico
+                            cantidad_requerida = float(comp.get('cantidad', 0)) * cantidad_producto
                             
-                            if cantidad_a_descontar > 0:
-                                cursor.execute('''
-                                    UPDATE materiales 
-                                    SET stock_actual = stock_actual - ? 
-                                    WHERE id = ?
-                                ''', (cantidad_a_descontar, material_id))
-                                
-                                cursor.execute('''
-                                    INSERT INTO movimientos_inventario 
-                                    (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
-                                    VALUES (?, ?, 'salida', ?, ?, 
-                                        (SELECT stock_actual FROM materiales WHERE id=?),
-                                        ?
-                                    )
-                                ''', (
-                                    session['user_id'],
-                                    material_id,
-                                    cantidad_a_descontar,
-                                    f"Venta #{venta_id} - {item['concepto']}",
-                                    material_id,
-                                    ahora_sql()
-                                ))
+                            if cantidad_requerida > 0:
+                                # En lugar de ir a la BD, sumamos en nuestro diccionario global
+                                if material_id in materiales_a_descontar:
+                                    materiales_a_descontar[material_id] += cantidad_requerida
+                                else:
+                                    materiales_a_descontar[material_id] = cantidad_requerida
                 except Exception as e:
-                    print(f"Error descontando inventario: {e}")
-                    print("DATA RECIBIDA:", data)
+                    print(f"Error calculando receta en memoria: {e}")
 
+        # 3. IMPACTO A LA BASE DE DATOS (FUERA DEL CICLO FOR DE PRODUCTOS)
+        # Ahora que ya sabemos el total exacto de cada material, hacemos los Updates.
+        if usar_inventario and not data.get('id') and materiales_a_descontar:
+            try:
+                for mat_id, total_descuento in materiales_a_descontar.items():
+                    # Restamos el stock actual de una sola vez por material
+                    cursor.execute('''
+                        UPDATE materiales 
+                        SET stock_actual = stock_actual - ? 
+                        WHERE id = ?
+                    ''', (total_descuento, mat_id))
+                    
+                    # Registramos el movimiento en el historial
+                    cursor.execute('''
+                        INSERT INTO movimientos_inventario 
+                        (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
+                        VALUES (?, ?, 'salida', ?, ?, 
+                            (SELECT stock_actual FROM materiales WHERE id=?),
+                            ?
+                        )
+                    ''', (
+                        session['user_id'],
+                        mat_id,
+                        total_descuento,
+                        f"Venta #{venta_id} - Descuento agrupado",
+                        mat_id,
+                        ahora_sql()
+                    ))
+            except Exception as e:
+                print(f"Error ejecutando descuento de inventario en BD: {e}")
+                
 
         conn.commit()
         return jsonify({'success': True, 'ticket_id': venta_id})
@@ -355,6 +418,8 @@ def historial():
 
     # 2. Primero contamos el TOTAL de resultados (Query COUNT)
     # Esto es necesario para calcular el número total de páginas
+    # Para Postgres cambiarás LIKE por ILIKE
+    # sql_count += " AND (CAST(id AS TEXT) ILIKE ? OR cliente ILIKE ?)"
     sql_count = "SELECT COUNT(*) FROM ventas WHERE user_id=?"
     params_count = [uid]
 
@@ -366,7 +431,6 @@ def historial():
     total_registros = conn.execute(sql_count, params_count).fetchone()[0]
     
     # Calculamos total de páginas (importamos math aquí por si acaso no está arriba)
-    import math 
     total_pages = math.ceil(total_registros / per_page)
 
     # 3. Ahora traemos los datos de la página actual (Query DATA)
@@ -469,14 +533,24 @@ def configuracion():
             else:
                 flash('La contraseña es muy corta.', 'danger')
 
+        # =========================================================
+        # INICIO DE BLINDAJE EN CONFIGURACIÓN (Sin tocar Frontend)
+        # =========================================================
+
         elif action == 'update_business':
-            margen = request.form['margen']
-            empresa = request.form['nombre_empresa']
-            slogan = request.form['slogan']
-            website = request.form['website']
+            # Blindaje numérico
+            try:
+                margen = float(request.form.get('margen') or 0)
+            except ValueError:
+                margen = 0.0
+
+            empresa = request.form.get('nombre_empresa', '')
+            slogan = request.form.get('slogan', '')
+            website = request.form.get('website', '')
             
-            inventario_activo = 1 if request.form.get('inventario_activo') else 0
-            ticket_bw = 1 if request.form.get('ticket_bw') else 0
+            # POSTGRES READY: Usamos booleanos explícitos (True/False) en lugar de 1/0
+            inventario_activo = True if request.form.get('inventario_activo') else False
+            ticket_bw = True if request.form.get('ticket_bw') else False
 
             # PASO 1: Actualizar la tabla USUARIOS (Fuente de la verdad del nombre)
             conn.execute('UPDATE usuarios SET company_name=? WHERE id=?', (empresa, uid))
@@ -496,31 +570,33 @@ def configuracion():
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                 ''', (uid, margen, empresa, slogan, website, inventario_activo, ticket_bw))
 
-            
             flash('Datos del negocio guardados correctamente.', 'success')
 
         # --- GESTIÓN DE ENVÍOS (Config Base) ---
         elif action == 'update_shipping':
             try:
-                # 1. Atrapamos el link que ahora sí tiene "name"
                 origin_address = request.form.get('origin_address') 
                 origin_lat = request.form.get('origin_lat')
                 origin_lng = request.form.get('origin_lng')
-                local_base = float(request.form.get('local_base_rate') or 0)
-                local_km = float(request.form.get('local_km_rate') or 0)
-                safety_margin = int(request.form.get('safety_margin') or 10)
+                
+                # BLINDAJE: Si el frontend manda basura, atrapamos el error sin tumbar el sistema
+                try:
+                    local_base = float(request.form.get('local_base_rate') or 0)
+                    local_km = float(request.form.get('local_km_rate') or 0)
+                    safety_margin = int(request.form.get('safety_margin') or 10)
+                except ValueError:
+                    flash('Los costos y márgenes de envío deben ser numéricos.', 'danger')
+                    return redirect(url_for('main.configuracion'))
 
                 existing = conn.execute("SELECT id FROM shipping_configs WHERE user_id=?", (uid,)).fetchone()
 
                 if existing:
-                    # 2. Agregamos origin_address al UPDATE
                     conn.execute("""
                         UPDATE shipping_configs 
                         SET origin_address=?, origin_lat=?, origin_lng=?, local_base_rate=?, local_km_rate=?, safety_margin_percent=?
                         WHERE user_id=?
                     """, (origin_address, origin_lat, origin_lng, local_base, local_km, safety_margin, uid))
                 else:
-                    # 3. Agregamos origin_address al INSERT
                     conn.execute("""
                         INSERT INTO shipping_configs (user_id, origin_address, origin_lat, origin_lng, local_base_rate, local_km_rate, safety_margin_percent)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -537,7 +613,6 @@ def configuracion():
                 nombre = request.form.get('zone_name')
                 estados_str = request.form.get('zone_states', '').upper()
                 
-                # Convertimos "NL, COAH" a lista ["NL", "COAH"]
                 if 'TODOS' in estados_str or 'ALL' in estados_str:
                     estados_json = json.dumps(['ALL'])
                 else:
@@ -553,26 +628,36 @@ def configuracion():
         # --- GESTIÓN DE ZONAS (Borrar) ---
         elif action == 'delete_zone':
             try:
-                zone_id = int(request.form.get('zone_id')) # FORZAMOS ENTERO
-                # Primero borramos las tarifas asociadas
+                raw_zone_id = request.form.get('zone_id')
+                # BLINDAJE: Validar que sí haya un número
+                if not raw_zone_id or not str(raw_zone_id).isdigit():
+                    flash("ID de zona inválido.", "danger")
+                    return redirect(url_for('main.configuracion'))
+                    
+                zone_id = int(raw_zone_id)
                 conn.execute("DELETE FROM shipping_rates WHERE zone_id=?", (zone_id,))
                 conn.execute("DELETE FROM shipping_zones WHERE id=? AND user_id=?", (zone_id, uid))
                 flash('Zona y sus tarifas eliminadas.', 'warning')
             except Exception as e:
                 flash(f'Error al eliminar zona: {e}', 'danger')
 
-        # --- GESTIÓN DE TARIFAS (Agregar) - AQUÍ ESTABA EL ERROR ---
+        # --- GESTIÓN DE TARIFAS (Agregar) ---
         elif action == 'add_rate':
             try:
                 raw_zone_id = request.form.get('zone_id')
-                
-                # VALIDACIÓN DE SEGURIDAD
                 if not raw_zone_id or raw_zone_id == 'None':
-                    raise ValueError("El ID de la zona no se cargó correctamente. Recarga la página.")
+                    flash("El ID de la zona no se cargó correctamente. Recarga la página.", "danger")
+                    return redirect(url_for('main.configuracion'))
 
                 zone_id = int(raw_zone_id) 
-                peso = float(request.form.get('max_weight'))
-                precio = float(request.form.get('price'))
+                
+                # BLINDAJE: Cast seguro a float
+                try:
+                    peso = float(request.form.get('max_weight') or 0)
+                    precio = float(request.form.get('price') or 0)
+                except ValueError:
+                    flash("El peso y el precio deben ser valores numéricos válidos.", "danger")
+                    return redirect(url_for('main.configuracion'))
                 
                 conn.execute("INSERT INTO shipping_rates (zone_id, max_weight_kg, price) VALUES (?, ?, ?)",
                              (zone_id, peso, precio))
@@ -584,11 +669,21 @@ def configuracion():
         # --- GESTIÓN DE TARIFAS (Borrar) ---
         elif action == 'delete_rate':
             try:
-                rate_id = int(request.form.get('rate_id')) # FORZAMOS ENTERO
+                raw_rate_id = request.form.get('rate_id')
+                # BLINDAJE: Evitar el Error 500 si rate_id viene nulo o con letras
+                if not raw_rate_id or not str(raw_rate_id).isdigit():
+                    flash("ID de tarifa inválido.", "danger")
+                    return redirect(url_for('main.configuracion'))
+                    
+                rate_id = int(raw_rate_id) 
                 conn.execute("DELETE FROM shipping_rates WHERE id=?", (rate_id,))
                 flash('Tarifa eliminada.', 'warning')
             except Exception as e:
                 flash(f'Error al eliminar tarifa: {e}', 'danger')
+
+        # =========================================================
+        # FIN DE BLINDAJE EN CONFIGURACIÓN
+        # =========================================================
 
         conn.commit()
         conn.close()
@@ -752,13 +847,22 @@ def descargar_excel():
         conn.close()
         
         if not df.empty:
-            df['Fecha_Registro'] = pd.to_datetime(df['Fecha_Registro'], utc=True, errors='coerce')
-            df['Fecha_Registro'] = df['Fecha_Registro'].dt.tz_convert('America/Mexico_City')
-            df['Fecha_Registro'] = df['Fecha_Registro'].dt.strftime('%d/%m/%Y %I:%M %p').fillna('Pendiente')
+
+            # 1. Normalizamos la columna sin importar si viene como String (SQLite) o Datetime (Postgres)
+            df['Fecha_Registro'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
+            
+            # 2. Iteramos con .apply() para usar tu función centralizada
+            # x.to_pydatetime() transforma el objeto de Pandas a un datetime estándar de Python
+            df['Fecha_Registro'] = df['Fecha_Registro'].apply(
+                lambda x: utc_to_local(x.to_pydatetime()).strftime('%d/%m/%Y %I:%M %p') if pd.notnull(x) else 'Pendiente'
+            )
             
             if 'Fecha_Vencimiento' in df.columns:
-                df['Fecha_Vencimiento'] = pd.to_datetime(df['Fecha_Vencimiento'], utc=True, errors='coerce')
-                df['Fecha_Vencimiento'] = df['Fecha_Vencimiento'].dt.strftime('%d/%m/%Y').fillna('')
+                df['Fecha_Vencimiento'] = pd.to_datetime(df['Fecha_Vencimiento'], errors='coerce')
+                df['Fecha_Vencimiento'] = df['Fecha_Vencimiento'].apply(
+                    # Para el vencimiento usamos el mismo flujo, pero formateando solo el día
+                    lambda x: utc_to_local(x.to_pydatetime()).strftime('%d/%m/%Y') if pd.notnull(x) else ''
+                )
 
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer: 

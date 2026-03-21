@@ -1,5 +1,8 @@
+import json
+from utils.datetime_utils import ahora_sql
 from flask import Blueprint, jsonify, session, request
 from db import get_db_connection as get_db
+from helpers import login_required
 
 api_bp = Blueprint('api', __name__)
 
@@ -118,13 +121,20 @@ def obtener_detalles_venta(id):
 
 
 @api_bp.route('/actualizar_venta', methods=['POST'])
+@login_required # Usamos tu decorador en lugar de revisar la sesión a mano
 def actualizar_venta():
-    if 'user_id' not in session:
-        return jsonify({'error': 'No autorizado'}), 401
-
     data = request.get_json()
     venta_id = data.get('id')
-    abono = float(data.get('abono', 0))
+    
+    # 1. BLINDAJE: Evitar que truenen el float()
+    try:
+        abono = float(data.get('abono', 0))
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'El abono debe ser un número válido'}), 400
+
+    # 2. BLINDAJE ANTI-HACK: No pueden abonar ceros ni números negativos
+    if abono <= 0:
+        return jsonify({'success': False, 'error': 'El abono debe ser mayor a cero'}), 400
 
     conn = get_db()
     cursor = conn.cursor()
@@ -136,21 +146,32 @@ def actualizar_venta():
         ).fetchone()
 
         if not venta:
-            return jsonify({'success': False}), 404
+            return jsonify({'success': False, 'error': 'Venta no encontrada'}), 404
+
+        saldo_actual = venta['total'] - venta['monto_pagado']
+        
+        # 3. REGLA DE NEGOCIO: No pueden abonar más de lo que deben
+        if abono > saldo_actual:
+            abono = saldo_actual
 
         nuevo_pagado = venta['monto_pagado'] + abono
         nuevo_saldo = venta['total'] - nuevo_pagado
 
-        estado = 'pagado' if nuevo_saldo <= 0 else 'anticipo'
+        # Matamos decimales residuales para evitar estados inconsistentes
+        if nuevo_saldo < 0.05:
+            nuevo_saldo = 0.0
+            estado = 'pagado'
+        else:
+            estado = 'anticipo'
 
         cursor.execute('''
             UPDATE ventas
             SET monto_pagado = ?, saldo_pendiente = ?, estado = ?
             WHERE id = ?
-        ''', (nuevo_pagado, max(nuevo_saldo, 0), estado, venta_id))
+        ''', (nuevo_pagado, nuevo_saldo, estado, venta_id))
 
         conn.commit()
-        return jsonify({'success': True})
+        return jsonify({'success': True, 'nuevo_estado': estado, 'nuevo_saldo': nuevo_saldo})
 
     except Exception as e:
         conn.rollback()
@@ -160,23 +181,95 @@ def actualizar_venta():
 
 
 @api_bp.route('/cancelar_venta', methods=['POST'])
+@login_required
 def cancelar_venta():
-    if 'user_id' not in session:
-        return jsonify({'error': 'No autorizado'}), 401
-
     data = request.get_json()
     venta_id = data.get('id')
 
     conn = get_db()
+    cursor = conn.cursor()
+
     try:
-        conn.execute(
+        # 1. BLINDAJE: Verificar si la venta existe y su estado actual
+        venta = cursor.execute(
+            'SELECT estado FROM ventas WHERE id = ? AND user_id = ?',
+            (venta_id, session['user_id'])
+        ).fetchone()
+
+        if not venta:
+            return jsonify({'success': False, 'error': 'Venta no encontrada'}), 404
+        
+        # Si ya está cancelada, abortamos para no duplicar la devolución de inventario
+        if venta['estado'] == 'cancelada':
+            return jsonify({'success': False, 'error': 'La venta ya estaba cancelada'}), 400
+
+        # 2. REGLA DE NEGOCIO: ¿Tiene el inventario activo?
+        config = cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=?', (session['user_id'],)).fetchone()
+        usar_inventario = config['inventario_activo'] if config else 0
+
+        # 3. DEVOLUCIÓN DE INVENTARIO (Solo si lo tiene activo)
+        if usar_inventario:
+            detalles = cursor.execute('SELECT cantidad, composicion FROM venta_detalles WHERE venta_id = ?', (venta_id,)).fetchall()
+            
+            materiales_a_devolver = {}
+            
+            # Agrupamos los materiales igual que cuando vendimos
+            for detalle in detalles:
+                try:
+                    composicion = json.loads(detalle['composicion'] or '[]')
+                    cantidad_producto = float(detalle['cantidad'])
+                    
+                    for comp in composicion:
+                        if comp.get('tipo') == 'material':
+                            mat_id = comp.get('id')
+                            # Multiplicamos la cantidad del material por la cantidad de productos cancelados
+                            cantidad_requerida = float(comp.get('cantidad', 0)) * cantidad_producto
+                            
+                            if cantidad_requerida > 0:
+                                if mat_id in materiales_a_devolver:
+                                    materiales_a_devolver[mat_id] += cantidad_requerida
+                                else:
+                                    materiales_a_devolver[mat_id] = cantidad_requerida
+                except Exception as e:
+                    print(f"Error procesando devolución de receta: {e}")
+
+            # Impactamos la base de datos: Devolvemos el stock de golpe
+            for mat_id, total_devolucion in materiales_a_devolver.items():
+                cursor.execute('''
+                    UPDATE materiales 
+                    SET stock_actual = stock_actual + ? 
+                    WHERE id = ?
+                ''', (total_devolucion, mat_id))
+                
+                # Dejamos la huella de auditoría
+                cursor.execute('''
+                    INSERT INTO movimientos_inventario 
+                    (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
+                    VALUES (?, ?, 'entrada', ?, ?, 
+                        (SELECT stock_actual FROM materiales WHERE id=?),
+                        ?
+                    )
+                ''', (
+                    session['user_id'],
+                    mat_id,
+                    total_devolucion,
+                    f"Cancelación Venta #{venta_id} - Devolución de stock",
+                    mat_id,
+                    ahora_sql()
+                ))
+
+        # 4. Finalmente, cambiamos el estatus de la venta
+        cursor.execute(
             'UPDATE ventas SET estado = "cancelada" WHERE id = ? AND user_id = ?',
             (venta_id, session['user_id'])
         )
+        
         conn.commit()
         return jsonify({'success': True})
+
     except Exception as e:
         conn.rollback()
+        print(f"Error al cancelar venta {venta_id}: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()

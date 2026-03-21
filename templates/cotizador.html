@@ -412,9 +412,20 @@
                         <span class="fw-bold" id="taxAmountDisplay">+$0.00</span>
                     </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top">
+                    <div
+                        class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top position-relative">
                         <span class="h5 fw-bold text-dark mb-0">Total:</span>
-                        <span id="totalTicket" class="total-ticket">$0.00</span>
+
+                        <div id="boxTotalInteractuable" class="text-end" style="cursor: pointer;"
+                            onclick="activarAjusteTotal()" title="Haz clic para cuadrar el ticket">
+                            <span id="totalTicket" class="total-ticket text-primary">$0.00</span>
+                            <input type="number" id="inputTotalMagico"
+                                class="form-control form-control-lg text-end total-ticket d-none text-success"
+                                style="width: 160px; font-weight: 900; background-color: #f0fdf4;"
+                                onblur="aplicarMagiaTotal()" onkeyup="if(event.key === 'Enter') this.blur()">
+                            <small class="d-block text-muted" id="hintTotal" style="font-size: 0.65rem;"><i
+                                    class="fas fa-magic me-1"></i>Clic para redondear/ajustar</small>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -677,16 +688,16 @@
         const opcion = sel.options[sel.selectedIndex];
         const precio = parseFloat(opcion.getAttribute('data-precio')) || 0;
         const unidad = opcion.getAttribute('data-unidad') || 'pieza'; // <-- Leemos la unidad de BD
-        
+
         row.querySelector('.input-precio').value = precio.toFixed(2);
-        
+
         // Actualizamos el textito al lado del input de cantidad
         const labelUnidad = row.querySelector('.label-unidad');
         if (labelUnidad) {
             // Si es 'pieza', lo abreviamos a 'pza' para que no estorbe visualmente
             labelUnidad.innerText = unidad === 'pieza' ? 'pza' : unidad;
         }
-        
+
         calcularFila(sel);
     }
 
@@ -756,7 +767,14 @@
             taxRow.style.display = 'none';
         }
 
-        const totalFinal = Math.ceil(baseImponible + impuestosMonto);
+        // Sumamos el subtotal limpio y los impuestos
+        const totalFinalBruto = baseImponible + impuestosMonto;
+        
+        // Limpiamos la basura de los micro-decimales dejándolo a 2 decimales exactos
+        const totalLimpio = Math.round(totalFinalBruto * 100) / 100;
+        
+        // Ahora sí, si hay centavos reales (ej. 98.30), lo sube. Si es 720.00, lo respeta.
+        const totalFinal = Math.ceil(totalLimpio);
 
         document.getElementById('labelSubtotal').innerText = formatMoney(subtotalCarrito);
         document.getElementById('labelDescuento').innerText = '-' + formatMoney(descuentoMonto);
@@ -772,7 +790,75 @@
         return '$' + amount.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,');
     }
 
-function confirmarLimpiarTodo() {
+    function activarAjusteTotal() {
+        if (carrito.length === 0) return;
+
+        const totalActualTexto = document.getElementById('totalTicket').innerText.replace(/[$,]/g, '');
+        const totalActual = parseFloat(totalActualTexto) || 0;
+
+        document.getElementById('totalTicket').classList.add('d-none');
+        document.getElementById('hintTotal').classList.add('d-none');
+
+        const input = document.getElementById('inputTotalMagico');
+        input.classList.remove('d-none');
+        input.value = totalActual.toFixed(2);
+        input.focus();
+        input.select();
+    }
+
+    function aplicarMagiaTotal() {
+        document.getElementById('totalTicket').classList.remove('d-none');
+        document.getElementById('hintTotal').classList.remove('d-none');
+
+        const input = document.getElementById('inputTotalMagico');
+        input.classList.add('d-none');
+
+        const nuevoTotal = parseFloat(input.value);
+        const totalOriginal = parseFloat(document.getElementById('totalTicket').innerText.replace(/[$,]/g, ''));
+
+        if (isNaN(nuevoTotal) || nuevoTotal <= 0 || nuevoTotal === totalOriginal) {
+            calcularTotal();
+            return;
+        }
+
+        // --- 1. MATEMÁTICA INVERSA ---
+        const taxSwitch = document.getElementById('taxSwitch').checked;
+        const taxPct = taxSwitch ? (parseFloat(document.getElementById('taxPercent').value) || 0) : 0;
+        const factorTax = 1 + (taxPct / 100);
+
+        const descPct = parseFloat(document.getElementById('inputDescuento').value) || 0;
+        const factorDesc = 1 - (descPct / 100);
+
+        const costoEnvioActual = typeof costoEnvio !== 'undefined' ? costoEnvio : 0;
+
+        const totalSinImpuesto = nuevoTotal / factorTax;
+        const totalSinEnvio = totalSinImpuesto - costoEnvioActual;
+        const subtotalObjetivo = totalSinEnvio / factorDesc;
+
+        // --- 2. PRORRATEO CON DECIMALES OCULTOS ---
+        let subtotalActualCarrito = 0;
+        carrito.forEach(i => subtotalActualCarrito += (i.precio_unitario * i.cantidad));
+
+        if (subtotalActualCarrito === 0) return;
+
+        const factorProrrateo = subtotalObjetivo / subtotalActualCarrito;
+
+        carrito.forEach(item => {
+            // TRUCO: Usamos 6 decimales para que la multiplicación en Python sea perfecta
+            item.precio_unitario = parseFloat((item.precio_unitario * factorProrrateo).toFixed(6));
+            item.subtotal = parseFloat((item.precio_unitario * item.cantidad).toFixed(6));
+        });
+
+        // Refrescamos visuales
+        renderizarCarrito();
+
+        Swal.fire({
+            toast: true, position: 'top-end', icon: 'success',
+            title: '¡Total ajustado a ' + formatMoney(nuevoTotal) + '!', showConfirmButton: false, timer: 1500
+        });
+    }
+
+    function confirmarLimpiarTodo() {
         Swal.fire({
             title: '¿Limpiar todo?',
             text: "Se borrarán los materiales y ajustes de la receta actual.",
@@ -790,13 +876,28 @@ function confirmarLimpiarTodo() {
     }
 
     function limpiarCalculadora() {
+        // Reiniciamos el select de cargar recetas si existe
+        const selectCargar = document.getElementById('selectCargarProducto');
+        if (selectCargar) selectCargar.value = "";
+
+        // Limpiamos la zona de armado
         document.getElementById('listaMateriales').innerHTML = '';
         document.getElementById('nombreProductoActual').value = '';
         document.getElementById('cantidadParaCarrito').value = 1;
         document.getElementById('costosExtra').value = 0;
+
+        // Desmarcamos máquinas
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
-        calcularTotal();
+
+        // Reiniciamos variables y visuales de costo
+        precioVentaCalculado = 0;
+        costoProduccionCalculado = 0;
+        document.getElementById('resultadoCosto').innerText = '$0.00';
+        document.getElementById('resultadoPrecio').innerText = '$0.00';
+
+        // Agregamos una fila en blanco lista para usarse y recalculamos (sin afectar el carrito)
         agregarFila();
+        calcularTotal();
     }
 
     function agregarAlCarrito() {
@@ -836,7 +937,17 @@ function confirmarLimpiarTodo() {
             subtotal: precioVentaCalculado * cant,
             composicion: composicionActual
         });
+
         renderizarCarrito();
+
+        // --- NUEVO: Limpiamos la interfaz tras agregar ---
+        limpiarCalculadora();
+
+        // Opcional: Una pequeña alerta visual para confirmar
+        Swal.fire({
+            toast: true, position: 'top-end', icon: 'success',
+            title: 'Agregado al carrito', showConfirmButton: false, timer: 1500
+        });
     }
 
     function renderizarCarrito() {
@@ -894,12 +1005,42 @@ function confirmarLimpiarTodo() {
     }
 
     function finalizarCompra(tipo) {
+        // 1. Validaciones iniciales
         if (carrito.length === 0) {
             Swal.fire({ icon: 'info', title: 'Carrito vacío', text: 'Agrega productos antes de finalizar.', borderRadius: '15px' });
             return;
         }
+
         const cli = document.getElementById('nombreCliente').value || "Cliente General";
 
+        // --- 2. MAGIA INVISIBLE: SINCRONIZAR UI CON BACKEND ---
+        const totalVisualTexto = document.getElementById('totalTicket').innerText.replace(/[$,]/g, '');
+        const totalVisual = parseFloat(totalVisualTexto) || 0;
+
+        const taxSwitch = document.getElementById('taxSwitch').checked;
+        const taxPct = taxSwitch ? (parseFloat(document.getElementById('taxPercent').value) || 0) : 0;
+        const factorTax = 1 + (taxPct / 100);
+
+        const descPct = parseFloat(document.getElementById('inputDescuento').value) || 0;
+        const factorDesc = 1 - (descPct / 100);
+
+        const costoEnvioActual = typeof costoEnvio !== 'undefined' ? costoEnvio : 0;
+
+        const subtotalObjetivo = ((totalVisual / factorTax) - costoEnvioActual) / factorDesc;
+
+        let subtotalActualCarrito = 0;
+        carrito.forEach(i => subtotalActualCarrito += (i.precio_unitario * i.cantidad));
+
+        if (subtotalActualCarrito > 0 && subtotalObjetivo > 0) {
+            const factorProrrateo = subtotalObjetivo / subtotalActualCarrito;
+            carrito.forEach(item => {
+                item.precio_unitario = parseFloat((item.precio_unitario * factorProrrateo).toFixed(6));
+                item.subtotal = parseFloat((item.precio_unitario * item.cantidad).toFixed(6));
+            });
+        }
+        // --- FIN MAGIA INVISIBLE ---
+
+        // 3. Recalcular las variables finales
         let subtotal = 0;
         let costo_total = 0;
         carrito.forEach(i => {
@@ -907,14 +1048,15 @@ function confirmarLimpiarTodo() {
             costo_total += (i.costo_unitario * i.cantidad);
         });
 
-        const desc_porcentaje = parseInt(document.getElementById('inputDescuento').value) || 0;
-        const desc_monto = subtotal * (desc_porcentaje / 100);
-        const taxAmountText = document.getElementById('taxAmountDisplay').innerText.replace('+$', '').replace('$', '').replace(',', '');
-        const tax_amount = parseFloat(taxAmountText) || 0;
-        const tax_percent = document.getElementById('taxSwitch').checked ? parseFloat(document.getElementById('taxPercent').value) : 0;
-        const total = Math.ceil((subtotal - desc_monto) + tax_amount);
+        const desc_monto = subtotal * (descPct / 100);
+        const subtotal_con_descuento = subtotal - desc_monto;
+        const tax_amount = subtotal_con_descuento * (taxPct / 100);
+
+        const totalFinalCalculado = Math.round(((subtotal_con_descuento + costoEnvioActual) + tax_amount) * 100) / 100;
+
+        // 4. Gestión de Estados y Pagos
         let estado = 'pagado';
-        let pago_inicial = total;
+        let pago_inicial = totalFinalCalculado;
 
         if (tipo === 'cotizacion') {
             estado = 'cotizacion';
@@ -923,16 +1065,21 @@ function confirmarLimpiarTodo() {
             estado = 'anticipo';
             const inputPago = document.getElementById('inputPagoInicial').value;
             pago_inicial = parseFloat(inputPago) || 0;
+
             if (!inputPago || pago_inicial <= 0) {
                 Swal.fire({ icon: 'error', title: 'Monto inválido', text: 'Ingresa cuánto estás recibiendo de anticipo.', borderRadius: '15px' });
                 return;
             }
-            if (pago_inicial >= total) estado = 'pagado';
+            if (pago_inicial >= totalFinalCalculado) estado = 'pagado';
         }
 
+        // 5. Preparar experiencia de usuario (Ventana emergente)
         const ventanaTicket = window.open('', '_blank');
-        if (ventanaTicket) ventanaTicket.document.write('<h2 style="text-align:center;font-family:sans-serif;margin-top:50px">Generando Ticket... 🧾</h2>');
+        if (ventanaTicket) {
+            ventanaTicket.document.write('<h2 style="text-align:center;font-family:sans-serif;margin-top:50px">Generando Ticket... 🧾</h2>');
+        }
 
+        // 6. Envío de datos al Backend
         fetch('/guardar_venta', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -945,16 +1092,14 @@ function confirmarLimpiarTodo() {
                     precio_unitario: i.precio_unitario,
                     costo_unitario: i.costo_unitario,
                     subtotal: i.subtotal,
-                    composicion: typeof i.composicion === 'string'
-                        ? i.composicion
-                        : JSON.stringify(i.composicion)
+                    composicion: typeof i.composicion === 'string' ? i.composicion : JSON.stringify(i.composicion)
                 })),
                 subtotal: subtotal,
-                descuento_porcentaje: desc_porcentaje,
+                descuento_porcentaje: descPct,
                 descuento_monto: desc_monto,
                 tax_amount: tax_amount,
-                tax_percent: tax_percent,
-                total: total,
+                tax_percent: taxPct,
+                total: totalFinalCalculado,
                 costo_total: costo_total,
                 estado: estado,
                 pago_inicial: pago_inicial
@@ -963,24 +1108,33 @@ function confirmarLimpiarTodo() {
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-
                     if (ventanaTicket) {
                         ventanaTicket.location.href = '/ticket/' + data.ticket_id;
                     } else {
                         window.location.href = '/ticket/' + data.ticket_id;
                     }
-
                     setTimeout(() => window.location.reload(), 800);
-
                 } else {
                     if (ventanaTicket) ventanaTicket.close();
-                    alert("Error: " + data.error);
+                    // REEMPLAZO 1: Alert nativo por SweetAlert
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'No se pudo guardar',
+                        text: data.error,
+                        borderRadius: '15px'
+                    });
                 }
             })
             .catch(err => {
                 if (ventanaTicket) ventanaTicket.close();
                 console.error(err);
-                alert("Error de conexión.");
+                // REEMPLAZO 2: Alert nativo por SweetAlert
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'Hubo un problema de red al procesar la venta. Revisa tu conexión.',
+                    borderRadius: '15px'
+                });
             });
     }
 
@@ -1019,9 +1173,9 @@ function confirmarLimpiarTodo() {
             .then(async response => {
                 const data = await response.json();
                 if (!response.ok) return Promise.reject(data.error || response.statusText);
-                
+
                 Swal.fire({ icon: 'success', title: '¡Receta guardada!', showConfirmButton: false, timer: 1500 })
-                .then(() => location.reload());
+                    .then(() => location.reload());
             })
             .catch(error => Swal.fire('Error', error, 'error'));
     }
@@ -1203,7 +1357,7 @@ function confirmarLimpiarTodo() {
     // Detectar si venimos del historial o de recetas para cargar datos
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
-        
+
         const idCotizacion = urlParams.get('cargar_cotizacion');
         const idReceta = urlParams.get('cargar_receta');
 

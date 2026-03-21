@@ -1,30 +1,61 @@
 from geopy.distance import geodesic
 from models.shipping_model import ShippingModel
+import requests
+import re
 
 class ShippingService:
     
     def __init__(self, user_id):
         self.user_id = user_id
-        self.config = ShippingModel.get_config(user_id)
+        row = ShippingModel.get_config(user_id)
+        self.config = dict(row) if row else None
 
     def calcular_peso_volumetrico(self, largo, ancho, alto):
-        # PROTECCIÓN: Convertimos a float por si llega texto
-        return (float(largo) * float(ancho) * float(alto)) / 5000
+        """
+        Calcula el peso volumetrico estandar de paqueteria.
+        Asume que los valores ya fueron validados y convertidos a float.
+        """
+        return (largo * ancho * alto) / 5000.0
 
     def cotizar_local(self, destino_lat, destino_lng):
+        """
+        Calcula el costo de envio local basado en la distancia en linea recta (geodesica)
+        usando las coordenadas de origen configuradas por el usuario.
+        """
         if not self.config:
-            return {"error": "Configuración de envío no encontrada"}
+            return {"error": "Configuracion de envio no encontrada"}
             
-        if not self.config['origin_lat'] or not self.config['origin_lng']:
-            return {"error": "Falta configurar la ubicación de origen"}
+        # Validacion segura de datos de origen en la base de datos
+        origin_lat = self.config.get('origin_lat')
+        origin_lng = self.config.get('origin_lng')
+        
+        if not origin_lat or not origin_lng:
+            return {"error": "Falta configurar la ubicacion de origen"}
 
-        origen = (self.config['origin_lat'], self.config['origin_lng'])
-        destino = (destino_lat, destino_lng)
+        # Blindaje de tipos de datos para evitar caidas en la libreria geodesic
+        try:
+            lat_origen = float(origin_lat)
+            lng_origen = float(origin_lng)
+            lat_destino = float(destino_lat)
+            lng_destino = float(destino_lng)
+        except (ValueError, TypeError):
+            return {"error": "Las coordenadas proporcionadas no son validas."}
+
+        origen = (lat_origen, lng_origen)
+        destino = (lat_destino, lng_destino)
         
-        distancia_km = geodesic(origen, destino).km
+        try:
+            distancia_km = geodesic(origen, destino).km
+        except Exception as e:
+            return {"error": f"Error al calcular la distancia: {str(e)}"}
         
-        costo_puro = self.config['local_base_rate'] + (distancia_km * self.config['local_km_rate'])
-        margen = 1 + (self.config['safety_margin_percent'] / 100)
+        # Obtencion segura de las tarifas con fallback a 0.0 para prevenir errores matematicos
+        base_rate = float(self.config.get('local_base_rate') or 0.0)
+        km_rate = float(self.config.get('local_km_rate') or 0.0)
+        safety_margin = float(self.config.get('safety_margin_percent') or 0.0)
+        
+        costo_puro = base_rate + (distancia_km * km_rate)
+        margen = 1.0 + (safety_margin / 100.0)
         
         total = costo_puro * margen
         
@@ -35,17 +66,25 @@ class ShippingService:
         }
 
     def cotizar_nacional(self, peso_kg, largo, ancho, alto, estado_destino):
+        """
+        Calcula el costo de envio nacional buscando la zona correspondiente al estado
+        y determinando el peso cobrable (el mayor entre peso real y volumetrico).
+        """
         if not self.config:
-            return {"error": "Configuración no encontrada. Ve a Configuración > Envíos."}
+            return {"error": "Configuracion no encontrada. Ve a Configuracion > Envios."}
 
+        # 1. Blindaje de tipos de datos y extraccion de texto residual
         try:
-            # 1. BLINDAJE DE TIPOS DE DATOS
             peso_kg = float(peso_kg)
             largo = float(largo)
             ancho = float(ancho)
             alto = float(alto)
-        except ValueError:
-            return {"error": "Las dimensiones y peso deben ser números válidos."}
+        except (ValueError, TypeError):
+            return {"error": "Las dimensiones y peso deben ser numeros validos."}
+
+        # Validacion logica: Prevenir inyeccion de valores negativos o paquetes imposibles
+        if peso_kg <= 0 or largo <= 0 or ancho <= 0 or alto <= 0:
+            return {"error": "Las dimensiones y el peso deben ser mayores a cero."}
 
         # 2. Calcular peso cobrable
         peso_vol = self.calcular_peso_volumetrico(largo, ancho, alto)
@@ -54,24 +93,48 @@ class ShippingService:
         # 3. Encontrar la zona
         zona = ShippingModel.get_zone_by_state(self.user_id, estado_destino)
         
-        # Si no hay zona específica, intentamos buscar la zona "ALL" (Nacional General)
+        # Si no hay zona especifica, intentamos buscar la zona general
         if not zona:
              zona = ShippingModel.get_zone_by_state(self.user_id, "ALL")
 
         if not zona:
             return {"error": f"No hay cobertura configurada para {estado_destino} ni tarifa Nacional General."}
             
-        # 4. Encontrar la tarifa
-        tarifa = ShippingModel.get_rate_for_zone(zona['id'], peso_cobrable)
+        # 4. Encontrar la tarifa de forma segura
+        zona_id = zona.get('id')
+        tarifa = ShippingModel.get_rate_for_zone(zona_id, peso_cobrable)
         
         if not tarifa:
-            return {"error": f"Tu paquete ({peso_cobrable:.2f}kg cobrables) excede el peso máximo configurado en la tarifa."}
+            return {"error": f"Tu paquete ({peso_cobrable:.2f}kg cobrables) excede el peso maximo configurado en la tarifa."}
             
         return {
             "tipo": "nacional",
-            "zona": zona['zone_name'],
+            "zona": zona.get('zone_name', 'General'),
             "peso_real": peso_kg,
             "peso_volumetrico": round(peso_vol, 2),
             "peso_cobrable": round(peso_cobrable, 2),
-            "costo_sugerido": tarifa['price']
+            "costo_sugerido": float(tarifa.get('price', 0.0))
         }
+
+
+def obtener_coordenadas_de_link_corto(url_corta):
+    """
+    Toma un link corto de Google Maps, sigue la redirección HTTP,
+    y extrae la Latitud y Longitud de la URL final.
+    """
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        respuesta = requests.get(url_corta, headers=headers, allow_redirects=True, timeout=5)
+        url_final = respuesta.url
+        
+        # Atrapa tanto el formato @lat,lng como el ?q=lat,lng
+        match = re.search(r'(?:@|q=)(-?\d+\.\d+),(-?\d+\.\d+)', url_final)
+        
+        if match:
+            return float(match.group(1)), float(match.group(2))
+            
+        return None, None
+            
+    except Exception as e:
+        print(f"Error al resolver el link de Google Maps: {e}")
+        return None, None

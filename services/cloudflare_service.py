@@ -1,27 +1,34 @@
-import boto3
 import os
 import io
 import uuid
+import boto3
 from botocore.client import Config
 from dotenv import load_dotenv
-from PIL import Image  # 👈 IMPORTANTE: Asegúrate de hacer 'pip install Pillow'
+from PIL import Image
+from werkzeug.utils import secure_filename
 
-# Carga las variables del archivo .env
+# ==============================================================================
+# INICIALIZACION Y VARIABLES DE ENTORNO
+# ==============================================================================
+# Carga las variables del archivo .env al entorno de ejecucion
 load_dotenv()
 
-# --- CONFIGURACIÓN PROTEGIDA ---
+# Configuracion protegida de Cloudflare R2
 ACCESS_KEY = os.getenv('R2_ACCESS_KEY')
 SECRET_KEY = os.getenv('R2_SECRET_KEY')
 ENDPOINT_URL = os.getenv('R2_ENDPOINT_URL')
 BUCKET_NAME = os.getenv('R2_BUCKET_NAME')
 PUBLIC_URL = os.getenv('R2_PUBLIC_URL')
 
-def upload_to_cloudflare(file, folder="invitaciones"):
-    if not BUCKET_NAME or not ENDPOINT_URL:
-            raise ValueError("🚨 ERROR: Las credenciales del .env no se cargaron correctamente. BUCKET_NAME es None.")
-
-    # Inicializamos el cliente
-    s3 = boto3.client(
+# ==============================================================================
+# FUNCIONES AUXILIARES
+# ==============================================================================
+def _get_s3_client():
+    """
+    Inicializa y retorna el cliente boto3 configurado para Cloudflare R2.
+    Se encapsula para evitar repeticion de codigo en las funciones principales.
+    """
+    return boto3.client(
         service_name='s3',
         endpoint_url=ENDPOINT_URL,
         aws_access_key_id=ACCESS_KEY,
@@ -29,53 +36,74 @@ def upload_to_cloudflare(file, folder="invitaciones"):
         region_name='auto',
         config=Config(signature_version='s3v4')
     )
+
+# ==============================================================================
+# SERVICIO DE SUBIDA Y COMPRESION
+# ==============================================================================
+def upload_to_cloudflare(file, folder="invitaciones"):
+    """
+    Recibe un objeto FileStorage de Flask, lo comprime a formato WebP si es una 
+    imagen (preservando dimensiones maximas y transparencias), y lo sube a R2.
+    Retorna la URL publica del archivo.
+    """
+    if not BUCKET_NAME or not ENDPOINT_URL:
+        raise ValueError("Error de entorno: Las credenciales de R2 (BUCKET_NAME / ENDPOINT_URL) no estan definidas.")
+
+    s3 = _get_s3_client()
     
-    # Aseguramos que el puntero del archivo esté al inicio
+    # Reinicia el puntero del archivo por si fue leido previamente en validaciones
     file.seek(0)
-    content_type = file.content_type
     
-    # --- 🛡️ LÓGICA INTELIGENTE DE COMPRESIÓN (SOLO IMÁGENES) ---
-    if content_type and content_type.startswith('image/') and 'svg' not in content_type:
+    # Sanitizacion de seguridad del nombre de archivo original
+    safe_original_filename = secure_filename(file.filename)
+    content_type = file.content_type or 'application/octet-stream'
+    
+    # --- LOGICA DE COMPRESION Y OPTIMIZACION (SOLO IMAGENES RASTERIZADAS) ---
+    if content_type.startswith('image/') and 'svg' not in content_type:
         try:
-            # 1. Abrimos la imagen en RAM
+            # 1. Carga de imagen en memoria RAM
             img = Image.open(file)
             
-            # 2. Convertimos a RGB (Evita errores al comprimir PNGs con fondo transparente)
-            if img.mode in ("RGBA", "P"):
-                img = img.convert("RGB")
+            # 2. Manejo inteligente de canales de color y transparencia
+            # Si tiene transparencia (RGBA, Paleta, o Luminancia+Alpha), la forzamos a RGBA
+            if img.mode in ('RGBA', 'P', 'LA') or (img.mode == 'P' and 'transparency' in img.info):
+                img = img.convert('RGBA')
+            # Si es otro formato (ej. CMYK), lo forzamos al estandar RGB
+            elif img.mode != 'RGB':
+                img = img.convert('RGB')
                 
-            # 3. Redimensionamos si es gigantesca (Max 1200px de ancho)
+            # 3. Redimensionamiento proporcional (Maximo 1200px de ancho)
             max_width = 1200
             if img.width > max_width:
                 ratio = max_width / float(img.width)
                 new_height = int((float(img.height) * float(ratio)))
                 img = img.resize((max_width, new_height), Image.Resampling.LANCZOS)
             
-            # 4. Guardamos optimizada en memoria como WEBP
+            # 4. Codificacion a formato optimizado WebP
             img_byte_arr = io.BytesIO()
             img.save(img_byte_arr, format='WEBP', quality=80)
             img_byte_arr.seek(0)
             
-            # 5. Variables listas para subida
+            # 5. Asignacion de nombres y preparacion del buffer
             nuevo_nombre = f"{uuid.uuid4().hex}.webp"
             filename = f"{folder}/{nuevo_nombre}"
             file_to_upload = img_byte_arr
             content_type = 'image/webp'
             
         except Exception as e:
-            print(f"Error al comprimir imagen, subiendo original: {e}")
-            # Fallback: si falla la compresión, subimos el original de forma segura
+            print(f"Alerta: Error comprimiendo imagen ({e}). Procediendo con subida original.")
+            # Fallback de seguridad: Si la libreria Pillow falla, subimos el archivo original
             file.seek(0)
-            nuevo_nombre = f"{uuid.uuid4().hex}_{file.filename}"
+            nuevo_nombre = f"{uuid.uuid4().hex}_{safe_original_filename}"
             filename = f"{folder}/{nuevo_nombre}"
             file_to_upload = file
     else:
-        # --- 🎵 LÓGICA PARA ARCHIVOS NO-IMAGEN (Música, etc.) ---
-        nuevo_nombre = f"{uuid.uuid4().hex}_{file.filename}"
+        # --- LOGICA PARA ARCHIVOS NO-IMAGEN (Audio, PDF, SVG, etc.) ---
+        nuevo_nombre = f"{uuid.uuid4().hex}_{safe_original_filename}"
         filename = f"{folder}/{nuevo_nombre}"
         file_to_upload = file
 
-    # --- ☁️ SUBIDA A CLOUDFLARE R2 ---
+    # --- SUBIDA A CLOUDFLARE R2 ---
     s3.upload_fileobj(
         file_to_upload, 
         BUCKET_NAME, 
@@ -83,43 +111,34 @@ def upload_to_cloudflare(file, folder="invitaciones"):
         ExtraArgs={'ContentType': content_type}
     )
     
-    # Retornamos la URL pública lista para usarse
+    # Retorna la URL concatenando el endpoint publico con la llave generada
     return f"{PUBLIC_URL}/{filename}"
 
-
-#ELIMINAR MEDIA DE INVITACIONES
+# ==============================================================================
+# SERVICIO DE ELIMINACION
+# ==============================================================================
 def delete_from_cloudflare(url_publica):
     """
-    Recibe la URL pública completa (ej. https://pub-d954.../invitaciones/boda/foto.jpg)
-    Extrae la ruta del archivo y lo elimina del bucket R2.
+    Toma la URL publica de Cloudflare devuelta previamente, extrae el Key (Ruta)
+    y envia el comando de eliminacion al bucket R2 para liberar espacio.
     """
     if not url_publica:
         return False
         
-    # El prefijo es tu URL pública más una diagonal
+    # Validacion: Nos aseguramos de extraer la ruta correctamente basados en el dominio base
     prefix = PUBLIC_URL + "/"
     
-    # Verificamos que la URL realmente pertenezca a nuestro R2
     if url_publica.startswith(prefix):
-        # Extraemos solo el nombre del archivo (ej. invitaciones/boda/foto.jpg)
+        # Aisla el Key requerido por el SDK de AWS
         file_key = url_publica[len(prefix):]
         
         try:
-            s3 = boto3.client(
-                service_name='s3',
-                endpoint_url=ENDPOINT_URL,
-                aws_access_key_id=ACCESS_KEY,
-                aws_secret_access_key=SECRET_KEY,
-                region_name='auto',
-                config=Config(signature_version='s3v4')
-            )
-            
-            # Comando de eliminación de S3/R2
+            s3 = _get_s3_client()
             s3.delete_object(Bucket=BUCKET_NAME, Key=file_key)
             return True
             
         except Exception as e:
-            print(f"Error al borrar {file_key} de R2: {e}")
+            print(f"Error critico al borrar el archivo {file_key} de R2: {e}")
             return False
             
     return False

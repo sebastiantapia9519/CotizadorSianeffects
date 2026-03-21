@@ -1,48 +1,60 @@
 import json
 import io
 import zipfile
-import uuid
-from helpers import guardar_pase_bd, obtener_estado_mesas
+import requests 
+from functools import wraps 
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
 from db import get_db_connection
+from helpers import guardar_pase_bd, obtener_estado_mesas
 from utils.datetime_utils import hoy_sqlite, hoy_local, ahora_sql
-from functools import wraps # Necesario para los decoradores
-from routes.invitaciones_publicas import s3_client, BUCKET_NAME
 
+# ==============================================================================
+# INICIALIZACION DEL BLUEPRINT
+# ==============================================================================
 clientes_bp = Blueprint('invitaciones_clientes', __name__)
 
+# Variable estandarizada para comparaciones de fecha a nivel de dia (SQLite)
 hoy = hoy_sqlite()
 
-# ==========================================
+# ==============================================================================
 # DECORADORES DE SEGURIDAD
-# ==========================================
+# ==============================================================================
 def planner_required(f):
+    """
+    Decorador que protege las rutas exclusivas para Planners (Socios B2B).
+    Verifica no solo la sesion, sino tambien el estado en tiempo real en la BD.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
+        # 1. Verificacion de la cookie de sesion
         if session.get('user_type') != 'planner' or 'planner_id' not in session:
-            flash("Debes iniciar sesión como Planner para acceder.", "warning")
+            flash("Debes iniciar sesion como Planner para acceder.", "warning")
             return redirect(url_for('invitaciones_clientes.login_cliente'))
         
-        # VERIFICACIÓN EN BASE DE DATOS CONTRA EL ESTADO
+        # 2. Verificacion en Base de Datos (Seguridad en tiempo real)
         conn = get_db_connection()
         planner = conn.execute("SELECT estado FROM planners WHERE id = ?", (session['planner_id'],)).fetchone()
         conn.close()
 
-        # Si no existe o su estado no es 'activo', lo expulsamos
+        # Si el administrador suspendio al planner mientras estaba logueado, lo expulsa
         if not planner or planner['estado'] != 'activo':
             session.clear() 
-            flash("Tu cuenta no está activa. Contacta al administrador.", "danger")
+            flash("Tu cuenta no esta activa. Contacta al administrador.", "danger")
             return redirect(url_for('invitaciones_clientes.login_cliente'))
 
         return f(*args, **kwargs)
     return decorated_function
 
-# ==========================================
-# RUTAS DE ACCESO (EL EMBUDO)
-# ==========================================
-
+# ==============================================================================
+# RUTAS DE ACCESO (EL EMBUDO UNIFICADO)
+# ==============================================================================
 @clientes_bp.route('/mi-evento', methods=['GET', 'POST'], strict_slashes=False)
 def login_cliente():
+    """
+    Portal de acceso unico. Separa el trafico dependiendo del formato del codigo:
+    - PLAN-XXXXX redirige al Dashboard B2B.
+    - SIA-XXXXX redirige al Dashboard del Cliente Final (Novios/Quinceanera).
+    """
     if request.method == 'POST':
         codigo = request.form.get('codigo', '').strip().upper()
         conn = get_db_connection()
@@ -55,7 +67,6 @@ def login_cliente():
                 """, (codigo,)).fetchone()
                 
                 if planner:
-                    # Bloqueo de entrada
                     if planner['estado'] != 'activo':
                         flash("Esta cuenta se encuentra suspendida.", "danger")
                         return render_template('clientes/login.html')
@@ -66,9 +77,9 @@ def login_cliente():
                     session['user_type'] = 'planner'
                     return redirect(url_for('invitaciones_clientes.dashboard_planner'))
                 else:
-                    flash("Código de Planner no encontrado.", "danger")
+                    flash("Codigo de Planner no encontrado.", "danger")
 
-            # --- CASO 2: ES UN CLIENTE/NOVIOS (SIA-XXXXX) ---
+            # --- CASO 2: ES UN CLIENTE FINAL (SIA-XXXXX) ---
             else:
                 inv = conn.execute("""
                     SELECT id, slug, datos_cliente_json 
@@ -80,28 +91,32 @@ def login_cliente():
                     session['cliente_inv_id'] = inv['id']
                     session['cliente_slug'] = inv['slug']
                     session['user_type'] = 'novios'
+                    
+                    # Extraemos el nombre para saludarlo en el dashboard
                     datos = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
                     session['cliente_nombre'] = datos.get('novios', 'Nuestro Evento')
                     return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
                 else:
-                    flash("Código de acceso no válido.", "danger")
+                    flash("Codigo de acceso no valido.", "danger")
         finally:
             conn.close()
             
     return render_template('clientes/login.html')
 
-# ==========================================
+# ==============================================================================
 # DASHBOARD DEL PLANNER (B2B)
-# ==========================================
-
+# ==============================================================================
 @clientes_bp.route('/socio/panel')
 @planner_required
 def dashboard_planner():
+    """
+    Calcula en tiempo real los creditos, vigencias y eventos del socio comercial.
+    """
     planner_id = session['planner_id']
     conn = get_db_connection()
     
     try:
-        # 1. Obtener Saldo Total Neto (Solo lo vigente y activo)
+        # 1. Calculo de Saldo Neto Vigente
         creditos_info = conn.execute("""
             SELECT SUM(cantidad_total - cantidad_usada) as saldo
             FROM planner_paquetes 
@@ -112,7 +127,7 @@ def dashboard_planner():
         
         saldo = creditos_info['saldo'] if creditos_info['saldo'] else 0
 
-        # 2. Obtener Movimientos (Ordenados por fecha de compra para calcular el histórico)
+        # 2. Historial de compras/recargas
         paquetes_raw = conn.execute("""
             SELECT id, cantidad_total, cantidad_usada, fecha_vencimiento, notas, fecha_compra
             FROM planner_paquetes
@@ -120,11 +135,11 @@ def dashboard_planner():
             ORDER BY fecha_compra ASC
         """, (planner_id,)).fetchall()
 
-        # Buscar créditos que vencen en los próximos 15 días
-        # Calculamos ambas fechas en Python. Esto es 100% compatible con SQLite y PostgreSQL.
-        fecha_hoy = hoy_local()[:10] # Ej: 2026-03-10
-        fecha_limite = ahora_sql(dias=15)[:10] # Cuantos dias antes te avisará que expiran tus creditos
+        # Blindaje: Calculo de fechas directo en Python para evitar conflictos Postgres/SQLite
+        fecha_hoy = hoy_local()[:10] 
+        fecha_limite = ahora_sql(dias=15)[:10] 
 
+        # Alertas de vencimiento proximo (15 dias)
         proximos_vencimientos = conn.execute("""
             SELECT id, (cantidad_total - cantidad_usada) as remanente, fecha_vencimiento
             FROM planner_paquetes
@@ -138,8 +153,8 @@ def dashboard_planner():
         paquetes_procesados = []
         saldo_acumulado = 0
         
+        # Generacion del estado de cuenta paso a paso
         for p in paquetes_raw:
-            # El cambio es la diferencia entre lo que entró y lo que se marcó como usado en ese registro
             cambio = p['cantidad_total'] - p['cantidad_usada']
             saldo_acumulado += cambio
             
@@ -147,7 +162,6 @@ def dashboard_planner():
             p_dict['cambio'] = cambio
             p_dict['saldo_posterior'] = saldo_acumulado
             
-            # Lógica de Expiración clara: Si es una resta (cambio negativo), no expira.
             if not p['fecha_vencimiento'] or cambio < 0:
                 p_dict['vence_display'] = "---"
             else:
@@ -155,10 +169,9 @@ def dashboard_planner():
             
             paquetes_procesados.append(p_dict)
 
-        # Invertimos para que el último movimiento (el más nuevo) salga arriba
         paquetes_procesados.reverse()
 
-        # 3. Obtener Invitaciones (Historial de consumo)
+        # 3. Historial de Eventos (Consumo)
         invitaciones_db = conn.execute("""
             SELECT id, slug, datos_cliente_json, fecha_evento, created_at, 
                    codigo_acceso_cliente, tipo_evento, tiene_modulo_invitados, camara_premium
@@ -176,7 +189,7 @@ def dashboard_planner():
                 item['datos_cliente'] = {"novios": "Evento sin nombre"}
             invitaciones.append(item)
 
-        # Revisar si ya gastó su carta del Demo
+        # Verificacion del cupon de Demo
         demo_db = conn.execute("SELECT id FROM invitaciones WHERE planner_id = ? AND es_demo = 1", (planner_id,)).fetchone()
         tiene_demo = True if demo_db else False
 
@@ -187,33 +200,48 @@ def dashboard_planner():
                                alertas_vencimiento=proximos_vencimientos,
                                hoy_local=hoy_local()[:10],
                                tiene_demo=tiene_demo)
+    except Exception as e:
+        flash(f"Error cargando dashboard: {e}", "danger")
+        return redirect(url_for('invitaciones_clientes.login_cliente'))
     finally:
         conn.close()
 
+# ==============================================================================
+# DASHBOARD DEL CLIENTE FINAL (NOVIOS / QUINCEANERA)
+# ==============================================================================
 @clientes_bp.route('/mi-evento/panel')
 def dashboard_cliente():
+    """
+    Panel donde el cliente puede gestionar a sus propios invitados, ver sus fotos
+    y leer los mensajes de buenos deseos.
+    """
     if 'cliente_inv_id' not in session:
         return redirect(url_for('invitaciones_clientes.login_cliente'))
         
     inv_id = session['cliente_inv_id']
     conn = get_db_connection()
 
+    # Paginacion para la galeria de fotos (evita sobrecargar el navegador)
     PER_PAGE = 12
     page = request.args.get('page', 1, type=int)
     offset = (page - 1) * PER_PAGE
     
     try:
+        # 1. Blindaje: Verificar que el evento no haya sido borrado
         inv = conn.execute("SELECT * FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+        if not inv:
+            session.clear()
+            flash("Evento no encontrado. Ingresa tu codigo de nuevo.", "danger")
+            return redirect(url_for('invitaciones_clientes.login_cliente'))
         
-        # 1. Leer qué módulos están prendidos
         config_modulos = json.loads(inv['config_json']) if inv['config_json'] else []
         
-        # 2. Traer invitados (si aplica)
+        # 2. Modulo de Invitados (RSVP)
         invitados = []
         if inv['tiene_modulo_invitados']:
              invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY nombre_familia ASC", (inv_id,)).fetchall()
         
-        # 3. Traer fotos (si aplica)
+        # 3. Modulo de Camara (Fotos)
         fotos = []
         total_fotos = 0
         if inv['camara_premium']:
@@ -223,7 +251,7 @@ def dashboard_cliente():
                 WHERE invitacion_id = ? ORDER BY fecha_creacion DESC LIMIT ? OFFSET ?
             """, (inv_id, PER_PAGE, offset)).fetchall()
 
-        # 4. NUEVO: Traer Buenos Deseos (Si el módulo está activo)
+        # 4. Modulo de Buenos Deseos
         buenos_deseos = []
         if 'deseos' in config_modulos:
             buenos_deseos = conn.execute("""
@@ -233,31 +261,44 @@ def dashboard_cliente():
                 ORDER BY fecha DESC
             """, (inv_id,)).fetchall()
 
+        # 5. Estado de mesas
         estado_mesas = obtener_estado_mesas(inv_id)
 
-        return render_template(
-            'clientes/dashboard.html',
-            inv=inv,
-            invitados=invitados,
-            fotos=fotos,
-            deseos=buenos_deseos,
-            modulos=config_modulos,
-            nombre_evento=session.get('cliente_nombre'),
-            page=page,
-            per_page=PER_PAGE,
-            total_fotos=total_fotos,
-            mesas_status=estado_mesas
-        )
-
+    except Exception as e:
+        print(f"Error cargando panel cliente: {e}")
+        flash("Ocurrio un error al cargar la informacion de tu evento.", "danger")
+        return redirect(url_for('invitaciones_clientes.login_cliente'))
     finally:
         conn.close()
 
-# --- Función Auxiliar para checar el candado ---
+    # El render_template ocurre fuera del bloque try/except para evitar enmascarar errores de Jinja
+    return render_template(
+        'clientes/dashboard.html',
+        inv=inv,
+        invitados=invitados,
+        fotos=fotos,
+        deseos=buenos_deseos,
+        modulos=config_modulos,
+        nombre_evento=session.get('cliente_nombre'),
+        page=page,
+        per_page=PER_PAGE,
+        total_fotos=total_fotos,
+        mesas_status=estado_mesas
+    )
+
+# ==============================================================================
+# LOGICA DE CONTROL DE INVITADOS (RSVP CLIENTE)
+# ==============================================================================
 def edicion_permitida(inv_id, conn):
+    """
+    Verifica si el Planner/Admin bloqueo la modificacion de la lista de invitados.
+    Retorna False si el evento no existe o si la edicion esta bloqueada.
+    """
     inv = conn.execute("SELECT bloquear_edicion_invitados FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+    if not inv: 
+        return False
     return not inv['bloquear_edicion_invitados']
 
-# 1. AGREGAR (Actualizado con función unificada)
 @clientes_bp.route('/mi-evento/agregar-invitado', methods=['POST'])
 def agregar_invitado_cliente():
     if 'cliente_inv_id' not in session: return redirect(url_for('invitaciones_clientes.login_cliente'))
@@ -268,16 +309,15 @@ def agregar_invitado_cliente():
     conn.close()
 
     if not permitido:
-        flash("La edición está bloqueada para este evento.", "danger")
+        flash("La edicion esta bloqueada para este evento.", "danger")
         return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
-    # Llamamos a la función maestra (Modo Crear)
+    # Usamos la funcion maestra unificada
     exito, msj = guardar_pase_bd(inv_id, request.form)
     flash(msj, "success" if exito else "danger")
     
     return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
-# 2. EDITAR INVITADO (Actualizado con función unificada)
 @clientes_bp.route('/mi-evento/editar-invitado/<int:pase_id>', methods=['POST'])
 def editar_invitado_cliente(pase_id):
     if 'cliente_inv_id' not in session: return redirect(url_for('invitaciones_clientes.login_cliente'))
@@ -288,17 +328,14 @@ def editar_invitado_cliente(pase_id):
     conn.close()
 
     if not permitido:
-        flash("La edición está bloqueada para este evento.", "danger")
+        flash("La edicion esta bloqueada para este evento.", "danger")
         return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
-    # Llamamos a la función maestra pasándole el pase_id (Modo Editar)
     exito, msj = guardar_pase_bd(inv_id, request.form, pase_id)
     flash(msj, "success" if exito else "danger")
     
     return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
-    
-# 3. ELIMINAR INVITADO (NUEVO)
 @clientes_bp.route('/mi-evento/eliminar-invitado/<int:pase_id>', methods=['POST'])
 def eliminar_invitado_cliente(pase_id):
     if 'cliente_inv_id' not in session: return redirect(url_for('invitaciones_clientes.login_cliente'))
@@ -307,7 +344,7 @@ def eliminar_invitado_cliente(pase_id):
     conn = get_db_connection()
     try:
         if not edicion_permitida(inv_id, conn):
-            flash("La edición está bloqueada para este evento.", "danger")
+            flash("La edicion esta bloqueada para este evento.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
         conn.execute("DELETE FROM pases_invitados WHERE id = ? AND invitacion_id = ?", (pase_id, inv_id))
@@ -320,8 +357,15 @@ def eliminar_invitado_cliente(pase_id):
     return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
 
+# ==============================================================================
+# DESCARGA DE FOTOS (ZERO DEPENDENCIES)
+# ==============================================================================
 @clientes_bp.route('/mi-evento/descargar-fotos')
 def descargar_fotos_cliente():
+    """
+    Arma un archivo ZIP en RAM descargando las fotos via HTTP publico.
+    Esto evita la dependencia ciclica con boto3/s3_client y asegura el servidor.
+    """
     if 'cliente_inv_id' not in session:
         return redirect(url_for('invitaciones_clientes.login_cliente'))
         
@@ -329,6 +373,12 @@ def descargar_fotos_cliente():
     conn = get_db_connection()
     try:
         inv = conn.execute("SELECT slug FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+        
+        # Blindaje: Si la invitacion fue purgada, aborta limpiamente
+        if not inv:
+            flash("Evento no encontrado.", "danger")
+            return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
+            
         fotos = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,)).fetchall()
 
         if not fotos:
@@ -339,26 +389,43 @@ def descargar_fotos_cliente():
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             for i, foto in enumerate(fotos):
                 try:
-                    key = foto['url'].split('.dev/')[-1]
-                    obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=key)
-                    zf.writestr(f"recuerdo_{i+1}.jpg", obj['Body'].read())
-                except:
+                    # Descargamos la imagen directo desde la URL final
+                    url_descarga = foto['url']
+                    respuesta = requests.get(url_descarga, timeout=10)
+                    
+                    if respuesta.status_code == 200:
+                        zf.writestr(f"recuerdo_{i+1}.jpg", respuesta.content)
+                except Exception as e:
+                    print(f"Error descargando foto {i}: {e}")
                     continue
 
         memory_file.seek(0)
-        return send_file(memory_file, mimetype='application/zip', as_attachment=True, download_name=f"fotos_{inv['slug']}.zip")
+        return send_file(
+            memory_file, 
+            mimetype='application/zip', 
+            as_attachment=True, 
+            download_name=f"fotos_{inv['slug']}.zip"
+        )
+    except Exception as e:
+        flash(f"Error general al descargar fotos: {str(e)}", "danger")
+        return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
     finally:
         conn.close()
 
+# ==============================================================================
+# SALIDA
+# ==============================================================================
 @clientes_bp.route('/mi-evento/salir')
 def logout_cliente():
+    """Destruye la sesion del cliente o planner."""
     session.clear()
     return redirect(url_for('invitaciones_clientes.login_cliente'))
 
-# ==========================================
-# CENTRO DE AYUDA DEL PLANNER
-# ==========================================
+# ==============================================================================
+# CENTRO DE AYUDA B2B
+# ==============================================================================
 @clientes_bp.route('/socio/ayuda')
 @planner_required
 def ayuda_planner():
+    """Manual de usuario exclusivo para socios comerciales."""
     return render_template('clientes/ayuda_planner.html')
