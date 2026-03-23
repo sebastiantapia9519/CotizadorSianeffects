@@ -336,58 +336,63 @@
         </button>
     </div>
 
- <script>
-    async function generarYCompartir() {
-        const btn = document.getElementById("btnShare");
-        
-        // Evitar múltiples clics mientras procesa
-        if (btn.disabled) return;
-        
-        const originalContent = btn.innerHTML;
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
-        btn.disabled = true;
+    <script>
+        async function generarYCompartir() {
+            const btn = document.getElementById("btnShare");
 
-        try {
-            // 1. Generamos el Canvas con mayor calidad (scale 2)
-            const canvas = await html2canvas(document.getElementById("ticketVisual"), {
-                scale: 2,
-                backgroundColor: "#ffffff",
-                useCORS: true // Útil si llegas a meter imágenes externas (logos)
-            });
+            if (btn.disabled) return;
 
-            // 2. Convertimos el canvas a un archivo real
-            const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
-            const ticketFile = new File([blob], "ticket.png", { type: "image/png" });
+            const originalContent = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando...';
+            btn.disabled = true;
 
-            // 3. Activamos el menú de compartir (Share API)
-            if (navigator.share && navigator.canShare({ files: [ticketFile] })) {
-                await navigator.share({
-                    files: [ticketFile],
-                    title: 'Ticket SianEffects',
-                    text: 'Aquí tienes tu ticket de compra.'
+            try {
+                // FIX 1: Forzamos el scroll arriba. Evita que html2canvas colapse en móviles.
+                window.scrollTo(0, 0);
+
+                const canvas = await html2canvas(document.getElementById("ticketVisual"), {
+                    scale: 2,
+                    backgroundColor: "#ffffff",
+                    useCORS: true
                 });
-            } else {
-                // 4. Si es PC o no soporta compartir archivos, lo descarga
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(ticketFile);
-                a.download = "ticket_SianEffects.png";
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-            }
-        } catch (error) {
-            console.error("Error al compartir:", error);
-            alert("No se pudo generar la imagen para compartir.");
-        } finally {
-            // Restauramos el botón
-            btn.innerHTML = originalContent;
-            btn.disabled = false;
-        }
-    }
 
-    // Actualizamos el ID del botón en el HTML para que use esta nueva función
-    document.getElementById("btnShare").setAttribute("onclick", "generarYCompartir()");
-</script>
+                // FIX 2: Puente más seguro para celulares (DataURL -> Fetch -> Blob -> File)
+                const dataUrl = canvas.toDataURL('image/png');
+                const res = await fetch(dataUrl);
+                const blob = await res.blob();
+
+                const ticketFile = new File([blob], "ticket.png", { type: "image/png" });
+
+                // FIX 3: Doble validación de soporte para Share API
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [ticketFile] })) {
+                    await navigator.share({
+                        files: [ticketFile],
+                        title: 'Ticket',
+                        text: 'Aquí tienes tu ticket.'
+                    });
+                } else {
+                    // Fallback (Descarga directa en PC)
+                    const a = document.createElement("a");
+                    a.href = dataUrl;
+                    a.download = "ticket.png";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+            } catch (error) {
+                // FIX 4: Si se cancela el menú de compartir, ignoramos el "error".
+                // Solo alertamos si es un fallo real del sistema.
+                if (error.name !== 'AbortError') {
+                    console.error("Fallo detectado:", error);
+                    alert("Detalle técnico: " + error.message);
+                }
+            } finally {
+                // Restauramos el botón
+                btn.innerHTML = originalContent;
+                btn.disabled = false;
+            }
+        }
+    </script>
 
 </body>
 

@@ -32,6 +32,9 @@ def login():
 
         # Validar credenciales
         if user and check_password_hash(user['password'], password):
+            
+            session.permanent = True 
+            
             # Guardar datos mínimos en sesión
             session['user_id'] = user['id']
             session['username'] = user['username']

@@ -43,6 +43,11 @@ logging.basicConfig(
 # Duración de sesión (no depende de timezone)
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 
+# --- NUEVO: Blindaje para navegadores móviles (iOS/Android) ---
+app.config['SESSION_COOKIE_SECURE'] = True      # Solo manda la cookie por HTTPS (PythonAnywhere ya tiene HTTPS)
+app.config['SESSION_COOKIE_HTTPONLY'] = True    # Evita que el JavaScript de la página lea la cookie
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'   # Crucial para celulares: evita que se pierda la sesión al cambiar de app o de red (LTE/WiFi)
+
 # =========================
 # TAREAS AUTOMÁTICAS (JOBS)
 # =========================

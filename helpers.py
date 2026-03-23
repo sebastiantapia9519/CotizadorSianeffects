@@ -34,13 +34,14 @@ def subscription_required(f):
     def decorated_function(*args, **kwargs):
         # 1. Verificar sesión básica
         if 'user_id' not in session:
+            # Quitamos el session.clear() de aquí para no ser tan destructivos 
+            # si el navegador móvil tuvo un hipo con la cookie.
+            flash('Por favor inicia sesión.', 'warning')
             return redirect(url_for('auth.login'))
         
         # -----------------------------------------------------------
         # BLINDAJE PARA DUEÑOS (NIVEL 2) Y ADMINS (NIVEL 1)
         # -----------------------------------------------------------
-        # Verificamos la sesión DIRECTAMENTE. Si dice que eres jefe, pasas.
-        # No consultamos fecha, no consultamos DB. Pase VIP inmediato.
         if session.get('role', 0) >= 1:
             return f(*args, **kwargs)
         # -----------------------------------------------------------
@@ -51,7 +52,10 @@ def subscription_required(f):
         conn.close()
 
         if not user:
+            # Aquí SÍ es válido limpiar la sesión, porque significa que el ID existe en la cookie
+            # pero el usuario ya no existe en la Base de Datos (ej. fue borrado por inactividad).
             session.clear()
+            flash('Tu cuenta ya no es válida o fue eliminada.', 'error')
             return redirect(url_for('auth.login'))
 
         # (Doble verificación de seguridad por si la sesión falló pero en BD sí es admin)
@@ -77,6 +81,7 @@ def subscription_required(f):
                 return redirect(url_for('main.plan_vencido')) 
         except Exception as e:
             print(f"Error verificando fecha de sub: {e}")
+            # Considerar si quieres bloquear el acceso si hay un error en la fecha
             pass
 
         return f(*args, **kwargs)
