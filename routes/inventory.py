@@ -38,7 +38,21 @@ def materiales():
 
             if duplicado:
                 conn.close()
-                return f"""<script>alert('Error: Ya tienes un material llamado "{nombre}".'); window.history.back();</script>"""
+                return f"""
+                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                <script>
+                    window.onload = function() {{
+                        Swal.fire({{
+                            icon: 'error',
+                            title: 'Material duplicado',
+                            text: 'Error: Ya tienes un material llamado "{nombre}".',
+                            confirmButtonColor: '#ff4757'
+                        }}).then((result) => {{
+                            window.history.back();
+                        }});
+                    }};
+                </script>
+                """
 
             # Conversión de valores numéricos con manejo de errores
             try:
@@ -128,7 +142,21 @@ def equipos():
             duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", (nombre, session['user_id'])).fetchone()
             if duplicado:
                 conn.close()
-                return f"""<script>alert('Error: Ya existe maquinaria con nombre "{nombre}".'); window.history.back();</script>"""
+                return f"""
+                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+                <script>
+                    window.onload = function() {{
+                        Swal.fire({{
+                            icon: 'error',
+                            title: 'Maquinaria duplicada',
+                            text: 'Error: Ya existe maquinaria con el nombre "{nombre}".',
+                            confirmButtonColor: '#ff4757'
+                        }}).then((result) => {{
+                            window.history.back();
+                        }});
+                    }};
+                </script>
+                """
 
             try:
                 costo_desgaste = float(request.form.get('costo_desgaste') or 0)

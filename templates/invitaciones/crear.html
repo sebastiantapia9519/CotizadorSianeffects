@@ -1151,15 +1151,26 @@
                 body: bodyData
             });
             const data = await response.json();
+            
             if (data.success) {
                 location.reload(); 
             } else {
-                alert('Error al eliminar: ' + data.error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al eliminar',
+                    text: data.error,
+                    confirmButtonColor: '#ff4757'
+                });
                 document.getElementById('loadingOverlay').style.display = 'none';
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error de conexión.');
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de conexión',
+                text: 'Hubo un problema de red al intentar eliminar la imagen.',
+                confirmButtonColor: '#ff4757'
+            });
             document.getElementById('loadingOverlay').style.display = 'none';
         }
     }
@@ -1378,14 +1389,26 @@
                 select.add(new Option('🎵 ' + data.nombre, data.id));
                 select.value = data.id;
                 
+                // Cerramos el modal con éxito (opcionalmente podrías poner un Swal de éxito aquí, 
+                // pero como ya se ve el cambio en el select, cerrar el modal suele ser suficiente).
                 bootstrap.Modal.getInstance(document.getElementById('modalMusica')).hide();
                 document.getElementById('formMusica').reset();
             } else { 
-                alert('Error: ' + data.error); 
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error al subir música',
+                    text: data.error,
+                    confirmButtonColor: '#ff4757'
+                });
             }
         } catch (error) { 
-            alert('Ocurrió un error al subir la canción.'); 
-            console.error(error);
+            console.error("Error subida música:", error);
+            Swal.fire({
+                icon: 'error',
+                title: 'Fallo técnico',
+                text: 'Ocurrió un error al intentar subir la canción. Revisa el formato del archivo.',
+                confirmButtonColor: '#ff4757'
+            });
         } finally {
             btn.classList.remove('d-none'); 
             loading.classList.add('d-none');

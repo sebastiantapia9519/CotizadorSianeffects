@@ -161,23 +161,28 @@
 
         // Iniciar Cámara
         async function iniciarCamara() {
-            if (fotosActuales >= LIMITE_FOTOS) {
-                mostrarPantallaFin();
-                return;
-            }
-
-            try {
-                // facingMode: "environment" fuerza a usar la cámara trasera del celular
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment" },
-                    audio: false
-                });
-                video.srcObject = stream;
-            } catch (err) {
-                alert("Necesitamos acceso a la cámara para usar el rollo virtual 📷");
-                console.error(err);
-            }
+        if (fotosActuales >= LIMITE_FOTOS) {
+            mostrarPantallaFin();
+            return;
         }
+
+        try {
+            // facingMode: "environment" fuerza a usar la cámara trasera del celular
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: "environment" },
+                audio: false
+            });
+            video.srcObject = stream;
+        } catch (err) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Cámara requerida',
+                text: 'Necesitamos acceso a la cámara para usar el rollo virtual 📷. Por favor, revisa los permisos de tu navegador.',
+                confirmButtonColor: '#ff4757'
+            });
+            console.error("Error de cámara:", err);
+        }
+    }
 
         function tomarFoto() {
             if (fotosActuales >= LIMITE_FOTOS) return;
@@ -219,11 +224,22 @@
                             mostrarPantallaFin();
                         }
                     } else {
-                        alert("Uy, el rollo se atascó. Intenta de nuevo.");
+                        Swal.fire({
+                            icon: 'error',
+                            title: '¡Ups!',
+                            text: 'El rollo se atascó. Intenta de nuevo.',
+                            confirmButtonColor: '#ff4757'
+                        });
                     }
                 })
                 .catch(err => {
-                    alert("Error de conexión al enviar la foto.");
+                    console.error("Error subiendo foto:", err);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Falla de conexión',
+                        text: 'No se pudo enviar la foto. Revisa tu internet.',
+                        confirmButtonColor: '#ff4757'
+                    });
                 })
                 .finally(() => {
                     // Restaurar botón si aún le quedan fotos

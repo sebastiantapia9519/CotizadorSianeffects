@@ -91,21 +91,27 @@ class ShippingService:
         peso_cobrable = max(peso_kg, peso_vol)
         
         # 3. Encontrar la zona
-        zona = ShippingModel.get_zone_by_state(self.user_id, estado_destino)
+        zona_row = ShippingModel.get_zone_by_state(self.user_id, estado_destino)
         
         # Si no hay zona especifica, intentamos buscar la zona general
-        if not zona:
-             zona = ShippingModel.get_zone_by_state(self.user_id, "ALL")
+        if not zona_row:
+             zona_row = ShippingModel.get_zone_by_state(self.user_id, "ALL")
 
-        if not zona:
+        if not zona_row:
             return {"error": f"No hay cobertura configurada para {estado_destino} ni tarifa Nacional General."}
+            
+        # FIX: Convertimos la fila de SQLite a diccionario de Python
+        zona = dict(zona_row)
             
         # 4. Encontrar la tarifa de forma segura
         zona_id = zona.get('id')
-        tarifa = ShippingModel.get_rate_for_zone(zona_id, peso_cobrable)
+        tarifa_row = ShippingModel.get_rate_for_zone(zona_id, peso_cobrable)
         
-        if not tarifa:
+        if not tarifa_row:
             return {"error": f"Tu paquete ({peso_cobrable:.2f}kg cobrables) excede el peso maximo configurado en la tarifa."}
+            
+        # Convertimos la tarifa a diccionario
+        tarifa = dict(tarifa_row)
             
         return {
             "tipo": "nacional",

@@ -769,10 +769,10 @@
 
         // Sumamos el subtotal limpio y los impuestos
         const totalFinalBruto = baseImponible + impuestosMonto;
-        
+
         // Limpiamos la basura de los micro-decimales dejándolo a 2 decimales exactos
         const totalLimpio = Math.round(totalFinalBruto * 100) / 100;
-        
+
         // Ahora sí, si hay centavos reales (ej. 98.30), lo sube. Si es 720.00, lo respeta.
         const totalFinal = Math.ceil(totalLimpio);
 
@@ -901,7 +901,16 @@
     }
 
     function agregarAlCarrito() {
-        if (precioVentaCalculado <= 0) return alert("Calcula primero el precio.");
+        if (precioVentaCalculado <= 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Falta calcular',
+                text: 'Por favor, calcula primero el precio antes de agregar al carrito.',
+                confirmButtonColor: '#ff4757'
+            });
+            return;
+        }
+
         const nom = document.getElementById('nombreProductoActual').value || "Producto Personalizado";
         const cant = parseFloat(document.getElementById('cantidadParaCarrito').value) || 1;
 
@@ -1146,7 +1155,15 @@
 
     function guardarProductoDB() {
         const nom = document.getElementById('nombreNuevoProducto').value.trim();
-        if (!nom) return alert("Escribe un nombre.");
+        if (!nom) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Nombre requerido',
+                text: 'Escribe un nombre para el producto antes de guardar.',
+                confirmButtonColor: '#ff4757'
+            });
+            return;
+        }
         const materiales = [];
         const maquinaria = [];
 
@@ -1197,7 +1214,15 @@
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
         fetch('/api/receta/' + id).then(r => r.json()).then(d => {
-            if (d.error) return alert("Error: " + d.error);
+            if (d.error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: '¡Oops!',
+                    text: d.error,
+                    confirmButtonColor: '#ff4757'
+                });
+                return;
+            }
             document.getElementById('nombreProductoActual').value = d.nombre;
             if (d.materiales && d.materiales.length > 0) {
                 d.materiales.forEach(i => agregarFila(i.id, i.cantidad));
@@ -1242,7 +1267,12 @@
             return;
         }
         if (url.includes('goo.gl') || url.includes('maps.app')) {
-            alert("Usa el link largo de Maps.");
+            Swal.fire({
+                icon: 'warning',
+                title: 'Enlace corto detectado',
+                text: 'Por favor, usa el enlace largo de Google Maps (el que aparece en la barra de direcciones del navegador).',
+                confirmButtonColor: '#ff4757'
+            });
             input.value = "";
         }
     }
@@ -1256,14 +1286,20 @@
     }
 
     // --- FUNCION PARA CARGAR UNA VENTA ANTERIOR AL CARRITO ---
-    function cargarCotizacion(id) {
+function cargarCotizacion(id) {
         console.log("Iniciando carga de cotización ID:", id); // Esto nos dirá que sí despertó
         fetch('/api/get_cotizacion/' + id)
             .then(r => r.json())
             .then(data => {
                 if (data.error) {
                     console.error("Error del servidor:", data.error);
-                    return alert(data.error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error al cargar',
+                        text: data.error,
+                        confirmButtonColor: '#ff4757'
+                    });
+                    return;
                 }
 
                 // 1. Limpiamos el carrito actual
@@ -1299,9 +1335,14 @@
                 console.log("Cotización cargada exitosamente");
             })
             .catch(e => {
-                console.error("Error de conexión:", e);
-                alert("Error de conexión al cargar datos.");
+            console.error("Error de conexión:", e);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de conexión',
+                text: 'Hubo un problema de conexión al intentar cargar los datos.',
+                confirmButtonColor: '#ff4757'
             });
+        });
     }
 
     function solicitarCotizacion(tipo) {
@@ -1312,7 +1353,16 @@
         if (tipo === 'local') {
             const lat = document.getElementById('latDestino').value;
             const lng = document.getElementById('lngDestino').value;
-            if (!lat || !lng) { loader.classList.add('d-none'); return alert("Falta ubicación."); }
+            if (!lat || !lng) { 
+                loader.classList.add('d-none'); 
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Falta ubicación',
+                    text: 'Por favor ingresa o resuelve el link de Google Maps antes de cotizar.',
+                    confirmButtonColor: '#ff4757'
+                });
+                return; 
+            }
             payload.lat = lat; payload.lng = lng;
         } else {
             payload.peso = document.getElementById('envioPeso').value;
@@ -1328,7 +1378,16 @@
             body: JSON.stringify(payload)
         }).then(r => r.json()).then(data => {
             loader.classList.add('d-none');
-            if (data.error) return alert(data.error);
+            
+            if (data.error) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Aviso de Cotización',
+                    text: data.error,
+                    confirmButtonColor: '#ff4757'
+                });
+                return;
+            }
 
             // Cerrar modal y aplicar
             const modalEl = document.getElementById('modalEnvios');
@@ -1345,9 +1404,15 @@
             document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
             document.getElementById('btnTextoEnvio').innerText = "Cambiar";
             calcularTotal();
+            
         }).catch(e => {
             loader.classList.add('d-none');
-            alert("Error de conexión");
+            Swal.fire({
+                icon: 'error',
+                title: 'Error de conexión',
+                text: 'Hubo un problema al intentar calcular el envío. Revisa tu conexión a internet.',
+                confirmButtonColor: '#ff4757'
+            });
         });
     }
 
@@ -1379,7 +1444,12 @@
     function cargarRecetaDesdeCarrito(index) {
         const item = carrito[index];
         if (!item || !item.composicion || typeof item.composicion === 'string') {
-            alert("Este producto no tiene receta.");
+            Swal.fire({
+                icon: 'info',
+                title: 'Sin receta',
+                text: 'Este producto no tiene una receta asignada.',
+                confirmButtonColor: '#ff4757'
+            });
             return;
         }
 

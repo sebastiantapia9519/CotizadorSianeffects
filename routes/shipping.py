@@ -7,20 +7,35 @@ shipping_bp = Blueprint('shipping', __name__)
 
 @shipping_bp.route('/api/cotizar-envio', methods=['POST'])
 def cotizar():
+    # 1. Validación estricta de sesión PRIMERO
     if 'user_id' not in session:
         return jsonify({"error": "No autorizado"}), 401
         
-    data = request.json
-    servicio = ShippingService(session['user_id'])
-    
     try:
+        # 2. Obtener datos de la petición de forma segura
+        data = request.get_json()
+        if not data:
+             return jsonify({"error": "No se enviaron datos"}), 400
+
+        # 3. Inicializar el servicio con el usuario verificado
+        servicio = ShippingService(session['user_id'])
+        
+        # 4. Determinar el tipo de cotización
         if data.get('tipo') == 'local':
+            # Validación rápida de que las coordenadas vengan en el payload
+            if 'lat' not in data or 'lng' not in data:
+                 return jsonify({"error": "Faltan coordenadas para envío local"}), 400
+                 
             resultado = servicio.cotizar_local(
                 data['lat'], 
                 data['lng']
             )
         else:
             # Nacional
+            # Validación de campos mínimos para nacional
+            if not all(k in data for k in ('peso', 'largo', 'ancho', 'alto', 'estado')):
+                 return jsonify({"error": "Faltan dimensiones o estado para envío nacional"}), 400
+                 
             resultado = servicio.cotizar_nacional(
                 data['peso'],
                 data['largo'],
@@ -32,8 +47,9 @@ def cotizar():
         return jsonify(resultado)
         
     except Exception as e:
-        print(f"Error en cotización: {e}")
-        return jsonify({"error": "Error interno al calcular envío"}), 500
+        print(f"Error crítico en cotización: {e}")
+        # Retornamos el error real temporalmente para ayudarte a depurar si falla la DB
+        return jsonify({"error": f"Fallo en el servicio: {str(e)}"}), 500
 
 @shipping_bp.route('/api/resolver-mapa', methods=['POST'])
 def resolver_mapa():

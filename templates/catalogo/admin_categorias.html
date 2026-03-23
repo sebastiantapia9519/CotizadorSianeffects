@@ -237,12 +237,23 @@
             .then(r => r.json())
             .then(data => {
                 if (!data.success) {
-                    alert('Error del Servidor: ' + data.error);
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error del Servidor',
+                        text: data.error,
+                        confirmButtonColor: '#ff4757'
+                    });
                     checkbox.checked = !checkbox.checked;
                 }
             })
             .catch(err => {
-                alert('Error de conexión o red: ' + err);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'Hubo un problema de red al intentar guardar el cambio.',
+                    confirmButtonColor: '#ff4757'
+                });
+                console.error("Error toggle:", err);
                 checkbox.checked = !checkbox.checked;
             });
     }

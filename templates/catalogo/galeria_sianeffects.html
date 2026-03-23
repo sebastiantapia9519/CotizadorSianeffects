@@ -544,20 +544,28 @@
         }
 
         function enviarPedidoWhatsapp() {
-            if (cart.length === 0) return alert("Agrega productos primero");
-
-            let msg = "Hola SianEffects! 👋 Me interesa cotizar los siguientes productos:\n\n";
-            let total = 0;
-            cart.forEach(i => {
-                msg += `▪️ ${i.cantidad}x ${i.titulo} \n`;
-                total += (i.cantidad * i.precio);
+        if (cart.length === 0) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Carrito vacío',
+                text: 'Por favor, agrega al menos un producto antes de enviar tu pedido.',
+                confirmButtonColor: '#ff4757'
             });
-            msg += `\n*Total Estimado: $${total.toFixed(2)}*`;
-            msg += "\n\n¿Tienen disponibilidad?";
-
-            const telefono = "5218134939580";
-            window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
+            return;
         }
+
+        let msg = "Hola SianEffects! 👋 Me interesa cotizar los siguientes productos:\n\n";
+        let total = 0;
+        cart.forEach(i => {
+            msg += `▪️ ${i.cantidad}x ${i.titulo} \n`;
+            total += (i.cantidad * i.precio);
+        });
+        msg += `\n*Total Estimado: $${total.toFixed(2)}*`;
+        msg += "\n\n¿Tienen disponibilidad?";
+
+        const telefono = "5218134939580";
+        window.open(`https://wa.me/${telefono}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
 
         // Detectar cuando se cierra el modal para pausar el video (Limpieza)
         const myModalEl = document.getElementById('mediaModal');
