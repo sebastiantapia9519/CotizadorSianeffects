@@ -1,0 +1,100 @@
+================================================================================
+                    MANUAL TÉCNICO Y DE NEGOCIO: SIANEFFECTS
+================================================================================
+Última actualización: Marzo 2026
+Descripción: Plataforma B2B/B2C para la creación y gestión de micro-sitios 
+premium de invitaciones sociales multievento (Bodas, XV Años, Bautizos, 
+Cumpleaños, Graduaciones, Eventos Corporativos y más).
+
+--------------------------------------------------------------------------------
+1. ARQUITECTURA TÉCNICA
+--------------------------------------------------------------------------------
+- Backend: Python con framework Flask.
+- Base de Datos: SQLite (con queries preparados para migración a Postgres).
+- Frontend: HTML5, CSS3, JavaScript Vanilla, Bootstrap 5.
+- Librerías UI: SweetAlert2 (Alertas), SortableJS (Drag & Drop), AOS (Animaciones), Canvas-Confetti.
+- Almacenamiento Multimedia: Cloudflare R2 (S3 compatible) para imágenes y audios. Las imágenes se procesan, se suben a R2 y solo se guarda la URL pública en la BD.
+- Lógica de Plantillas: Jinja2. Las invitaciones se renderizan dinámicamente según el 'slug' (URL única) y el tipo de evento.
+
+--------------------------------------------------------------------------------
+2. ROLES DE USUARIO
+--------------------------------------------------------------------------------
+A) Admin Master (SianEffects):
+   - Tiene acceso a TODAS las invitaciones y a TODOS los Planners.
+   - Puede crear, editar, eliminar, regalar créditos y suspender cuentas.
+   - Gestiona el catálogo global de Música.
+
+B) Socio / Planner:
+   - Ingresa con código "PLAN-XXXXX".
+   - Compra paquetes de "créditos" para crear invitaciones para sus clientes.
+   - Solo ve y gestiona los eventos que él mismo ha creado.
+   - Tiene un "Modo Demo" para crear 1 invitación de prueba (gratis) para su portafolio de ventas.
+
+C) Cliente Final (Novios / Quinceañera / Festejados):
+   - Ingresan con código "SIA-XXXXX".
+   - Tienen un panel limitado donde ven su evento, la lista de invitados (si no está bloqueada) y pueden descargar el álbum de fotos.
+
+--------------------------------------------------------------------------------
+3. SISTEMA DE CRÉDITOS Y VIGENCIAS (EL NEGOCIO)
+--------------------------------------------------------------------------------
+- 1 Crédito = 1 Invitación Publicada.
+- El "Modo Demo" cuesta 0 créditos, fuerza la fecha a 2 meses en el futuro y le pone la marca de agua "Demo". Solo puede haber 1 Demo activo por Planner.
+- Vigencia de Paquetes de Créditos (Caducan si no se usan):
+  * 1 a 3 créditos = 1 mes.
+  * 4 a 9 créditos = 3 meses.
+  * 10 a 15 créditos = 6 meses.
+  * Más de 15 créditos = 12 meses.
+- El sistema descuenta siempre del paquete más próximo a vencer (First in, First out).
+
+--------------------------------------------------------------------------------
+4. CICLO DE VIDA DE UNA INVITACIÓN
+--------------------------------------------------------------------------------
+- Día 0: Creación y entrega al cliente.
+- Día del Evento: La cuenta regresiva llega a cero. La cámara desechable se activa para los invitados.
+- Día +30: BLOQUEO AUTOMÁTICO. La URL muestra un candado, ya no se pueden ver detalles ni subir fotos.
+- Día +45: BORRADO DEFINITIVO (Purgado). El sistema elimina las fotos de Cloudflare R2 y borra los registros de la BD para liberar espacio y proteger la privacidad.
+
+--------------------------------------------------------------------------------
+5. MÓDULOS DE LA INVITACIÓN (CONSTRUCTOR DRAG & DROP)
+--------------------------------------------------------------------------------
+La invitación se ensambla guardando el orden en un arreglo JSON (`config_json`). Si un módulo está "apagado", se quita del arreglo.
+* Modo Camaleón: Los placeholders y títulos del panel cambian si es Boda, XV Años o Fiesta genérica.
+- Portada: Foto hero, nombres, frase principal.
+- Cuenta Regresiva: Reloj automático con integración dinámica a Google/Apple Calendar.
+- Mapas: Enlaces directos a Google Maps para Misa y Fiesta/Recepción.
+- Dresscode: Opciones de etiqueta predefinidas.
+- No Niños: Mensaje de restricción.
+- Mesa de Regalos: Datos bancarios o múltiples links (Amazon, Liverpool).
+- Hospedaje: Notas de transporte y links a hoteles/Airbnb.
+- Historia / Timeline (Común en XV): Línea de tiempo con fotos y años. (Las fotos se guardan como un JSON de objetos).
+- Itinerario: Actividades por hora con iconos (Misa, Banquete, Baile).
+- Galería: Carrusel de fotos de sesión casual.
+- Libro de Visitas (Buenos Deseos): Formulario para dejar mensajes.
+- Protocolo / Anfitriones: Listado de padres, padrinos o los organizadores de la fiesta.
+
+--------------------------------------------------------------------------------
+6. MÓDULOS PREMIUM Y FUNCIONES EXTRA
+--------------------------------------------------------------------------------
+A) Cámara Desechable (R2):
+   - Muestra un botón en la invitación para que los invitados tomen fotos.
+   - Las fotos van directo a Cloudflare R2.
+   - El admin/planner/cliente puede descargar un archivo .ZIP generado al vuelo en la memoria RAM del servidor.
+
+B) RSVP (Gestión de Invitados):
+   - Se dan de alta los pases con un número de boletos.
+   - Genera un código QR único por familia.
+   - Envío de mensaje predeterminado por WhatsApp.
+   - ESCÁNER MAESTRO: Permite "Check-in Parcial". Si una familia de 4 llega dividida en 2, el escáner permite meter a 2 personas, deja el estatus en "2/4" y el QR sigue vivo para los otros 2.
+
+C) Save The Date (STD):
+   - Link independiente (/std/slug o /save-the-date/slug), con foto propia (guardada en el JSON datos_cliente), mensaje de calendario y estilos de marcadores (círculo, corazón, sólido).
+
+--------------------------------------------------------------------------------
+7. DETALLES DE DESARROLLO Y BLINDAJES
+--------------------------------------------------------------------------------
+- Borrado de imágenes AJAX: Al eliminar una foto desde el panel de edición, una petición (fetch) va al backend, la borra de R2 y actualiza el campo exacto (portada, fondo, JSON de galería, o el JSON 'datos_cliente_json' para el STD) sin recargar la página abruptamente, usando SweetAlert2.
+- Agendar en Calendario: Se genera un archivo .ics al vuelo en el navegador o se construye un enlace profundo (Deep Link) a Google/Outlook Calendar, formateando la fecha de Python a ISO (YYYYMMDDTHHMMSS) mediante JS.
+- Autoplay de música: Un truco en JS (iniciarMusicaAutomaticamente) espera el primer tap o scroll del usuario en el celular para saltarse el bloqueo de autoplay de los navegadores.
+- Animación de Confeti: Al abrir eventos tipo "Fiesta" o confirmar asistencia positivamente en el RSVP, se lanza un script de Canvas-Confetti en pantalla.
+- Slugs Inteligentes: Validados en tiempo real mediante AJAX. Reemplazan espacios y caracteres especiales. Dependiendo del tipo de evento la ruta renderizada es: `/invitacion/slug` (Boda), `/xv/slug` (XV Años) o `/fiesta/slug` (Otro).
+- Tipografías Dinámicas: Clases CSS mapeadas por Jinja para aplicar Google Fonts formales (Cinzel, Playfair) o casuales/infantiles (Fredoka, Pacifico, Caveat).

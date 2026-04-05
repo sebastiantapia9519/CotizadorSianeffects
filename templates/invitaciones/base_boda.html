@@ -1806,39 +1806,59 @@
         }
 
 
-        function addToCalendar(type) {
-    // 1. CONFIGURA AQUÍ LOS DATOS DEL EVENTO
-    const eventData = {
-        title: "Nombre de tu Evento | SianEffects",
-        description: "¡Te esperamos en nuestra celebración! No olvides confirmar tu asistencia.",
-        location: "Dirección del Evento, Monterrey, NL",
-        // Formato: YYYYMMDDTHHMMSS (UTC preferiblemente o local si no especificas Z)
-        start: "20260620T190000", 
-        end: "20260621T020000"
-    };
+function addToCalendar(type) {
+            // 1. Damos formato a la fecha del evento automáticamente
+            const fechaOriginal = "{{ inv['fecha_evento'] }}"; 
+            let startCal = "20260620T190000"; // Respaldo de seguridad
+            let endCal = "20260621T020000";
+            
+            if (fechaOriginal && fechaOriginal !== 'None') {
+                // Limpiamos la fecha para el estándar iCal (YYYYMMDDTHHMMSS)
+                const fechaLimpia = fechaOriginal.replace(/[-:]/g, '').replace(' ', 'T');
+                if (fechaLimpia.length >= 15) {
+                    startCal = fechaLimpia.substring(0, 15);
+                    
+                    // Calculamos una hora de fin (sumamos 5 horas a la fiesta)
+                    const fechaObj = new Date(fechaOriginal.replace(' ', 'T'));
+                    fechaObj.setHours(fechaObj.getHours() + 5);
+                    
+                    // Formateamos la nueva hora de fin
+                    const pad = (n) => n < 10 ? '0' + n : n;
+                    endCal = `${fechaObj.getFullYear()}${pad(fechaObj.getMonth() + 1)}${pad(fechaObj.getDate())}T${pad(fechaObj.getHours())}${pad(fechaObj.getMinutes())}00`;
+                }
+            }
 
-    const title = encodeURIComponent(eventData.title);
-    const desc = encodeURIComponent(eventData.description);
-    const loc = encodeURIComponent(eventData.location);
+            // 2. CONFIGURAMOS LOS DATOS DEL EVENTO DINÁMICAMENTE
+            const eventData = {
+                title: "Boda de {{ datos.get('novios', 'los novios') }}",
+                description: "¡Te esperamos en nuestra celebración! No olvides confirmar tu asistencia. {{ datos.get('frase', '') }}",
+                location: "{{ datos.get('maps_fiesta', datos.get('maps_misa', 'Ubicación pendiente')) }}",
+                start: startCal, 
+                end: endCal
+            };
 
-    if (type === 'google') {
-        window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${desc}&location=${loc}&dates=${eventData.start}/${eventData.end}`, '_blank');
-    } 
-    else if (type === 'outlook') {
-        window.open(`https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&body=${desc}&location=${loc}&startdt=${eventData.start}&enddt=${eventData.end}`, '_blank');
-    } 
-    else if (type === 'ics') {
-        // Genera un archivo .ics para Apple Calendar o dispositivos locales
-        const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${eventData.title}\nDESCRIPTION:${eventData.description}\nLOCATION:${eventData.location}\nDTSTART:${eventData.start}\nDTEND:${eventData.end}\nEND:VEVENT\nEND:VCALENDAR`;
-        const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
-        const link = document.createElement('a');
-        link.href = window.URL.createObjectURL(blob);
-        link.setAttribute('download', 'evento.ics');
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-}
+            const title = encodeURIComponent(eventData.title);
+            const desc = encodeURIComponent(eventData.description);
+            const loc = encodeURIComponent(eventData.location);
+
+            if (type === 'google') {
+                window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${desc}&location=${loc}&dates=${eventData.start}/${eventData.end}`, '_blank');
+            } 
+            else if (type === 'outlook') {
+                window.open(`https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&body=${desc}&location=${loc}&startdt=${eventData.start}&enddt=${eventData.end}`, '_blank');
+            } 
+            else if (type === 'ics') {
+                // Genera un archivo .ics para Apple Calendar o dispositivos locales
+                const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${eventData.title}\nDESCRIPTION:${eventData.description}\nLOCATION:${eventData.location}\nDTSTART:${eventData.start}\nDTEND:${eventData.end}\nEND:VEVENT\nEND:VCALENDAR`;
+                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.setAttribute('download', 'boda_{{ inv["slug"] }}.ics');
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
     </script>
 </body>
 

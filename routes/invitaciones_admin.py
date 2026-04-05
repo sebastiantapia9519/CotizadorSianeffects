@@ -258,6 +258,11 @@ def crear_invitacion():
             nombres_proto = request.form.getlist('nombres_protocolo[]')
             protocolo_familiar = [{'rol': r, 'nombres': n} for r, n in zip(roles_proto, nombres_proto) if r and n]
 
+            # [NUEVO] Extracción y subida de foto exclusiva para el STD
+            activar_std = True if request.form.get('activar_std') == '1' else False
+            foto_std = request.files.get('foto_std')
+            url_foto_std = upload_to_cloudflare(foto_std, folder=f"invitaciones/{slug}/std") if foto_std and foto_std.filename else None
+
             datos_cliente = {
                 "novios": request.form.get('nombres_novios'),
                 "mensaje_bienvenida": request.form.get('mensaje_bienvenida', '').strip(),
@@ -272,7 +277,16 @@ def crear_invitacion():
                 "itinerario": itinerario,
                 "no_ninos": 'no_ninos' in request.form.getlist('orden_items[]'),
                 "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip(),
-                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip() 
+                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip(),
+                
+                # [NUEVO] Almacenar la configuracion del STD dentro del JSON
+                "activar_std": activar_std,
+                "foto_std_url": url_foto_std,
+                "std_frase_calendario": request.form.get('std_frase_calendario', 'Save the Date').strip(),
+                "std_ubicacion": request.form.get('std_ubicacion', '').strip(),
+                "std_estilo_marcador": request.form.get('std_estilo_marcador', 'circulo'),
+                "std_incluir_contador": True if request.form.get('std_incluir_contador') else False,
+                "std_frase_final": request.form.get('std_frase_final', '').strip()
             }
             
             foto_portada = request.files.get('foto_portada')
@@ -590,8 +604,16 @@ def editar_invitacion(id):
             for rol, nombres in zip(roles_proto, nombres_proto):
                 if rol and nombres: protocolo_familiar.append({'rol': rol, 'nombres': nombres})
 
+            # [MODIFICACION] Extraemos y procesamos la foto del STD si se subió una nueva
+            activar_std = True if request.form.get('activar_std') == '1' else False
+            foto_std = request.files.get('foto_std')
+            if foto_std and foto_std.filename != '':
+                url_foto_std = upload_to_cloudflare(foto_std, folder=f"invitaciones/{slug}/std")
+            else:
+                url_foto_std = datos_viejos.get('foto_std_url') # Mantenemos la que ya tenía
+
             datos_cliente = {
-                "novios": nombres_novios_final,
+                "novios": request.form.get('nombres_novios') if not es_planner else nombres_novios_final,
                 "mensaje_bienvenida": request.form.get('mensaje_bienvenida', '').strip(),
                 "iniciales": request.form.get('iniciales'),
                 "frase": request.form.get('frase'),
@@ -604,7 +626,16 @@ def editar_invitacion(id):
                 "itinerario": itinerario,
                 "no_ninos": 'no_ninos' in request.form.getlist('orden_items[]'),
                 "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip(),
-                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip() 
+                "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip(),
+                
+                # [NUEVO] Actualizamos los datos del STD en la base de datos
+                "activar_std": activar_std,
+                "foto_std_url": url_foto_std,
+                "std_frase_calendario": request.form.get('std_frase_calendario', 'Save the Date').strip(),
+                "std_ubicacion": request.form.get('std_ubicacion', '').strip(),
+                "std_estilo_marcador": request.form.get('std_estilo_marcador', 'circulo'),
+                "std_incluir_contador": True if request.form.get('std_incluir_contador') else False,
+                "std_frase_final": request.form.get('std_frase_final', '').strip()
             }
             
             nombres_tiendas = request.form.getlist('nombre_tienda[]')
@@ -716,7 +747,8 @@ def eliminar_invitacion(id):
     """Purga la invitacion y libera todo el almacenamiento asociado en R2."""
     conn = get_db_connection()
     try:
-        inv = conn.execute("SELECT foto_portada_url, url_fondo, fotos_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        # [MODIFICACION] Agregamos 'datos_cliente_json' al SELECT para purgar la foto del STD si existe.
+        inv = conn.execute("SELECT foto_portada_url, url_fondo, fotos_json, datos_cliente_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
         
         if inv:
             if inv['foto_portada_url']: delete_from_cloudflare(inv['foto_portada_url'])
@@ -724,6 +756,11 @@ def eliminar_invitacion(id):
             if inv['fotos_json']:
                 fotos_galeria = json.loads(inv['fotos_json'])
                 for foto_url in fotos_galeria: delete_from_cloudflare(foto_url)
+
+            # [NUEVO] Eliminación de la foto exclusiva del Save the Date
+            datos_cliente = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
+            if datos_cliente.get('foto_std_url'):
+                delete_from_cloudflare(datos_cliente['foto_std_url'])
 
             fotos_invitados = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (id,)).fetchall()
             for foto in fotos_invitados:
@@ -748,8 +785,12 @@ def eliminar_invitacion(id):
 # RUTA PUBLICA: RENDERIZADO DEL EVENTO (/invitacion/slug)
 # ==============================================================================
 @invitaciones_bp.route('/invitacion/<slug>')
+@invitaciones_bp.route('/xv/<slug>')
+@invitaciones_bp.route('/save-the-date/<slug>')
+@invitaciones_bp.route('/std/<slug>') 
+@invitaciones_bp.route('/fiesta/<slug>') 
 def ver_invitacion(slug):
-    """Renderiza el front-end final que ven los invitados (Boda o XV)."""
+    """Renderiza el front-end final que ven los invitados (Boda, XV o STD)."""
     conn = get_db_connection()
     try:
         inv = conn.execute("""
@@ -760,9 +801,11 @@ def ver_invitacion(slug):
         """, (slug,)).fetchone()
         
         if not inv:
-            return "<h1>404 - Invitacion no encontrada</h1>", 404
+            return "<h1>404 - Invitación no encontrada</h1>", 404
 
-        # Blindaje Date String Lexicografico (Seguro en SQLite y Postgres)
+        inv = dict(inv)
+
+        # Blindaje Date String Lexicográfico (Seguro en SQLite y Postgres)
         hoy_str = str(hoy_local())[:10]
         vigencia_str = str(inv['vigencia'])[:10] if inv['vigencia'] else None
 
@@ -797,7 +840,23 @@ def ver_invitacion(slug):
                     'template_color_fondo': template['color_fondo']
                 }
 
-        plantilla_render = 'invitaciones/xv.html' if inv['tipo_evento'] == 'xv' else 'invitaciones/base_boda.html'
+        # [MODIFICACION] --- SELECCIÓN DINÁMICA DE PLANTILLA BASADA EN LA URL ---
+        if request.path.startswith('/std/') or request.path.startswith('/save-the-date/'):
+            # Si entran por el link del STD, revisamos si el Planner lo tiene activado
+            if not datos.get('activar_std'):
+                return "<h1>404 - El Save the Date no está activo para este evento.</h1>", 404
+            
+            plantilla_render = 'invitaciones/std.html'
+            
+            # Ajustamos la foto principal a mandar a la vista (para que si hay foto_std la prefiera)
+            inv['foto_portada_url'] = datos.get('foto_std_url') if datos.get('foto_std_url') else inv['foto_portada_url']
+            
+        elif inv['tipo_evento'] == 'xv':
+            plantilla_render = 'invitaciones/xv.html'
+        elif inv['tipo_evento'] == 'otro':
+            plantilla_render = 'invitaciones/fiesta.html'
+        else:
+            plantilla_render = 'invitaciones/base_boda.html'
         
         return render_template(
             plantilla_render,
@@ -951,7 +1010,6 @@ def gestionar_pases(id):
     return render_template('invitaciones/pases_admin.html', inv=inv, invitados=invitados, mesas_status=estado_mesas)
 
 
-
 @invitaciones_bp.route('/admin/invitacion/<int:inv_id>/eliminar-pase/<int:pase_id>', methods=['POST'])
 def eliminar_pase(inv_id, pase_id):
     """Revoca un pase desde la base de datos."""
@@ -1095,7 +1153,8 @@ def eliminar_planner():
             flash(f"Cuenta suspendida. No se puede eliminar: tiene {saldo} creditos o {invitaciones_activas} eventos vigentes.", "warning")
             return redirect(url_for('invitaciones_admin.gestionar_socios'))
 
-        invs_a_borrar = conn.execute("SELECT id, foto_portada_url, url_fondo, fotos_json FROM invitaciones WHERE planner_id = ?", (planner_id,)).fetchall()
+        # [MODIFICACION] Extraemos también 'datos_cliente_json' para borrar fotos del STD si existen
+        invs_a_borrar = conn.execute("SELECT id, foto_portada_url, url_fondo, fotos_json, datos_cliente_json FROM invitaciones WHERE planner_id = ?", (planner_id,)).fetchall()
         
         for inv in invs_a_borrar:
             inv_id = inv['id']
@@ -1105,6 +1164,11 @@ def eliminar_planner():
             if inv['fotos_json']:
                 fotos_galeria = json.loads(inv['fotos_json'])
                 for foto_url in fotos_galeria: delete_from_cloudflare(foto_url)
+                
+            # [NUEVO] Purga de la foto de STD de Cloudflare
+            datos_cliente = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
+            if datos_cliente.get('foto_std_url'):
+                delete_from_cloudflare(datos_cliente['foto_std_url'])
                 
             fotos_invitados = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,)).fetchall()
             for foto in fotos_invitados:
@@ -1274,6 +1338,7 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
     if not es_admin_master and not es_planner: return jsonify({"success": False, "error": "Acceso denegado"}), 403
 
+    import json # Asegúrate de tener json importado arriba en tu archivo
     conn = get_db_connection()
     try:
         inv = conn.execute("SELECT *, planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
@@ -1296,6 +1361,26 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
                 fotos_actuales.remove(foto_url_a_borrar)
                 conn.execute("UPDATE invitaciones SET fotos_json = ? WHERE id = ?", (json.dumps(fotos_actuales), id))
                 conn.commit()
+            
+            return jsonify({"success": True})
+            
+        elif tipo_imagen == 'std':
+            # AQUÍ ESTÁ LA MAGIA: Usamos el nombre real de tu columna: datos_cliente_json
+            datos_cliente = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
+            url_imagen_cloudflare = datos_cliente.get('foto_std_url')
+            
+            if not url_imagen_cloudflare: return jsonify({"success": False, "error": "Imagen STD ya eliminada o no existe"}), 400
+            
+            try:
+                # Borramos de Cloudflare
+                delete_from_cloudflare(url_imagen_cloudflare)
+            except Exception as e:
+                print(f"Error R2 STD: {e}")
+                
+            # Quitamos la llave 'foto_std_url' del JSON y actualizamos la base de datos con el nombre de columna correcto
+            datos_cliente.pop('foto_std_url', None)
+            conn.execute("UPDATE invitaciones SET datos_cliente_json = ? WHERE id = ?", (json.dumps(datos_cliente), id))
+            conn.commit()
             
             return jsonify({"success": True})
             

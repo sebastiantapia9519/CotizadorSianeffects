@@ -4,60 +4,98 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis XV Años - {{ datos['novios'] }}</title>
+    <title>Evento de {{ datos['novios'] }}</title>
 
-
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css" />
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
 <style id="core-styles">
     /* =========================================
-       1. FUENTES DINÁMICAS (Temas de XV Años)
+       1. FUENTES DINÁMICAS Y CONFIGURACIÓN BASE
        ========================================= */
        
-    {% if inv['template_id'] == 'rose_gold' %}
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Montserrat:wght@300;400&display=swap');
-        :root {
-            --font-title: 'Playfair Display', serif;
-            --font-body: 'Montserrat', sans-serif;
-            --color-acento: #b76e79; /* Rose Gold */
-            --bg-color: #fdfaf9;
-        }
-    {% elif inv['template_id'] == 'princesa' %}
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Lato:wght@300;400&display=swap');
-        :root {
-            --font-title: 'Cinzel', serif;
-            --font-body: 'Lato', sans-serif;
-            --color-acento: #D4AF37; /* Dorado */
-            --bg-color: #f0f4f8; /* Azul claro muy sutil */
-        }
-    {% elif inv['template_id'] == 'neon' %}
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Roboto:wght@300;400&display=swap');
-        :root {
-            --font-title: 'Orbitron', sans-serif;
-            --font-body: 'Roboto', sans-serif;
-            --color-acento: #ff007f; /* Rosa Neon */
-            --bg-color: #121212; /* Oscuro */
-        }
-    {% else %}
-        /* Personalizado o Default */
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Lato:wght@300;400&display=swap');
-        :root {
-            --font-title: 'Playfair Display', serif;
-            --font-body: 'Lato', sans-serif;
-            --color-acento: {{ inv['color_acentos']|default('#D4AF37') }};
-            --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
-        }
-    {% endif %}
-
+        /* Lógica de Jinja para Fuentes (Incluye Fiestas) */
+        {% if inv['estilo_fuente']=='clasico' %}
+    @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
     :root {
-        /* Mapeamos color-oro a color-acento para mantener compatibilidad con tus componentes base */
-        --color-oro: var(--color-acento); 
-        --text-color: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else '#ffffff') | color_contraste }};
-        --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else '#ffffff') | fondo_tarjeta }};
+        --font-title: 'Playfair Display', serif;
+        --font-body: 'Lato', sans-serif;
+        --color-oro: #D4AF37;
+    }
+        {% elif inv['estilo_fuente']=='romantico' %}
+    @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400&display=swap');
+    :root {
+        --font-title: 'Great Vibes', cursive;
+        --font-body: 'Montserrat', sans-serif;
+        --color-oro: #d48b9b;
+    }
+        {% elif inv['estilo_fuente']=='moderno' %}
+    @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
+    :root {
+        --font-title: 'Oswald', sans-serif;
+        --font-body: 'Roboto', sans-serif;
+        --color-oro: #a89f91;
+    }
+        {% elif inv['estilo_fuente']=='minimal' %}
+    @import url('https://fonts.googleapis.com/css2?family=Cinzel&family=Raleway:wght@300;400&display=swap');
+    :root {
+        --font-title: 'Cinzel', serif;
+        --font-body: 'Raleway', sans-serif;
+        --color-oro: #8c8c8c;
+    }
+        {% elif inv['estilo_fuente']=='botanico' %}
+    @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;1,400&family=Proza+Libre:wght@400;500&display=swap');
+    :root {
+        --font-title: 'Cormorant', serif;
+        --font-body: 'Proza Libre', sans-serif;
+        --color-oro: #8f9779;
+    }
+        {% elif inv['estilo_fuente']=='infantil' %}
+    @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&display=swap');
+    :root {
+        --font-title: 'Fredoka', sans-serif;
+        --font-body: 'Fredoka', sans-serif;
+        --color-oro: #ff4757;
+    }
+        {% elif inv['estilo_fuente']=='divertido' %}
+    @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Raleway:wght@400;600&display=swap');
+    :root {
+        --font-title: 'Pacifico', cursive;
+        --font-body: 'Raleway', sans-serif;
+        --color-oro: #ffa502;
+    }
+        {% elif inv['estilo_fuente']=='casual' %}
+    @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Montserrat:wght@400;500&display=swap');
+    :root {
+        --font-title: 'Caveat', cursive;
+        --font-body: 'Montserrat', sans-serif;
+        --color-oro: #e15f41;
+    }
+        {% else %}
+    @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+    :root {
+        --font-title: 'Playfair Display', serif;
+        --font-body: 'Lato', sans-serif;
+        --color-oro: #D4AF37;
+    }
+        {% endif %}
+
+    /* 2. VARIABLES INTELIGENTES DE COLOR */
+    :root {
+        {% if inv['template_id'] == 'personalizado' %}
+            /* 🎨 Colores definidos manualmente por el usuario */
+            --color-oro: {{ inv['color_acentos']|default('#D4AF37') }};
+            --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
+        {% else %}
+            /* 🎨 Colores heredados de la plantilla */
+            --color-oro: {{ inv['template_color_acento']|default('#D4AF37') }};
+            --bg-color: {{ inv['template_color_fondo']|default('#fdfbf7') }};
+        {% endif %}
+
+        /* Derivados automáticos (SIEMPRE se calculan) */
+        --text-color: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | color_contraste }};
+        --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']) | fondo_tarjeta }};
     }
 
     html {
@@ -74,9 +112,6 @@
         width: 100%;
         position: relative;
         overflow-x: hidden; 
-        background-color: var(--bg-color);
-        color: var(--text-color);
-        font-family: var(--font-body);
     }
     
     .hero {
@@ -84,18 +119,18 @@
     }
 
     .fondo-fijo-app {
-        position: fixed;
-        inset: 0; 
-        z-index: -1;
-        background-color: var(--bg-color);
-        {% if inv['url_fondo'] %}
-        background-image: url('{{ inv['url_fondo'] }}');
-        background-size: cover;
-        background-position: center;
-        {% endif %}
+    position: fixed;
+    inset: 0; 
+    z-index: -1;
+    background-color: var(--bg-color);
+    {% if inv['url_fondo'] %}
+    background-image: url('{{ inv['url_fondo'] }}');
+    background-size: cover;
+    background-position: center;
+    {% endif %}
     }
 
-    h1, h2, h3, .font-title {
+    h1, h2, h3 {
         font-family: var(--font-title);
         font-weight: normal;
         margin: 0;
@@ -130,7 +165,7 @@
         letter-spacing: 2px;
         background: transparent;
         color: var(--text-color);
-        border: 1px solid var(--color-acento);
+        border: 1px solid var(--color-oro);
         cursor: pointer;
         transition: all 0.3s;
         text-decoration: none;
@@ -140,9 +175,9 @@
 
     .btn-entrar:hover,
     .btn-boda:hover {
-        background: var(--color-acento);
+        background: var(--color-oro);
         color: var(--bg-color);
-        border-color: var(--color-acento);
+        border-color: var(--color-oro);
     }
 
     .music-btn {
@@ -151,13 +186,13 @@
         right: 20px;
         width: 50px;
         height: 50px;
-        background: var(--color-acento);
+        background: var(--color-oro);
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         color: var(--bg-color);
-        z-index: 90;
+        z-index: 1000;
         cursor: pointer;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
         animation: pulse 2s infinite;
@@ -175,6 +210,7 @@
        3. SISTEMA DE SOBRES E INVITACIÓN (Híbrido Desktop/Móvil)
        ========================================= */
 
+    /* --- CONTENEDOR PRINCIPAL --- */
     .pantalla-sobre {
         position: fixed;
         top: 0;
@@ -236,9 +272,16 @@
     }
 
     /* --- ANIMACIONES DE APERTURA --- */
-    .sobre-abierto .svg-desktop { transform: rotateX(180deg); }
-    .sobre-abierto .svg-mobile-izq { transform: rotateY(-180deg); }
-    .sobre-abierto .svg-mobile-der { transform: rotateY(180deg); }
+    .sobre-abierto .svg-desktop {
+        transform: rotateX(180deg);
+    }
+
+    .sobre-abierto .svg-mobile-izq {
+        transform: rotateY(-180deg);
+    }
+    .sobre-abierto .svg-mobile-der {
+        transform: rotateY(180deg);
+    }
 
     .sobre-abierto .sello-wrapper {
         opacity: 0;
@@ -299,17 +342,17 @@
         pointer-events: none;
     }
 
+    /* --- ANIMACIÓN RESPIRACIÓN --- */
     @keyframes respiracion-suave {
         0%   { transform: translate(-50%, -50%) scale(1); }
         50%  { transform: translate(-50%, -50%) scale(1.03); } 
         100% { transform: translate(-50%, -50%) scale(1); }
     }
     
+/* --- TOOLTIP FLOTANTE (Centrado y anclado arriba) --- */
     .tooltip-sian {
         position: absolute;
-        bottom: 100%;
         left: 50%;
-        margin-bottom: 15px; 
         background: #b5986d;
         color: #ffffff;
         padding: 6px 18px;
@@ -335,16 +378,17 @@
         height: 10px;
         background: #b5986d;
     }
-    
+
     @keyframes float-tooltip {
         0%, 100% { transform: translateX(-50%) translateY(0); }
         50% { transform: translateX(-50%) translateY(-5px); }
     }
     
+    /* --- ESTILO 3: INICIALES DESVANECIDAS --- */
     .iniciales-gigantes {
         font-family: var(--font-title);
         font-size: 6rem;
-        color: var(--color-acento);
+        color: var(--color-oro);
         margin: 0;
         text-shadow: 0 5px 15px rgba(0,0,0,0.1);
     }
@@ -355,6 +399,7 @@
        4. COMPONENTES UI, ICONOS Y ANIMACIONES
        ========================================= */
 
+    /* SECCIONES Y CONTADORES */
     section {
         padding: 80px 20px;
         text-align: center;
@@ -367,22 +412,25 @@
         justify-content: center;
         gap: 15px;
         margin-top: 20px;
-        flex-wrap: wrap;
     }
 
     .time-unit {
         background: var(--card-bg);
         backdrop-filter: blur(4px);
+
         border-radius: 16px;
         padding: 16px 18px;
         min-width: 82px;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.45);
+
+        box-shadow:
+            0 6px 16px rgba(0,0,0,0.08),
+            inset 0 0 0 1px rgba(255,255,255,0.45);
     }
 
     .time-number {
         font-size: 2rem;
         font-family: var(--font-title);
-        color: var(--color-acento);
+        color: var(--color-oro);
     }
 
     .time-label {
@@ -393,6 +441,7 @@
         opacity: 0.7;
     }
 
+    /* TARJETAS PREMIUM (Regalos, Hospedaje) + ICONOS */
     .premium-container {
         display: flex;
         flex-direction: column;
@@ -405,18 +454,26 @@
         background: var(--card-bg);
         border-radius: 18px;
         padding: 24px;
+
         display: flex;
         align-items: center;
         gap: 20px;
+
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
+
+        box-shadow:
+            0 8px 25px rgba(0, 0, 0, 0.08),
+            inset 0 0 0 1px rgba(255,255,255,0.35);
+
         transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
 
     .premium-card:hover {
         transform: translateY(-4px);
-        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.12), inset 0 0 0 1px var(--color-acento);
+        box-shadow:
+            0 14px 35px rgba(0, 0, 0, 0.12),
+            inset 0 0 0 1px var(--color-oro);
     }
 
     .premium-icon {
@@ -428,12 +485,11 @@
         align-items: center;
         justify-content: center;
         font-size: 1.5rem;
-        color: var(--color-acento);
+        color: var(--color-oro);
     }
 
     .premium-info {
         flex: 1;
-        text-align: left;
     }
 
     .premium-title {
@@ -457,40 +513,37 @@
     }
 
     .btn-card:hover {
-        background: var(--color-acento);
+        background: var(--color-oro);
         color: var(--bg-color);
     }
 
-    
-    /* --- NUEVO: MASONRY GALLERY --- */
-    .masonry-grid {
-        column-count: 2;
-        column-gap: 15px;
+    /* CARRUSEL SWIPER */
+    .swiper {
+        width: 280px;
+        height: 380px;
         margin-top: 20px;
-    }
-    
-    @media (min-width: 768px) {
-        .masonry-grid { column-count: 3; }
-    }
-    
-    .masonry-item {
-        break-inside: avoid;
-        margin-bottom: 15px;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    
-    .masonry-item img {
-        width: 100%;
-        display: block;
-        transition: transform 0.3s ease;
-    }
-    
-    .masonry-item:hover img {
-        transform: scale(1.05);
+        margin-bottom: 50px;
+        padding: 10px;
     }
 
+    .swiper-slide {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        background-color: var(--card-bg);
+        overflow: hidden;
+    }
+
+    .swiper-slide img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* TIMELINE DINÁMICO */
     .timeline {
         position: relative;
         max-width: 400px;
@@ -520,17 +573,17 @@
         text-align: right;
         font-style: italic;
         font-size: 0.9rem;
-        color: var(--color-acento);
+        color: var(--color-oro);
     }
 
     .timeline-dot {
         width: 10px;
         height: 10px;
-        background: var(--color-acento);
+        background: var(--color-oro);
         border-radius: 50%;
         margin: 0 15px;
         z-index: 1;
-        box-shadow: 0 0 10px var(--color-acento);
+        box-shadow: 0 0 10px var(--color-oro);
     }
 
     .timeline-content {
@@ -542,19 +595,24 @@
         gap: 10px;
     }
 
+    /* NUEVO ESTILO PARA EL PASE */
     .ticket-container {
         background: var(--card-bg);
         border-radius: 18px;
+
         backdrop-filter: blur(6px);
         -webkit-backdrop-filter: blur(6px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
+
+        box-shadow:
+            0 10px 30px rgba(0,0,0,0.08),
+            inset 0 0 0 1px rgba(255,255,255,0.35);
     }
 
     .ticket-header {
         font-family: var(--font-title);
         font-size: 1.8rem;
         margin-bottom: 30px;
-        border-bottom: 1px solid var(--color-acento);
+        border-bottom: 1px solid var(--color-oro);
         display: inline-block;
         padding-bottom: 5px;
     }
@@ -569,14 +627,14 @@
 
     @media (max-width: 480px) {
         .ticket-grid { grid-template-columns: 1fr; text-align: center; }
-        .qr-side { order: -1; } 
+        .qr-side { order: -1; }
     }
 
     .ticket-label {
         font-size: 0.65rem;
         text-transform: uppercase;
         letter-spacing: 2px;
-        color: var(--color-acento);
+        color: var(--color-oro);
         margin-bottom: 4px;
         display: block;
         font-weight: bold;
@@ -605,18 +663,110 @@
         letter-spacing: 1px;
     }
 
-    .anim-iglesia { display: inline-block; transform-origin: top center; transition: transform 0.6s ease, filter 0.6s ease; }
-    [data-aos].aos-animate .anim-iglesia { animation: campanaEntrada 1.6s cubic-bezier(.4,0,.2,1) both; }
-    @keyframes campanaEntrada { 0% { transform: rotate(0deg); filter: drop-shadow(0 0 0 transparent); } 60% { transform: rotate(-4deg); filter: drop-shadow(0 0 10px var(--color-acento)); } 100% { transform: rotate(0deg); filter: drop-shadow(0 0 0 transparent); } }
-    .premium-card:hover .anim-iglesia { animation: campanaHover 0.8s ease-in-out; }
-    @keyframes campanaHover { 0% { transform: rotate(0); } 25% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } 75% { transform: rotate(-3deg); } 100% { transform: rotate(0); } }
+    /* MAPAS – Animación Genérica Flotante */
+    .anim-mapa {
+      display: inline-block;
+      transform-origin: center bottom;
+    }
 
-    .anim-copas { display: inline-block; transform-origin: center bottom; }
-    [data-aos].aos-animate .anim-copas { animation: brindisEntrada 1.4s cubic-bezier(.4,0,.2,1) both; }
-    @keyframes brindisEntrada { 0% { transform: scale(0.9) translateY(6px); filter: drop-shadow(0 0 0 transparent); opacity: 0; } 60% { transform: scale(1.05) translateY(0); filter: drop-shadow(0 0 12px var(--color-acento)); opacity: 1; } 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } }
-    .premium-card:hover .anim-copas { animation: brindisHover 0.7s ease-in-out; }
-    @keyframes brindisHover { 0% { transform: rotate(0); } 30% { transform: rotate(-8deg); } 60% { transform: rotate(8deg); } 100% { transform: rotate(0); } }
+    [data-aos].aos-animate .anim-mapa {
+      animation: mapaEntrada 1.4s cubic-bezier(.4,0,.2,1) both;
+    }
 
+    @keyframes mapaEntrada {
+      0% {
+        transform: translateY(10px);
+        filter: drop-shadow(0 0 0 transparent);
+        opacity: 0;
+      }
+      60% {
+        transform: translateY(-5px);
+        filter: drop-shadow(0 0 12px var(--color-oro));
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(0);
+        filter: drop-shadow(0 0 0 transparent);
+      }
+    }
+
+    .premium-card:hover .anim-mapa {
+      animation: mapaHover 1s infinite alternate ease-in-out;
+    }
+
+    @keyframes mapaHover {
+      0% { transform: translateY(0); }
+      100% { transform: translateY(-5px); }
+    }
+
+    /* --- TOOLTIP --- */
+    .tooltip-sian {
+        position: absolute;
+        top: 20px;
+        background: #b5986d;
+        color: #ffffff;
+        padding: 6px 18px;
+        border-radius: 20px;
+        font-family: var(--font-body);
+        font-size: 0.8rem;
+        font-weight: 500;
+        letter-spacing: 0.5px;
+        white-space: nowrap;
+        pointer-events: none;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        animation: float-tooltip 2.8s ease-in-out infinite;
+        z-index: 200; 
+    }
+
+    .sello-wrapper .tooltip-sian {
+        top: 30px; 
+    }
+
+    .pulso-apertura .tooltip-sian {
+        top: 0px; 
+    }
+
+    .tooltip-sian::after {
+        content: '';
+        position: absolute;
+        top: 100%; 
+        left: 50%;
+        transform: translate(-50%, -50%) rotate(45deg);
+        width: 10px;
+        height: 10px;
+        background: #b5986d;
+    }
+
+    @keyframes float-tooltip {
+        0%, 100% { transform: translate(-50%, calc(-100% - 10px)); }
+        50% { transform: translate(-50%, calc(-100% - 16px)); }
+    }
+
+
+    
+    .no-ninos-card {
+        background: transparent;
+        border-top: 1px solid rgba(150,150,150,0.25);
+        border-bottom: 1px solid rgba(150,150,150,0.25);
+        padding: 35px 20px;
+        max-width: 520px;
+        margin: 0 auto;
+    }
+
+    .no-ninos-title {
+        font-family: var(--font-title);
+        font-size: 1.8rem;
+        color: var(--color-oro);
+        margin-bottom: 10px;
+    }
+
+    .no-ninos-text {
+        font-size: 0.9rem;
+        letter-spacing: 1px;
+        opacity: 0.75;
+    }
+
+    /* --- SECCIÓN BUENOS DESEOS --- */
     .swiper-deseos {
         width: 100%;
         max-width: 600px;
@@ -626,7 +776,7 @@
         border-radius: 18px;
         overflow: hidden;
         background: transparent;
-        padding-bottom: 40px; 
+        padding-bottom: 40px;
     }
 
     .swiper-deseos .swiper-slide {
@@ -654,7 +804,7 @@
 
     .deseo-nombre {
         font-family: var(--font-title);
-        color: var(--color-acento);
+        color: var(--color-oro);
         font-size: 1.4rem;
         font-weight: bold;
     }
@@ -678,7 +828,7 @@
         align-items: center;
         justify-content: center;
         font-weight: bold;
-        color: var(--color-acento);
+        color: var(--color-oro);
         font-family: var(--font-body);
         font-size: 0.8rem;
     }
@@ -692,122 +842,12 @@
         width: 100%;
         height: 100%;
         stroke-width: 4px;
-        stroke: var(--color-acento);
+        stroke: var(--color-oro);
         fill: none;
         stroke-dashoffset: calc(125.6px * (1 - var(--progress)));
         stroke-dasharray: 125.6;
         transform: rotate(-90deg);
     }
-
-    /* --- MI HISTORIA - ESTILO EDITORIAL (NUEVO) --- */
-    .historia-container {
-        background-color: var(--card-bg);
-        background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-        border-radius: 12px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.08);
-        padding: 50px 20px 40px 20px;
-        max-width: 850px;
-        margin: 0 auto;
-    }
-
-    .historia-layout {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-
-    .historia-header {
-        flex: 1;
-        text-align: center;
-    }
-
-    .historia-header-title {
-        font-family: var(--font-title);
-        font-size: 3.5rem;
-        color: var(--color-acento);
-        letter-spacing: 4px;
-        margin: 0;
-        line-height: 1;
-        text-transform: uppercase;
-    }
-
-    .historia-header-subtitle {
-        font-family: 'Great Vibes', cursive;
-        font-size: 3.5rem;
-        color: var(--color-acento);
-        margin: -15px 0 0 0;
-        font-weight: normal;
-    }
-
-    .swiper-historia {
-        flex: 1.5;
-        width: 100%;
-        padding-bottom: 40px;
-        position: relative;
-    }
-
-    .card-historia {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        background: transparent;
-    }
-
-    .card-historia img {
-        width: 100%;
-        max-width: 320px;
-        height: auto;
-        aspect-ratio: 4/3;
-        object-fit: cover;
-        border-radius: 12px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15); 
-        margin-bottom: 20px;
-    }
-
-    .historia-content {
-        max-width: 320px;
-        margin: 0 auto;
-    }
-
-    .historia-year {
-        font-family: var(--font-title);
-        font-size: 1.3rem;
-        color: var(--text-color);
-        letter-spacing: 2px;
-        margin-bottom: 5px;
-    }
-
-    .historia-title {
-        font-family: var(--font-body);
-        font-size: 1rem;
-        color: var(--color-acento);
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-
-    .swiper-button-prev, .swiper-button-next {
-        color: var(--color-acento) !important;
-        transform: scale(0.6); 
-    }
-
-    .swiper-pagination-bullet {
-        background: var(--color-acento) !important;
-    }
-
-    @media (max-width: 768px) {
-        .historia-layout {
-            flex-direction: column;
-        }
-        .historia-header {
-            margin-bottom: 10px;
-        }
-        .swiper-button-prev, .swiper-button-next {
-            top: 35%; 
-        }
-    }
-
     .dropdown-menu-center {
         left: 50% !important;
         right: auto !important;
@@ -816,13 +856,12 @@
     .dropdown-item:active {
         background-color: var(--bs-primary);
     }
-
     .btn-calendar-premium {
         background: var(--card-bg);
-        color: var(--color-oro); /* Usa el color de acento dinámico de tu invitación */
+        color: var(--color-oro);
         border: 1px solid rgba(255,255,255,0.3);
         padding: 12px 28px;
-        border-radius: 15px; /* Bordes suaves como tus contadores */
+        border-radius: 15px; 
         font-family: var(--font-body);
         font-weight: 600;
         font-size: 0.9rem;
@@ -840,7 +879,6 @@
         border-color: var(--color-oro);
     }
 
-    /* Centrado del menú en móvil */
     .dropdown-menu-center {
         left: 50% !important;
         right: auto !important;
@@ -860,7 +898,6 @@
         color: var(--color-oro);
     }
 
-    /* Animación de entrada sutil */
     .animate-dropdown {
         animation: slideIn 0.3s ease-out;
     }
@@ -869,9 +906,9 @@
         from { opacity: 0; transform: translateX(-50%) translateY(20px); }
         to { opacity: 1; transform: translateX(-50%) translateY(10px); }
     }
-
-    
 </style>
+
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
 </head>
 
@@ -912,9 +949,9 @@
         </div>
 
         {% else %}
-            <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-acento);">Mis XV Años</p>
+            <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-oro);">¡Estás Invitado!</p>
             <h1 style="font-size: 4rem; margin: 15px 0; text-align: center;">{{ datos['novios'] }}</h1>
-            <button class="btn-boda mt-4" onclick="entrarSitio('simple')">Abrir Invitación</button>
+            <button class="btn-entrar mt-4" onclick="entrarSitio('simple')">Abrir Invitación</button>
         {% endif %}
 
     </div>
@@ -927,8 +964,8 @@
     {% endif %}
 
     <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">        
-        
         {% for item in config %}
+        
         
         {% if item == 'hero' %}
         <section class="hero"
@@ -943,23 +980,22 @@
                 filter: brightness(0.6);">
             </div>
             
-            <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #ffffff;"
+            <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #fdfbf7;"
                 data-aos="zoom-in" data-aos-duration="1500">
-                
-                {% if datos.get('mensaje_bienvenida') %}
-                    <p style="font-size: 1.1rem; font-style: italic; opacity: 0.9; max-width: 600px; margin: 0 auto 20px auto; line-height: 1.6; text-shadow: 1px 1px 5px rgba(0,0,0,0.5);">
-                        "{{ datos['mensaje_bienvenida'] }}"
-                    </p>
-                {% endif %}
-
-                <h1 style="font-size: clamp(3.5rem, 10vw, 6rem); margin: 10px 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">
+                <h1
+                    style="font-size: clamp(3.5rem, 10vw, 6rem); margin: 10px 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">
                     {{ datos['novios'] }}</h1>
-                <p style="font-size: 1.3rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-top: 10px; color: var(--color-acento);">Mis XV Años</p>
+                <p style="font-size: 1.3rem; font-style: italic; opacity: 0.9;">{{ datos['frase'] }}</p>
             </div>
         </section>
 
         {% elif item == 'countdown' %}
         <section data-aos="fade-up">
+            <p
+                style="text-transform: uppercase; letter-spacing: 5px; font-size: 1.1rem; color: var(--color-oro); margin-bottom: 15px; font-weight: 600;">
+                {{ datos.get('frase', '¡Falta muy poco!') }}
+            </p>
+            
             <h2 id="fecha-elegante"
                 style="font-size: 2rem; color: var(--text-color); margin-bottom: 40px; font-family: var(--font-title);">
             </h2>
@@ -1004,61 +1040,26 @@
 </div>
         </section>
 
-        {% elif item == 'historia' and historia_lista %}
-        <section data-aos="fade-up" style="max-width: 1000px;">
-            <div class="historia-container">
-                <div class="historia-layout">
-                    
-                    <div class="historia-header">
-                        <h2 class="historia-header-title">MI</h2>
-                        <h3 class="historia-header-subtitle">Historia</h3>
-                    </div>
-
-                    <div class="swiper swiper-historia">
-                        <div class="swiper-wrapper">
-                            {% for recuerdo in historia_lista %}
-                            <div class="swiper-slide"> <div class="card-historia">
-                                    {% if recuerdo.foto %}
-                                    <img src="{{ recuerdo.foto }}" alt="Año {{ recuerdo.anio }}">
-                                    {% endif %}
-                                    <div class="historia-content">
-                                        <div class="historia-year">{{ recuerdo.anio }}</div>
-                                        <div class="historia-title">{{ recuerdo.texto }}</div>
-                                    </div> </div>
-                            </div>
-                            {% endfor %}
-                        </div>
-                        
-                        <div class="swiper-button-prev swiper-btn-custom"></div>
-                        <div class="swiper-button-next swiper-btn-custom"></div>
-                        
-                        <div class="swiper-pagination"></div>
-                    </div>
-
-                </div>
-            </div>
-        </section>
-
         {% elif item == 'mapas' %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 40px;">Ubicaciones</h2>
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Ubicaciones</h2>
             <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
                 {% if datos['maps_misa'] %}
                 <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
-                    <span class="anim-iglesia">
-                        <i class="fas fa-church fa-2x mb-2" style="color: var(--color-acento);"></i>
+                    <span class="anim-mapa">
+                        <i class="fas fa-map-marked-alt fa-2x mb-2" style="color: var(--color-oro);"></i>
                     </span>
-                    <h3 style="margin-bottom: 15px;">Misa de Acción de Gracias</h3>
+                    <h3 style="margin-bottom: 15px;">Lugar del Evento</h3>
                     <a href="{{ datos['maps_misa'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
                 </div>
                 {% endif %}
 
                 {% if datos['maps_fiesta'] %}
                 <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
-                    <span class="anim-copas">
-                        <i class="fas fa-glass-cheers fa-2x mb-2" style="color: var(--color-acento);"></i>
+                    <span class="anim-mapa">
+                        <i class="fas fa-glass-cheers fa-2x mb-2" style="color: var(--color-oro);"></i>
                     </span>
-                    <h3 style="margin-bottom: 15px;">La Recepción</h3>
+                    <h3 style="margin-bottom: 15px;">Recepción</h3>
                     <a href="{{ datos['maps_fiesta'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
                 </div>
                 {% endif %}
@@ -1067,8 +1068,8 @@
 
         {% elif item == 'dresscode' and inv['dress_code'] %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 20px;">Código de Vestimenta</h2>
-            <div style="font-size: 3rem; color: var(--color-acento); margin-bottom: 15px;">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 20px;">Código de Vestimenta</h2>
+            <div style="font-size: 3rem; color: var(--color-oro); margin-bottom: 15px;">
                 <i class="fas fa-user-tie me-3"></i><i class="fas fa-female"></i>
             </div>
             <h3 style="text-transform: uppercase; letter-spacing: 3px; font-family: var(--font-body);">{{
@@ -1082,13 +1083,25 @@
             </p>
         </section>
 
-        {% elif item == 'regalos' %}
+        {% elif item == 'no_ninos' and datos.get('no_ninos') %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Mesa de Regalos <i
+            <div class="no-ninos-card">
+                <div class="no-ninos-title">No niños</div>
+                <div class="no-ninos-text">
+                    {{ datos.mensaje_no_ninos or
+                    'Este evento está diseñado solo para adultos. Agradecemos su apoyo en este gran día.' }}
+                </div>
+            </div>
+        </section>
+
+
+       {% elif item == 'regalos' %}
+        <section data-aos="fade-up">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Mesa de Regalos <i
                     class="fas fa-gift ms-2"></i></h2>
                     
             <p class="mb-5" style="font-style: italic; opacity: 0.8; font-size: 1.1rem; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-                ¡Que me acompañes en este día es mi mejor regalo! Pero si está en tu disposición realizar un obsequio, te comparto estas opciones.
+                ¡Que nos acompañes es lo más importante! Y si está en tu disposición realizar una muestra de cariño, ¡estaremos muy agradecidos!
             </p>
 
             <div class="premium-container">
@@ -1098,7 +1111,7 @@
                     <div class="premium-info">
                         <div class="premium-title">Lluvia de Sobres</div>
                         <p
-                            style="white-space: pre-line; margin: 0; font-family: monospace; color: var(--color-acento); font-size: 1.1rem;">
+                            style="white-space: pre-line; margin: 0; font-family: monospace; color: var(--color-oro); font-size: 1.1rem;">
                             {{ datos['cuenta_bancaria'] }}</p>
                     </div>
                 </div>
@@ -1184,10 +1197,10 @@
                     </div>
 
                     {% if inv['tiene_modulo_invitados'] %}
-                    <div style="margin-top: 40px; border-top: 1px dashed var(--color-acento); padding-top: 30px;">
+                    <div style="margin-top: 40px; border-top: 1px dashed var(--color-oro); padding-top: 30px;">
                         <p class="mb-4" style="opacity: 0.8; font-weight: bold;">¿Confirmas tu asistencia?</p>
                         <div id="botones-rsvp" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                            <button class="btn-boda" style="background: var(--color-acento); color: var(--bg-color);"
+                            <button class="btn-boda" style="background: var(--color-oro); color: var(--bg-color);"
                                 onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Confirmado')">
                                 <i class="fas fa-check me-2"></i> Sí, asistiré
                             </button>
@@ -1207,30 +1220,30 @@
             
             {% else %}
             <section data-aos="fade-up" style="padding-bottom: 100px;">
-                <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 20px;">Asistencia</h2>
-                <p class="mb-4" style="opacity: 0.8;">Me encantaría contar con tu presencia.</p>
+                <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 20px;">Asistencia</h2>
+                <p class="mb-4" style="opacity: 0.8;">Nos encantaría contar con tu presencia.</p>
                 {% if datos['telefono_rsvp'] %}
-                    <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia%20a%20los%20XV%20años..."
+                    <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia..."
                         target="_blank" class="btn-boda" style="background: #25D366; border-color: #25D366; color: white;">
                         <i class="fab fa-whatsapp me-2"></i> Confirmar por WhatsApp
                     </a>
                 {% endif %}
             </section>
-            {% endif %}
+        {% endif %}
         
         {% elif item == 'protocolo' and datos.get('protocolo') %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.2rem; color: var(--color-acento); margin-bottom: 10px;">Mis Padres y Padrinos</h2>
+            <h2 style="font-size: 2.2rem; color: var(--color-oro); margin-bottom: 10px;">Anfitriones</h2>
             
             <p style="font-style: italic; opacity: 0.7; font-size: 1.1rem; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto;">
-                "Con el amor y apoyo incondicional de quienes me guían en cada paso."
+                "Con el cariño y apoyo de nuestra familia y seres queridos."
             </p>
             
             <div class="row g-4 justify-content-center" style="display: flex; flex-wrap: wrap; gap: 15px;">
                 {% for integrante in datos['protocolo'] %}
                 <div class="col-md-5 col-sm-12 text-center" style="flex: 1; min-width: 250px;">
                     <div class="p-3">
-                        <i class="fas fa-heart mb-2" style="color: var(--color-acento);"></i>
+                        <i class="fas fa-heart mb-2" style="color: var(--color-oro);"></i>
                         <h4 class="mb-1" style="font-weight: 600;">{{ integrante.nombres }}</h4>
                         <small class="text-uppercase text-muted" style="letter-spacing: 2px;">{{ integrante.rol }}</small>
                         
@@ -1243,7 +1256,7 @@
 
         {% elif item == 'hospedaje' %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Hospedaje y Transporte</h2>
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Hospedaje y Transporte</h2>
             
             <p class="mb-5" style="font-style: italic; opacity: 0.8; font-size: 1.1rem; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.5;">
                 Pensando en tu comodidad, hemos seleccionado estas opciones de alojamiento y detalles de transporte para que disfrutes con nosotros sin preocupaciones.
@@ -1281,9 +1294,9 @@
 
         {% elif item == 'camara' and inv['camara_premium'] %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 15px;">Captura el Momento</h2>
-            <p class="mb-4" style="opacity: 0.8;">Ayúdame a documentar este día tan especial. Te regalo una cámara
-                desechable virtual con 5 fotos para mi rollo.</p>
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 15px;">Captura el Momento</h2>
+            <p class="mb-4" style="opacity: 0.8;">Ayúdanos a documentar este día tan especial. Te regalamos una cámara
+                desechable virtual con 5 fotos para nuestro rollo.</p>
 
             <div class="premium-card"
                 style="flex-direction: column; text-align: center; justify-content: center; padding: 40px;">
@@ -1295,24 +1308,25 @@
                 </button>
             </div>
         </section>
+        
 
         {% elif item == 'galeria' and fotos %}
-        <section data-aos="fade-up" style="max-width: 1000px;">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Mi Sesión Fotográfica</h2>
-            
-            <div class="masonry-grid">
-                {% for foto in fotos %}
-                <div class="masonry-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 50 }}">
-                    <img src="{{ foto }}" alt="Foto XV Años">
+        <section data-aos="fade-up" style="max-width: 100%; overflow: hidden;">
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Nuestra Historia</h2>
+            <p class="mb-4" style="opacity: 0.7;">Desliza para ver más</p>
+            <div class="swiper mySwiper">
+                <div class="swiper-wrapper">
+                    {% for foto in fotos %}
+                    <div class="swiper-slide"><img src="{{ foto }}" alt="Foto"></div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
         </section>
 
         {% elif item == 'deseos' %}
         <section data-aos="fade-up" style="padding-bottom: 60px;">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Libro de Visitas</h2>
-            <p class="mb-4" style="opacity: 0.8;">Déjame un mensaje para recordar este día tan especial.</p>
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 10px;">Libro de Visitas</h2>
+            <p class="mb-4" style="opacity: 0.8;">Déjanos un mensaje para recordar este día tan especial.</p>
             
             <button class="btn-boda mb-4" onclick="abrirModalDeseos({{ inv['id'] }})" style="margin-top: 10px;">
                 <i class="fas fa-pen-fancy me-2"></i> Escribir Mensaje
@@ -1323,7 +1337,7 @@
                 <div class="swiper-wrapper">
                     {% for deseo in buenos_deseos %}
                     <div class="swiper-slide">
-                        <i class="fas fa-quote-left mb-3" style="color: var(--color-acento); font-size: 2rem; opacity: 0.3;"></i>
+                        <i class="fas fa-quote-left mb-3" style="color: var(--color-oro); font-size: 2rem; opacity: 0.3;"></i>
                         <div class="deseo-mensaje">"{{ deseo.mensaje }}"</div>
                         <div class="deseo-nombre">{{ deseo.nombre }}</div>
                         <div class="deseo-fecha">{{ deseo.fecha[:10] }}</div>
@@ -1339,36 +1353,37 @@
             </div>
             {% else %}
             <div class="premium-card" style="margin-top: 30px; text-align: center; display: block;">
-                <p style="font-style: italic; opacity: 0.6; margin: 0;">Aún no hay mensajes. ¡Sé el primero en firmar mi libro!</p>
+                <p style="font-style: italic; opacity: 0.6; margin: 0;">Aún no hay mensajes. ¡Sé el primero en firmar nuestro libro!</p>
             </div>
             {% endif %}
         </section>
 
         {% elif item == 'timeline' and datos.get('itinerario') %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 40px;">Itinerario</h2>
+            <h2 style="font-size: 2.5rem; color: var(--color-oro); margin-bottom: 40px;">Itinerario</h2>
             <div class="timeline">
                 {% for act in datos['itinerario'] %}
                 <div class="timeline-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 + 100 }}">
                     <div class="timeline-time">{{ act.hora }}</div>
                     <div class="timeline-dot"></div>
-                    <div class="timeline-content"><i class="{{ act.icono }} me-2" style="color: var(--color-acento);"></i>
+                    <div class="timeline-content"><i class="{{ act.icono }} me-2" style="color: var(--color-oro);"></i>
                         {{ act.actividad }}</div>
                 </div>
                 {% endfor %}
             </div>
         </section>
 
+        
         {% elif item == 'frase_final' and inv['frase_final'] %}
         <section data-aos="fade-up" class="text-center" style="padding: 100px 20px;">
-            <div style="color: var(--color-acento); font-size: 1.5rem; margin-bottom: 25px; opacity: 0.6;">
-                <i class="fas fa-star"></i>
+            <div style="color: var(--color-oro); font-size: 1.5rem; margin-bottom: 25px; opacity: 0.6;">
+                <i class="fas fa-leaf"></i>
                 <span style="margin: 0 10px;">✦</span>
-                <i class="fas fa-star"></i>
+                <i class="fas fa-leaf fa-flip-horizontal"></i>
             </div>
             
             <div style="max-width: 600px; margin: 0 auto;">
-                <p class="fs-3" style="font-family: var(--font-title); color: var(--color-acento); font-style: italic; line-height: 1.4; margin-bottom: 30px;">
+                <p class="fs-3" style="font-family: var(--font-title); color: var(--color-oro); font-style: italic; line-height: 1.4; margin-bottom: 30px;">
                     "{{ inv['frase_final'] }}"
                 </p>
                 
@@ -1377,7 +1392,7 @@
                 </h3>
                 
                 <p style="text-transform: uppercase; letter-spacing: 4px; font-size: 0.8rem; opacity: 0.6; font-weight: bold;">
-                    ¡Te espero para celebrar!
+                    ¡Los esperamos para celebrar!
                 </p>
             </div>
         </section>
@@ -1395,7 +1410,7 @@
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
             <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; background: var(--bg-color); color: var(--text-color);">
                 <div class="modal-header border-bottom-0 pb-0">
-                    <h5 class="modal-title fw-bold" style="font-family: var(--font-title); color: var(--color-acento);">
+                    <h5 class="modal-title fw-bold" style="font-family: var(--font-title); color: var(--color-oro);">
                         <i class="fas fa-shield-alt me-2"></i>Aviso de Privacidad
                     </h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(var(--text-color) == '#333333' ? 0 : 1);"></button>
@@ -1403,7 +1418,7 @@
                 <div class="modal-body small" style="font-family: var(--font-body); line-height: 1.6; opacity: 0.9;">
                     <p>Al utilizar la función de <strong>Cámara de Invitados</strong>, aceptas lo siguiente:</p>
                     <ul style="padding-left: 20px; margin-bottom: 0;">
-                        <li class="mb-2"><strong>Uso de imagen:</strong> Otorgas permiso a la Quinceañera y a su familia para visualizar, descargar y conservar las fotografías que subas.</li>
+                        <li class="mb-2"><strong>Uso de imagen:</strong> Otorgas permiso a los anfitriones de este evento para visualizar, descargar y conservar las fotografías que subas.</li>
                         <li class="mb-2"><strong>Almacenamiento:</strong> Tus imágenes serán procesadas y almacenadas temporalmente en nuestra infraestructura segura.</li>
                         <li class="mb-2"><strong>Vigencia:</strong> Todas las fotografías se eliminarán permanentemente de nuestros servidores 45 días después de la fecha del evento.</li>
                         <li><strong>Responsabilidad:</strong> SianEffects y los organizadores se reservan el derecho de eliminar contenido inapropiado.</li>
@@ -1427,13 +1442,31 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
     <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <script>
+        // Función para explotar confeti
+        function dispararConfeti() {
+            var duration = 3000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 9999 };
+
+            function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+            var interval = setInterval(function() {
+                var timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) { return clearInterval(interval); }
+                var particleCount = 50 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } }));
+                confetti(Object.assign({}, defaults, { particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } }));
+            }, 250);
+        }
+
+        // Efecto de entrada dinámico
         function entrarSitio(estilo = 'simple') {
             const welcome = document.getElementById('welcome-screen');
             const content = document.getElementById('main-content');
@@ -1442,8 +1475,16 @@
             if (estilo === 'sobre') {
                 welcome.classList.add('sobre-abierto');
                 mostrarInvitacion(content);
-                setTimeout(() => { welcome.style.opacity = '0'; }, 800);
-                setTimeout(() => { welcome.style.visibility = 'hidden'; welcome.style.display = 'none'; }, 2000);
+
+                setTimeout(() => {
+                    welcome.style.opacity = '0'; 
+                }, 800);
+
+                setTimeout(() => { 
+                    welcome.style.visibility = 'hidden'; 
+                    welcome.style.display = 'none';
+                }, 2500);
+                
             } else {
                 welcome.style.opacity = '0';
                 setTimeout(() => { welcome.style.visibility = 'hidden'; }, 800);
@@ -1453,34 +1494,28 @@
             if (audio) { audio.play().catch(e => console.log("Autoplay bloqueado")); }
         }
 
+        // Separo la lógica de renderizado para no repetir código
         function mostrarInvitacion(content) {
             content.style.visibility = 'visible';
             content.style.opacity = '1';
+            
+            // Disparamos el confeti cuando se vea el contenido principal
+            setTimeout(dispararConfeti, 500);
 
             setTimeout(() => {
-                if(document.querySelector('.swiper-historia')) {
-                    new Swiper(".swiper-historia", {
+                // Swiper de Galería (El que ya tenías)
+                if(document.querySelector('.mySwiper')) {
+                    new Swiper(".mySwiper", {
+                        effect: "cards",
+                        grabCursor: true,
+                        centeredSlides: true,
+                        loop: true,
                         observer: true,
                         observeParents: true,
-                        allowTouchMove: false,
-                        slidesPerView: 1, 
-                        spaceBetween: 30, 
-                        loop: false, 
-                        navigation: {
-                            nextEl: ".swiper-button-next", 
-                            prevEl: ".swiper-button-prev", 
-                        },
-                        pagination: {
-                            el: ".swiper-pagination",
-                            clickable: true,
-                        },
-                        effect: "fade", 
-                        fadeEffect: {
-                            crossFade: true
-                        }
                     });
                 }
-                
+
+                // NUEVO: Swiper de Buenos Deseos con Autoplay Progress
                 const swiperDeseos = document.querySelector('.swiper-deseos');
                 if(swiperDeseos) {
                     const progressCircle = swiperDeseos.querySelector(".autoplay-progress svg");
@@ -1522,6 +1557,7 @@
             }
         }
 
+       // Reloj Cuenta Regresiva y Formato de Fecha
         const fechaStr = "{{ inv['fecha_evento'] }}";
         if (fechaStr && fechaStr !== 'None') {
             const safeFechaStr = fechaStr.replace(' ', 'T');
@@ -1530,6 +1566,7 @@
             if (!isNaN(fechaEvento.getTime())) {
                 const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
                 let textoFecha = fechaEvento.toLocaleDateString('es-ES', opcionesFecha);
+                
                 textoFecha = textoFecha.charAt(0).toUpperCase() + textoFecha.slice(1);
                 
                 const elFechaTexto = document.getElementById("fecha-elegante");
@@ -1542,7 +1579,7 @@
 
                     if (distance < 0) {
                         clearInterval(x);
-                        document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-acento); margin-top:20px;'>¡ES HOY!</h3>";
+                        document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-oro); margin-top:20px;'>¡ES HOY!</h3>";
                         return;
                     }
                     document.getElementById("dias").innerText = Math.floor(distance / (1000 * 60 * 60 * 24));
@@ -1550,9 +1587,12 @@
                     document.getElementById("minutos").innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
                     document.getElementById("segundos").innerText = Math.floor((distance % (1000 * 60)) / 1000);
                 }, 1000);
+            } else {
+                console.error("El formato de la fecha no es válido:", fechaStr);
             }
         }
 
+        // Lógica del Aviso de Privacidad de la Cámara
         document.addEventListener('DOMContentLoaded', function() {
             const checkPrivacidad = document.getElementById('checkAceptoPrivacidad');
             const btnContinuar = document.getElementById('btnContinuarCamara');
@@ -1560,22 +1600,21 @@
             if (checkPrivacidad && btnContinuar) {
                 checkPrivacidad.addEventListener('change', function() {
                     if (this.checked) {
+                        // Desbloquear botón
                         btnContinuar.style.pointerEvents = 'auto';
-                        btnContinuar.style.opacity = '1';
-                        btnContinuar.style.background = 'var(--color-acento)';
+                        btnContinuar.style.background = 'var(--color-oro)';
                         btnContinuar.style.color = 'var(--bg-color)';
-                        btnContinuar.style.borderColor = 'var(--color-acento)';
                     } else {
+                        // Bloquear botón
                         btnContinuar.style.pointerEvents = 'none';
-                        btnContinuar.style.opacity = '1';
                         btnContinuar.style.background = '#e9ecef';
                         btnContinuar.style.color = '#adb5bd';
-                        btnContinuar.style.borderColor = 'transparent';
                     }
                 });
             }
         });
 
+        // Función RSVP Premium (AJAX)
         function confirmarAsistencia(invitadoId, estado) {
             fetch(`/api/invitados/${invitadoId}/confirmar`, {  
                 method: 'POST',
@@ -1586,7 +1625,7 @@
             .then(data => {
                 if (data.success) {
                     document.getElementById('botones-rsvp').innerHTML = `
-                        <p style="color: var(--color-acento); font-weight: bold; font-size: 1.2rem; margin-top: 15px;">
+                        <p style="color: var(--color-oro); font-weight: bold; font-size: 1.2rem; margin-top: 15px;">
                             <i class="fas fa-check-circle me-1"></i> ¡Asistencia ${estado.toLowerCase()} exitosamente!
                         </p>`;
 
@@ -1595,22 +1634,22 @@
                             particleCount: 150,
                             spread: 80,
                             origin: { y: 0.6 },
-                            colors: ['#ff007f', '#D4AF37', '#ffffff'] 
+                            colors: ['#D4AF37', '#ffffff'] 
                         });
                         
                         Swal.fire({
-                            title: '¡Qué emoción! ✨',
-                            text: 'Gracias por confirmar. Me hace inmensamente feliz saber que compartirás este día tan especial conmigo.',
+                            title: '¡Qué emoción! 🤍',
+                            text: 'Gracias por confirmar. Nos hace inmensamente felices saber que compartirás este día tan especial con nosotros.',
                             icon: 'success',
-                            confirmButtonColor: 'var(--color-acento)',
+                            confirmButtonColor: 'var(--color-oro)',
                             confirmButtonText: '¡Nos vemos pronto!',
                             background: 'var(--bg-color)',
                             color: 'var(--text-color)'
                         });
                     } else {
                         Swal.fire({
-                            title: '¡Te extrañaré! 🥺',
-                            text: 'Entiendo que no puedas acompañarme, gracias por avisarme con tiempo.',
+                            title: '¡Te extrañaremos! 🥺',
+                            text: 'Entendemos que no puedas acompañarnos, gracias por avisarnos con tiempo.',
                             icon: 'info',
                             confirmButtonColor: 'rgba(150,150,150,0.5)',
                             confirmButtonText: 'Cerrar',
@@ -1619,77 +1658,126 @@
                         });
                     }
                 } else {
-                    Swal.fire('Ups...', 'Hubo un problema al guardar tu confirmación.', 'error');
+                    Swal.fire({
+                        title: 'Ups...', 
+                        text: 'Hubo un problema al guardar tu confirmación. Intenta de nuevo.', 
+                        icon: 'error',
+                        background: 'var(--bg-color)',
+                        color: 'var(--text-color)'
+                    });
                 }
             })
             .catch(error => {
-                Swal.fire('Error de conexión', 'No pudimos conectar con el servidor.', 'error');
+                console.error('Error:', error);
+                Swal.fire({
+                    title: 'Error de conexión', 
+                    text: 'No pudimos conectar con el servidor. Revisa tu internet.', 
+                    icon: 'error',
+                    background: 'var(--bg-color)',
+                    color: 'var(--text-color)'
+                });
             });
         }
-
+// Función para el Modal de Buenos Deseos
         function abrirModalDeseos(invitacionId) {
             Swal.fire({
-                title: '<span style="color: var(--color-acento); font-family: var(--font-title); font-size: 2rem;">Tus Buenos Deseos</span>',
+                title: '<span style="color: var(--color-oro); font-family: var(--font-title); font-size: 2rem;">Tus Buenos Deseos</span>',
                 html: `
                     <div style="text-align: left; margin-bottom: 10px;">
-                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-acento); font-weight: bold;">Tu Nombre o Familia</label>
+                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-oro); font-weight: bold;">Tu Nombre o Familia</label>
                         <input id="swal-nombre" class="swal2-input" placeholder="Ej. Familia Pérez" style="max-width: 100%; margin-top: 5px;">
                     </div>
                     <div style="text-align: left;">
-                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-acento); font-weight: bold;">Mensaje a la Quinceañera</label>
-                        <textarea id="swal-mensaje" class="swal2-textarea" placeholder="Te deseamos una vida llena de felicidad..." rows="4" style="max-width: 100%; resize: none; margin-top: 5px;"></textarea>
+                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-oro); font-weight: bold;">Mensaje a los anfitriones</label>
+                        <textarea id="swal-mensaje" class="swal2-textarea" placeholder="Les deseamos una vida llena de felicidad..." rows="4" style="max-width: 100%; resize: none; margin-top: 5px;"></textarea>
                     </div>
                 `,
                 confirmButtonText: 'Guardar Mensaje <i class="fas fa-paper-plane ms-2"></i>',
                 showCancelButton: true,
                 cancelButtonText: 'Cancelar',
-                confirmButtonColor: 'var(--color-acento)',
+                confirmButtonColor: 'var(--color-oro)',
                 cancelButtonColor: 'rgba(150,150,150,0.5)',
                 background: 'var(--bg-color)',
                 color: 'var(--text-color)',
+                focusConfirm: false,
                 preConfirm: () => {
                     const nombre = document.getElementById('swal-nombre').value.trim();
                     const mensaje = document.getElementById('swal-mensaje').value.trim();
-                    if (!nombre || !mensaje) Swal.showValidationMessage('Por favor completa ambos campos. 🙏');
+                    if (!nombre || !mensaje) {
+                        Swal.showValidationMessage('Por favor completa ambos campos. 🙏');
+                    }
                     return { nombre: nombre, mensaje: mensaje };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
-                    Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    
+                    Swal.fire({
+                        title: 'Guardando...',
+                        allowOutsideClick: false,
+                        background: 'var(--bg-color)',
+                        color: 'var(--color-oro)',
+                        didOpen: () => { Swal.showLoading(); }
+                    });
+
                     fetch('/api/buenos-deseos', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ invitacion_id: invitacionId, nombre: result.value.nombre, mensaje: result.value.mensaje })
+                        body: JSON.stringify({
+                            invitacion_id: invitacionId,
+                            nombre: result.value.nombre,
+                            mensaje: result.value.mensaje
+                        })
                     })
                     .then(response => response.json())
                     .then(data => {
                         if(data.success) {
-                            Swal.fire({ icon: 'success', title: '¡Mensaje Guardado!', confirmButtonColor: 'var(--color-acento)' }).then(() => window.location.reload());
+                            Swal.fire({
+                                icon: 'success',
+                                title: '¡Mensaje Guardado!',
+                                text: data.mensaje,
+                                confirmButtonColor: 'var(--color-oro)',
+                                background: 'var(--bg-color)',
+                                color: 'var(--text-color)'
+                            }).then(() => {
+                                window.location.reload(); 
+                            });
                         } else {
                             Swal.fire('Error', data.error, 'error');
                         }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Oops...',
+                            text: 'Ocurrió un error al enviar el mensaje. Intenta de nuevo.',
+                            background: 'var(--bg-color)',
+                            color: 'var(--text-color)',
+                            confirmButtonColor: 'var(--color-oro)'
+                        });
                     });
                 }
             });
         }
 
-   function addToCalendar(type) {
-            // 1. Damos formato a la fecha del evento automáticamente
-            const fechaOriginal = "{{ inv['fecha_evento'] }}"; 
-            let startCal = "20260620T190000"; // Respaldo de seguridad
+
+function addToCalendar(type) {
+            // 1. Damos formato a la fecha del evento (quitamos guiones, puntos y espacios)
+            const fechaOriginal = "{{ inv['fecha_evento'] }}"; // Ej: "2026-06-20 19:00:00"
+            let startCal = "20260620T190000"; // Valor por defecto por si falla
             let endCal = "20260621T020000";
             
             if (fechaOriginal && fechaOriginal !== 'None') {
-                // Limpiamos la fecha para el estándar iCal (YYYYMMDDTHHMMSS)
+                // Limpiamos los caracteres para cumplir el estándar iCal (YYYYMMDDTHHMMSS)
                 const fechaLimpia = fechaOriginal.replace(/[-:]/g, '').replace(' ', 'T');
                 if (fechaLimpia.length >= 15) {
-                    startCal = fechaLimpia.substring(0, 15);
+                    startCal = fechaLimpia;
                     
-                    // Calculamos una hora de fin (sumamos 5 horas a la fiesta de XV)
+                    // Calculamos una hora de fin (por defecto, 5 horas después)
                     const fechaObj = new Date(fechaOriginal.replace(' ', 'T'));
                     fechaObj.setHours(fechaObj.getHours() + 5);
                     
-                    // Formateamos la nueva hora de fin
+                    // Formateamos la hora de fin manualmente para evitar problemas de zona horaria
                     const pad = (n) => n < 10 ? '0' + n : n;
                     endCal = `${fechaObj.getFullYear()}${pad(fechaObj.getMonth() + 1)}${pad(fechaObj.getDate())}T${pad(fechaObj.getHours())}${pad(fechaObj.getMinutes())}00`;
                 }
@@ -1697,8 +1785,8 @@
 
             // 2. CONFIGURAMOS LOS DATOS DEL EVENTO DINÁMICAMENTE
             const eventData = {
-                title: "XV de {{ datos.get('novios', 'la quinceañera') }}",
-                description: "¡Te espero en mi fiesta de XV años! No olvides confirmar tu asistencia. {{ datos.get('frase', '') }}",
+                title: "Fiesta de {{ datos['novios'] }} | SianEffects",
+                description: "¡Nos encantaría contar con tu presencia! No olvides confirmar tu asistencia. {{ datos.get('frase', '') }}",
                 location: "{{ datos.get('maps_fiesta', datos.get('maps_misa', 'Ubicación pendiente')) }}",
                 start: startCal, 
                 end: endCal
@@ -1715,12 +1803,11 @@
                 window.open(`https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&body=${desc}&location=${loc}&startdt=${eventData.start}&enddt=${eventData.end}`, '_blank');
             } 
             else if (type === 'ics') {
-                // Genera un archivo .ics para Apple Calendar o dispositivos locales
                 const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${eventData.title}\nDESCRIPTION:${eventData.description}\nLOCATION:${eventData.location}\nDTSTART:${eventData.start}\nDTEND:${eventData.end}\nEND:VEVENT\nEND:VCALENDAR`;
                 const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
                 const link = document.createElement('a');
                 link.href = window.URL.createObjectURL(blob);
-                link.setAttribute('download', 'xv_{{ inv["slug"] }}.ics');
+                link.setAttribute('download', 'evento_{{ inv["slug"] }}.ics');
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);

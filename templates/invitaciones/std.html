@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Save the Date | {{ datos.get('novios', 'Nuestra Boda') }}</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Cormorant:ital,wght@0,400;0,600;1,400&family=Great+Vibes&family=Lato:wght@300;400&family=Montserrat:wght@300;400;500&family=Oswald:wght@300;400&family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=Proza+Libre:wght@400;500&family=Raleway:wght@300;400&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+
+    {% set color_fondo = template_color_fondo|default(inv['color_fondo'])|default('#fdfbf7') %}
+    {% set color_acento = template_color_acento|default(inv['color_acentos'])|default('#D4AF37') %}
+
+    <style>
+        /* === LÓGICA DE TIPOGRAFÍAS === */
+        {% if inv['estilo_fuente'] == 'romantico' %}
+            :root { --font-title: 'Great Vibes', cursive; --font-body: 'Montserrat', sans-serif; }
+        {% elif inv['estilo_fuente'] == 'moderno' %}
+            :root { --font-title: 'Oswald', sans-serif; --font-body: 'Roboto', sans-serif; }
+        {% elif inv['estilo_fuente'] == 'minimal' %}
+            :root { --font-title: 'Cinzel', serif; --font-body: 'Raleway', sans-serif; }
+        {% elif inv['estilo_fuente'] == 'botanico' %}
+            :root { --font-title: 'Cormorant', serif; --font-body: 'Proza Libre', sans-serif; }
+        {% else %}
+            :root { --font-title: 'Playfair Display', serif; --font-body: 'Lato', sans-serif; }
+        {% endif %}
+
+        :root {
+            --color-bg: {{ color_fondo }};
+            --color-accent: {{ color_acento }};
+            /* Usa tu filtro para decidir si el texto es claro u oscuro */
+            --color-text: {{ color_fondo | color_contraste }}; 
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            color: var(--color-text);
+            font-family: var(--font-body);
+            overflow-x: hidden;
+            background-color: #000;
+        }
+
+        h1, h2, h3, h4, .font-title {
+            font-family: var(--font-title);
+            font-weight: normal;
+        }
+
+        /* === FONDO FIJO GLOBAL === */
+        .fixed-bg {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            /* SE CAMBIÓ AQUÍ: Prioriza la foto de STD, si no hay, usa la portada */
+            background-image: url('{{ datos.get("foto_std_url") if datos.get("foto_std_url") else (inv["foto_portada_url"] if inv["foto_portada_url"] else "") }}');
+            background-size: cover;
+            background-position: center;
+            z-index: -2;
+        }
+        .bg-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.65) 100%);
+            z-index: -1;
+        }
+
+        /* === CONTENEDOR PRINCIPAL === */
+        .content-wrapper {
+            position: relative;
+            z-index: 1;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding-bottom: 40px;
+        }
+
+        /* === SECCIÓN HERO === */
+        .hero-section {
+            text-align: center;
+            color: #fff;
+            padding: 12vh 20px 40px 20px;
+        }
+
+        .hero-subtitle {
+            font-size: 1rem;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            margin-bottom: 15px;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.5);
+        }
+
+        .hero-title {
+            font-size: clamp(3.5rem, 12vw, 5rem); 
+            line-height: 1.1;
+            text-shadow: 2px 2px 10px rgba(0,0,0,0.4);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .hero-initials {
+            font-size: 1.3rem;
+            letter-spacing: 6px;
+            color: var(--color-accent);
+            margin-top: 15px;
+            text-shadow: 1px 1px 4px rgba(0,0,0,0.6);
+        }
+
+        /* === TARJETA GLASSMORPHISM === */
+        .glass-panel {
+            background-color: color-mix(in srgb, var(--color-bg) 90%, transparent);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 24px;
+            margin: 0 20px;
+            padding: 35px 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+            text-align: center;
+            max-width: 500px;
+            margin-left: auto;
+            margin-right: auto;
+            width: calc(100% - 40px);
+        }
+
+        /* === CALENDARIO === */
+        .calendar-header {
+            font-size: 1.4rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--color-accent);
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid rgba(0,0,0,0.08);
+        }
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 5px; 
+            text-align: center;
+        }
+
+        .day-name {
+            font-weight: bold;
+            font-size: 0.75rem;
+            color: #999;
+            margin-bottom: 5px;
+        }
+
+        .day-number {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 35px; 
+            width: 35px;
+            margin: 0 auto;
+            border-radius: 50%;
+            font-size: 0.95rem;
+            color: var(--color-text);
+        }
+
+        /* Marcadores */
+        .marcador-circulo {
+            border: 2px solid var(--color-accent);
+            font-weight: bold;
+            color: var(--color-accent);
+        }
+
+        .marcador-corazon {
+            position: relative;
+            color: #fff;
+            font-weight: bold;
+            z-index: 1;
+        }
+        .marcador-corazon::before {
+            content: '♥';
+            position: absolute;
+            font-size: 2rem;
+            color: var(--color-accent);
+            z-index: -1;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .marcador-solido {
+            background-color: var(--color-accent);
+            color: #fff;
+            font-weight: bold;
+            border-radius: 8px; 
+        }
+
+        .location-text {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            letter-spacing: 2px;
+            font-weight: 600;
+            color: #555;
+            text-transform: uppercase;
+        }
+
+        /* === CONTADOR === */
+        .countdown-section {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0,0,0,0.05);
+        }
+        
+        .timer-box {
+            display: inline-block;
+            margin: 0 10px;
+        }
+        
+        .timer-number {
+            font-size: 2rem;
+            color: var(--color-accent);
+            font-family: var(--font-title);
+            line-height: 1;
+        }
+        
+        .timer-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        /* === FRASE FINAL === */
+        .frase-section {
+            margin-top: 25px;
+        }
+
+        .frase-text {
+            font-size: 1.5rem;
+            color: var(--color-accent);
+            line-height: 1.3;
+        }
+
+        /* === REPRODUCTOR MÚSICA === */
+        .music-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: var(--color-accent);
+            color: var(--color-bg); 
+            border: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(var(--color-accent), 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(var(--color-accent), 0); }
+            100% { box-shadow: 0 0 0 0 rgba(var(--color-accent), 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="fixed-bg">
+        <div class="bg-overlay"></div>
+    </div>
+
+    {% if inv['musica_url'] %}
+    <audio id="bg-audio" loop>
+        <source src="{{ inv['musica_url'] }}" type="audio/mpeg">
+    </audio>
+    <button class="music-btn" id="music-toggle" onclick="toggleAudio()">
+        <i class="fas fa-play" id="music-icon"></i>
+    </button>
+    {% endif %}
+
+    <div class="content-wrapper">
+
+        <section class="hero-section" data-aos="fade-in" data-aos-duration="1500">
+            <div class="hero-subtitle">{{ datos.get('std_frase_calendario', 'Save the Date') }}</div>
+            
+            <h1 class="hero-title">{{ (datos.get('std_novios') if datos.get('std_novios') else datos.get('novios', 'Diana y Sebastian'))|replace(" & ", " y ") }}</h1>
+            
+            {% if datos.get('iniciales') %}
+            <div class="hero-initials">
+                {{ datos.get('iniciales') }}
+            </div>
+            {% endif %}
+        </section>
+
+        <div class="glass-panel" data-aos="fade-up" data-aos-duration="1200" data-aos-delay="300">
+            
+            <div class="calendar-container mb-4">
+                <h2 class="font-title mb-3" style="color: var(--color-accent); font-size: 2.2rem;">
+                    {{ datos.get('std_frase_calendario', 'Save the Date') }}
+                </h2>
+                
+                <div class="calendar-header font-title" id="cal-month-year"></div>
+                
+                <div class="calendar-grid mb-1">
+                    <div class="day-name">D</div><div class="day-name">L</div><div class="day-name">M</div>
+                    <div class="day-name">M</div><div class="day-name">J</div><div class="day-name">V</div>
+                    <div class="day-name">S</div>
+                </div>
+                
+                <div class="calendar-grid" id="cal-days"></div>
+
+                {% if datos.get('std_ubicacion') %}
+                <div class="location-text">
+                    <i class="fas fa-map-marker-alt me-1" style="color: var(--color-accent);"></i> {{ datos.get('std_ubicacion') }}
+                </div>
+                {% endif %}
+            </div>
+
+            {% if datos.get('std_incluir_contador', True) %}
+            <div class="countdown-section">
+                <div id="countdown-wrapper">
+                    <div class="timer-box"><div class="timer-number" id="cd-days">00</div><div class="timer-label">Días</div></div>
+                    <div class="timer-box"><div class="timer-number" id="cd-hours">00</div><div class="timer-label">Hrs</div></div>
+                    <div class="timer-box"><div class="timer-number" id="cd-minutes">00</div><div class="timer-label">Min</div></div>
+                    <div class="timer-box"><div class="timer-number" id="cd-seconds">00</div><div class="timer-label">Seg</div></div>
+                </div>
+            </div>
+            {% endif %}
+
+            {% if datos.get('std_frase_final') %}
+            <div class="frase-section">
+                <div class="font-title frase-text">
+                    "{{ datos.get('std_frase_final') }}"
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    
+    <script>
+        AOS.init({ once: true });
+
+        // === CONTROL DE AUDIO Y "AUTOPLAY" ===
+        let audioPlaying = false;
+        const audio = document.getElementById('bg-audio');
+        const musicIcon = document.getElementById('music-icon');
+        const musicBtn = document.getElementById('music-toggle');
+
+        function toggleAudio() {
+            if (!audio) return;
+            if (audioPlaying) {
+                audio.pause();
+                musicIcon.classList.remove('fa-pause');
+                musicIcon.classList.add('fa-play');
+                musicBtn.style.animation = 'none'; 
+            } else {
+                audio.play().catch(e => console.log("Bloqueado", e));
+                musicIcon.classList.remove('fa-play');
+                musicIcon.classList.add('fa-pause');
+                musicBtn.style.animation = 'pulse 2s infinite';
+            }
+            audioPlaying = !audioPlaying;
+        }
+
+        // Truco para iniciar la música al primer toque o scroll
+        function iniciarMusicaAutomaticamente() {
+            if (!audioPlaying && audio) {
+                audio.play().then(() => {
+                    audioPlaying = true;
+                    musicIcon.classList.remove('fa-play');
+                    musicIcon.classList.add('fa-pause');
+                    musicBtn.style.animation = 'pulse 2s infinite';
+                    
+                    document.removeEventListener('click', iniciarMusicaAutomaticamente);
+                    document.removeEventListener('touchstart', iniciarMusicaAutomaticamente);
+                    document.removeEventListener('scroll', iniciarMusicaAutomaticamente);
+                }).catch(error => {
+                    console.log("Autoplay bloqueado esperando interacción.");
+                });
+            }
+        }
+
+        document.addEventListener('click', iniciarMusicaAutomaticamente);
+        document.addEventListener('touchstart', iniciarMusicaAutomaticamente, { passive: true });
+        document.addEventListener('scroll', iniciarMusicaAutomaticamente, { once: true });
+
+        // === VARIABLES DEL EVENTO ===
+        const fechaString = "{{ inv['fecha_evento'] }}".replace(' ', 'T');
+        const eventDate = new Date(fechaString);
+        
+        // === GENERADOR DEL CALENDARIO ===
+        if(document.getElementById('cal-days')) {
+            const meses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            const eventYear = eventDate.getFullYear();
+            const eventMonth = eventDate.getMonth();
+            const eventDay = eventDate.getDate();
+            const marcadorStyle = "{{ datos.get('std_estilo_marcador', 'circulo') }}";
+
+            document.getElementById('cal-month-year').innerText = `${meses[eventMonth]} ${eventYear}`;
+
+            const firstDayIndex = new Date(eventYear, eventMonth, 1).getDay(); 
+            const daysInMonth = new Date(eventYear, eventMonth + 1, 0).getDate();
+            const calDaysContainer = document.getElementById('cal-days');
+            
+            for (let i = 0; i < firstDayIndex; i++) {
+                calDaysContainer.innerHTML += `<div></div>`;
+            }
+
+            for (let i = 1; i <= daysInMonth; i++) {
+                let div = document.createElement('div');
+                div.className = 'day-number';
+                div.innerText = i;
+                if (i === eventDay) div.classList.add(`marcador-${marcadorStyle}`);
+                calDaysContainer.appendChild(div);
+            }
+        }
+
+        // === CONTADOR ===
+        if(document.getElementById('countdown-wrapper')) {
+            function updateCountdown() {
+                const now = new Date().getTime();
+                const distance = eventDate.getTime() - now;
+
+                if (distance < 0) {
+                    document.getElementById("countdown-wrapper").innerHTML = "<h4 class='font-title' style='color: var(--color-accent); font-size: 1.5rem;'>¡El gran día ha llegado!</h4>";
+                    return;
+                }
+
+                document.getElementById("cd-days").innerText = String(Math.floor(distance / (1000 * 60 * 60 * 24))).padStart(2, '0');
+                document.getElementById("cd-hours").innerText = String(Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))).padStart(2, '0');
+                document.getElementById("cd-minutes").innerText = String(Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60))).padStart(2, '0');
+                document.getElementById("cd-seconds").innerText = String(Math.floor((distance % (1000 * 60)) / 1000)).padStart(2, '0');
+            }
+            updateCountdown(); 
+            setInterval(updateCountdown, 1000);
+        }
+    </script>
+</body>
+</html>

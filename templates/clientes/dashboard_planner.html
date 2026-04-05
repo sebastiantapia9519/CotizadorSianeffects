@@ -108,7 +108,6 @@
                 border-top: 1px solid #f1f3f5 !important;
             }
 
-            /* Ajuste para que los créditos en celular sean una lista compacta */
             .hide-mobile {
                 display: none !important;
             }
@@ -335,16 +334,11 @@
         </div>
 
         <div class="card border-0 shadow-sm rounded-4">
-            <div
-                class="card-header bg-white py-3 border-bottom-0 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
-                <h5 class="m-0 fw-bold text-dark"><i class="fas fa-envelope-open-text me-2 text-primary"></i>Mis
-                    Invitaciones Creadas</h5>
+            <div class="card-header bg-white py-3 border-bottom-0 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <h5 class="m-0 fw-bold text-dark"><i class="fas fa-envelope-open-text me-2 text-primary"></i>Mis Invitaciones Creadas</h5>
                 <div class="position-relative" style="width: 100%; max-width: 300px;">
-                    <i class="fas fa-search position-absolute text-muted"
-                        style="left: 15px; top: 50%; transform: translateY(-50%);"></i>
-                    <input type="text" id="buscadorInvitaciones"
-                        class="form-control form-control-sm rounded-pill ps-5 border-light-subtle shadow-sm"
-                        placeholder="Buscar evento o novios...">
+                    <i class="fas fa-search position-absolute text-muted" style="left: 15px; top: 50%; transform: translateY(-50%);"></i>
+                    <input type="text" id="buscadorInvitaciones" class="form-control form-control-sm rounded-pill ps-5 border-light-subtle shadow-sm" placeholder="Buscar evento o novios...">
                 </div>
             </div>
 
@@ -364,21 +358,42 @@
                             {% for inv in invitaciones %}
                             <tr class="fila-invitacion">
                                 <td class="ps-4" data-label="Evento">
-                                    <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-2"
-                                        style="font-size: 1.1rem;">
-                                        <span class="nombre-evento">{{ inv.datos_cliente.get('novios', 'Evento sin
-                                            nombre') }}</span>
+                                    <div class="fw-bold text-dark d-flex align-items-center flex-wrap gap-2" style="font-size: 1.1rem;">
+                                        <span class="nombre-evento">{{ inv.datos_cliente.get('novios', 'Evento sin nombre') }}</span>
 
                                         {% if inv.tipo_evento == 'xv' %}
-                                        <span class="badge bg-warning text-dark border align-middle"
-                                            style="font-size: 0.7rem; height: fit-content;">👑 XV Años</span>
+                                            <span class="badge bg-warning text-dark border align-middle" style="font-size: 0.7rem; height: fit-content;">👑 XV Años</span>
+                                        {% elif inv.tipo_evento == 'std' %}
+                                            <span class="badge bg-primary text-white border align-middle" style="font-size: 0.7rem; height: fit-content;"><i class="far fa-calendar-alt"></i> Save the Date</span>
+                                        {% elif inv.tipo_evento == 'otro' %}
+                                            <span class="badge bg-success text-white border align-middle" style="font-size: 0.7rem; height: fit-content;"><i class="fas fa-glass-cheers"></i> Fiesta</span>
                                         {% else %}
-                                        <span class="badge bg-primary bg-opacity-10 text-primary border align-middle"
-                                            style="font-size: 0.7rem; height: fit-content;">💍 Boda</span>
+                                            <span class="badge bg-primary bg-opacity-10 text-primary border align-middle" style="font-size: 0.7rem; height: fit-content;">💍 Boda</span>
                                         {% endif %}
                                     </div>
-                                    <small class="text-muted d-block mt-1 text-truncate" style="max-width: 250px;">Slug:
-                                        /invitacion/{{ inv.slug }}</small>
+                                    
+                                    <div class="mt-2">
+                                        {% set url_base = 'xv' if inv.tipo_evento == 'xv' else ('fiesta' if inv.tipo_evento == 'otro' else 'invitacion') %}
+                                        <div class="d-flex align-items-center mb-1">
+                                            <span class="badge bg-light text-dark border border-secondary font-monospace">
+                                                /{{ url_base }}/{{ inv.slug }}
+                                            </span>
+                                            <button onclick="copiarLink('{{ request.host_url }}{{ url_base }}/{{ inv.slug }}')" class="btn btn-sm btn-link text-primary p-0 ms-2" title="Copiar Enlace Principal">
+                                                <i class="far fa-copy"></i>
+                                            </button>
+                                        </div>
+                                        
+                                        {% if inv.datos_cliente.get('activar_std') %}
+                                        <div class="d-flex align-items-center mt-1">
+                                            <span class="badge bg-info text-white border border-info font-monospace">
+                                                /std/{{ inv.slug }}
+                                            </span>
+                                            <button onclick="copiarLink('{{ request.host_url }}std/{{ inv.slug }}')" class="btn btn-sm btn-link text-info p-0 ms-2" title="Copiar Enlace Save the Date">
+                                                <i class="far fa-copy"></i>
+                                            </button>
+                                        </div>
+                                        {% endif %}
+                                    </div>
                                 </td>
 
                                 <td class="text-center" data-label="Fecha">
@@ -418,12 +433,22 @@
                                         </a>
                                         {% endif %}
 
-                                        <a href="{{ url_for('invitaciones_admin.ver_invitacion', slug=inv.slug) }}"
+                                        {% set url_base = 'xv' if inv.tipo_evento == 'xv' else ('fiesta' if inv.tipo_evento == 'otro' else 'invitacion') %}
+                                        <a href="/{{ url_base }}/{{ inv.slug }}"
                                             target="_blank"
                                             class="btn btn-light border rounded-circle text-primary shadow-sm d-inline-flex align-items-center justify-content-center"
-                                            style="width: 38px; height: 38px;" title="Ver Link">
+                                            style="width: 38px; height: 38px;" title="Ver Link Principal">
                                             <i class="fas fa-external-link-alt"></i>
                                         </a>
+                                        
+                                        {% if inv.datos_cliente.get('activar_std') %}
+                                        <a href="/std/{{ inv.slug }}"
+                                            target="_blank"
+                                            class="btn btn-light border rounded-circle text-info shadow-sm d-inline-flex align-items-center justify-content-center"
+                                            style="width: 38px; height: 38px;" title="Ver Link Save the Date">
+                                            <i class="far fa-calendar-check"></i>
+                                        </a>
+                                        {% endif %}
                                     </div>
                                 </td>
                             </tr>
@@ -507,6 +532,26 @@
 
             }).catch(function () {
                 Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo copiar.', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
+            });
+        }
+
+        // NUEVA FUNCION: Para copiar los enlaces directos (como en el admin)
+        function copiarLink(url) {
+            navigator.clipboard.writeText(url).then(() => {
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+                Toast.fire({
+                    icon: 'success',
+                    title: '¡Enlace copiado!'
+                });
+            }).catch(err => {
+                console.error('Error al copiar: ', err);
+                Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo copiar el enlace.', toast: true, position: 'top-end', timer: 2000, showConfirmButton: false });
             });
         }
 
