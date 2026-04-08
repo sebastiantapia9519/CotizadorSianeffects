@@ -21,17 +21,17 @@ def index():
 
     try:
         # 1. TOTALES DE NEGOCIO
-        total_usuarios = conn.execute("SELECT COUNT(id) as total FROM usuarios WHERE role = 0").fetchone()['total']
+        total_usuarios = conn.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1").fetchone()['total']
         
         activos = conn.execute(
-            "SELECT COUNT(id) as total FROM usuarios WHERE role = 0 AND subscription_end > ?", 
+            "SELECT COUNT(id) as total FROM usuarios WHERE role <= 1 AND subscription_end > ?", 
             (ahora_str,)
         ).fetchone()['total']
         
         vencidos = total_usuarios - activos
 
         proximos_a_vencer = conn.execute(
-            "SELECT COUNT(id) as total FROM usuarios WHERE role = 0 AND subscription_end BETWEEN ? AND ?", 
+            "SELECT COUNT(id) as total FROM usuarios WHERE role <= 1 AND subscription_end BETWEEN ? AND ?", 
             (ahora_str, semana_proxima_str)
         ).fetchone()['total']
 
