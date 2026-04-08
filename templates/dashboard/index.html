@@ -4,45 +4,70 @@
 <style>
     .dashboard-bg { background-color: #fcfcfc; min-height: 100vh; padding: 1.5rem 0 3rem 0; }
     .sian-stat-card {
-        background: #ffffff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+        background: #ffffff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
         padding: 16px 10px; text-align: center; border-left: 4px solid transparent; height: 100%;
         display: flex; flex-direction: column; align-items: center; justify-content: center;
         transition: transform 0.2s;
     }
     .sian-stat-card:hover { transform: translateY(-2px); }
-
-    /* Colores funcionales */
     .border-total { border-left-color: #0d6efd; }
     .border-active { border-left-color: #198754; }
     .border-expired { border-left-color: #dc3545; }
     .border-warning { border-left-color: #ffc107; }
-
     .icon-box { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.1rem; }
     .bg-blue-light { background-color: #e7f1ff; color: #0d6efd; }
     .bg-green-light { background-color: #e8f5e9; color: #198754; }
     .bg-red-light { background-color: #f8d7da; color: #dc3545; }
     .bg-yellow-light { background-color: #fff8e1; color: #ffc107; }
-
     .stat-value { font-size: 1.5rem; font-weight: 700; color: #212529; margin-bottom: 6px; }
     .stat-label { font-size: 0.65rem; font-weight: 600; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-    
-    .table-minimal { font-size: 0.9rem; }
+    .table-minimal { font-size: 0.85rem; }
     .table-minimal th { font-weight: 600; color: #86868b; text-transform: uppercase; font-size: 0.7rem; border: none; }
+    .filter-bar { background: #fff; border-radius: 50px; padding: 8px 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
 </style>
 
 <div class="dashboard-bg">
     <div class="container">
-        
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
                 <h3 style="font-weight: 600; color: #2c3e50; margin-bottom: 0;">Salud de Sianeffects</h3>
                 <p style="color: #6c757d; font-size: 0.85rem; margin-bottom: 0;">Métricas de crecimiento y retención</p>
             </div>
-            <button class="btn btn-primary" style="border-radius: 8px; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#modalEnlaces">
+            <button class="btn btn-primary shadow-sm" style="border-radius: 50px; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#modalEnlaces">
                 <i class="fas fa-link me-2"></i> Crear Enlace
             </button>
         </div>
-        
+
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="d-flex align-items-center gap-3 flex-wrap">
+                    <form action="{{ url_for('dashboard.index') }}" method="GET" class="filter-bar d-flex align-items-center gap-2">
+                        <span class="small fw-bold text-muted me-2">Análisis de Periodo:</span>
+                        <select name="mes" class="form-select form-select-sm border-0 bg-white shadow-sm rounded-pill">
+                            <option value="">Mes (Todos)</option>
+                            {% for val, nom in lista_meses %}
+                            <option value="{{ val }}" {% if val==mes_sel %}selected{% endif %}>{{ nom }}</option>
+                            {% endfor %}
+                        </select>
+                        <select name="anio" class="form-select form-select-sm border-0 bg-white shadow-sm rounded-pill">
+                            <option value="">Año (Todos)</option>
+                            {% for a in lista_anios %}
+                            <option value="{{ a }}" {% if a|string==anio_sel|string %}selected{% endif %}>{{ a }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+                            <i class="fas fa-sync-alt me-1"></i> Actualizar
+                        </button>
+                    </form>
+                    {% if mes_sel or anio_sel %}
+                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-light btn-sm rounded-pill border shadow-sm px-3">
+                        <i class="fas fa-globe-americas me-1 text-primary"></i> Ver Histórico Total
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
         <div class="row g-3">
             <div class="col-6 col-md-3">
                 <div class="sian-stat-card border-total">
@@ -77,22 +102,21 @@
         <div class="row mt-4 g-4">
             <div class="col-12 col-lg-7">
                 <div class="sian-stat-card" style="align-items: flex-start; padding: 20px;">
-                    <div class="stat-label mb-3">Velocidad de Adquisición</div>
+                    <div class="stat-label mb-3">Velocidad de Adquisición (Histórico)</div>
                     <div style="position: relative; height: 300px; width: 100%;">
                         <canvas id="chartCrecimiento"></canvas>
                     </div>
                 </div>
             </div>
-
             <div class="col-12 col-lg-5">
                 <div class="sian-stat-card" style="align-items: flex-start; padding: 20px;">
-                    <div class="stat-label mb-3">Heavy Users (Mayor Actividad)</div>
+                    <div class="stat-label mb-3">Heavy Users (Actividad del Mes)</div>
                     <div class="table-responsive w-100">
                         <table class="table table-minimal align-middle">
                             <thead>
                                 <tr>
                                     <th>Empresa</th>
-                                    <th class="text-center">Cotizaciones</th>
+                                    <th class="text-center">Cots.</th>
                                     <th class="text-end">Estado</th>
                                 </tr>
                             </thead>
@@ -104,12 +128,16 @@
                                         <small class="text-muted">@{{ cliente.username }}</small>
                                     </td>
                                     <td class="text-center">
-                                        <span class="badge bg-blue-light" style="font-size: 0.85rem;">{{ cliente.total_cotizaciones }}</span>
+                                        <span class="badge bg-blue-light" style="font-size: 0.8rem;">{{ cliente.total_cotizaciones }}</span>
                                     </td>
                                     <td class="text-end">
-                                        {% if cliente.subscription_end > ahora_actual %} <span class="text-success" style="font-size: 0.8rem;"><i class="fas fa-check-circle"></i> Al día</span>
+                                        {% if cliente.subscription_end > ahora_actual %}
+                                        <span class="text-success small"><i class="fas fa-check-circle"></i> Al día</span>
                                         {% else %}
-                                            <span class="text-danger" style="font-size: 0.8rem;"><i class="fas fa-exclamation-circle"></i> Vencido</span>
+                                        <div class="text-danger small" style="line-height: 1;">
+                                            <i class="fas fa-exclamation-circle"></i> Vencido<br>
+                                            <small style="font-size: 0.65rem;">({{ cliente.subscription_end[:10] }})</small>
+                                        </div>
                                         {% endif %}
                                     </td>
                                 </tr>
@@ -121,137 +149,155 @@
             </div>
         </div>
 
-        <div class="row mt-4">
-            <div class="col-12 col-md-6 col-lg-4">
+        <div class="row mt-4 g-4">
+            <div class="col-12 col-md-6 col-lg-5">
                 <div class="sian-stat-card" style="align-items: flex-start; padding: 20px;">
-                    <div class="stat-label mb-3">Fuentes de Adquisición</div>
+                    <div class="stat-label mb-3">Origen de Registros ({{ mes_sel }}/{{ anio_sel }})</div>
                     <div style="position: relative; height: 250px; width: 100%;">
                         <canvas id="chartFuentes"></canvas>
                     </div>
                 </div>
             </div>
+            <div class="col-12 col-md-6 col-lg-7">
+                <div class="sian-stat-card" style="align-items: flex-start; padding: 20px;">
+                    <div class="stat-label mb-3">Perfil de Uso (Lealtad por Actividad)</div>
+                    <div style="position: relative; height: 250px; width: 100%;">
+                        <canvas id="chartSegmentos"></canvas>
+                    </div>
+                </div>
+            </div>
         </div>
-        
     </div>
 </div>
 
 <div class="modal fade" id="modalEnlaces" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content" style="border-radius: 16px; border: none; box-shadow: 0 10px 40px rgba(0,0,0,0.1);">
-      <div class="modal-header" style="border-bottom: 1px solid #f0f0f0; padding: 20px 24px;">
-        <h5 class="modal-title" style="font-weight: 600; color: #2c3e50;"><i class="fas fa-magic text-primary me-2"></i> Creador de Enlaces</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body" style="padding: 24px;">
-        <div class="mb-3">
-            <label class="form-label stat-label">Canal</label>
-            <select id="utm_source" class="form-select">
-                <option value="instagram">Instagram</option>
-                <option value="facebook">Facebook</option>
-                <option value="tiktok">TikTok</option>
-                <option value="whatsapp">WhatsApp</option>
-                <option value="recomendacion">Recomendación</option>
-            </select>
-        </div>
-        <div class="mb-4">
-            <label class="form-label stat-label">Campaña (Opcional)</label>
-            <input type="text" id="utm_campaign" class="form-control" placeholder="Ej. promo_abril">
-        </div>
-        <button class="btn btn-primary w-100 mb-3" onclick="generarEnlace()">Generar Link</button>
-        <div id="resultado_link" style="display: none; background: #f8f9fa; padding: 12px; border-radius: 8px; border: 1px dashed #ccc;">
-            <div class="input-group">
-                <input type="text" id="link_final" class="form-control" readonly>
-                <button class="btn btn-outline-secondary" onclick="copiarEnlace()"><i class="fas fa-copy"></i></button>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius: 20px; border: none;">
+            <div class="modal-header border-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold">Generador de Marketing</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <div class="mb-3">
+                    <label class="stat-label d-block mb-2">Canal de Difusión</label>
+                    <select id="utm_source" class="form-select border-0 bg-light rounded-3">
+                        <option value="instagram">Instagram</option>
+                        <option value="facebook">Facebook</option>
+                        <option value="tiktok">TikTok</option>
+                        <option value="whatsapp">WhatsApp</option>
+                        <option value="recomendacion">Recomendación</option>
+                    </select>
+                </div>
+                <div class="mb-4">
+                    <label class="stat-label d-block mb-2">Nombre de Campaña</label>
+                    <input type="text" id="utm_campaign" class="form-control border-0 bg-light rounded-3" placeholder="Ej: promo_mayo">
+                </div>
+                <button class="btn btn-primary w-100 fw-bold py-2 rounded-3" onclick="generarEnlace()">Crear Link Mágico</button>
+                <div id="resultado_link" class="mt-4 p-3 rounded-3" style="display: none; background: #f0f7ff; border: 1px dashed #0d6efd;">
+                    <div class="input-group">
+                        <input type="text" id="link_final" class="form-control form-control-sm border-0 bg-transparent" readonly>
+                        <button class="btn btn-sm btn-primary rounded-3 px-3" onclick="copiarEnlace()"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
             </div>
         </div>
-      </div>
     </div>
-  </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         Chart.defaults.font.family = "'Segoe UI', sans-serif";
         Chart.defaults.color = "#86868b";
 
-        // 1. Gráfica de Velocidad de Adquisición (Líneas con Gradiente)
-    const ctxLine = document.getElementById('chartCrecimiento').getContext('2d');
-    
-    // Creamos un degradado azul muy elegante
-    const gradient = ctxLine.createLinearGradient(0, 0, 0, 400);
-    gradient.addColorStop(0, 'rgba(13, 110, 253, 0.3)');
-    gradient.addColorStop(1, 'rgba(13, 110, 253, 0)');
+        // 1. Gráfica de Adquisición
+        const ctxLine = document.getElementById('chartCrecimiento').getContext('2d');
+        const gradient = ctxLine.createLinearGradient(0, 0, 0, 300);
+        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.2)');
+        gradient.addColorStop(1, 'rgba(13, 110, 253, 0)');
 
-    new Chart(ctxLine, {
-        type: 'line',
-        data: {
-            labels: {{ meses_labels | tojson }},
-            datasets: [{
-                label: 'Nuevos Clientes',
-                data: {{ usuarios_data | tojson }},
-                borderColor: '#0d6efd',
-                backgroundColor: gradient, // Usamos el degradado
-                fill: true,
-                tension: 0.4,
-                borderWidth: 3,
-                pointRadius: 5,
-                pointHoverRadius: 8,
-                pointBackgroundColor: '#ffffff',
-                pointBorderColor: '#0d6efd',
-                pointBorderWidth: 2
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            scales: {
-                y: {
-                    beginAtZero: true,
-                    ticks: {
-                        stepSize: 1, // Para que no salgan decimales (no existen medios usuarios)
-                        precision: 0
-                    }
-                },
-                x: {
-                    ticks: {
-                        maxRotation: 45, // Inclina los meses si hay muchos
-                        minRotation: 0,
-                        font: { size: 10 }
-                    }
-                }
+        new Chart(ctxLine, {
+            type: 'line',
+            data: {
+                labels: {{ meses_labels | tojson }},
+                datasets: [{
+                    label: 'Registros',
+                    data: {{ usuarios_data | tojson }},
+                    borderColor: '#0d6efd',
+                    backgroundColor: gradient,
+                    fill: true,
+                    tension: 0.4,
+                    borderWidth: 3,
+                    pointRadius: 4,
+                    pointBackgroundColor: '#fff',
+                    pointBorderWidth: 2
+                }]
             },
-            plugins: {
-                tooltip: {
-                    mode: 'index',
-                    intersect: false, // Para que sea fácil de tocar en el cel
-                }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    x: { grid: { display: false } }
+                },
+                plugins: { legend: { display: false } }
             }
-        }
-    });
+        });
 
-        // Fuentes
+        // 2. Gráfica de Origen
         new Chart(document.getElementById('chartFuentes'), {
             type: 'doughnut',
             data: {
                 labels: {{ origen_labels | tojson }},
                 datasets: [{
                     data: {{ origen_data | tojson }},
-                    backgroundColor: ['#0d6efd', '#198754', '#0dcaf0', '#ffc107', '#af52de'],
+                    backgroundColor: ['#0d6efd', '#34c759', '#5856d6', '#ff9500', '#ff2d55'],
                     borderWidth: 0
                 }]
             },
-            options: { responsive: true, maintainAspectRatio: false, cutout: '75%' }
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '80%',
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } }
+                }
+            }
+        });
+
+        // 3. Gráfica de Segmentación
+        new Chart(document.getElementById('chartSegmentos'), {
+            type: 'bar',
+            data: {
+                labels: {{ seg_labels | tojson }},
+                datasets: [{
+                    label: 'Usuarios',
+                    data: {{ seg_data | tojson }},
+                    backgroundColor: ['#ff3b30', '#ffcc00', '#34c759'],
+                    borderRadius: 8,
+                    barThickness: 30
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { beginAtZero: true, ticks: { stepSize: 1 } },
+                    y: { grid: { display: false } }
+                }
+            }
         });
     });
 
     function generarEnlace() {
         const baseUrl = window.location.origin + "/registro";
         const source = document.getElementById('utm_source').value;
-        const campaign = document.getElementById('utm_campaign').value.trim().replace(/\s+/g, '_').toLowerCase();
-        let link = `${baseUrl}?utm_source=${source}`;
-        if(campaign) link += `&utm_campaign=${campaign}`;
-        document.getElementById('link_final').value = link;
+        const camp = document.getElementById('utm_campaign').value.trim().replace(/\s+/g, '_').toLowerCase();
+        let final = `${baseUrl}?utm_source=${source}`;
+        if (camp) final += `&utm_campaign=${camp}`;
+        document.getElementById('link_final').value = final;
         document.getElementById('resultado_link').style.display = 'block';
     }
 
@@ -260,12 +306,8 @@
         input.select();
         document.execCommand('copy');
         const btn = document.querySelector('#resultado_link .btn');
-        btn.classList.replace('btn-outline-secondary', 'btn-success');
         btn.innerHTML = '<i class="fas fa-check"></i>';
-        setTimeout(() => { 
-            btn.classList.replace('btn-success', 'btn-outline-secondary'); 
-            btn.innerHTML = '<i class="fas fa-copy"></i>'; 
-        }, 2000);
+        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 2000);
     }
 </script>
 {% endblock %}

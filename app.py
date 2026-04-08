@@ -2,6 +2,7 @@ import os
 from flask import Flask, session
 from flask_apscheduler import APScheduler
 import logging
+from logging.handlers import RotatingFileHandler
 import json
 from datetime import timedelta
 from dotenv import load_dotenv
@@ -36,6 +37,20 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     encoding='utf-8'
 )
+
+# Configuración del Log
+log_path = os.path.join(app.root_path, 'limpieza.log')
+
+# Formato: [Fecha] [Nivel] Mensaje
+formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%d/%m/%Y %H:%M:%S')
+
+# Manejador: Archivo de max 1MB, mantiene hasta 3 copias viejas
+file_handler = RotatingFileHandler(log_path, maxBytes=1024 * 1024, backupCount=3)
+file_handler.setFormatter(formatter)
+file_handler.setLevel(logging.INFO)
+
+app.logger.addHandler(file_handler)
+app.logger.info("Sistema de monitoreo iniciado correctamente")
 
 # =========================
 # SESIÓN

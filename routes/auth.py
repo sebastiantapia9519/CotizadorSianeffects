@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
 from werkzeug.security import generate_password_hash, check_password_hash
 from db import get_db_connection as get_db
 from datetime import timedelta  
@@ -16,45 +16,34 @@ auth_bp = Blueprint('auth', __name__)
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
     if request.method == 'POST':
-        # 1. Bajamos a minúsculas en Python, no en la Base de Datos (Más rápido y seguro)
         login_input = request.form['email_or_user'].strip().lower()
         password = request.form['password']
         
-        conn = get_db()
+        current_app.logger.info(f"Intento de login para: {login_input}") # Monitor!
 
-        # 2. Simplificamos el Query. La base de datos debe buscar texto exacto si ya lo normalizamos
+        conn = get_db()
         user = conn.execute('''
             SELECT * FROM usuarios
-            WHERE email = ? OR username = ?
+            WHERE LOWER(email) = ? OR LOWER(username) = ?
         ''', (login_input, login_input)).fetchone()
-
         conn.close()
 
-        # Validar credenciales
-        if user and check_password_hash(user['password'], password):
-            
-            session.permanent = True 
-            
-            # Guardar datos mínimos en sesión
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['role'] = user['role']
+        if user:
+            # Si encuentra al usuario, validamos la clave
+            if check_password_hash(user['password'], password):
+                session.permanent = True 
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['role'] = user['role']
 
-            # Actualizar último login con UTC
-            try:
-                conn = get_db()
-                conn.execute(
-                    'UPDATE usuarios SET last_login = ? WHERE id = ?',
-                    (now_utc(), user['id'])
-                )
-                conn.commit()
-            except Exception as e:
-                print(f"Error actualizando last_login: {e}")
-            finally:
-                conn.close()
-
-            return redirect(url_for('main.index'))
+                # Log de éxito
+                current_app.logger.info(f"LOGIN_SUCCESS: User '{user['username']}' authenticated.")
+                return redirect(url_for('main.index'))
+            else:
+                current_app.logger.warning(f"LOGIN_FAILED: Invalid password for user '{login_input}'.")
+                flash('Usuario/Correo o contraseña incorrectos.', 'error')
         else:
+            current_app.logger.warning(f"LOGIN_FAILED: User not found '{login_input}'.")
             flash('Usuario/Correo o contraseña incorrectos.', 'error')
 
     return render_template('login.html')

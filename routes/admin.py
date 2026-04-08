@@ -13,7 +13,7 @@ from utils.datetime_utils import now_utc, utc_to_local
 
 admin_bp = Blueprint('admin', __name__)
 
-@admin_bp.route('/admin')
+@admin_bp.route('/')
 @admin_required
 def dashboard():
     # 1. Datos de la base de datos
@@ -106,12 +106,12 @@ def dashboard():
                            
 # --- ACCIONES PROTEGIDAS (SOLO DUEÑO - ROL 2) ---
 
-@admin_bp.route('/admin/renovar/<int:user_id>/<int:meses>')
+@admin_bp.route('/renovar/<int:user_id>/<int:meses>')
 @admin_required
 def renovar(user_id, meses):
     # BLOQUEO DE SEGURIDAD: Si no es el dueño (2), fuera.
-    if session.get('role') != 2:
-        flash('Solo el Dueño puede realizar acciones.', 'error')
+    if session.get('role') < 1:
+        flash('No tienes permisos para renovar membresías.', 'error')
         return redirect(url_for('admin.dashboard'))
     
     nueva_fecha_fin = now_utc() + timedelta(days=meses*30)
@@ -121,12 +121,17 @@ def renovar(user_id, meses):
     flash(f'Suscripción renovada por {meses} meses.', 'success')
     return redirect(url_for('admin.dashboard'))
 
-@admin_bp.route('/admin/cambiar_rol/<int:user_id>/<int:nuevo_rol>')
+@admin_bp.route('/cambiar_rol/<int:user_id>/<int:nuevo_rol>')
 @admin_required
 def cambiar_rol(user_id, nuevo_rol):
     # BLOQUEO DE SEGURIDAD
-    if session.get('role') != 2:
-        flash('Solo el Dueño puede cambiar roles.', 'error')
+    if session.get('role') < 1:
+        flash('No tienes permisos para cambiar roles.', 'error')
+        return redirect(url_for('admin.dashboard'))
+    
+    # Seguridad extra: Un Admin (1) no puede crear un Dueño (2)
+    if session.get('role') == 1 and nuevo_rol > 1:
+        flash('No puedes asignar un rango superior al tuyo.', 'warning')
         return redirect(url_for('admin.dashboard'))
     
     conn = get_db()
@@ -134,19 +139,55 @@ def cambiar_rol(user_id, nuevo_rol):
     conn.commit(); conn.close()
     return redirect(url_for('admin.dashboard'))
 
-@admin_bp.route('/admin/reset_password', methods=['POST'])
+@admin_bp.route('/reset_password', methods=['POST'])
 @admin_required
 def reset_password():
-    # BLOQUEO DE SEGURIDAD
-    if session.get('role') != 2:
-        flash('Solo el Dueño puede resetear passwords.', 'error')
+    # Definimos el nivel mínimo para esta acción (1 = Admin)
+    # Cualquier rol igual o mayor a 1 podrá resetear passwords
+    MIN_ROLE_LEVEL = 1
+    
+    current_role = session.get('role', 0)
+    current_uid = session.get('user_id')
+
+    if current_role < MIN_ROLE_LEVEL:
+        current_app.logger.warning(f"AUTH_FAILURE: User {current_uid} attempted password reset without sufficient permissions.")
+        flash('No tienes permisos suficientes para realizar esta acción.', 'error')
         return redirect(url_for('admin.dashboard'))
     
+    user_id = request.form.get('user_id')
+    new_pass = request.form.get('new_password', '').strip()
+
+    # LOG 1: ¿Qué llegó del formulario?
+    current_app.logger.info(f"DEBUG: Form data received -> ID: {user_id}, Pass_Len: {len(new_pass)}")
+
+    if not user_id or not new_pass:
+        current_app.logger.warning("DEBUG: Cancelled. ID or Password missing.")
+        return redirect(url_for('admin.dashboard'))
+
     conn = get_db()
-    conn.execute('UPDATE usuarios SET password = ? WHERE id = ?', 
-                 (generate_password_hash(request.form['new_password']), request.form['user_id']))
-    conn.commit(); conn.close()
-    flash('Password actualizada.', 'success')
+    try:
+        hashed_password = generate_password_hash(new_pass, method='pbkdf2:sha256')
+        
+        # LOG 2: ¿Qué hash generamos? (primeros 10 chars)
+        current_app.logger.info(f"DEBUG: Generated Hash Prefix: {hashed_password[:10]}")
+
+        cursor = conn.execute('UPDATE usuarios SET password = ? WHERE id = ?', (hashed_password, user_id))
+        conn.commit()
+        
+        # LOG 3: ¿Se actualizó algo realmente?
+        if cursor.rowcount > 0:
+            current_app.logger.info(f"DEBUG: SUCCESS. Row updated for UID {user_id}")
+            flash('Contraseña actualizada correctamente.', 'success')
+        else:
+            current_app.logger.warning(f"DEBUG: FAIL. No user found with UID {user_id}")
+            flash('Error: Usuario no encontrado en la base de datos.', 'error')
+
+    except Exception as e:
+        current_app.logger.error(f"DEBUG: DATABASE ERROR -> {str(e)}")
+        flash('Error en la base de datos.', 'error')
+    finally:
+        conn.close()
+    
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/impersonate/<int:user_id>')
@@ -190,10 +231,10 @@ def delete_user():
         flash('El usuario no existe.', 'danger')
         return redirect(url_for('admin.dashboard'))
         
-    # Si el que borra NO es dueño (rol 2), y la víctima es Admin (1) o Dueño (2), lo bloqueamos
-    if session.get('role') < 2 and target_user['role'] >= 1:
+    # Un Admin (1) puede borrar usuarios (0), pero no a otros Admins o al Dueño
+    if session.get('role') < 2 and target_user['role'] >= session.get('role'):
         conn.close()
-        flash('No tienes permisos para borrar a este nivel de usuario.', 'danger')
+        flash('No puedes eliminar a un usuario de tu mismo rango o superior.', 'danger')
         return redirect(url_for('admin.dashboard'))
 
     # 2. PROCESO DE BORRADO EN CASCADA
@@ -229,7 +270,7 @@ def delete_user():
         
     except Exception as e:
         conn.rollback()
-        print(f"Error borrando cascada user {user_id}: {e}")
+        current_app.logger.error(f"Error borrando cascada user {user_id}: {e}")
         flash('Error interno al eliminar el usuario. Intenta de nuevo.', 'danger')
     finally:
         conn.close()
@@ -253,6 +294,21 @@ def descargar_log():
         )
     else:
         return "El archivo de historial (limpieza.log) aún no se ha generado.", 404
+
+@admin_bp.route('/monitor')
+@admin_required
+def monitor():
+    log_path = os.path.join(current_app.root_path, 'limpieza.log')
+    logs = []
+    
+    if os.path.exists(log_path):
+        # AGREGAMOS: errors='replace' y encoding='utf-8'
+        # Esto ignora caracteres basura y lee bien las tildes/colores
+        with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
+            logs = f.readlines()[-100:]
+            logs.reverse() 
+            
+    return render_template('monitor.html', logs=logs)
 
 @admin_bp.route('/stop_impersonate')
 def stop_impersonate():

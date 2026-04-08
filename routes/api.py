@@ -231,7 +231,7 @@ def cancelar_venta():
                                 else:
                                     materiales_a_devolver[mat_id] = cantidad_requerida
                 except Exception as e:
-                    print(f"Error procesando devolución de receta: {e}")
+                    current_app.logger.error(f"Error procesando devolución de receta: {e}")
 
             # Impactamos la base de datos: Devolvemos el stock de golpe
             for mat_id, total_devolucion in materiales_a_devolver.items():
@@ -269,7 +269,7 @@ def cancelar_venta():
 
     except Exception as e:
         conn.rollback()
-        print(f"Error al cancelar venta {venta_id}: {e}")
+        current_app.logger.error(f"Error al cancelar venta {venta_id}: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()

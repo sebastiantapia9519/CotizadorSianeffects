@@ -147,8 +147,8 @@
         <i class="fas fa-chart-line text-info me-2"></i>Dashboard
     </a>
 
-    <a href="{{ url_for('admin.descargar_log') }}" class="btn btn-white btn-sm border shadow-sm rounded-pill px-3 flex-fill text-center">
-        <i class="fas fa-file-alt text-primary me-2"></i>Logs
+    <a href="{{ url_for('admin.monitor') }}" class="btn btn-white btn-sm border shadow-sm rounded-pill px-3 flex-fill text-center">
+        <i class="fas fa-terminal text-primary me-2"></i>Monitor
     </a>
     
     <a href="{{ url_for('admin.exportar_usuarios') }}" class="btn btn-success btn-sm border-0 shadow-sm rounded-pill px-3 text-white flex-fill text-center">
@@ -370,8 +370,8 @@
                                         <h6 class="dropdown-header">SEGURIDAD</h6>
                                     </li>
                                     <li>
-                                        <button class="dropdown-item text-dark"
-                                            onclick="abrirReset({{u['id']}}, '{{u['username']}}')">
+                                        <button class="dropdown-item text-dark" 
+                                            onclick="abrirReset('{{ u.id|string }}', '{{ u.username }}')">
                                             <i class="fas fa-key text-warning bg-warning bg-opacity-10 rounded p-1"></i>
                                             Resetear Clave
                                         </button>
@@ -460,7 +460,11 @@
                     <input type="hidden" name="user_id" id="resetUserId">
                     <label class="small fw-bold">Nueva Contraseña</label>
                     <input type="text" name="new_password" class="form-control text-center fw-bold mt-1"
-                        placeholder="Ej. 123456" required>
+                        placeholder="Mínimo 6 caracteres" 
+                        required 
+                        minlength="6"
+                        oninput="this.value = this.value.replace(/\s+/g, '')">
+                    <small class="text-muted" style="font-size: 0.6rem;">No se permiten espacios.</small>
                 </div>
                 <div class="modal-footer border-0 p-2">
                     <button type="submit" class="btn btn-dark w-100 rounded-pill">Guardar Cambio</button>
@@ -547,5 +551,22 @@
 
         rows.forEach(row => tbody.appendChild(row));
     }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    Swal.fire({
+                        title: "{{ '¡Éxito!' if category == 'success' else 'Atención' }}",
+                        text: "{{ message }}",
+                        icon: "{{ category }}", // 'success', 'error', 'warning', 'info'
+                        confirmButtonColor: '#0d6efd',
+                        timer: 3000,
+                        timerProgressBar: true
+                    });
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+    });
 </script>
 {% endblock %}
