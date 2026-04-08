@@ -44,7 +44,7 @@ def index():
                 COUNT(v.id) as total_cotizaciones
             FROM usuarios u
             LEFT JOIN ventas v ON u.id = v.user_id
-            WHERE u.role = 0 
+            WHERE u.role <= 1
             GROUP BY u.id
             ORDER BY total_cotizaciones DESC 
             LIMIT 5
@@ -59,7 +59,7 @@ def index():
                 strftime('%m', created_at) as mes,
                 COUNT(id) as conteo 
             FROM usuarios 
-            WHERE role = 0 
+            WHERE role <= 1
             GROUP BY anio, mes 
             ORDER BY anio ASC, mes ASC
         ''').fetchall()
@@ -71,7 +71,7 @@ def index():
         
         origen_raw = conn.execute('''
             SELECT origen_registro, COUNT(id) as conteo 
-            FROM usuarios WHERE role = 0 GROUP BY origen_registro
+            FROM usuarios WHERE role <= 1 GROUP BY origen_registro
         ''').fetchall()
 
         return render_template(
