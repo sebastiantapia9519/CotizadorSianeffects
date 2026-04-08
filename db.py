@@ -40,6 +40,10 @@ def init_db():
         terms_accepted BOOLEAN DEFAULT 0,
         country_code TEXT DEFAULT 'MX',
         last_login DATETIME,
+        origen_registro TEXT DEFAULT 'desconocido',
+        utm_campaign TEXT,
+        estado_suscripcion TEXT DEFAULT 'activa',
+        fecha_cancelacion DATETIME,
         tutorial_visto BOOLEAN DEFAULT 0
     )
     """)
