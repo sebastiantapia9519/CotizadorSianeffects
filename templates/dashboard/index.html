@@ -205,28 +205,26 @@
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    backgroundColor: '#1d1d1f',
-                    padding: 12,
-                    titleFont: { size: 14, weight: '600' },
-                    callbacks: {
-                        label: function(context) {
-                            return ` + ${context.raw} nuevos usuarios`;
-                        }
-                    }
-                }
-            },
             scales: {
                 y: {
                     beginAtZero: true,
-                    grid: { color: '#f0f0f0', drawBorder: false },
-                    ticks: { stepSize: 1, color: '#86868b' }
+                    ticks: {
+                        stepSize: 1, // Para que no salgan decimales (no existen medios usuarios)
+                        precision: 0
+                    }
                 },
                 x: {
-                    grid: { display: false },
-                    ticks: { color: '#86868b', font: { size: 10 } }
+                    ticks: {
+                        maxRotation: 45, // Inclina los meses si hay muchos
+                        minRotation: 0,
+                        font: { size: 10 }
+                    }
+                }
+            },
+            plugins: {
+                tooltip: {
+                    mode: 'index',
+                    intersect: false, // Para que sea fácil de tocar en el cel
                 }
             }
         }
