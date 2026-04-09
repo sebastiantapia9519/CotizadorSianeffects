@@ -159,6 +159,9 @@ def registro():
             ''', (user_id, 35.00, 8.00, 10))
 
             conn.commit()
+            
+            # Log de negocio: ¡Un cliente nuevo!
+            current_app.logger.info(f"REGISTER_SUCCESS: Nuevo usuario registrado -> '{username}' ({email}) de la empresa '{company_name}'. UTM: {utm_campaign}")
 
             flash('Cuenta creada con éxito. ¡Tienes 7 días de prueba!', 'success')
             resp = redirect(url_for('auth.login'))
@@ -170,7 +173,7 @@ def registro():
             if "UNIQUE" in str(e).upper():
                 flash('Ese usuario o correo ya existe.', 'error')
             else:
-                print(f"Error registro: {e}")
+                current_app.logger.error(f"REGISTER_ERROR: Fallo al crear cuenta para '{email}' - {str(e)}")
                 flash('Error al crear la cuenta.', 'error')
         finally:
             conn.close()
@@ -184,5 +187,9 @@ def registro():
 # =========================================================
 @auth_bp.route('/logout')
 def logout():
+    # Sacamos el nombre antes de limpiar la sesión para saber quién se fue
+    usuario = session.get('username', 'Usuario_Desconocido')
+    current_app.logger.info(f"LOGOUT: '{usuario}' cerró su sesión.")
+    
     session.clear()
     return redirect(url_for('auth.login'))

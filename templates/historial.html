@@ -469,19 +469,42 @@
                             </tr>`;
                     });
 
-                    const totalVenta = parseFloat(data.total || 0), impuestos = parseFloat(data.impuestos || 0), descuento = parseFloat(data.descuento_monto || 0);
-                    const pagado = parseFloat(data.monto_pagado || 0), pendiente = parseFloat(data.saldo_pendiente || 0);
+                    const totalVenta = parseFloat(data.total || 0);
+                    const impuestos = parseFloat(data.impuestos || 0);
+                    const descuento = parseFloat(data.descuento_monto || 0);
+                    const pagado = parseFloat(data.monto_pagado || 0);
+                    const pendiente = parseFloat(data.saldo_pendiente || 0);
+                    const costoEnvioHistorial = parseFloat(data.envio || 0); 
+                    
                     const gananciaReal = sumaGanancias - descuento;
 
+                    // Construimos la vista del panel 
                     document.getElementById('panelFinanciero').innerHTML = `
                         <div class="col-12 border-bottom pb-2 mb-2">
                             <div class="row">
-                                <div class="col-4 border-end"><small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Total</small><span class="h5 fw-bold text-dark">$${totalVenta.toFixed(2)}</span></div>
-                                <div class="col-4 border-end"><small class="text-primary fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Abonado</small><span class="h5 fw-bold text-primary">$${pagado.toFixed(2)}</span></div>
-                                <div class="col-4"><small class="text-danger fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Resta</small><span class="h5 fw-bold ${pendiente > 0.1 ? 'text-danger' : 'text-success'}">$${pendiente.toFixed(2)}</span></div>
+                                <div class="col-3 border-end">
+                                    <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Total</small>
+                                    <span class="h6 fw-bold text-dark">$${totalVenta.toFixed(2)}</span>
+                                </div>
+                                
+                                <div class="col-3 border-end">
+                                    <small class="text-muted fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Envío</small>
+                                    <span class="h6 fw-bold text-secondary">$${costoEnvioHistorial.toFixed(2)}</span>
+                                </div>
+                                <div class="col-3 border-end">
+                                    <small class="text-primary fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Abonado</small>
+                                    <span class="h6 fw-bold text-primary">$${pagado.toFixed(2)}</span>
+                                </div>
+                                <div class="col-3">
+                                    <small class="text-danger fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Resta</small>
+                                    <span class="h6 fw-bold ${pendiente > 0.1 ? 'text-danger' : 'text-success'}">$${pendiente.toFixed(2)}</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="col-12"><small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Ganancia Neta Estimada</small><span class="h4 fw-bold text-success">$${gananciaReal.toFixed(2)}</span></div>`;
+                        <div class="col-12">
+                            <small class="text-success fw-bold d-block text-uppercase" style="font-size: 0.65rem;">Ganancia Neta Estimada</small>
+                            <span class="h4 fw-bold text-success">$${gananciaReal.toFixed(2)}</span>
+                        </div>`;
 
                     const aviso = document.getElementById('avisoCotizacion');
                     if (data.estado === 'cotizacion') aviso.classList.remove('d-none');

@@ -4,7 +4,7 @@ import uuid
 import os
 import json
 import html
-from flask import Blueprint, render_template, request, jsonify, session
+from flask import Blueprint, render_template, request, jsonify, session, current_app
 from utils.datetime_utils import ahora_sql
 from db import get_db_connection as get_db
 import boto3
@@ -73,8 +73,10 @@ def upload_rollo(invitacion_id):
         conn.commit()
         conn.close()
         
+        current_app.logger.info(f"GUEST_CAM_UPLOAD: Foto subida con éxito para la invitación ID {invitacion_id}.")
         return jsonify({'success': True, 'mensaje': '¡Foto revelada!', 'url': url_final})
     except Exception as e:
+        current_app.logger.error(f"GUEST_CAM_ERROR: Fallo al procesar/subir foto de invitado para evento {invitacion_id} - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # =========================================================
@@ -157,6 +159,7 @@ def validar_qr():
 
     if not invitado:
         conn.close()
+        current_app.logger.warning(f"QR_SCAN_DENIED: Intento de acceso con QR inválido o ajeno al evento: '{codigo}'")
         return jsonify({'success': False, 'error': 'Código QR no válido para este evento'})
 
     # 2. Calculamos los pases disponibles reales
@@ -167,6 +170,7 @@ def validar_qr():
     # Si ya entraron todos, bloqueamos
     if pases_disponibles <= 0:
         conn.close()
+        current_app.logger.warning(f"QR_SCAN_EMPTY: La familia {invitado['nombre_familia']} intentó ingresar sin pases disponibles.")
         return jsonify({
             'success': False, 
             'error': f"¡ALERTA! La familia {invitado['nombre_familia']} ya ingresó todos sus pases ({pases_totales}/{pases_totales}). Evento: {invitado['boda_nombre']}"
@@ -213,6 +217,8 @@ def validar_qr():
     conn.execute("UPDATE pases_invitados SET pases_usados = ? WHERE id = ?", (nuevo_usados, invitado['id']))
     conn.commit()
     conn.close()
+
+    current_app.logger.info(f"QR_SCAN_SUCCESS: Ingresaron {pases_a_ingresar} personas de la familia {invitado['nombre_familia']} al evento {invitado['boda_nombre']}.")
 
     return jsonify({
         'success': True,

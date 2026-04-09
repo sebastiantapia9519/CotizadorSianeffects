@@ -2,6 +2,7 @@ from geopy.distance import geodesic
 from models.shipping_model import ShippingModel
 import requests
 import re
+import logging
 
 class ShippingService:
     
@@ -142,5 +143,5 @@ def obtener_coordenadas_de_link_corto(url_corta):
         return None, None
             
     except Exception as e:
-        print(f"Error al resolver el link de Google Maps: {e}")
+        logging.error(f"SHIPPING_MAPS_ERROR: Fallo al resolver el link corto de Google Maps '{url_corta}' - {e}")
         return None, None

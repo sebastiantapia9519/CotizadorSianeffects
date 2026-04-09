@@ -1,6 +1,6 @@
 import json
 from utils.datetime_utils import ahora_sql
-from flask import Blueprint, jsonify, session, request
+from flask import Blueprint, jsonify, session, request, current_app
 from db import get_db_connection as get_db
 from helpers import login_required
 
@@ -116,6 +116,7 @@ def obtener_detalles_venta(id):
         'costo_total': venta['costo_total'],
         'monto_pagado': venta['monto_pagado'],
         'saldo_pendiente': venta['saldo_pendiente'],
+        'envio': venta['envio'] if 'envio' in venta.keys() else 0,
         'items': items
     })
 
@@ -171,6 +172,10 @@ def actualizar_venta():
         ''', (nuevo_pagado, nuevo_saldo, estado, venta_id))
 
         conn.commit()
+        
+        # LOG DE DINERO: Qué usuario recibió dinero, cuánto y de qué venta
+        current_app.logger.info(f"SALE_PAYMENT: Usuario {session['user_id']} registró abono de ${abono} a la Venta #{venta_id}. Estado: {estado.upper()}")
+        
         return jsonify({'success': True, 'nuevo_estado': estado, 'nuevo_saldo': nuevo_saldo})
 
     except Exception as e:
@@ -265,6 +270,11 @@ def cancelar_venta():
         )
         
         conn.commit()
+        
+        # LOG DE CANCELACIÓN: Avisa si se devolvió inventario o no
+        inv_status = "con devolución de stock" if usar_inventario else "sin afectar stock"
+        current_app.logger.info(f"SALE_CANCELLED: Usuario {session['user_id']} canceló la Venta #{venta_id} ({inv_status}).")
+        
         return jsonify({'success': True})
 
     except Exception as e:

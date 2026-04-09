@@ -1,0 +1,58 @@
+================================================================================
+            MANUAL TÉCNICO Y DE SEGURIDAD: ADMINISTRACIÓN Y MONITOREO
+================================================================================
+Última actualización: Abril 2026
+Descripción: Documentación técnica del panel de control central (Admin Master), 
+sistema de auditoría continua (caja negra), telemetría de errores y gestión de 
+seguridad del ecosistema SaaS de Sianeffects.
+
+--------------------------------------------------------------------------------
+1. ARQUITECTURA DE MONITOREO (LA CAJA NEGRA)
+--------------------------------------------------------------------------------
+El sistema cuenta con una arquitectura de telemetría pasiva que registra cada 
+movimiento crítico de los usuarios sin afectar el rendimiento de la aplicación.
+- Sistema Base: Librería estándar `logging` de Python nativa y `current_app.logger` para contextos web.
+- Almacenamiento y Rotación: Utiliza `RotatingFileHandler` para escribir físicamente en el archivo `limpieza.log`.
+- Prevención de Saturación: El archivo tiene un límite estricto de 1 MB. Al llenarse, el sistema hace un respaldo automático y comienza uno nuevo (conservando hasta 3 respaldos históricos). Evita colapsos de almacenamiento en el servidor.
+- Formato Estricto: `[Fecha y Hora] NIVEL: MENSAJE` (Asegura legibilidad en auditorías).
+
+--------------------------------------------------------------------------------
+2. ESTANDARIZACIÓN DE ETIQUETAS (PREFIJOS DE TELEMETRÍA)
+--------------------------------------------------------------------------------
+Para facilitar el rastreo de errores o auditorías desde el Monitor UI, los logs utilizan prefijos en mayúsculas estandarizados. Los principales son:
+- AUTH_ / PROFILE_: Intentos de login, registros exitosos, cambios de contraseña o reseteos. Registra el nombre y correo del usuario que ejecutó la acción.
+- SALE_: Movimientos de dinero. Registra cuando se crea, abona o cancela una cotización/venta y quién lo hizo.
+- INVENTORY_: Fallos o éxitos al descontar material en la base de datos, o al registrar la huella de auditoría en el Kardex.
+- R2_: Monitoreo estricto del bucket de Cloudflare. Registra cada subida (UPLOAD) y cada borrado (DELETE) de imágenes para evitar cobros por "archivos fantasma" u hojas de datos huérfanos.
+- JOB_: Registros de las tareas automáticas del Cron (ej. JOB_CLEANUP para purga de usuarios inactivos o JOB_MAINTENANCE para el borrado de ventas canceladas).
+- IMPERSONATE_: Registros de alta seguridad que indican cuándo un Administrador entró al "Modo Fantasma" para usar la cuenta de un cliente, y a qué hora salió.
+
+--------------------------------------------------------------------------------
+3. PANEL DE MONITOREO EN VIVO (UI)
+--------------------------------------------------------------------------------
+- Interfaz Gráfica: Los administradores tienen acceso a la ruta protegida `/admin/monitor`.
+- Lectura Invertida: El sistema lee las últimas 100 líneas del archivo físico `limpieza.log` y las invierte para mostrar los eventos más recientes en la parte superior de la pantalla.
+- Codificación de Severidad: El log clasifica los mensajes por nivel de criticidad:
+  * INFO (Verde): Éxitos, rutinas completadas, registros de auditoría normales.
+  * WARNING (Amarillo): Fallos no críticos (ej. fallo al borrar una imagen huérfana, intentos de acceso denegados).
+  * ERROR (Rojo): Caídas de base de datos, excepciones (Exceptions) y fallos de conexión a servicios externos (ej. Google Maps o Cloudflare R2).
+- Enriquecimiento de Datos: Los logs no solo muestran IDs numéricos de base de datos, sino que cruzan información para mostrar nombres de usuario ("Sian reseteó la contraseña de ebstian"), facilitando la lectura humana.
+
+--------------------------------------------------------------------------------
+4. GESTIÓN DE SEGURIDAD, JERARQUÍAS Y PERMISOS
+--------------------------------------------------------------------------------
+- Bloqueo Lateral: Un Administrador (Rol 1) no puede asignar el rol de Dueño (Rol 2) a nadie, ni puede eliminarse a sí mismo o eliminar a cuentas de rango igual o superior al suyo.
+- Modo Fantasma (Impersonation): 
+  * Permite a un administrador tomar control de la sesión de un cliente (Rol 0) sin conocer su contraseña.
+  * Útil para replicar bugs o dar soporte técnico remoto.
+  * Al activarlo, el ID original del Admin se guarda en la sesión (`original_admin_id`). Un botón de escape permite restaurar la sesión original instantáneamente, dejando un rastro completo en el log de auditoría.
+- Delegación de Reseteos: Los administradores pueden cambiar las contraseñas de los clientes directamente desde el panel sin requerir envío de correos, usando cifrado seguro `pbkdf2:sha256`.
+
+--------------------------------------------------------------------------------
+5. HERRAMIENTAS ADMINISTRATIVAS Y MANTENIMIENTO
+--------------------------------------------------------------------------------
+- Dashboard de Métricas Master:
+  * Calcula tasas de actividad dividiendo a los usuarios en tres segmentos de adopción: Zombies (0-2 cotizaciones), Exploradores (3-14) y Power Users (15+).
+  * Evalúa usuarios próximos a vencer y heavy users de los últimos 6 meses.
+- Extracción de Datos: Los administradores pueden descargar la base completa de usuarios en formato CSV para análisis en herramientas externas, y el archivo físico `.log` para investigación forense de fallos.
+- Borrado en Cascada Seguro: Cuando se elimina a un usuario permanentemente desde el panel, el sistema ejecuta una transacción SQL secuencial que destruye su configuración, ventas, detalles de ventas, inventario, maquinaria y envíos ANTES de borrar su fila en la tabla `usuarios`, evitando la corrupción de datos relacionales.

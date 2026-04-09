@@ -1,0 +1,83 @@
+================================================================================
+                    MANUAL TÉCNICO Y DE NEGOCIO: COTIZADOR SIANEFFECTS
+================================================================================
+Última actualización: Abril 2026
+Descripción: Plataforma SaaS (Software as a Service) diseñada para creadores, 
+artesanos y agencias. Permite la gestión integral de costos de producción, 
+inventarios, creación de "recetas" (productos), cotizaciones, abonos, logística 
+de envíos y catálogo público en línea.
+
+--------------------------------------------------------------------------------
+1. ARQUITECTURA TÉCNICA (FASE BOOTSTRAP)
+--------------------------------------------------------------------------------
+- Backend: Python con framework Flask.
+- Base de Datos: SQLite. La separación de datos entre clientes (Multi-tenant) se maneja de forma estricta a nivel de aplicación mediante filtros `user_id` en todas las consultas SQL.
+- Tareas en Segundo Plano (Cron): `APScheduler` para rutinas de mantenimiento automático a medianoche y mensualmente.
+- Sesiones: Nativas de Flask (Cookies firmadas del lado del cliente) con protecciones `HttpOnly`, `Secure` y `SameSite=Lax` para garantizar estabilidad en navegadores móviles (4G/LTE a WiFi).
+- Logística y Mapas: Integración de la librería Geopy para cálculo de distancias geodésicas en tiempo real y expresiones regulares (Regex) para decodificar enlaces cortos de Google Maps.
+- Almacenamiento y Optimización: Cloudflare R2 para el catálogo público. Integración con Pillow (PIL) para conversión automática de imágenes a formato WebP de última generación.
+
+--------------------------------------------------------------------------------
+2. REGLAS DE NEGOCIO (SAAS, PAGOS Y SUSCRIPCIONES)
+--------------------------------------------------------------------------------
+- Onboarding y Periodo de Gracia: Al registrarse, el sistema crea automáticamente una "Configuración Base" y asigna 7 días de prueba gratuita. Se inyecta una cookie `has_free_trial` (vigente por 1 año) para evitar abuso de pruebas gratuitas desde el mismo dispositivo.
+- Esquema de Pagos (Fase 1): Los pagos se manejan externamente (Transferencia bancaria). Una vez confirmado el pago, el Administrador renueva la fecha `subscription_end` desde el Panel Master.
+- Muro de Pago Restrictivo (Paywall): El decorador `@subscription_required` evalúa la fecha límite del cliente contra el reloj UTC del servidor. Si la suscripción expiró, bloquea inmediatamente el acceso al sistema (excepto el login) y redirige a `/plan_vencido`. No hay acceso a datos sin pago.
+- Alertas Proactivas: El Navbar muestra alertas rojas/amarillas si a la cuenta le restan 5 días o menos de vigencia.
+- El Gran Purgador (Protección de Almacenamiento): 
+  * Diariamente (12 AM / 12 PM), el sistema busca cuentas (Nivel 0) vencidas hace más de 12 meses y ejecuta una eliminación en cascada de todos sus datos para liberar espacio.
+  * El día 1 de cada mes se purgan las ventas con estado "Cancelada" de todos los usuarios.
+
+--------------------------------------------------------------------------------
+3. EXPERIENCIA DE USUARIO Y SOPORTE (ONBOARDING)
+--------------------------------------------------------------------------------
+- Centro de Capacitación Integrado: El sistema cuenta con un manual interactivo (`/ayuda`) dividido en 7 capítulos estratégicos (Inventario, Cotizador, Ventas, Historial, Reportes, Stock, Envíos).
+- Accesibilidad Móvil: El manual detecta pantallas pequeñas (<768px) y ejecuta un auto-scroll (smooth) para mejorar la lectura vertical de las pestañas en celulares.
+- FAQs Dinámicas: Acordeón interactivo para resolver dudas comunes (cómo cambiar márgenes, diferencia entre cotizar y cobrar, manejo de errores de caja, etc.), reduciendo la carga de soporte al administrador.
+
+--------------------------------------------------------------------------------
+4. MOTOR DE COSTOS E INVENTARIO (EL CORE)
+--------------------------------------------------------------------------------
+Este módulo permite al usuario saber exactamente cuánto le cuesta fabricar algo.
+- Insumos por Paquete o Pieza: El usuario registra la compra global (Ej. $800 por 10 metros de Vinil). El sistema fracciona y calcula el costo micro-unitario internamente.
+- Costo de Desgaste (Maquinaria): Se pueden registrar equipos (Hornos, Plotters, Laptops) y asignar un costo fijo de uso por ciclo para recuperar la inversión del equipo y el gasto eléctrico.
+- Recetas de Producción: Al unir Insumos + Maquinaria + Mano de Obra, el sistema dictamina el "Costo Base Real".
+
+--------------------------------------------------------------------------------
+5. EL COTIZADOR Y PUNTO DE VENTA
+--------------------------------------------------------------------------------
+Diseñado para la vida real del emprendedor, cuenta con dos motores de venta:
+- A) Modo "Armar Receta": Para fabricaciones exactas a medida.
+- B) Modo "Venta Rápida": Para servicios directos, conceptos genéricos (Ej. "Copias", "Propina", "Diseño") donde el usuario define el precio de venta final de forma manual, pudiendo declarar costo $0 para que sea 100% ganancia neta.
+
+- Gestión de IVA (Impuestos): Un toggle en el carrito permite sumar el porcentaje de impuesto (ej. 16%) sobre el precio final si el cliente final requiere factura.
+- Control de Estados y Deudas:
+  * "Solo Cotizar": Guarda el ticket temporalmente (caduca en 48 horas) sin afectar reportes ni inventario.
+  * "Anticipo": El cliente paga una fracción. Se genera una deuda y el estado queda en amarillo. Liquidable posteriormente desde el Historial.
+  * "Pagado": Se absorben decimales basura (< $0.05) para cerrar el ticket limpio a $0.00 de deuda.
+- Generador de Tickets: El sistema consolida la venta y genera un PDF listo para ser enviado al cliente final vía WhatsApp u otro medio.
+
+--------------------------------------------------------------------------------
+6. KARDEX Y CONTROL DE STOCK (OPCIONAL POR NEGOCIO)
+--------------------------------------------------------------------------------
+El usuario puede encender o apagar el control de inventario según la madurez de su negocio.
+- Impacto Global (Ventas): Al vender, el sistema desglosa todas las recetas del ticket, agrupa los materiales idénticos y hace una sola resta a la base de datos, optimizando el rendimiento de SQLite.
+- Reversiones (Cancelaciones): Si un usuario se equivoca y anula un ticket ("botón de basura"), el sistema reintegra el material exacto a las bodegas. No permite doble cancelación.
+- Alertas de Escasez: El sistema compara el `stock_actual` vs `stock_minimo` configurado por el usuario y dispara notificaciones visuales (`badge danger/warning`) en el Navbar cuando un insumo está por agotarse.
+
+--------------------------------------------------------------------------------
+7. LOGÍSTICA DE ENVÍOS INTELIGENTE
+--------------------------------------------------------------------------------
+- Estrategia Local (Última Milla):
+  * Diseñado para motos/taxis. El backend extrae coordenadas de enlaces compartidos de Google Maps.
+  * Fórmula: [Tarifa Base (Banderazo) + (Distancia KM * Costo por KM)] + Porcentaje de Margen de Seguridad (Tráfico/Clima).
+- Estrategia Nacional (Volumetría):
+  * Compara el Peso Real vs el Peso Volumétrico (Largo x Ancho x Alto / 5000) y cobra en base al mayor de los dos.
+  * Sistema de escalones (Ej. Hasta 1kg, Hasta 3kg, Hasta 15kg). Aplica tarifas zonificadas (Estado específico) o tarifas de la zona "General (ALL)".
+
+--------------------------------------------------------------------------------
+8. EXTRACCIÓN DE DATOS Y FINANZAS
+--------------------------------------------------------------------------------
+- Los usuarios pueden exportar su inteligencia de negocios haciendo clic en "Excel" desde el Historial.
+- El backend utiliza `Pandas` y `openpyxl` para generar un reporte que incluye: Folios, Clientes, Desglose de recetas (JSON decodificado a texto), Costos de producción exactos, Ganancia Unitaria, Impuestos y Estatus de Deuda.
+- Las fechas en BD (guardadas siempre en UTC) se transforman al vuelo a la hora local del usuario (`America/Monterrey` u otra) en la exportación para mantener coherencia contable.

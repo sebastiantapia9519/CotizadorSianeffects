@@ -1,4 +1,4 @@
-from flask import Blueprint, request, session, jsonify, render_template, redirect, url_for
+from flask import Blueprint, request, session, jsonify, render_template, redirect, url_for, current_app
 import json
 from helpers import login_required
 from db import get_db_connection as get_db
@@ -237,7 +237,7 @@ def recetas():
             recetas_lista.append(receta_dict)
             
     except Exception as e:
-        print(f"Error al cargar recetas: {e}")
+        current_app.logger.error(f"RECIPE_LOAD_ERROR: Fallo al cargar recetas para usuario {session.get('user_id')} - {e}")
         recetas_lista = []
         
     conn.close()
@@ -274,10 +274,11 @@ def guardar_receta():
             conn.execute("INSERT INTO producto_maquinaria (producto_id, maquinaria_id) VALUES (?, ?)", (pid, e['id']))
 
         conn.commit()
+        current_app.logger.info(f"RECIPE_CREATED: Usuario {session.get('user_id')} creó la receta '{nombre_receta}' (ID: {pid})")
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
-        print(f"Error guardando receta: {e}") 
+        current_app.logger.error(f"RECIPE_SAVE_ERROR: Usuario {session.get('user_id')} falló al guardar receta - {e}") 
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
@@ -371,10 +372,11 @@ def registrar_compra():
             ))
         except Exception as aud_error:
             # Imprimimos el error de auditoría para depuración sin tumbar la compra
-            print(f"Error en auditoría de compra: {aud_error}")
+            current_app.logger.warning(f"INVENTORY_AUDIT_WARNING: No se pudo registrar historial para material {material_id} - {aud_error}")
             pass 
 
         conn.commit()
+        current_app.logger.info(f"STOCK_ADDED: Usuario {session.get('user_id')} ingresó {cantidad_a_sumar} unidades al material ID {material_id}")
         return jsonify({'success': True})
 
     except Exception as e:

@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify, send_from_directory, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify, send_from_directory, abort, current_app
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
 import pandas as pd
@@ -20,6 +20,7 @@ def inject_notifications():
     return {'notificaciones': []}
 
 # --- HELPER INTERNO PARA FORMATEAR FECHAS A LOCAL ---
+# --- HELPER INTERNO PARA FORMATEAR FECHAS A LOCAL ---
 def procesar_fila_fechas(fila_db):
     if not fila_db: return None
     item = dict(fila_db)
@@ -32,8 +33,13 @@ def procesar_fila_fechas(fila_db):
                 dt_utc = parser.parse(str(valor_original))
                 if dt_utc.tzinfo is None:
                     dt_utc = dt_utc.replace(tzinfo=timezone.utc)
-                dt_local = utc_to_local(dt_utc)
-                item[campo] = dt_local.strftime('%d/%m/%Y %H:%M')
+                dt_local = utc_to_local(dt_utc)               
+
+                if campo == 'fecha_vencimiento':
+                    item[campo] = dt_local.strftime('%d/%m/%Y') 
+                else:
+                    item[campo] = dt_local.strftime('%d/%m/%Y %H:%M') 
+                    
             except ValueError:
                 pass 
     return item
@@ -139,7 +145,7 @@ def obtener_receta_api(id):
             'maquinaria': maquinaria_lista
         })
     except Exception as e:
-        print(f"Error API Receta ID {id}: {e}")
+        current_app.logger.error(f"API_ERROR: Cargando receta ID {id} - {e}")
         return jsonify({'error': 'Error al cargar los detalles'}), 500
     finally:
         conn.close()
@@ -151,7 +157,6 @@ def guardar_venta():
     data = request.get_json()
     conn = get_db() 
     cursor = conn.cursor()
-    print("DATA RECIBIDA:", data)
     
     try:
         config = cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=?', (session['user_id'],)).fetchone()
@@ -167,6 +172,7 @@ def guardar_venta():
         # --- 1. RECIBIMOS DATOS (Confiamos en la intención, no en los totales) ---
         cliente = data.get('cliente', 'Cliente General')
         items = data.get('items', [])
+        costo_envio = float(data.get('envio', 0))
         descuento_pct = float(data.get('descuento_porcentaje', 0))
         descuento_monto = float(data.get('descuento_monto', 0))
         tax_percent = float(data.get('tax_percent', 0))
@@ -226,18 +232,15 @@ def guardar_venta():
         fecha_actual = ahora_sql()
         fecha_vencimiento = ahora_sql(dias=2) #Si la venta no se concreta en 2 dias se elimina
 
-        print("VENTA_ID RECIBIDA:", venta_id)
-
         if venta_id:
             cursor.execute('''
                 UPDATE ventas 
-                SET cliente=?, subtotal=?, descuento_porcentaje=?, descuento_monto=?,
+                SET cliente=?, subtotal=?, envio=?, descuento_porcentaje=?, descuento_monto=?,
                     impuestos=?, tax_engine=?,
                     total=?, costo_total=?, estado=?, monto_pagado=?, saldo_pendiente=?
                 WHERE id=? AND user_id=?
             ''', (
-                # AQUÍ ESTÁ EL CAMBIO: Usamos las variables _calculado y _real
-                cliente, subtotal_calculado, descuento_pct, descuento_monto,
+                cliente, subtotal_calculado, costo_envio, descuento_pct, descuento_monto,
                 tax_amount_calculado, tax_engine,
                 total_calculado, costo_total_calculado, estado, monto_pagado_real, saldo_pendiente_real,
                 venta_id, session['user_id']
@@ -246,23 +249,22 @@ def guardar_venta():
         else:
             cursor.execute('''
                 INSERT INTO ventas (
-                    user_id, fecha, cliente, subtotal, 
+                    user_id, fecha, cliente, subtotal, envio, 
                     descuento_porcentaje, descuento_monto, 
                     impuestos, tax_engine,
                     total, costo_total, estado, 
                     monto_pagado, saldo_pendiente, fecha_vencimiento
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ''', (
-                # AQUÍ TAMBIÉN ACTUALIZAMOS LAS VARIABLES
-                session['user_id'], fecha_actual, cliente, subtotal_calculado, 
+                session['user_id'], fecha_actual, cliente, subtotal_calculado, costo_envio, 
                 descuento_pct, descuento_monto, 
                 tax_amount_calculado, tax_engine,
                 total_calculado, costo_total_calculado, estado, 
                 monto_pagado_real, saldo_pendiente_real, fecha_vencimiento
             ))
             
-            # --- 🚨 NOTA DE MIGRACIÓN A POSTGRESQL 🚨 ---
+            # ---  NOTA DE MIGRACIÓN A POSTGRESQL  ---
             # SQLite usa .lastrowid para obtener el ID recién creado. Postgres NO lo soporta así.
             # Cuando migres, tu query de INSERT deberá terminar con: "... VALUES (...) RETURNING id"
             # Y esta línea de abajo cambiará a: venta_id = cursor.fetchone()[0]
@@ -309,7 +311,7 @@ def guardar_venta():
                                 else:
                                     materiales_a_descontar[material_id] = cantidad_requerida
                 except Exception as e:
-                    print(f"Error calculando receta en memoria: {e}")
+                    current_app.logger.warning(f"INVENTORY_CALC_WARNING: Error calculando receta en memoria para venta - {e}")
 
         # 3. IMPACTO A LA BASE DE DATOS (FUERA DEL CICLO FOR DE PRODUCTOS)
         # Ahora que ya sabemos el total exacto de cada material, hacemos los Updates.
@@ -340,15 +342,16 @@ def guardar_venta():
                         ahora_sql()
                     ))
             except Exception as e:
-                print(f"Error ejecutando descuento de inventario en BD: {e}")
+                current_app.logger.error(f"INVENTORY_DB_ERROR: Error descontando stock para venta {venta_id} - {e}")
                 
 
         conn.commit()
+        current_app.logger.info(f"SALE_SAVED: Usuario {session['user_id']} guardó la venta/cotización #{venta_id} con estado '{estado}'.")
         return jsonify({'success': True, 'ticket_id': venta_id})
 
     except Exception as e:
         conn.rollback()
-        print(f"Error guardando venta: {e}")
+        current_app.logger.error(f"SALE_ERROR: Error guardando venta para usuario {session['user_id']} - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         conn.close()
@@ -359,9 +362,6 @@ def guardar_venta():
 def actualizar_venta():
     data = request.get_json()
     venta_id = data.get('id')
-
-    print("DEBUG guardar_venta → data recibida:", data)
-    print("DEBUG guardar_venta → venta_id:", venta_id)
 
     abono = float(data.get('abono', 0))
     
@@ -521,7 +521,7 @@ def configuracion():
                 session['username'] = new_username
 
             except Exception as e:
-                print(f"Error update profile: {e}")
+                current_app.logger.error(f"PROFILE_UPDATE_ERROR: Usuario {uid} intentó usar email/user duplicado - {e}")
                 flash('Error: El nombre de usuario o correo ya está en uso.', 'danger')
 
         elif action == 'update_password':
@@ -604,7 +604,7 @@ def configuracion():
 
                 flash('Configuración de envíos actualizada.', 'success')
             except Exception as e:
-                print(f"Error shipping config: {e}")
+                current_app.logger.error(f"SHIPPING_CONFIG_ERROR: Usuario {uid} falló actualizando envíos - {e}")
                 flash(f'Error al guardar envíos: {e}', 'danger')
 
         # --- GESTIÓN DE ZONAS (Crear) ---
@@ -663,7 +663,7 @@ def configuracion():
                              (zone_id, peso, precio))
                 flash('Tarifa agregada correctamente.', 'success')
             except Exception as e:
-                print(f"Error rate: {e}")
+                current_app.logger.error(f"SHIPPING_RATE_ERROR: Fallo al agregar tarifa en zona {zone_id} - {e}")
                 flash(f'No se pudo agregar: {e}', 'danger')
 
         # --- GESTIÓN DE TARIFAS (Borrar) ---
@@ -797,7 +797,7 @@ def get_cotizacion(id):
             'items': items
         })
     except Exception as e:
-        print(f"Error cargando cotización {id}: {e}")
+        current_app.logger.error(f"QUOTE_LOAD_ERROR: Error al cargar cotización {id} para editor - {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         conn.close()
@@ -880,5 +880,5 @@ def descargar_excel():
         return send_file(output, download_name=filename, as_attachment=True)
 
     except Exception as e:
-        print(f"Error exportando Excel: {e}")
+        current_app.logger.error(f"EXPORT_ERROR: Usuario {uid} falló al exportar Excel - {e}")
         return f"Error al generar el Excel: {str(e)}", 500

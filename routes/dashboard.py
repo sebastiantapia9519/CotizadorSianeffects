@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request
+from flask import Blueprint, render_template, request, current_app, session
 from db import get_db_connection
 from helpers import admin_required
 from utils.datetime_utils import now_utc, ahora_sql
@@ -113,7 +113,7 @@ def index():
         )
 
     except Exception as e:
-        print(f"Error en Dashboard: {e}")
+        current_app.logger.error(f"DASHBOARD_ERROR: Fallo al cargar métricas para el Admin ID {session.get('user_id')} - {e}")
         return f"Error: {e}", 500
     finally:
         conn.close()

@@ -4,6 +4,7 @@ from db import get_db_connection
 from datetime import datetime, timezone, timedelta
 import json
 import uuid
+import logging
 
 # ========================================================
 # DECORADORES DE PROTECCIÓN
@@ -80,7 +81,7 @@ def subscription_required(f):
                 flash('Tu suscripción ha vencido. Renueva para continuar.', 'error')
                 return redirect(url_for('main.plan_vencido')) 
         except Exception as e:
-            print(f"Error verificando fecha de sub: {e}")
+            logging.error(f"AUTH_DATE_ERROR: Fallo al verificar fecha de subscripción para user {session.get('user_id')} - {e}")
             # Considerar si quieres bloquear el acceso si hay un error en la fecha
             pass
 
@@ -140,11 +141,11 @@ def obtener_alertas(user_id):
                         'url': '/configuracion'
                     })
             except Exception as e:
-                print(f"Error obteniendo alerta de fecha: {e}")
+                logging.warning(f"ALERT_DATE_ERROR: Fallo calculando alerta de fecha para user {user_id} - {e}")
                 pass
 
     except Exception as e:
-        print(f"Error obteniendo alertas: {e}")
+        logging.error(f"ALERT_FETCH_ERROR: Fallo general obteniendo alertas para user {user_id} - {e}")
     finally:
         conn.close()
         
@@ -246,7 +247,7 @@ def obtener_estado_mesas(inv_id):
             
         return resultado
     except Exception as e:
-        print(f"Error calculando mesas: {e}")
+        logging.error(f"TABLE_CALC_ERROR: Fallo calculando estado de mesas para invitación {inv_id} - {e}")
         return []
     finally:
         conn.close()

@@ -6,6 +6,7 @@ from botocore.client import Config
 from dotenv import load_dotenv
 from PIL import Image
 from werkzeug.utils import secure_filename
+import logging
 
 # ==============================================================================
 # INICIALIZACION Y VARIABLES DE ENTORNO
@@ -91,7 +92,7 @@ def upload_to_cloudflare(file, folder="invitaciones"):
             content_type = 'image/webp'
             
         except Exception as e:
-            print(f"Alerta: Error comprimiendo imagen ({e}). Procediendo con subida original.")
+            logging.warning(f"R2_COMPRESSION_WARNING: Error comprimiendo imagen ({e}). Procediendo con subida original de '{safe_original_filename}'.")
             # Fallback de seguridad: Si la libreria Pillow falla, subimos el archivo original
             file.seek(0)
             nuevo_nombre = f"{uuid.uuid4().hex}_{safe_original_filename}"
@@ -138,7 +139,7 @@ def delete_from_cloudflare(url_publica):
             return True
             
         except Exception as e:
-            print(f"Error critico al borrar el archivo {file_key} de R2: {e}")
+            logging.error(f"R2_DELETE_ERROR: Fallo crítico al borrar el archivo '{file_key}' de R2 - {e}")
             return False
             
     return False

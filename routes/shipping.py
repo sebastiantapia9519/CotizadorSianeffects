@@ -1,6 +1,6 @@
 import requests
 import re
-from flask import Blueprint, request, jsonify, session
+from flask import Blueprint, request, jsonify, session, current_app
 from services.shipping_service import ShippingService
 
 shipping_bp = Blueprint('shipping', __name__)
@@ -47,7 +47,7 @@ def cotizar():
         return jsonify(resultado)
         
     except Exception as e:
-        print(f"Error crítico en cotización: {e}")
+        current_app.logger.error(f"SHIPPING_QUOTE_ERROR: Usuario {session.get('user_id')} falló al cotizar - {e}")
         # Retornamos el error real temporalmente para ayudarte a depurar si falla la DB
         return jsonify({"error": f"Fallo en el servicio: {str(e)}"}), 500
 
@@ -70,10 +70,8 @@ def resolver_mapa():
         response = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
         url_final = response.url
         
-        # --- DIAGNÓSTICO: Imprimir en consola por si acaso ---
-        print(f"DEBUG MAPS: Link original: {url}")
-        print(f"DEBUG MAPS: Link final: {url_final}")
-        # ---------------------------------------------------
+        # Logueamos la resolución del mapa en una sola línea
+        current_app.logger.info(f"MAPS_RESOLVE: Original -> {url} | Final -> {url_final}")
 
         # 1. Búsqueda Estándar (@lat,lng)
         match = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', url_final)
@@ -111,7 +109,6 @@ def resolver_mapa():
         }), 400
 
     except Exception as e:
-        # AQUÍ ESTÁ EL CAMBIO IMPORTANTE:
         # Devolvemos el error real (str(e)) para verlo en la alerta
-        print(f"ERROR CRÍTICO MAPS: {e}")
+        current_app.logger.error(f"MAPS_CONNECTION_ERROR: Fallo al intentar resolver URL '{url}' - {e}")
         return jsonify({"error": f"Fallo Técnico: {str(e)}"}), 500

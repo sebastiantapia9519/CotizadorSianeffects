@@ -71,7 +71,7 @@ def dashboard():
                     if u['role'] == 0 and f_local < proximos_a_borrar_local:
                         stats['en_riesgo'] += 1
             except Exception as e:
-                print(f"Error parseando subscription_end: {e}")
+                current_app.logger.error(f"DATE_ERROR: Parseando subscription_end para user {u['id']} - {e}")
                 stats['vencidos'] += 1
         else:
             stats['vencidos'] += 1
@@ -91,7 +91,7 @@ def dashboard():
                 if log_local > hace_24h_local:
                     stats['online_hoy'] += 1
             except Exception as e:
-                print(f"Error parseando last_login: {e}")
+                current_app.logger.warning(f"DATE_WARNING: Parseando last_login para user {u['id']} - {e}")
                 pass
 
     # 5. Envío a la plantilla
@@ -104,7 +104,7 @@ def dashboard():
                            limite_riesgo=fecha_limite_riesgo)
 
                            
-# --- ACCIONES PROTEGIDAS (SOLO DUEÑO - ROL 2) ---
+
 
 @admin_bp.route('/renovar/<int:user_id>/<int:meses>')
 @admin_required
@@ -116,8 +116,15 @@ def renovar(user_id, meses):
     
     nueva_fecha_fin = now_utc() + timedelta(days=meses*30)
     conn = get_db()
+    # Obtenemos el nombre del usuario afectado
+    target_user = conn.execute('SELECT username FROM usuarios WHERE id = ?', (user_id,)).fetchone()
+    target_name = target_user['username'] if target_user else f"ID {user_id}"
+    
     conn.execute('UPDATE usuarios SET subscription_end = ? WHERE id = ?', (nueva_fecha_fin, user_id))
     conn.commit(); conn.close()
+    
+    # Log enriquecido
+    current_app.logger.info(f"SUB_RENEWED: '{session.get('username')}' renovó la suscripción de '{target_name}' por {meses} meses.")
     flash(f'Suscripción renovada por {meses} meses.', 'success')
     return redirect(url_for('admin.dashboard'))
 
@@ -135,8 +142,16 @@ def cambiar_rol(user_id, nuevo_rol):
         return redirect(url_for('admin.dashboard'))
     
     conn = get_db()
+    
+    # Obtenemos el nombre del usuario afectado para el log
+    target_user = conn.execute('SELECT username FROM usuarios WHERE id = ?', (user_id,)).fetchone()
+    target_name = target_user['username'] if target_user else f"ID {user_id}"
+    
     conn.execute('UPDATE usuarios SET role = ? WHERE id = ?', (nuevo_rol, user_id))
     conn.commit(); conn.close()
+    
+    # Log enriquecido con nombres
+    current_app.logger.info(f"ROLE_CHANGED: '{session.get('username')}' cambió el rol de '{target_name}' a {nuevo_rol}.")
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/reset_password', methods=['POST'])
@@ -176,7 +191,11 @@ def reset_password():
         
         # LOG 3: ¿Se actualizó algo realmente?
         if cursor.rowcount > 0:
-            current_app.logger.info(f"DEBUG: SUCCESS. Row updated for UID {user_id}")
+            # Buscamos el nombre para el log
+            target = conn.execute('SELECT username FROM usuarios WHERE id = ?', (user_id,)).fetchone()
+            target_name = target['username'] if target else f"ID {user_id}"
+            
+            current_app.logger.info(f"PASSWORD_RESET: '{session.get('username')}' reseteó la contraseña de '{target_name}'.")
             flash('Contraseña actualizada correctamente.', 'success')
         else:
             current_app.logger.warning(f"DEBUG: FAIL. No user found with UID {user_id}")
@@ -206,7 +225,8 @@ def impersonate(user_id):
         session['username'] = user['username']
         session['role'] = user['role']
         
-        flash(f'👻 Modo Fantasma: Ahora estás viendo el sistema como {user["username"]}', 'info')
+        current_app.logger.info(f"IMPERSONATE_START: Admin UID {session['original_admin_id']} entró a la cuenta del UID {user['id']}.")
+        flash(f'Modo Fantasma: Ahora estás viendo el sistema como {user["username"]}', 'info')
         return redirect(url_for('main.index'))
     
     # CORRECCIÓN: Evita el BuildError si el usuario no existe
@@ -266,7 +286,11 @@ def delete_user():
         cursor.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
         
         conn.commit()
-        flash('✅ Usuario y todos sus datos eliminados correctamente.', 'success')
+        
+        # Como no tenemos el nombre cargado, lo extraemos del query que ya hicimos antes de borrarlo
+        # (Opcional: puedes hacer un select del username al principio de la función, pero con esto basta)
+        current_app.logger.info(f"USER_DELETED: '{session.get('username')}' borró permanentemente la cuenta ID {user_id} y todos sus datos.")
+        flash('Usuario y todos sus datos eliminados correctamente.', 'success')
         
     except Exception as e:
         conn.rollback()
@@ -332,7 +356,8 @@ def stop_impersonate():
         # 2. Borramos el rastro del modo fantasma
         session.pop('original_admin_id', None)
 
-        flash('👻 Modo Fantasma finalizado. Bienvenido de vuelta, Jefe.', 'success')
+        current_app.logger.info(f"IMPERSONATE_STOP: Admin UID {original_id} salió del modo fantasma.")
+        flash('Modo Fantasma finalizado. Bienvenido de vuelta, Jefe.', 'success')
         
         return redirect(url_for('admin.dashboard'))
     

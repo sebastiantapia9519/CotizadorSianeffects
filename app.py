@@ -132,7 +132,7 @@ def tarea_limpieza():
                 
                 for email in emails:
                     logging.warning(f"CUENTA ELIMINADA POR INACTIVIDAD (12 MESES): {email}")
-                print(f"Limpia UTC completada para {len(ids)} usuarios inactivos.")
+                logging.info(f"JOB_CLEANUP: Limpieza UTC completada para {len(ids)} usuarios inactivos.")
 
             # -------------------------------------------------------------
             # 3. PURGA DE INVITACIONES OBSOLETAS
@@ -175,8 +175,7 @@ def tarea_limpieza():
                     conn.execute("DELETE FROM buenos_deseos WHERE invitacion_id = ?", (inv_id,))
                     conn.execute("DELETE FROM invitaciones WHERE id = ?", (inv_id,))
                     
-                    logging.info(f"PURGA COMPLETA: Invitación '{slug_inv}' (ID: {inv_id}) eliminada de BD y R2 por antigüedad.")
-                    print(f"Invitación '{slug_inv}' purgada del sistema liberando espacio.")
+                    logging.info(f"JOB_CLEANUP: Invitación '{slug_inv}' (ID: {inv_id}) eliminada de BD y R2 por antigüedad.")
 
             conn.commit()
 
@@ -205,8 +204,7 @@ def tarea_canceladas():
                 conn.execute(f"DELETE FROM ventas WHERE id IN ({placeholders})", ids_tuple)
                 
                 conn.commit()
-                logging.info(f"Mantenimiento Mensual: {len(ids_canc)} ventas 'canceladas' borradas permanentemente.")
-                print(f"Mantenimiento: {len(ids_canc)} ventas basura eliminadas.")
+                logging.info(f"JOB_MAINTENANCE: Mantenimiento mensual ejecutado. {len(ids_canc)} ventas 'canceladas' borradas.")
                 
         except Exception as e:
             logging.error(f"Error en tarea_canceladas: {str(e)}")
@@ -277,7 +275,7 @@ def inject_user_config():
                 # Convertimos a dict por si acaso
                 return {'config': dict(user_config)}
         except Exception as e:
-            print(f"Error inyectando config: {e}")
+            app.logger.error(f"CONTEXT_ERROR: Fallo al inyectar config global para usuario {session.get('user_id')} - {e}")
     
     # Si no hay usuario logueado, devolvemos los defaults para que no truene
     return {'config': default_config}

@@ -411,7 +411,7 @@ def api_subir_musica():
         return jsonify({'success': True, 'id': nuevo_id, 'nombre': nombre.strip()})
         
     except Exception as e:
-        print(f"Error en API musica: {e}")
+        current_app.logger.error(f"MUSIC_UPLOAD_ERROR: Fallo al subir archivo de audio '{nombre}' - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
@@ -948,7 +948,7 @@ def descargar_rollo_zip(id):
                         zf.writestr(f"foto_{i+1}.jpg", respuesta.content)
                         fotos_anadidas += 1
                 except Exception as e:
-                    print(f"Error HTTP extrayendo foto {i}: {e}")
+                    current_app.logger.error(f"ZIP_DOWNLOAD_ERROR: Fallo HTTP al extraer foto index {i} de la URL {foto['url'][:50]}... - {e}")
                     continue
 
         if fotos_anadidas == 0:
@@ -1351,10 +1351,9 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
             if not foto_url_a_borrar: return jsonify({"success": False, "error": "URL no proporcionada"}), 400
 
             try:
-                # BLINDAJE: Usamos el servicio oficial que tu ya creaste en services
                 delete_from_cloudflare(foto_url_a_borrar)
             except Exception as e:
-                print(f"Error R2 Galeria: {e}")
+                current_app.logger.error(f"R2_DELETE_ERROR: Fallo al eliminar imagen de galería {foto_url_a_borrar[-30:]} - {e}")
 
             fotos_actuales = json.loads(inv['fotos_json']) if inv['fotos_json'] else []
             if foto_url_a_borrar in fotos_actuales:
@@ -1372,10 +1371,9 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
             if not url_imagen_cloudflare: return jsonify({"success": False, "error": "Imagen STD ya eliminada o no existe"}), 400
             
             try:
-                # Borramos de Cloudflare
                 delete_from_cloudflare(url_imagen_cloudflare)
             except Exception as e:
-                print(f"Error R2 STD: {e}")
+                current_app.logger.error(f"R2_DELETE_ERROR: Fallo al eliminar foto STD {url_imagen_cloudflare[-30:]} - {e}")
                 
             # Quitamos la llave 'foto_std_url' del JSON y actualizamos la base de datos con el nombre de columna correcto
             datos_cliente.pop('foto_std_url', None)
@@ -1393,10 +1391,9 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
             if not url_imagen_cloudflare: return jsonify({"success": False, "error": "Imagen ya eliminada"}), 400
 
             try:
-                # BLINDAJE: Usamos el servicio oficial
                 delete_from_cloudflare(url_imagen_cloudflare)
             except Exception as e:
-                print(f"Error R2 {tipo_imagen}: {e}")
+                current_app.logger.error(f"R2_DELETE_ERROR: Fallo al eliminar {tipo_imagen} {url_imagen_cloudflare[-30:]} - {e}")
 
             conn.execute(f"UPDATE invitaciones SET {columna_db} = NULL WHERE id = ?", (id,))
             conn.commit()

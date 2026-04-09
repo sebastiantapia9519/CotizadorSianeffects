@@ -2,7 +2,7 @@ import random
 import string
 import os
 import uuid
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
 from db import get_db_connection as get_db
 from helpers import login_required
 import boto3
@@ -68,9 +68,10 @@ def upload_r2():
         # Construimos la URL publica final que se guardara en la base de datos
         url_final = f"{PUBLIC_URL}/{unique_filename}"
         
+        current_app.logger.info(f"R2_UPLOAD_SUCCESS: Usuario {session.get('user_id')} subió el archivo '{unique_filename}'")
         return jsonify({"success": True, "url": url_final})
     except Exception as e:
-        print(f"Error subiendo a R2: {e}")
+        current_app.logger.error(f"R2_UPLOAD_ERROR: Usuario {session.get('user_id')} falló al subir archivo - {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -220,7 +221,7 @@ def toggle_status():
         conn.commit()
         return jsonify({'success': True})
     except Exception as e:
-        print(f"Error toggle: {e}")
+        current_app.logger.error(f"CATALOG_TOGGLE_ERROR: Fallo al cambiar estado de {tipo} ID {id_obj} - {e}")
         return jsonify({'success': False, 'error': str(e)})
     finally:
         conn.close()
@@ -280,7 +281,7 @@ def delete_item(tipo, id_obj):
                     nombre_archivo = url_archivo.split('/')[-1]
                     s3_client.delete_object(Bucket=BUCKET_NAME, Key=nombre_archivo)
                 except Exception as e:
-                    print(f"Error al borrar archivo huerfano en R2: {e}")
+                    current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo huérfano '{nombre_archivo}' de R2 - {e}")
 
             # Borramos los registros en cascada
             conn.execute('DELETE FROM catalogo_productos WHERE categoria_id = ?', (id_obj,))
@@ -306,8 +307,9 @@ def delete_item(tipo, id_obj):
                     try:
                         nombre_archivo = url_archivo.split('/')[-1]
                         s3_client.delete_object(Bucket=BUCKET_NAME, Key=nombre_archivo)
+                        current_app.logger.info(f"R2_DELETE_SUCCESS: Archivo '{nombre_archivo}' eliminado correctamente de la nube.")
                     except Exception as e:
-                        print(f"Error al borrar en R2: {e}")
+                        current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo '{nombre_archivo}' de R2 - {e}")
 
                 conn.execute('DELETE FROM catalogo_productos WHERE id = ?', (id_obj,))
                 conn.commit()

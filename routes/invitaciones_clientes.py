@@ -3,7 +3,7 @@ import io
 import zipfile
 import requests 
 from functools import wraps 
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, current_app
 from db import get_db_connection
 from helpers import guardar_pase_bd, obtener_estado_mesas
 from utils.datetime_utils import hoy_sqlite, hoy_local, ahora_sql
@@ -75,6 +75,8 @@ def login_cliente():
                     session['planner_id'] = planner['id']
                     session['planner_nombre'] = planner['nombre_contacto']
                     session['user_type'] = 'planner'
+                    
+                    current_app.logger.info(f"PLANNER_LOGIN: Agencia '{planner['nombre_empresa']}' (ID: {planner['id']}) inició sesión.")
                     return redirect(url_for('invitaciones_clientes.dashboard_planner'))
                 else:
                     flash("Codigo de Planner no encontrado.", "danger")
@@ -95,6 +97,8 @@ def login_cliente():
                     # Extraemos el nombre para saludarlo en el dashboard
                     datos = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
                     session['cliente_nombre'] = datos.get('novios', 'Nuestro Evento')
+                    
+                    current_app.logger.info(f"CLIENT_LOGIN: Los clientes '{session['cliente_nombre']}' entraron a ver su invitación {inv['slug']}.")
                     return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
                 else:
                     flash("Codigo de acceso no valido.", "danger")
@@ -265,7 +269,7 @@ def dashboard_cliente():
         estado_mesas = obtener_estado_mesas(inv_id)
 
     except Exception as e:
-        print(f"Error cargando panel cliente: {e}")
+        current_app.logger.error(f"CLIENT_DASHBOARD_ERROR: Fallo al cargar panel para invitación ID {inv_id} - {e}")
         flash("Ocurrio un error al cargar la informacion de tu evento.", "danger")
         return redirect(url_for('invitaciones_clientes.login_cliente'))
     finally:
@@ -396,7 +400,7 @@ def descargar_fotos_cliente():
                     if respuesta.status_code == 200:
                         zf.writestr(f"recuerdo_{i+1}.jpg", respuesta.content)
                 except Exception as e:
-                    print(f"Error descargando foto {i}: {e}")
+                    current_app.logger.warning(f"CLIENT_ZIP_WARNING: Fallo HTTP extrayendo foto index {i} para el cliente - {e}")
                     continue
 
         memory_file.seek(0)
@@ -418,6 +422,9 @@ def descargar_fotos_cliente():
 @clientes_bp.route('/mi-evento/salir')
 def logout_cliente():
     """Destruye la sesion del cliente o planner."""
+    usuario = session.get('planner_nombre') or session.get('cliente_nombre') or 'Usuario Desconocido'
+    current_app.logger.info(f"PORTAL_LOGOUT: '{usuario}' cerró su sesión externa.")
+    
     session.clear()
     return redirect(url_for('invitaciones_clientes.login_cliente'))
 
