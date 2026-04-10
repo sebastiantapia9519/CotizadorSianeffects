@@ -60,6 +60,8 @@ def init_db():
         slogan TEXT DEFAULT 'Servicios Creativos',
         website TEXT DEFAULT '',
         inventario_activo BOOLEAN DEFAULT 0,
+        icono_empresa TEXT DEFAULT '🎨',
+        logo_empresa TEXT DEFAULT '',
         ticket_bw BOOLEAN DEFAULT 0
     )
     """)

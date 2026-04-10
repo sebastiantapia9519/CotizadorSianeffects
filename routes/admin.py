@@ -6,10 +6,12 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
 
-# IMPORTACIÓN DE BASE DE DATOS
+# IMPORTACIÓN DE BASE DE DATOS Y SERVICIOS
 from db import get_db_connection as get_db
 from helpers import admin_required
 from utils.datetime_utils import now_utc, utc_to_local 
+# 👇 NUEVO: Importamos tu servicio de limpieza de Cloudflare
+from services.cloudflare_service import delete_from_cloudflare
 
 admin_bp = Blueprint('admin', __name__)
 
@@ -102,9 +104,6 @@ def dashboard():
                            my_role=session.get('role'),
                            hace_24h_str=hace_24h_str,
                            limite_riesgo=fecha_limite_riesgo)
-
-                           
-
 
 @admin_bp.route('/renovar/<int:user_id>/<int:meses>')
 @admin_required
@@ -260,6 +259,23 @@ def delete_user():
     # 2. PROCESO DE BORRADO EN CASCADA
     cursor = conn.cursor()
     try:
+        # =========================================================
+        #  LIMPIEZA DEL LOGO EN CLOUDFLARE R2 
+        # =========================================================
+        # Buscamos si el usuario tenía un logo antes de borrar su registro
+        config_user = cursor.execute("SELECT logo_empresa FROM configuracion WHERE user_id = ?", (user_id,)).fetchone()
+        
+        if config_user and config_user['logo_empresa']:
+            logo_url = config_user['logo_empresa']
+            # Verificamos que sea una URL de Cloudflare antes de intentar borrar
+            if "http" in logo_url:
+                try:
+                    delete_from_cloudflare(logo_url)
+                    current_app.logger.info(f"R2_CLEANUP_SUCCESS: Se eliminó el logo del usuario {user_id} de R2.")
+                except Exception as e:
+                    current_app.logger.warning(f"R2_CLEANUP_WARNING: No se pudo borrar el logo del usuario {user_id} - {e}")
+        # =========================================================
+
         # Borrar Configuración
         cursor.execute("DELETE FROM configuracion WHERE user_id = ?", (user_id,))
         
@@ -288,7 +304,6 @@ def delete_user():
         conn.commit()
         
         # Como no tenemos el nombre cargado, lo extraemos del query que ya hicimos antes de borrarlo
-        # (Opcional: puedes hacer un select del username al principio de la función, pero con esto basta)
         current_app.logger.info(f"USER_DELETED: '{session.get('username')}' borró permanentemente la cuenta ID {user_id} y todos sus datos.")
         flash('Usuario y todos sus datos eliminados correctamente.', 'success')
         
@@ -326,7 +341,6 @@ def monitor():
     logs = []
     
     if os.path.exists(log_path):
-        # AGREGAMOS: errors='replace' y encoding='utf-8'
         # Esto ignora caracteres basura y lee bien las tildes/colores
         with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
             logs = f.readlines()[-100:]

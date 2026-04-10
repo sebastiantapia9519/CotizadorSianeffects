@@ -2,592 +2,638 @@
 
 {% block extra_css %}
 <style>
-    /* Estilos del Ticket Preview */
-    .ticket-preview {
-        background: white;
-        padding: 20px;
-        border: 2px dashed #ff6b81;
-        border-radius: 10px;
-        margin: 0 auto;
-        max-width: 300px;
-        font-family: 'Nunito', sans-serif;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+    /* ==========================================================================
+       SaaS UI Design System (Inspirado en Vercel/Shopify)
+       ========================================================================== */
+    body {
+        background-color: #fafafa;
     }
 
-    .tp-brand h4 {
-        color: #ff6b81;
-        font-weight: 900;
-        text-transform: uppercase;
-        margin: 0;
+    /* --- Sidebar Navigation --- */
+    .saas-sidebar {
+        background: transparent;
+        padding-right: 1rem;
     }
 
-    .tp-brand p {
-        color: #2ec4b6;
+    .saas-nav-link {
+        display: flex;
+        align-items: center;
+        padding: 10px 16px;
+        color: #6b7280;
+        font-weight: 600;
+        font-size: 0.95rem;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        transition: all 0.2s ease;
+        text-decoration: none;
+    }
+
+    .saas-nav-link:hover {
+        background: #f3f4f6;
+        color: #111827;
+    }
+
+    .saas-nav-link.active {
+        background: var(--sian-pink-light);
+        color: var(--sian-pink);
         font-weight: 700;
-        font-size: 0.85rem;
+    }
+
+    .saas-nav-icon {
+        width: 24px;
+        text-align: center;
+        margin-right: 12px;
+        font-size: 1.1rem;
+    }
+
+    /* --- Modulos / Tarjetas --- */
+    .saas-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
+    }
+
+    .saas-card-header {
+        padding: 20px 24px;
+        border-bottom: 1px solid #e5e7eb;
+        background: #ffffff;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .saas-card-header h5 {
         margin: 0;
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #111827;
     }
 
-    .tp-type {
-        background: #2ec4b6;
-        color: white;
-        text-align: center;
-        font-weight: bold;
-        border-radius: 4px;
-        font-size: 0.8rem;
-        margin: 10px 0;
+    .saas-card-body {
+        padding: 24px;
     }
 
-    .tp-info {
-        border-bottom: 2px dotted #eee;
-        font-size: 0.75rem;
-        text-align: center;
-        padding-bottom: 8px;
-        margin-bottom: 10px;
-        color: #666;
-    }
-
-    .tp-table {
-        width: 100%;
-        font-size: 0.75rem;
-        margin-bottom: 10px;
-    }
-
-    .tp-table th {
-        text-align: left;
-        border-bottom: 1px solid #ff6b81;
-        color: #ff6b81;
-    }
-
-    .tp-total {
-        border-top: 1px dashed #ccc;
+    .saas-card-footer {
+        padding: 16px 24px;
+        background: #f9fafb;
+        border-top: 1px solid #e5e7eb;
         text-align: right;
-        padding-top: 5px;
     }
 
-    .tp-total-amount {
-        font-size: 1.4rem;
-        font-weight: 900;
-        color: #333;
+    /* --- Formularios --- */
+    .saas-label {
+        font-weight: 600;
+        font-size: 0.75rem;
+        color: #6b7280;
+        margin-bottom: 6px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
     }
 
-    .tp-footer {
-        text-align: center;
-        font-size: 0.7rem;
-        color: #999;
-        margin-top: 15px;
+    .saas-input {
+        border: 1px solid #d1d5db;
+        border-radius: 8px;
+        padding: 10px 14px;
+        transition: border-color 0.2s, box-shadow 0.2s;
+        background-color: #fff;
+        font-weight: 500;
+        color: #111827;
     }
 
-    /* Estilo para convertir tickets a blanco y negro */
-    .ticket-bw,
-    .ticket-bw .tp-type,
-    .ticket-bw .tp-table th {
-        border-color: #333 !important;
-        color: #000 !important;
+    .saas-input:focus {
+        border-color: var(--sian-pink);
+        box-shadow: 0 0 0 3px var(--sian-pink-light);
+        outline: none;
     }
 
-    .ticket-bw .tp-brand h4 {
-        color: #000 !important;
+    /* --- Uploader de Logo --- */
+    .logo-uploader {
+        display: flex;
+        align-items: center;
+        gap: 20px;
     }
 
-    .ticket-bw .tp-brand p,
-    .ticket-bw p[style*="color"] {
-        color: #555 !important;
+    .logo-circle {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        border: 2px dashed #d1d5db;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: #f3f4f6;
+        flex-shrink: 0;
     }
 
-    .ticket-bw .tp-type {
-        background: #333 !important;
-        color: #fff !important;
+    .logo-circle img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    /* --- Ticket Preview (Original mantenido) --- */
+    .ticket-preview {
+        background: white; padding: 20px; border: 2px dashed #ff6b81; border-radius: 10px;
+        margin: 0 auto; max-width: 300px; font-family: 'Nunito', sans-serif; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    }
+    .tp-brand { text-align: center; margin-bottom: 15px; }
+    .tp-brand h4 { color: #ff6b81; font-weight: 900; text-transform: uppercase; margin: 0; font-size: 1.2rem; }
+    .tp-brand p { color: #2ec4b6; font-weight: 700; font-size: 0.85rem; margin: 0; }
+    .tp-type { background: #2ec4b6; color: white; text-align: center; font-weight: bold; border-radius: 4px; font-size: 0.8rem; margin: 10px 0; padding: 4px; }
+    .tp-info { border-bottom: 2px dotted #eee; font-size: 0.75rem; text-align: center; padding-bottom: 8px; margin-bottom: 10px; color: #666; }
+    .tp-table { width: 100%; font-size: 0.75rem; margin-bottom: 10px; border-collapse: collapse;}
+    .tp-table th { text-align: left; border-bottom: 1px solid #ff6b81; color: #ff6b81; padding-bottom: 4px;}
+    .tp-table td { padding: 4px 0; }
+    .tp-total { border-top: 1px dashed #ccc; text-align: right; padding-top: 10px; margin-top: 5px; }
+    .tp-total-amount { font-size: 1.4rem; font-weight: 900; color: #333; }
+    .tp-footer { text-align: center; font-size: 0.7rem; color: #999; margin-top: 15px; }
+
+    .ticket-bw, .ticket-bw .tp-type, .ticket-bw .tp-table th { border-color: #333 !important; color: #000 !important; }
+    .ticket-bw .tp-brand h4 { color: #000 !important; }
+    .ticket-bw .tp-brand p, .ticket-bw p[style*="color"] { color: #555 !important; }
+    .ticket-bw .tp-type { background: #333 !important; color: #fff !important; }
+
+    /* Fix switches */
+    .form-switch .form-check-input {
+        width: 2.5em;
+        height: 1.25em;
+        cursor: pointer;
+    }
+    .form-switch .form-check-input:checked {
+        background-color: var(--sian-teal);
+        border-color: var(--sian-teal);
+    }
+    /* --- Estilos para Selector de Emojis --- */
+    .emoji-grid-inline {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    .emoji-item {
+        font-size: 1.8rem;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        cursor: pointer;
+        background: #f8f9fa;
+        border: 2px solid transparent;
+        transition: all 0.2s;
+    }
+    .emoji-item:hover {
+        transform: scale(1.1);
+    }
+    .emoji-item.selected {
+        background: var(--sian-pink-light);
+        border-color: var(--sian-pink);
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4">
+<div class="container mt-4 mb-5">
     <div class="row">
 
         <div class="col-md-3 mb-4">
-            <div class="list-group shadow-sm" id="list-tab" role="tablist">
-                <h5 class="px-3 py-2 text-muted">Configuración</h5>
-                <a class="list-group-item list-group-item-action active d-flex justify-content-between align-items-center"
-                    id="list-negocio-list" data-bs-toggle="list" href="#list-negocio" role="tab">
-                    <span>🏢 Mi Negocio</span>
+            <div class="saas-sidebar" id="list-tab" role="tablist">
+                <h6 class="px-3 mb-3 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase;">Ajustes</h6>
+                
+                <a class="saas-nav-link active" id="list-negocio-list" data-bs-toggle="list" href="#list-negocio" role="tab">
+                    <span class="saas-nav-icon"><i class="fas fa-store"></i></span> Mi Negocio
                 </a>
-                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                    id="list-perfil-list" data-bs-toggle="list" href="#list-perfil" role="tab">
-                    <span>👤 Mi Perfil</span>
+                <a class="saas-nav-link" id="list-perfil-list" data-bs-toggle="list" href="#list-perfil" role="tab">
+                    <span class="saas-nav-icon"><i class="fas fa-user-circle"></i></span> Mi Perfil
                 </a>
-                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                    id="list-seguridad-list" data-bs-toggle="list" href="#list-seguridad" role="tab">
-                    <span>🔒 Seguridad</span>
+                <a class="saas-nav-link" id="list-seguridad-list" data-bs-toggle="list" href="#list-seguridad" role="tab">
+                    <span class="saas-nav-icon"><i class="fas fa-shield-alt"></i></span> Seguridad
                 </a>
-                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                    id="list-envios-list" data-bs-toggle="list" href="#list-envios" role="tab">
-                    <span>🚚 Logística y Envíos</span>
+                <a class="saas-nav-link" id="list-envios-list" data-bs-toggle="list" href="#list-envios" role="tab">
+                    <span class="saas-nav-icon"><i class="fas fa-truck"></i></span> Logística
                 </a>
-                <a class="list-group-item list-group-item-action d-flex justify-content-between align-items-center"
-                    id="list-suscripcion-list" data-bs-toggle="list" href="#list-suscripcion" role="tab">
-                    <span>💎 Mi Suscripción</span>
+                
+                <h6 class="px-3 mb-3 mt-4 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase;">Facturación</h6>
+                <a class="saas-nav-link" id="list-suscripcion-list" data-bs-toggle="list" href="#list-suscripcion" role="tab">
+                    <span class="saas-nav-icon"><i class="fas fa-gem"></i></span> Plan actual
                 </a>
             </div>
         </div>
 
         <div class="col-md-9">
-
             <div class="tab-content" id="nav-tabContent">
 
                 <div class="tab-pane fade show active" id="list-negocio" role="tabpanel">
-                    <div class="card shadow-sm border-0">
-                        <div
-                            class="card-header bg-white border-bottom py-3 d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0 text-primary">Identidad del Negocio</h5>
-                            <button type="button" class="btn btn-sm btn-outline-dark rounded-pill px-3"
-                                onclick="actualizarVistaPrevia()">
-                                <i class="fas fa-eye me-1"></i> Ver Ticket
+                    
+                    <div class="saas-card">
+                        <div class="saas-card-header">
+                            <h5>Identidad del Negocio</h5>
+                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" onclick="actualizarVistaPrevia()">
+                                <i class="fas fa-eye me-1"></i> Preview Ticket
                             </button>
                         </div>
-                        <div class="card-body p-4">
-                            <form method="POST" action="{{ url_for('main.configuracion') }}">
-                                <input type="hidden" name="action" value="update_business">
+                        
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_negocio') }}" enctype="multipart/form-data">
+                            <input type="hidden" name="current_logo" id="currentLogo" value="{{ config['logo_empresa'] }}">
+                            <input type="hidden" name="icono_empresa" id="inputIconoReal" value="{{ config['icono_empresa'] }}">
+                            
+                            <input type="hidden" name="tipo_identidad" id="tipoIdentidad" value="{% if config['logo_empresa'] %}logo{% else %}emoji{% endif %}">
 
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="form-label fw-bold">Nombre de la Empresa</label>
-                                        <input type="text" name="nombre_empresa" id="inputEmpresa" class="form-control"
-                                            value="{{ config['nombre_empresa'] }}" required
-                                            placeholder="Ej. Sian Effects">
+                            <div class="saas-card-body">
+                                <div class="row g-4">
+                                    
+                                    <div class="col-md-12">
+                                        <label class="saas-label">Marca Visual</label>
+                                        
+                                        <ul class="nav nav-pills mb-3 bg-light p-1 rounded-pill d-inline-flex" id="pills-tab-logo" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link rounded-pill fw-bold px-4 {% if not config['logo_empresa'] %}active{% endif %}" 
+                                                    id="pills-emoji-tab" data-bs-toggle="pill" data-bs-target="#pills-emoji" type="button" role="tab"
+                                                    onclick="document.getElementById('tipoIdentidad').value='emoji'">Elegir Ícono</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link rounded-pill fw-bold px-4 {% if config['logo_empresa'] %}active{% endif %}" 
+                                                    id="pills-logo-tab" data-bs-toggle="pill" data-bs-target="#pills-logo" type="button" role="tab"
+                                                    onclick="document.getElementById('tipoIdentidad').value='logo'">Subir mi Logo</button>
+                                            </li>
+                                        </ul>
+
+                                        <div class="tab-content mt-2" id="pills-tabContent-logo">
+                                            <div class="tab-pane fade {% if not config['logo_empresa'] %}show active{% endif %}" id="pills-emoji" role="tabpanel">
+                                                <div class="emoji-grid-inline">
+                                                    {% set emojis = ['🎨','🍔','🧵','👗','💻','📸','🪴','☕','💅','🔨','🚗','📱','🎮','📚','🛒'] %}
+                                                    {% for e in emojis %}
+                                                    <div class="emoji-item {% if config['icono_empresa'] == e %}selected{% endif %}" onclick="seleccionarEmoji(this, '{{ e }}')">
+                                                        {{ e }}
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+
+                                            <div class="tab-pane fade {% if config['logo_empresa'] %}show active{% endif %}" id="pills-logo" role="tabpanel">
+                                                <div class="logo-uploader bg-white border rounded-4 p-3 mt-2">
+                                                    <div class="logo-circle shadow-sm" id="logoPreviewContainer">
+                                                        {% if config['logo_empresa'] %}
+                                                            <img id="logoPreviewImg" src="{{ config['logo_empresa'] }}">
+                                                        {% else %}
+                                                            <i class="fas fa-cloud-upload-alt text-muted fs-3" id="logoPlaceholderIcon"></i>
+                                                            <img id="logoPreviewImg" src="" style="display:none;">
+                                                        {% endif %}
+                                                    </div>
+                                                    <div>
+                                                        <label for="logoInput" class="btn btn-sm btn-dark rounded-pill px-3 fw-bold mb-1" style="cursor: pointer;">Seleccionar Archivo</label>
+                                                        <input type="file" name="logo_file" id="logoInput" class="d-none" accept="image/png, image/jpeg, image/svg+xml, image/webp" onchange="previewLogo(event)">
+                                                        <div class="text-muted" style="font-size: 0.75rem;">Recomendado: 200x200px (PNG, JPG, SVG). <br>Si guardas y luego cambias a "Ícono", el logo se borrará.</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
 
                                     <div class="col-md-6">
-                                        <label class="form-label fw-bold">Slogan / Giro</label>
-                                        <input type="text" name="slogan" id="inputSlogan" class="form-control"
-                                            value="{{ config['slogan'] }}" placeholder="Ej. Soluciones creativas">
+                                        <label class="saas-label">Nombre Público</label>
+                                        <input type="text" name="nombre_empresa" id="inputEmpresa" class="form-control saas-input fs-5"
+                                            value="{{ config['nombre_empresa'] }}" required placeholder="Sian Effects">
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <label class="saas-label">Slogan o Giro</label>
+                                        <input type="text" name="slogan" id="inputSlogan" class="form-control saas-input fs-5"
+                                            value="{{ config['slogan'] }}" placeholder="Soluciones creativas">
                                     </div>
 
                                     <div class="col-12">
-                                        <label class="form-label fw-bold">Sitio Web / Red Social</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text bg-light">🌐</span>
-                                            <input type="text" name="website" id="inputWeb" class="form-control"
+                                        <label class="saas-label">Sitio Web / Enlace</label>
+                                        <div class="input-group shadow-sm" style="border-radius: 8px;">
+                                            <span class="input-group-text bg-light border-0"><i class="fas fa-link text-muted"></i></span>
+                                            <input type="text" name="website" id="inputWeb" class="form-control border-0 bg-light"
                                                 value="{{ config['website'] }}" placeholder="www.tuempresa.com">
                                         </div>
                                     </div>
-
-                                    <div class="col-12">
-                                        <hr class="my-4">
-                                        <h6 class="text-primary fw-bold mb-3"><i class="fas fa-boxes me-2"></i>Funciones
-                                            Avanzadas</h6>
-
-                                        <div class="p-3 bg-light rounded-4 border">
-                                            <div class="d-flex justify-content-between align-items-center gap-3">
-                                                <div>
-                                                    <label class="fw-bold text-dark mb-1 d-block" for="checkInventario"
-                                                        style="cursor: pointer;">
-                                                        Activar Control de Inventario y Stock
-                                                    </label>
-                                                    <small class="text-muted d-block" style="line-height: 1.4;">
-                                                        Si activas esto, podrás registrar compras de materiales y el
-                                                        sistema descontará automáticamente las cantidades cuando
-                                                        realices ventas.
-                                                    </small>
-                                                </div>
-                                                <div class="form-check form-switch fs-4 m-0 d-flex align-items-center">
-                                                    <input class="form-check-input m-0" type="checkbox"
-                                                        id="checkInventario" name="inventario_activo" {% if
-                                                        config['inventario_activo'] %}checked{% endif %}
-                                                        style="cursor: pointer;">
-                                                </div>
-                                            </div>
-
-                                            <hr class="my-3 text-muted opacity-25">
-
-                                            <div class="d-flex justify-content-between align-items-center gap-3">
-                                                <div>
-                                                    <label class="fw-bold text-dark mb-1 d-block" for="checkTicketBW"
-                                                        style="cursor: pointer;">
-                                                        Ticket en Blanco y Negro
-                                                    </label>
-                                                    <small class="text-muted d-block" style="line-height: 1.4;">
-                                                        Imprime o comparte tus tickets en escala de grises. Ideal para
-                                                        ahorrar tinta a color o dar un estilo minimalista.
-                                                    </small>
-                                                </div>
-                                                <div class="form-check form-switch fs-4 m-0 d-flex align-items-center">
-                                                    <input class="form-check-input m-0" type="checkbox"
-                                                        id="checkTicketBW" name="ticket_bw" {% if config['ticket_bw']
-                                                        %}checked{% endif %} style="cursor: pointer;"
-                                                        onchange="actualizarVistaPrevia()">
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        <hr class="my-4">
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold text-success">Margen de Ganancia (%)</label>
-                                        <div class="input-group">
-                                            <input type="number" name="margen"
-                                                class="form-control form-control-lg border-success"
-                                                value="{{ config['margen_ganancia'] }}" required min="0" step="1">
-                                            <span class="input-group-text bg-success text-white">%</span>
-                                        </div>
-                                        <small class="text-muted">Este porcentaje se aplica automáticamente a tus
-                                            costos.</small>
-                                    </div>
                                 </div>
-
-                                <div class="mt-4 text-end">
-                                    <button type="submit" class="btn btn-primary px-4">Guardar Cambios del
-                                        Negocio</button>
-                                </div>
-                            </form>
-                        </div>
+                            </div>
                     </div>
-                </div>
 
-                <div class="tab-pane fade" id="list-envios" role="tabpanel">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-white border-bottom py-3">
-                            <h5 class="mb-0 text-primary">Configuración de Logística</h5>
+                    <div class="saas-card">
+                        <div class="saas-card-header">
+                            <h5>Ajustes del Sistema</h5>
                         </div>
-                        <div class="card-body p-4">
-
-                            <form method="POST" action="{{ url_for('main.configuracion') }}#list-envios">
-                                <input type="hidden" name="action" value="update_shipping">
-
-                                <h6 class="fw-bold text-muted mb-3">📍 ¿Desde dónde envías? (Origen)</h6>
-                                <div class="alert alert-light border small">
-                                    Para calcular distancias, necesitamos saber dónde estás. Ve a Google Maps, busca tu
-                                    local, y copia el link de la barra de direcciones. (POR MOTIVO DE SER AMBIENTE DE
-                                    PRUEBAS SOLO FUNCIONA CON EL LINK LARGO DE GOOGLE MAPS)
+                        <div class="saas-card-body">
+                            
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">Control de Inventario</h6>
+                                    <p class="text-muted small m-0" style="max-width: 450px;">Al vender, el sistema descontará las unidades de tus materiales. Requiere cargar stock previamente.</p>
                                 </div>
-
-                                <div class="mb-3">
-                                    <label class="form-label fw-bold">Link de Ubicación (Google Maps)</label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-white"><i
-                                                class="fas fa-map-marker-alt text-danger"></i></span>
-
-                                        <input type="text" name="origin_address" id="inputMapsConfig"
-                                            class="form-control" placeholder="Pega aquí el link largo de Google Maps..."
-                                            value="{{ shipping_config['origin_address'] if shipping_config else '' }}"
-                                            onchange="extraerCoordenadasConfig(this)">
-
-                                    </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input" type="checkbox" id="checkInventario" name="inventario_activo" {% if config['inventario_activo'] %}checked{% endif %}>
                                 </div>
-
-                                <div class="row g-2 mb-4">
-                                    <div class="col-6">
-                                        <label class="small text-muted">Latitud</label>
-                                        <input type="text" name="origin_lat" id="latConfig"
-                                            class="form-control bg-light" readonly
-                                            value="{{ shipping_config['origin_lat'] if shipping_config else '' }}"
-                                            required>
-                                    </div>
-                                    <div class="col-6">
-                                        <label class="small text-muted">Longitud</label>
-                                        <input type="text" name="origin_lng" id="lngConfig"
-                                            class="form-control bg-light" readonly
-                                            value="{{ shipping_config['origin_lng'] if shipping_config else '' }}"
-                                            required>
-                                    </div>
-                                </div>
-
-                                <hr>
-
-                                <h6 class="fw-bold text-muted mb-3">🛵 Tarifas Locales (Misma Ciudad)</h6>
-                                <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">Tarifa Base (Banderazo)</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">$</span>
-                                            <input type="number" step="0.50" name="local_base_rate" class="form-control"
-                                                value="{{ shipping_config['local_base_rate'] if shipping_config else '35.00' }}"
-                                                required>
-                                        </div>
-                                        <div class="form-text small">Costo fijo por iniciar un envío.</div>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">Costo por KM</label>
-                                        <div class="input-group">
-                                            <span class="input-group-text">$</span>
-                                            <input type="number" step="0.50" name="local_km_rate" class="form-control"
-                                                value="{{ shipping_config['local_km_rate'] if shipping_config else '8.00' }}"
-                                                required>
-                                        </div>
-                                        <div class="form-text small">Se multiplica por la distancia real.</div>
-                                    </div>
-
-                                    <div class="col-md-4">
-                                        <label class="form-label fw-bold">Margen Seguridad (%)</label>
-                                        <div class="input-group">
-                                            <input type="number" name="safety_margin" class="form-control"
-                                                value="{{ shipping_config['safety_margin_percent'] if shipping_config else '10' }}">
-                                            <span class="input-group-text">%</span>
-                                        </div>
-                                        <div class="form-text small">Extra para cubrir tráfico/errores.</div>
-                                    </div>
-                                </div>
-
-                                <div class="mt-4 text-end">
-                                    <button type="submit" class="btn btn-primary px-4">Guardar Configuración de
-                                        Envíos</button>
-                                </div>
-                            </form>
-
-                            <hr class="my-5">
-
-                            <div class="d-flex justify-content-between align-items-center mb-3">
-                                <h6 class="fw-bold text-primary m-0"><i class="fas fa-globe-americas me-2"></i>Tarifas
-                                    Nacionales (Por Zonas)</h6>
-                                <button type="button" class="btn btn-sm btn-outline-primary rounded-pill"
-                                    data-bs-toggle="modal" data-bs-target="#modalNuevaZona">
-                                    <i class="fas fa-plus"></i> Nueva Zona
-                                </button>
                             </div>
 
-                            {% if not zones %}
-                            <div class="alert alert-warning text-center">
-                                <small>No tienes zonas configuradas. Crea una para envíos nacionales (Ej: "Nacional"
-                                    para todo el país).</small>
+                            <hr class="border-light my-4">
+
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">Ticket Térmico (Blanco y Negro)</h6>
+                                    <p class="text-muted small m-0" style="max-width: 450px;">Fuerza la visualización del recibo sin colores para mejor lectura en impresoras térmicas.</p>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input" type="checkbox" id="checkTicketBW" name="ticket_bw" {% if config['ticket_bw'] %}checked{% endif %} onchange="actualizarVistaPrevia()">
+                                </div>
                             </div>
-                            {% else %}
-                            <div class="row g-4">
-                                {% for zone in zones %}
+
+                            <hr class="border-light my-4">
+
+                            <div class="row">
                                 <div class="col-md-6">
-                                    <div class="card h-100 border shadow-sm">
-                                        <div
-                                            class="card-header bg-light d-flex justify-content-between align-items-center">
-                                            <div>
-                                                <strong>{{ zone['zone_name'] }}</strong>
-                                                <div class="small text-muted" style="font-size: 0.75rem;">
-                                                    Cobertura: {{ zone['states_str'] }}
-                                                </div>
-                                            </div>
-                                            <button type="button" class="btn btn-sm text-danger" 
-                                                onclick="confirmarEliminarZona('{{ zone['id'] }}', '{{ zone['zone_name'] }}')">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        </div>
-                                        <div class="card-body p-0">
-                                            <table class="table table-sm table-striped m-0" style="font-size: 0.85rem;">
-                                                <thead class="bg-white">
-                                                    <tr>
-                                                        <th class="ps-3">Hasta (Kg)</th>
-                                                        <th>Precio</th>
-                                                        <th></th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {% for rate in zone['rates'] %}
-                                                    <tr>
-                                                        <td class="ps-3 fw-bold">{{ rate['max_weight_kg'] }} kg</td>
-                                                        <td class="text-success fw-bold">${{
-                                                            "{:.2f}".format(rate['price']) }}</td>
-                                                        <td class="text-end pe-3">
-                                                            <button type="button" class="btn btn-link p-0 text-muted text-decoration-none"
-                                                                style="font-size:0.7rem"
-                                                                onclick="confirmarEliminarTarifa('{{ rate['id'] }}')">
-                                                                ❌
-                                                            </button>
-                                                        </td>
-                                                    </tr>
-                                                    {% else %}
-                                                    <tr>
-                                                        <td colspan="3" class="text-center text-muted py-3">Sin tarifas
-                                                            asignadas</td>
-                                                    </tr>
-                                                    {% endfor %}
-                                                </tbody>
-                                            </table>
-                                        </div>
-                                        <div class="card-footer bg-white border-top-0 p-2">
-                                            <form method="POST" action="{{ url_for('main.configuracion') }}"
-                                                class="row g-1 align-items-center">
-                                                <input type="hidden" name="action" value="add_rate">
-                                                <input type="hidden" name="zone_id" value="{{ zone['id'] }}">
-
-                                                <div class="col-4">
-                                                    <input type="number" step="0.1" name="max_weight"
-                                                        class="form-control form-control-sm" placeholder="Kg Max"
-                                                        required>
-                                                </div>
-                                                <div class="col-4">
-                                                    <input type="number" step="1" name="price"
-                                                        class="form-control form-control-sm" placeholder="$ Precio"
-                                                        required>
-                                                </div>
-                                                <div class="col-4">
-                                                    <button type="submit"
-                                                        class="btn btn-sm btn-success w-100">Agregar</button>
-                                                </div>
-                                            </form>
-                                        </div>
+                                    <label class="saas-label text-success"><i class="fas fa-chart-line me-1"></i> Margen de Ganancia Base</label>
+                                    <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
+                                        <input type="number" name="margen" class="form-control border-0 bg-success bg-opacity-10 text-success fw-bold fs-5"
+                                            value="{{ config['margen_ganancia'] }}" required min="0" step="1">
+                                        <span class="input-group-text border-0 bg-success text-white fw-bold">%</span>
                                     </div>
+                                    <div class="form-text small mt-1">Multiplicador automático sugerido en el cotizador.</div>
                                 </div>
-                                {% endfor %}
                             </div>
-                            {% endif %}
 
                         </div>
+                        <div class="saas-card-footer">
+                            <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold">Guardar Negocio</button>
+                        </div>
+                        </form>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="list-perfil" role="tabpanel">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-white border-bottom py-3">
-                            <h5 class="mb-0 text-primary">Información Personal</h5>
+                    <div class="saas-card">
+                        <div class="saas-card-header">
+                            <h5>Información Personal</h5>
                         </div>
-                        <div class="card-body p-4">
-                            <form method="POST" action="{{ url_for('main.configuracion') }}">
-                                <input type="hidden" name="action" value="update_profile">
-
-                                <div class="row g-3">
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_perfil') }}">
+                            <input type="hidden" name="action" value="update_profile">
+                            
+                            <div class="saas-card-body">
+                                <div class="row g-4">
                                     <div class="col-md-6">
-                                        <label class="form-label">Nombre de Usuario</label>
-                                        <input type="text" name="username" class="form-control"
-                                            value="{{ usuario['username'] }}" required>
+                                        <label class="saas-label">Nombre de Usuario</label>
+                                        <input type="text" name="username" class="form-control saas-input" value="{{ usuario['username'] }}" required>
                                     </div>
 
                                     <div class="col-md-6">
-                                        <label class="form-label">Correo Electrónico</label>
-                                        <input type="email" name="email" class="form-control"
-                                            value="{{ usuario['email'] }}" required>
+                                        <label class="saas-label">Correo Electrónico</label>
+                                        <input type="email" name="email" class="form-control saas-input text-muted" value="{{ usuario['email'] }}" required readonly>
+                                        <small class="form-text">El correo principal no puede cambiarse.</small>
                                     </div>
 
                                     <div class="col-md-4">
-                                        <label class="form-label">Código País</label>
-                                        <select name="country_code" class="form-select">
-                                            <option value="MX" {% if usuario['country_code']=='MX' %}selected{% endif
-                                                %}>🇲🇽 México (+52)</option>
-                                            <option value="US" {% if usuario['country_code']=='US' %}selected{% endif
-                                                %}>🇺🇸 USA (+1)</option>
-                                            <option value="CO" {% if usuario['country_code']=='CO' %}selected{% endif
-                                                %}>🇨🇴 Colombia (+57)</option>
+                                        <label class="saas-label">País</label>
+                                        <select name="country_code" class="form-select saas-input">
+                                            <option value="MX" {% if usuario['country_code']=='MX' %}selected{% endif %}>🇲🇽 MX (+52)</option>
+                                            <option value="US" {% if usuario['country_code']=='US' %}selected{% endif %}>🇺🇸 US (+1)</option>
+                                            <option value="CO" {% if usuario['country_code']=='CO' %}selected{% endif %}>🇨🇴 CO (+57)</option>
                                         </select>
                                     </div>
-                                    <div class="col-md-8">
-                                        <label class="form-label">Teléfono / WhatsApp</label>
-                                        <input type="tel" name="telefono" class="form-control"
-                                            value="{{ usuario['telefono'] }}" placeholder="Solo números">
-                                    </div>
 
-                                    <div class="col-12 mt-3">
-                                        <div class="alert alert-light border d-flex align-items-center" role="alert">
-                                            <small class="text-muted">
-                                                📅 Miembro desde: <strong>{{ usuario['created_at'] }}</strong> <br>
-                                                🆔 ID de Usuario: <strong>{{ usuario['id'] }}</strong>
-                                            </small>
+                                    <div class="col-md-8">
+                                        <label class="saas-label">WhatsApp / Teléfono</label>
+                                        <input type="tel" name="telefono" class="form-control saas-input" value="{{ usuario['telefono'] }}">
+                                    </div>
+                                    
+                                    <div class="col-12 mt-4">
+                                        <div class="d-flex align-items-center p-3 bg-light rounded-3 border">
+                                            <div class="me-3 fs-3 text-secondary"><i class="fas fa-id-badge"></i></div>
+                                            <div>
+                                                <div class="small text-muted mb-1">ID Único: <strong>{{ usuario['id'] }}</strong></div>
+                                                <div class="small text-muted">Miembro desde: <strong>{{ usuario['created_at'] }}</strong></div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-
-                                <div class="mt-4 text-end">
-                                    <button type="submit" class="btn btn-primary px-4">Actualizar Perfil</button>
-                                </div>
-                            </form>
-                        </div>
+                            </div>
+                            <div class="saas-card-footer">
+                                <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold">Actualizar Perfil</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="list-seguridad" role="tabpanel">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-white border-bottom py-3">
-                            <h5 class="mb-0 text-danger">Seguridad de la Cuenta</h5>
+                    <div class="saas-card">
+                        <div class="saas-card-header">
+                            <h5>Seguridad y Acceso</h5>
                         </div>
-                        <div class="card-body p-4">
-                            <form method="POST" action="{{ url_for('main.configuracion') }}"
-                                onsubmit="return validarPassword()">
-                                <input type="hidden" name="action" value="update_password">
-
-                                <div class="row g-3">
-                                    <div class="col-12">
-                                        <div class="alert alert-warning">
-                                            <i class="bi bi-exclamation-triangle"></i>
-                                            Usa una contraseña segura. Al cambiarla, tendrás que volver a iniciar
-                                            sesión.
-                                        </div>
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <label class="form-label">Nueva Contraseña</label>
-                                        <input type="password" id="pass1" name="password" class="form-control" required
-                                            minlength="6">
-                                    </div>
-
-                                    <div class="col-md-6">
-                                        <label class="form-label">Confirmar Contraseña</label>
-                                        <input type="password" id="pass2" class="form-control" required minlength="6">
-                                        <div id="passError" class="form-text text-danger d-none">
-                                            Las contraseñas no coinciden.
-                                        </div>
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_password') }}" onsubmit="return validarPassword()">
+                            
+                            <div class="saas-card-body">
+                                <div class="alert alert-light border border-warning border-start border-start-4 d-flex align-items-center p-3 mb-4" role="alert">
+                                    <i class="fas fa-lock text-warning fs-3 me-3"></i>
+                                    <div>
+                                        <strong class="d-block text-dark">Protege tu cuenta</strong>
+                                        <span class="small text-muted">Al cambiar la contraseña, se cerrarán tus sesiones activas y tendrás que volver a ingresar.</span>
                                     </div>
                                 </div>
 
-                                <div class="mt-4 text-end">
-                                    <button type="submit" class="btn btn-danger px-4">Cambiar Contraseña</button>
+                                <div class="row g-4">
+                                    <div class="col-md-6">
+                                        <label class="saas-label">Nueva Contraseña</label>
+                                        <input type="password" id="pass1" name="password" class="form-control saas-input" required minlength="6">
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="saas-label">Confirmar Contraseña</label>
+                                        <input type="password" id="pass2" class="form-control saas-input" required minlength="6">
+                                    </div>
                                 </div>
-                            </form>
-                        </div>
+                            </div>
+                            <div class="saas-card-footer bg-white border-top-0 pt-0">
+                                <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">Cambiar Contraseña</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
 
-                <div class="tab-pane fade" id="list-suscripcion" role="tabpanel">
-                    <div class="card shadow-sm border-0">
-                        <div class="card-header bg-white border-bottom py-3">
-                            <h5 class="mb-0 text-primary">Estado de la Suscripción</h5>
+                <div class="tab-pane fade" id="list-envios" role="tabpanel">
+                    
+                    <div class="saas-card">
+                        <div class="saas-card-header">
+                            <h5>Origen y Tarifas Locales</h5>
                         </div>
-                        <div class="card-body p-5 text-center">
-
-                            <div class="mb-4">
-                                <div class="avatar bg-light text-primary rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
-                                    style="width: 80px; height: 80px;">
-                                    <i class="fas fa-crown fa-3x"></i>
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_logistica_base') }}">
+                            <div class="saas-card-body">
+                                
+                                <h6 class="fw-bold text-dark mb-3 fs-6">📍 Punto de Despacho</h6>
+                                <div class="input-group shadow-sm mb-3" style="border-radius: 8px;">
+                                    <span class="input-group-text bg-white border-0 text-danger"><i class="fas fa-map-marker-alt"></i></span>
+                                    <input type="text" name="origin_address" id="inputMapsConfig" class="form-control border-0" 
+                                        placeholder="Pega el link largo de Google Maps aquí..."
+                                        value="{{ shipping_config['origin_address'] if shipping_config else '' }}"
+                                        onchange="extraerCoordenadasConfig(this)">
                                 </div>
-                                <h4 class="fw-bold text-dark">Plan SianEffects PRO</h4>
-                                <p class="text-muted">Tienes acceso total a todas las herramientas.</p>
-                            </div>
+                                <div class="row g-3 mb-4">
+                                    <div class="col-6">
+                                        <label class="saas-label">Latitud</label>
+                                        <input type="text" name="origin_lat" id="latConfig" class="form-control saas-input bg-light" readonly
+                                            value="{{ shipping_config['origin_lat'] if shipping_config else '' }}" required>
+                                    </div>
+                                    <div class="col-6">
+                                        <label class="saas-label">Longitud</label>
+                                        <input type="text" name="origin_lng" id="lngConfig" class="form-control saas-input bg-light" readonly
+                                            value="{{ shipping_config['origin_lng'] if shipping_config else '' }}" required>
+                                    </div>
+                                </div>
 
-                            <div class="card bg-light border-0 p-4 mb-4 mx-auto" style="max-width: 400px;">
-                                <h6 class="text-muted small text-uppercase fw-bold mb-2">Tu plan vence el:</h6>
-                                <h2 class="fw-bold text-dark m-0">
-                                    {% if usuario['role'] >= 1 %}
-                                    <span class="text-success">Licencia Permanente / Admin</span>
+                                <hr class="border-light my-4">
 
-                                    {% elif usuario['subscription_end'] %}
-                                    {% set fecha_str = usuario['subscription_end']|string %}
-                                    {% set anio = fecha_str[0:4] %}
-                                    {% set mes = fecha_str[5:7] %}
-                                    {% set dia = fecha_str[8:10]|int %}
-
-                                    {% set nombres_meses = {
-                                    '01': 'Enero', '02': 'Febrero', '03': 'Marzo', '04': 'Abril',
-                                    '05': 'Mayo', '06': 'Junio', '07': 'Julio', '08': 'Agosto',
-                                    '09': 'Septiembre', '10': 'Octubre', '11': 'Noviembre', '12': 'Diciembre'
-                                    } %}
-
-                                    {{ dia }} de {{ nombres_meses[mes] }} del {{ anio }}
-
-                                    {% else %}
-                                    <span class="text-success">Licencia Permanente</span>
-                                    {% endif %}
-                                </h2>
-                            </div>
-
-                            <div class="alert alert-info border-0 shadow-sm d-inline-block text-start"
-                                style="max-width: 500px;">
-                                <div class="d-flex">
-                                    <div class="me-3"><i class="fas fa-info-circle fa-2x"></i></div>
-                                    <div>
-                                        <strong>Información de Renovación:</strong><br>
-                                        Para renovar tu plan o cambiar de método de pago, por favor contacta a soporte o
-                                        espera el aviso automático 3 días antes del vencimiento.
+                                <h6 class="fw-bold text-dark mb-3 fs-6">🛵 Calculadora de Ciudad</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="saas-label">Banderazo (Fijo)</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">$</span>
+                                            <input type="number" step="0.50" name="local_base_rate" class="form-control saas-input"
+                                                value="{{ shipping_config['local_base_rate'] if shipping_config else '35.00' }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="saas-label">Costo x KM</label>
+                                        <div class="input-group">
+                                            <span class="input-group-text bg-light">$</span>
+                                            <input type="number" step="0.50" name="local_km_rate" class="form-control saas-input"
+                                                value="{{ shipping_config['local_km_rate'] if shipping_config else '8.00' }}" required>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="saas-label">Margen Error</label>
+                                        <div class="input-group">
+                                            <input type="number" name="safety_margin" class="form-control saas-input text-end"
+                                                value="{{ shipping_config['safety_margin_percent'] if shipping_config else '10' }}">
+                                            <span class="input-group-text bg-light">%</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
+                            <div class="saas-card-footer">
+                                <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold">Guardar Logística</button>
+                            </div>
+                        </form>
+                    </div>
 
+                    <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
+                        <h5 class="fw-bold text-dark m-0">Paquetería Nacional</h5>
+                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold" data-bs-toggle="modal" data-bs-target="#modalNuevaZona">
+                            <i class="fas fa-plus me-1"></i> Nueva Zona
+                        </button>
+                    </div>
+
+                    {% if not zones %}
+                    <div class="saas-card bg-light border-dashed">
+                        <div class="saas-card-body text-center py-5 text-muted">
+                            <i class="fas fa-map-marked-alt fa-2x mb-2 opacity-50"></i>
+                            <h6 class="fw-bold mb-1">Sin zonas configuradas</h6>
+                            <small>Crea una zona (Ej: Nacional) para cobrar envíos foráneos por peso.</small>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="row g-4">
+                        {% for zone in zones %}
+                        <div class="col-md-6">
+                            <div class="saas-card h-100 mb-0">
+                                <div class="saas-card-header py-3 bg-light d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong class="text-dark">{{ zone['zone_name'] }}</strong>
+                                        <div class="small text-muted" style="font-size: 0.7rem; text-transform: uppercase;">
+                                            Destinos: {{ zone['states_str'] }}
+                                        </div>
+                                    </div>
+                                    <button type="button" class="btn btn-sm text-danger opacity-50 hover-opacity-100" 
+                                        onclick="confirmarEliminarZona('{{ zone['id'] }}', '{{ zone['zone_name'] }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <table class="table table-sm table-borderless m-0" style="font-size: 0.85rem;">
+                                        <thead class="border-bottom">
+                                            <tr>
+                                                <th class="ps-4 py-2 text-muted fw-semibold">Límite (Kg)</th>
+                                                <th class="py-2 text-muted fw-semibold">Costo</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for rate in zone['rates'] %}
+                                            <tr class="border-bottom">
+                                                <td class="ps-4 py-2 fw-bold text-dark">{{ rate['max_weight_kg'] }} kg</td>
+                                                <td class="py-2 text-success fw-bold">${{ "{:.2f}".format(rate['price']) }}</td>
+                                                <td class="text-end pe-3 py-2">
+                                                    <button type="button" class="btn btn-link p-0 text-muted text-decoration-none"
+                                                        onclick="confirmarEliminarTarifa('{{ rate['id'] }}')"><i class="fas fa-times"></i></button>
+                                                </td>
+                                            </tr>
+                                            {% else %}
+                                            <tr>
+                                                <td colspan="3" class="text-center text-muted py-4 small">Agrega tarifas de peso aquí abajo.</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="saas-card-footer bg-white p-3 border-top">
+                                    <form method="POST" action="{{ url_for('configuracion.crear_tarifa') }}" class="row g-2 align-items-center">
+                                        <input type="hidden" name="zone_id" value="{{ zone['id'] }}">
+                                        <div class="col-4">
+                                            <input type="number" step="0.1" name="max_weight" class="form-control form-control-sm saas-input" placeholder="Kg Max" required>
+                                        </div>
+                                        <div class="col-5">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-light">$</span>
+                                                <input type="number" step="1" name="price" class="form-control saas-input" placeholder="Precio" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-3">
+                                            <button type="submit" class="btn btn-sm btn-dark w-100 rounded-pill fw-bold">Añadir</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="tab-pane fade" id="list-suscripcion" role="tabpanel">
+                    <div class="saas-card border-0" style="background: linear-gradient(145deg, #111827, #1f2937); color: white;">
+                        <div class="card-body p-5 text-center">
+                            <div class="mb-4">
+                                <div class="mx-auto mb-3 d-flex align-items-center justify-content-center"
+                                    style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;">
+                                    <i class="fas fa-gem fa-2x text-warning"></i>
+                                </div>
+                                <h3 class="fw-bold text-white mb-1">Plan SianEffects PRO</h3>
+                                <p class="text-light opacity-75">Acceso ilimitado a todas las herramientas.</p>
+                            </div>
+
+                            <div class="p-4 mb-4 mx-auto rounded-4" style="max-width: 400px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
+                                <h6 class="opacity-50 small text-uppercase fw-bold mb-2 letter-spacing-1">Vencimiento de Licencia</h6>
+                                <h2 class="fw-bold text-white m-0">
+                                    {% if usuario['role'] >= 1 %}
+                                    <span class="text-warning"><i class="fas fa-infinity me-2"></i>Permanente (Admin)</span>
+                                    {% elif usuario['subscription_end'] %}
+                                        {% set fecha_str = usuario['subscription_end']|string %}
+                                        {% set anio = fecha_str[0:4] %}
+                                        {% set mes = fecha_str[5:7] %}
+                                        {% set dia = fecha_str[8:10]|int %}
+                                        {% set nombres_meses = {'01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr', '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic'} %}
+                                        {{ dia }} {{ nombres_meses[mes] }}, {{ anio }}
+                                    {% else %}
+                                    <span class="text-warning">Ilimitada</span>
+                                    {% endif %}
+                                </h2>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -600,13 +646,15 @@
 <div class="modal fade" id="modalPreview" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content border-0 bg-transparent shadow-none">
-            <div class="ticket-preview position-relative">
-                <button type="button" class="btn-close position-absolute top-0 end-0 m-2"
-                    data-bs-dismiss="modal"></button>
+            <div class="ticket-preview position-relative" id="ticketVisual">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-2" data-bs-dismiss="modal"></button>
 
-                <div class="text-center mb-3 tp-brand">
-                    <h4 id="prevEmpresa">Nombre Empresa</h4>
-                    <p id="prevSlogan">Slogan Aquí</p>
+                <div class="tp-brand">
+                    <div id="prevLogoContainer" style="display: none; margin-bottom: 10px;">
+                        <img id="prevLogoImg" src="" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: inline-block;">
+                    </div>
+                    <h4 id="prevEmpresa">Empresa</h4>
+                    <p id="prevSlogan">Slogan</p>
                 </div>
 
                 <div class="tp-type">RECIBO DE PRUEBA</div>
@@ -614,45 +662,26 @@
                 <div class="tp-info">
                     Folio #0000<br>
                     <span id="prevFecha">--/--/----</span><br>
-                    Cliente: <strong>Cliente Ejemplo</strong>
+                    Cliente: <strong>Cliente VIP</strong>
                 </div>
 
                 <table class="tp-table">
-                    <thead>
-                        <tr>
-                            <th>Cant.</th>
-                            <th>Concepto</th>
-                            <th class="text-end">Total</th>
-                        </tr>
-                    </thead>
+                    <thead><tr><th>Cant.</th><th>Concepto</th><th class="text-end">Total</th></tr></thead>
                     <tbody>
-                        <tr>
-                            <td>1</td>
-                            <td>Producto Ejemplo</td>
-                            <td class="text-end">$150.00</td>
-                        </tr>
-                        <tr>
-                            <td>2</td>
-                            <td>Otro Ítem</td>
-                            <td class="text-end">$50.00</td>
-                        </tr>
+                        <tr><td>1</td><td>Producto Estrella</td><td class="text-end">$1,500.00</td></tr>
+                        <tr><td>2</td><td>Envío (Ejemplo)</td><td class="text-end">$150.00</td></tr>
                     </tbody>
                 </table>
 
                 <div class="tp-total">
-                    <span class="text-muted small">Subtotal: $200.00</span><br>
-                    <div class="tp-total-amount">$200.00</div>
+                    <span class="text-muted small">Subtotal: $1,650.00</span><br>
+                    <div class="tp-total-amount">$1,650.00</div>
                 </div>
 
                 <div class="tp-footer">
-                    <p>¡Gracias por tu compra!</p>
-                    <p class="fw-bold" style="color:#2ec4b6" id="prevWeb">www.sitio.com</p>
+                    <p>¡Gracias por tu preferencia!</p>
+                    <p class="fw-bold" style="color:#2ec4b6" id="prevWeb">www.tusitio.com</p>
                 </div>
-            </div>
-
-            <div class="text-center mt-3">
-                <button class="btn btn-light rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cerrar Vista
-                    Previa</button>
             </div>
         </div>
     </div>
@@ -660,43 +689,36 @@
 
 <div class="modal fade" id="modalNuevaZona" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h6 class="modal-title fw-bold">Crear Nueva Zona de Envío</h6>
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom px-4 py-3">
+                <h6 class="modal-title fw-bold text-dark">Nueva Zona de Envío</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
-                <form method="POST" action="{{ url_for('main.configuracion') }}#list-envios">
-                    <input type="hidden" name="action" value="create_zone">
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Nombre de la Zona</label>
-                        <input type="text" name="zone_name" class="form-control" placeholder="Ej. Nacional Estándar"
-                            required>
+            <div class="modal-body p-4">
+                <form method="POST" action="{{ url_for('configuracion.crear_zona') }}">
+                    <div class="mb-4">
+                        <label class="saas-label">Nombre Identificador</label>
+                        <input type="text" name="zone_name" class="form-control saas-input" placeholder="Ej. Pacífico, Norte, Todo México..." required>
                     </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-bold">Estados / Cobertura</label>
-                        <input type="text" name="zone_states" class="form-control"
-                            placeholder="Ej. NL, CDMX, JAL (o escribe TODOS)" required>
-                        <div class="form-text small">Separa los códigos de estado por comas. Usa "TODOS" para cubrir el
-                            resto del país.</div>
+                    <div class="mb-4">
+                        <label class="saas-label">Códigos de Estado (Cobertura)</label>
+                        <input type="text" name="zone_states" class="form-control saas-input" placeholder="Ej. JAL, NAY, COL (o escribe TODOS)" required>
+                        <div class="form-text small mt-2">Separa los estados por comas. Usa la palabra <strong>TODOS</strong> para cubrir el resto del territorio.</div>
                     </div>
-
                     <div class="d-grid">
-                        <button type="submit" class="btn btn-primary">Crear Zona</button>
+                        <button type="submit" class="btn btn-dark rounded-pill fw-bold py-2">Crear Zona Logística</button>
                     </div>
                 </form>
             </div>
         </div>
     </div>
 </div>
+
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // --- PERSISTENCIA AL CARGAR LA PÁGINA ---
-document.addEventListener('DOMContentLoaded', function() {
-        // --- 1. PERSISTENCIA DE PESTAÑA ---
-        // Revisamos si en la URL hay un hash (ej: #list-envios)
+    // --- 1. PERSISTENCIA Y CARGA INICIAL ---
+    document.addEventListener('DOMContentLoaded', function() {
+        // Restaurar pestaña activa
         let hash = window.location.hash;
         if (hash) {
             let activeTab = document.querySelector(`a[href="${hash}"]`);
@@ -704,8 +726,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 bootstrap.ListGroup.getOrCreateInstance(activeTab).show();
             }
         }
-
-        // Guardar el hash en la URL cada vez que cambies de pestaña
+        // Guardar pestaña en hash
         const triggerTabList = document.querySelectorAll('#list-tab a');
         triggerTabList.forEach(triggerEl => {
             triggerEl.addEventListener('click', function (event) {
@@ -713,111 +734,119 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
 
-        // --- 2. PERSISTENCIA DE DATOS DE MAPAS ---
+        // Extraer coords silencioso si hay link
         const inputMaps = document.getElementById('inputMapsConfig');
         if (inputMaps && inputMaps.value.trim() !== "") {
             extraerCoordenadasConfig(inputMaps, true); 
         }
     });
 
+    // --- 2. LÓGICA DE UPLOAD VISUAL DE LOGO ---
+    function previewLogo(event) {
+        const input = event.target;
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = document.getElementById('logoPreviewImg');
+                const icon = document.getElementById('logoPlaceholderIcon');
+                
+                img.src = e.target.result;
+                img.style.display = 'block';
+                if(icon) icon.style.display = 'none';
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // --- LÓGICA DE EMOJIS INLINE ---
+    function seleccionarEmoji(elemento, emoji) {
+        // Quitamos la clase 'selected' de todos
+        document.querySelectorAll('.emoji-item').forEach(el => el.classList.remove('selected'));
+        // Se la ponemos al que clickeó
+        elemento.classList.add('selected');
+        // Guardamos el valor en el input oculto
+        document.getElementById('inputIconoReal').value = emoji;
+    }
+
+    // --- VISTA PREVIA DEL TICKET HÍBRIDO ---
+    function actualizarVistaPrevia() {
+        const empresa = document.getElementById('inputEmpresa').value || "Nombre Empresa";
+        const slogan = document.getElementById('inputSlogan').value || "Tu Slogan va aquí";
+        const web = document.getElementById('inputWeb').value || "";
+        const tipoActual = document.getElementById('tipoIdentidad').value;
+        
+        document.getElementById('prevSlogan').innerText = slogan;
+        document.getElementById('prevWeb').innerText = web;
+        document.getElementById('prevFecha').innerText = new Date().toLocaleDateString();
+
+        const prevLogoImg = document.getElementById('prevLogoImg');
+        const prevLogoCont = document.getElementById('prevLogoContainer');
+
+        if (tipoActual === 'logo') {
+            const imgInput = document.getElementById('logoPreviewImg');
+            if(imgInput.src && imgInput.style.display !== 'none' && !imgInput.src.endsWith(window.location.host + "/")) {
+                prevLogoImg.src = imgInput.src;
+                prevLogoCont.style.display = 'block';
+                document.getElementById('prevEmpresa').innerHTML = empresa;
+            }
+        } else {
+            // Modo Emoji
+            prevLogoCont.style.display = 'none';
+            const emojiSeleccionado = document.getElementById('inputIconoReal').value;
+            document.getElementById('prevEmpresa').innerHTML = `<span style="font-size:1.5rem; margin-right:5px;">${emojiSeleccionado}</span>${empresa}`;
+        }
+
+        const isBW = document.getElementById('checkTicketBW').checked;
+        const previewEl = document.getElementById('ticketVisual');
+        if (isBW) previewEl.classList.add('ticket-bw');
+        else previewEl.classList.remove('ticket-bw');
+        
+        new bootstrap.Modal(document.getElementById('modalPreview')).show();
+    }
+
+    // --- 4. VALIDACIONES Y UTILIDADES EXISTENTES ---
     function validarPassword() {
         var p1 = document.getElementById("pass1").value;
         var p2 = document.getElementById("pass2").value;
-        
         if (p1 !== p2) {
-            Swal.fire({
-                icon: 'error',
-                title: 'Error de validación',
-                text: 'Las contraseñas no coinciden.',
-                borderRadius: '15px',
-                confirmButtonColor: '#ff6b81'
-            });
+            Swal.fire({ icon: 'error', title: 'Error', text: 'Las contraseñas no coinciden.', borderRadius: '15px' });
             return false;
         }
         return true;
     }
 
-    function actualizarVistaPrevia() {
-        const empresa = document.getElementById('inputEmpresa').value || "Nombre de tu Empresa";
-        const slogan = document.getElementById('inputSlogan').value || "Tu Slogan va aquí";
-        const web = document.getElementById('inputWeb').value || "";
-
-        document.getElementById('prevEmpresa').innerText = empresa;
-        document.getElementById('prevSlogan').innerText = slogan;
-        document.getElementById('prevWeb').innerText = web;
-        document.getElementById('prevFecha').innerText = new Date().toLocaleDateString();
-
-        const modal = new bootstrap.Modal(document.getElementById('modalPreview'));
-        const isBW = document.getElementById('checkTicketBW').checked;
-        const previewEl = document.querySelector('.ticket-preview');
-        
-        if (isBW) previewEl.classList.add('ticket-bw');
-        else previewEl.classList.remove('ticket-bw');
-        
-        modal.show();
-    }
-
-    // Función para extraer coordenadas con modo Silencioso (para carga inicial)
     function extraerCoordenadasConfig(input, silencioso = false) {
         const url = input.value.trim();
         if (!url) return;
 
         const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
         const match = url.match(regex);
-        const regexQ = /q=(-?\d+\.\d+),(-?\d+\.\d+)/;
-        const matchQ = url.match(regexQ);
-        const matchFinal = match || matchQ;
+        const matchFinal = match || url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
 
         if (matchFinal) {
             document.getElementById('latConfig').value = matchFinal[1];
             document.getElementById('lngConfig').value = matchFinal[2];
             input.classList.remove('is-invalid');
             input.classList.add('is-valid');
-        } else {
-            if (!silencioso) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Link no válido',
-                    text: 'Asegúrate de copiar el LINK LARGO de la barra de direcciones de Google Maps (el que contiene la @latitud,longitud).',
-                    borderRadius: '15px',
-                    confirmButtonColor: '#ff6b81'
-                });
-                input.classList.add('is-invalid');
-            }
+        } else if (!silencioso) {
+            Swal.fire({ icon: 'warning', title: 'Link no válido', text: 'Copia el LINK LARGO de Google Maps.', borderRadius: '15px' });
+            input.classList.add('is-invalid');
         }
     }
 
-    // --- REEMPLAZO SEGURO DE RUTAS PARA ELIMINAR ZONA ---
-    // Usamos el mismo método de pasar la URL real de Flask
-    function confirmarEliminarZona(urlReal, nombreZona) {
+    // --- 5. ELIMINACIONES SEGURAS (RUTEADAS A BLUEPRINT) ---
+    function confirmarEliminarZona(idZona, nombreZona) {
         Swal.fire({
-            title: '¿Eliminar zona?',
-            text: `Vas a borrar "${nombreZona}". Se perderán todas las tarifas de peso asociadas.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            borderRadius: '15px'
+            title: '¿Eliminar zona?', text: `Borrarás "${nombreZona}". Se perderán sus tarifas.`,
+            icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Sí, eliminar', borderRadius: '15px'
         }).then((result) => {
             if (result.isConfirmed) {
-                // Creamos un formulario dinámico para respetar tu método POST original
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ url_for('main.configuracion') }}";
-
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'action';
-                actionInput.value = 'delete_zone';
-
+                form.action = "{{ url_for('configuracion.eliminar_zona') }}"; // NUEVA RUTA
                 const idInput = document.createElement('input');
-                idInput.type = 'hidden';
-                idInput.name = 'zone_id';
-                idInput.value = urlReal; // Pasamos el ID directamente
-
-                form.appendChild(actionInput);
+                idInput.type = 'hidden'; idInput.name = 'zone_id'; idInput.value = idZona;
                 form.appendChild(idInput);
                 document.body.appendChild(form);
                 form.submit();
@@ -827,32 +856,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function confirmarEliminarTarifa(idTarifa) {
         Swal.fire({
-            title: '¿Eliminar tarifa?',
-            text: "Esta acción no se puede deshacer.",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            borderRadius: '15px'
+            title: '¿Eliminar tarifa?', icon: 'warning', showCancelButton: true,
+            confirmButtonColor: '#dc3545', confirmButtonText: 'Sí, eliminar', borderRadius: '15px'
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ url_for('main.configuracion') }}#list-envios";
-
-                const actionInput = document.createElement('input');
-                actionInput.type = 'hidden';
-                actionInput.name = 'action';
-                actionInput.value = 'delete_rate';
-
+                form.action = "{{ url_for('configuracion.eliminar_tarifa') }}"; // NUEVA RUTA
                 const idInput = document.createElement('input');
-                idInput.type = 'hidden';
-                idInput.name = 'rate_id';
-                idInput.value = idTarifa;
-
-                form.appendChild(actionInput);
+                idInput.type = 'hidden'; idInput.name = 'rate_id'; idInput.value = idTarifa;
                 form.appendChild(idInput);
                 document.body.appendChild(form);
                 form.submit();

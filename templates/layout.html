@@ -23,7 +23,6 @@
             font-family: 'Nunito', sans-serif;
             background-color: var(--bg-cream);
             padding-top: 80px;
-            /* Espacio para el navbar fijo */
             color: #555;
         }
 
@@ -37,31 +36,34 @@
             color: #333 !important;
         }
 
-        /* Estilos globales extras */
         .card-custom {
             border: none;
             border-radius: 20px;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
         }
 
-        .search-input {
-            border-radius: 50px;
-            padding-left: 20px;
-            border: 2px solid #eee;
-        }
-
-        .search-input:focus {
-            border-color: var(--sian-pink);
-            box-shadow: none;
+        /* Avatar del Usuario */
+        .user-avatar {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--sian-pink), #ff4757);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            box-shadow: 0 4px 10px rgba(255, 107, 129, 0.3);
         }
 
         /* CAMPANA DE NOTIFICACIONES */
         .nav-icon-btn {
             position: relative;
             color: #555;
-            font-size: 1.2rem;
+            font-size: 1.3rem;
             padding: 8px;
             transition: color 0.2s;
+            text-decoration: none;
         }
 
         .nav-icon-btn:hover {
@@ -84,25 +86,12 @@
         }
 
         @keyframes pulse-red {
-            0% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-            }
-
-            70% {
-                transform: scale(1);
-                box-shadow: 0 0 0 6px rgba(220, 53, 69, 0);
-            }
-
-            100% {
-                transform: scale(0.95);
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-            }
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(220, 53, 69, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
         }
 
-        /* ==========================================
-           TRUCO PARA EL MENÚ HÍBRIDO (OFFCANVAS)
-           ========================================== */
+        /* TRUCO PARA EL MENÚ HÍBRIDO (OFFCANVAS) */
         @media (min-width: 992px) {
             .offcanvas {
                 position: static !important;
@@ -117,11 +106,7 @@
                 transition: none !important;
                 box-shadow: none !important;
             }
-
-            .offcanvas-header {
-                display: none !important;
-            }
-
+            .offcanvas-header { display: none !important; }
             .offcanvas-body {
                 padding: 0 !important;
                 overflow: visible !important;
@@ -129,31 +114,40 @@
                 flex-direction: row !important;
                 justify-content: flex-end !important;
             }
-
-            .navbar-nav {
-                margin-top: 0 !important;
-            }
-
-            .nav-item {
-                width: auto !important;
-            }
+            .navbar-nav { margin-top: 0 !important; }
+            .nav-item { width: auto !important; }
         }
 
         @media (max-width: 991.98px) {
-            .offcanvas {
-                max-width: 75%;
-            }
-
-            .nav-link {
-                text-align: left !important;
-                padding-left: 1rem !important;
-            }
-
+            .offcanvas { max-width: 75%; border-radius: 0 20px 20px 0; }
+            .nav-link { text-align: left !important; padding-left: 1rem !important; }
+            
+            /* Mejoras para el dropdown en móvil */
             .dropdown-menu {
-                text-align: center;
-                background-color: #f8f9fa;
+                background-color: transparent;
                 border: none;
+                box-shadow: none !important;
+                padding-left: 1rem;
             }
+            .dropdown-item { border-radius: 10px; margin-bottom: 2px; }
+            .dropdown-item:hover { background-color: var(--sian-pink-light); color: var(--sian-pink); }
+        }
+
+        /* Estilo para los items del menú de perfil */
+        .profile-dropdown {
+            border-radius: 16px;
+            min-width: 260px;
+            padding: 10px;
+        }
+        .profile-dropdown .dropdown-item {
+            border-radius: 8px;
+            padding: 8px 15px;
+            font-weight: 600;
+            color: #555;
+        }
+        .profile-dropdown .dropdown-item:hover {
+            background-color: var(--sian-pink-light);
+            color: var(--sian-pink);
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -178,14 +172,15 @@
 
             {% if session.get('user_id') %}
             <div class="dropdown me-2 order-lg-last">
-                <a class="nav-icon-btn" href="#" role="button" data-bs-toggle="dropdown">
+                <a class="nav-icon-btn d-flex align-items-center justify-content-center" href="#" role="button"
+                    data-bs-toggle="dropdown">
                     <i class="fas fa-bell"></i>
                     {% if notificaciones %}
                     <span class="notification-badge pulse-animation"></span>
                     {% endif %}
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2"
-                    style="width: 300px; max-height: 400px; overflow-y: auto;">
+                    style="width: 300px; max-height: 400px; overflow-y: auto; border-radius: 16px;">
                     <li class="dropdown-header text-uppercase small fw-bold text-muted">Notificaciones</li>
 
                     {% if notificaciones %}
@@ -214,9 +209,8 @@
             <div class="offcanvas offcanvas-start" tabindex="-1" id="miMenuMobile" aria-labelledby="miMenuLabel">
 
                 <div class="offcanvas-header border-bottom">
-                    <h5 class="offcanvas-title fw-bold" id="miMenuLabel" style="color: var(--sian-pink);">Menú</h5>
-                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas"
-                        aria-label="Close"></button>
+                    <h5 class="offcanvas-title fw-bold" id="miMenuLabel" style="color: var(--sian-pink);">Menú Principal</h5>
+                    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                 </div>
 
                 <div class="offcanvas-body">
@@ -237,74 +231,117 @@
                                 href="#" role="button" data-bs-toggle="dropdown">📦 
                                 <span>Inventario</span>
                             </a>
-                            <ul class="dropdown-menu border-0 shadow-sm text-center text-lg-start mt-2">
-                                <li>
-                                    <a class="dropdown-item py-2"
-                                        href="{{ url_for('inventory.materiales') }}">Materiales</a>
+                            <ul class="dropdown-menu border-0 shadow-sm mt-2" style="border-radius: 12px;">
+                                <li><a class="dropdown-item py-2" href="{{ url_for('inventory.materiales') }}">Materiales</a></li>
+                                <li><a class="dropdown-item py-2" href="{{ url_for('inventory.equipos') }}">Equipos</a></li>
+                                <li><a class="dropdown-item py-2" href="{{ url_for('inventory.recetas') }}">Recetas</a></li>
+                            </ul>
+                            </li>
+                            
+                            <li class="nav-item d-none d-lg-block">
+                                <div class="vr h-75 mx-2 text-muted opacity-25"></div>
+                            </li>
+                            <li class="nav-item d-lg-none">
+                                <hr class="text-muted my-2 opacity-25">
+                            </li>
+                            
+                            <li class="nav-item dropdown d-none d-lg-block">
+                                <a class="nav-link d-flex align-items-center justify-content-start gap-2 px-2 py-1 rounded-pill" href="#"
+                                    role="button" data-bs-toggle="dropdown" style="transition: all 0.2s;">
+                                    <div class="user-avatar shadow-sm">
+                                        {{ session.get('username', 'U')[0]|upper }}
+                                    </div>
+                                    <i class="fas fa-chevron-down ms-1 text-muted" style="font-size: 0.7rem;"></i>
+                                </a>
+                            
+                                <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3 profile-dropdown">
+                                    <li class="px-3 py-2 border-bottom mb-2">
+                                        <div class="fw-bold text-dark fs-6">{{ session.get('username', 'Usuario') }}</div>
+                                        <small class="text-muted">Mi Cuenta</small>
                                     </li>
                                 <li>
-                                    <a class="dropdown-item py-2" 
-                                    href="{{ url_for('inventory.equipos') }}">Equipos</a>
+                                    <a class="dropdown-item d-flex align-items-center gap-2" href="{{ url_for('configuracion.configuracion') }}">
+                                        <i class="fas fa-cog text-secondary w-20px text-center"></i> Configuración
+                                    </a>
+                                    </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2" href="{{ url_for('main.ayuda') }}">
+                                        <i class="fas fa-question-circle text-secondary w-20px text-center"></i> Ayuda
+                                    </a>
+                                </li>
+{% if session.get('role', 0) >= 1 %}
+<li>
+    <hr class="dropdown-divider my-2">
+</li>
+<li class="dropdown-header text-uppercase small fw-bold" style="color: var(--sian-pink); letter-spacing: 0.5px;">👑
+    Administración</li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 fw-bold" href="{{ url_for('admin.dashboard') }}">
+                                        <i class="fas fa-hammer text-warning w-20px text-center"></i> Admin Cotizador
+                                    </a>
                                 </li>
                                 <li>
-                                    <a class="dropdown-item py-2" 
-                                    href="{{ url_for('inventory.recetas') }}">Recetas</a>
+                                    <a class="dropdown-item d-flex align-items-center gap-2" href="{{ url_for('catalogo.admin_categorias') }}">
+                                        <i class="fas fa-images text-info w-20px text-center"></i> Gestión Catálogo
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2"
+                                        href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}">
+                                        <i class="fas fa-envelope-open-text text-success w-20px text-center"></i> Invitaciones
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                <li>
+                                    <hr class="dropdown-divider my-2">
+                                </li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 text-danger fw-bold" href="{{ url_for('auth.logout') }}">
+                                        <i class="fas fa-sign-out-alt w-20px text-center"></i> Cerrar Sesión
+                                    </a>
                                 </li>
                             </ul>
                         </li>
 
-                        <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center justify-content-start justify-content-lg-center gap-2 {% if request.endpoint == 'main.configuracion' %}active fw-bold bg-light border{% endif %} rounded-pill px-3"
-                                href="{{ url_for('main.configuracion') }}">⚙️ <span>Config</span></a>
-                        </li>
-
-                        {% if session.get('role', 0) >= 1 %}
-                        <li class="nav-item d-none d-lg-block">
-                            <div class="vr h-75 mx-1 text-muted opacity-25"></div>
-                        </li>
-                        <li class="nav-item d-lg-none">
-                            <hr class="text-muted my-2 opacity-25">
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm px-3 d-flex align-items-center justify-content-start justify-content-lg-center gap-2"
-                                href="{{ url_for('admin.dashboard') }}">
-                                <span>Administar Cotizador</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm px-3 d-flex align-items-center justify-content-start justify-content-lg-center gap-2"
-                                href="{{ url_for('catalogo.admin_categorias') }}">
-                                <i class="fas fa-images"></i> <span>Catálogo</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-warning rounded-pill fw-bold w-100 shadow-sm px-3 d-flex align-items-center justify-content-start justify-content-lg-center gap-2"
-                                href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}">
-                                <i class="fas fa-envelope-open-text"></i> <span>Invitaciones</span>
-                            </a>
-                        </li>
-                        {% endif %}
-
-                        <li class="nav-item d-none d-lg-block">
-                            <div class="vr h-75 mx-1 text-muted opacity-25"></div>
-                        </li>
-                        <li class="nav-item d-lg-none">
-                            <hr class="text-muted my-2 opacity-25">
-                        </li>
-
-                        <li class="nav-item">
-                            <a class="nav-link d-flex align-items-center justify-content-start justify-content-lg-center gap-2 px-3"
-                                href="{{ url_for('main.ayuda') }}">
-                                <i class="fas fa-question-circle"></i> <span>Ayuda</span>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="btn btn-outline-danger rounded-pill fw-bold w-100 px-3 d-flex align-items-center justify-content-start justify-content-lg-center gap-2"
-                                href="{{ url_for('auth.logout') }}">
-                                <i class="fas fa-sign-out-alt"></i> <span>Salir</span>
-                            </a>
-                        </li>
+                        <div class="d-lg-none mt-3">
+                            <h6 class="text-muted fw-bold px-3 mb-2 small text-uppercase">👤 Mi Perfil</h6>
+                            <li class="nav-item">
+                                <a class="nav-link px-4 py-2 text-dark" href="{{ url_for('configuracion.configuracion') }}">
+                                    <i class="fas fa-cog text-secondary w-20px me-2"></i> Configuración
+                                </a>
+                                </li>
+                                <li class="nav-item">
+                                <a class="nav-link px-4 py-2 text-dark" href="{{ url_for('main.ayuda') }}">
+                                    <i class="fas fa-question-circle text-secondary w-20px me-2"></i> Ayuda
+                                </a>
+                                </li>
+{% if session.get('role', 0) >= 1 %}
+<h6 class="text-muted fw-bold px-3 mt-4 mb-2 small text-uppercase" style="color: var(--sian-pink) !important;">👑
+    Administración</h6>
+                            <li class="nav-item">
+                                <a class="nav-link px-4 py-2 text-dark fw-bold" href="{{ url_for('admin.dashboard') }}">
+                                    <i class="fas fa-hammer text-warning w-20px me-2"></i> Admin Cotizador
+                                </a>
+                                </li>
+                            <li class="nav-item">
+                                <a class="nav-link px-4 py-2 text-dark" href="{{ url_for('catalogo.admin_categorias') }}">
+                                    <i class="fas fa-images text-info w-20px me-2"></i> Gestión Catálogo
+                                </a>
+                                </li>
+                                <li class="nav-item">
+                                <a class="nav-link px-4 py-2 text-dark" href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}">
+                                    <i class="fas fa-envelope-open-text text-success w-20px me-2"></i> Invitaciones
+                                </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li class="nav-item mt-3">
+                                <a class="nav-link px-4 py-2 text-danger fw-bold" href="{{ url_for('auth.logout') }}">
+                                    <i class="fas fa-sign-out-alt w-20px me-2"></i> Cerrar Sesión
+                                </a>
+                            </li>
+                            </div>
 
                     </ul>
                 </div>
@@ -334,16 +371,14 @@
     
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            var navLinks = document.querySelectorAll('.offcanvas .nav-link:not(.dropdown-toggle)');
+            // Cerramos el offcanvas al hacer clic en enlaces normales
+            var navLinks = document.querySelectorAll('.offcanvas .nav-link:not(.dropdown-toggle), .offcanvas .dropdown-item');
             var menuToggle = document.getElementById('miMenuMobile');
-            var bsOffcanvas = new bootstrap.Offcanvas(menuToggle);
 
             navLinks.forEach(function (l) {
                 l.addEventListener('click', function () {
-                    // Solo cerramos si estamos en móvil (si el offcanvas es visible como cajón)
+                    // Si el offcanvas es un cajón lateral (móvil) lo cerramos
                     if (window.getComputedStyle(menuToggle).position === 'fixed') {
-                        // bootstrap.Offcanvas.getInstance(menuToggle).hide();
-                        // Nota: A veces la instancia se pierde, usamos el elemento nativo
                         var closeBtn = menuToggle.querySelector('.btn-close');
                         if (closeBtn) closeBtn.click();
                     }
@@ -352,6 +387,7 @@
         });
     </script>
     {% block scripts %}{% endblock %}
+    
     {% if session.get('original_admin_id') %}
     <div style="position: fixed; bottom: 20px; right: 20px; z-index: 9999; animation: pulse 2s infinite;">
         <a href="{{ url_for('admin.stop_impersonate') }}"
@@ -362,22 +398,12 @@
 
     <style>
         @keyframes pulse {
-            0% {
-                transform: scale(1);
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7);
-            }
-
-            70% {
-                transform: scale(1.05);
-                box-shadow: 0 0 0 10px rgba(220, 53, 69, 0);
-            }
-
-            100% {
-                transform: scale(1);
-                box-shadow: 0 0 0 0 rgba(220, 53, 69, 0);
-            }
+            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0.7); }
+            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(220, 53, 69, 0); }
+            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(220, 53, 69, 0); }
         }
     </style>
     {% endif %}
 
+</body>
 </html>
