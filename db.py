@@ -90,7 +90,7 @@ def init_db():
         precio_compra REAL,
         cantidad_paquete REAL,
         precio_unitario REAL,
-        unidad_medida,
+        unidad_medida TEXT,
         stock_actual REAL DEFAULT 0,
         stock_minimo REAL DEFAULT 5
     )
@@ -114,7 +114,7 @@ def init_db():
     """)
 
     # =========================
-    # 5. PRODUCTOS
+    # 5. PRODUCTOS (Cotizador)
     # =========================
     conn.execute("""
     CREATE TABLE IF NOT EXISTS productos (
@@ -186,10 +186,10 @@ def init_db():
     """)
 
     # =========================
-    # 7. SUPER ADMIN
+    # 7. SUPER ADMIN (SEED BLINDADO)
     # =========================
     admin = conn.execute(
-        "SELECT id FROM usuarios WHERE username = 'admin'"
+        "SELECT id FROM usuarios WHERE email = 'contacto@sianeffects.com'"
     ).fetchone()
 
     if not admin:
@@ -207,9 +207,12 @@ def init_db():
             'admin', 'contacto@sianeffects.com', hashed_pw, 'SianEffects HQ', 2,
             '2099-12-31T23:59:59Z', now_utc_str, 1, 'MX', now_utc_str
         ))
+        
+        # Guardamos los cambios para poder consultar el ID insertado
+        conn.commit()
 
         admin_id = conn.execute(
-            "SELECT id FROM usuarios WHERE username = 'admin'"
+            "SELECT id FROM usuarios WHERE email = 'contacto@sianeffects.com'"
         ).fetchone()['id']
 
         conn.execute("""
@@ -224,7 +227,7 @@ def init_db():
             """, (admin_id, nombre, costo))
 
     # =========================
-    # 8. CATALOGO
+    # 8. CATÁLOGO
     # =========================
     conn.execute("""
     CREATE TABLE IF NOT EXISTS categorias (
@@ -237,8 +240,9 @@ def init_db():
     )
     """)
 
+    # Aquí respetamos tu tabla confirmada: catalogo_productos
     conn.execute("""
-    CREATE TABLE IF NOT EXISTS productos (
+    CREATE TABLE IF NOT EXISTS catalogo_productos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         categoria_id INTEGER,     
         sku TEXT NOT NULL,
@@ -255,8 +259,7 @@ def init_db():
     )
     """)
 
-
- # =========================
+    # =========================
     # 9. ENVÍOS (LOGÍSTICA)
     # =========================
     conn.execute("""
@@ -274,18 +277,16 @@ def init_db():
     )
     """)
 
-    # Tabla de Zonas (Nacional)
     conn.execute("""
     CREATE TABLE IF NOT EXISTS shipping_zones (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         user_id INTEGER,
         zone_name TEXT,
-        states_included TEXT, -- Guardamos el JSON como texto en SQLite
+        states_included TEXT, 
         FOREIGN KEY(user_id) REFERENCES usuarios(id)
     )
     """)
 
-    # Tabla de Tarifas
     conn.execute("""
     CREATE TABLE IF NOT EXISTS shipping_rates (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -296,10 +297,9 @@ def init_db():
     )
     """)
 
-
-    # SECCION DE INVITACIONES
-
-    #-- Tabla para tus 5 canciones gestionables
+    # =========================
+    # 10. INVITACIONES Y PLANNERS
+    # =========================
     conn.execute("""
     CREATE TABLE IF NOT EXISTS lista_musica (
         id INTEGER PRIMARY KEY,
@@ -309,16 +309,15 @@ def init_db():
     );
     """)
 
-#-- Tabla principal de la invitación
     conn.execute("""
     CREATE TABLE IF NOT EXISTS invitaciones (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        slug TEXT UNIQUE,           -- Ejemplo: 'boda-sebastian-y-atlas'
-        config_json TEXT,           -- Aquí guardamos el ORDEN de los items [1, 5, 2...]
-        musica_id INTEGER,          -- Cuál de tus 5 canciones suena
+        slug TEXT UNIQUE,           
+        config_json TEXT,           
+        musica_id INTEGER,          
         fecha_evento DATETIME,
-        vigencia DATETIME,          -- Hasta cuándo funciona el link
-        datos_cliente_json TEXT,     -- Nombres, Maps, Cuenta bancaria, etc.
+        vigencia DATETIME,          
+        datos_cliente_json TEXT,     
         fotos_json TEXT,
         foto_portada_url TEXT,
         estilo_fuente TEXT DEFAULT 'clasico',
@@ -336,7 +335,6 @@ def init_db():
         padrinos TEXT,
         frase_final TEXT,
         historia_json TEXT,
-        mesas_json TEXT DEFAULT '[]',
         es_demo INTEGER DEFAULT 0,
         tipo_evento TEXT DEFAULT 'boda',
         bloquear_edicion_invitados BOOLEAN DEFAULT 0,
@@ -349,14 +347,14 @@ def init_db():
         FOREIGN KEY(musica_id) REFERENCES lista_musica(id)
     );
     """)
-#-- Tabla principal de la invitación
+
     conn.execute("""
     CREATE TABLE IF NOT EXISTS fotos_invitados (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    invitacion_id INTEGER NOT NULL,
-    url TEXT NOT NULL,
-    camara_premium BOOLEAN DEFAULT 0,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        invitacion_id INTEGER NOT NULL,
+        url TEXT NOT NULL,
+        camara_premium BOOLEAN DEFAULT 0,
+        fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
 
@@ -388,35 +386,36 @@ def init_db():
     )
     """)
 
-    # 1. Tabla de Perfiles de Planners
     conn.execute("""
     CREATE TABLE IF NOT EXISTS planners (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         nombre_contacto TEXT,
         nombre_empresa TEXT,
         telefono TEXT,
-        codigo_acceso_planner TEXT UNIQUE, -- Formato 'PLAN-XXXXX'
+        codigo_acceso_planner TEXT UNIQUE, 
         notas TEXT,
         estado TEXT DEFAULT 'activo',
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
-    # 2. Tabla de Paquetes de Créditos (La cartera)
     conn.execute("""
     CREATE TABLE IF NOT EXISTS planner_paquetes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         planner_id INTEGER,
-        cantidad_total INTEGER,   -- Cuántos compró en este paquete
+        cantidad_total INTEGER,   
         cantidad_usada INTEGER DEFAULT 0,
         fecha_compra DATETIME DEFAULT CURRENT_TIMESTAMP,
-        fecha_vencimiento DATETIME, -- Aquí aplicamos lo de 1 año de vigencia
+        fecha_vencimiento DATETIME, 
         activo BOOLEAN DEFAULT 1,
         notas TEXT,
         FOREIGN KEY(planner_id) REFERENCES planners(id)
     )
     """)
-
     
     conn.commit()
     conn.close()
+
+if __name__ == '__main__':
+    init_db()
+    print("Base de datos inicializada correctamente.")
