@@ -208,16 +208,19 @@ def guardar_venta():
 
         subtotal_con_descuento = subtotal_calculado - descuento_monto
 
+        # Sumamos el envío ANTES de calcular impuestos
+        base_imponible = subtotal_con_descuento + costo_envio
+
         # Calculamos impuestos reales nosotros mismos
         tax_amount_calculado = 0.0
         tax_engine = "none"
 
         if tax_percent > 0:
-            tax_amount_calculado = subtotal_con_descuento * (tax_percent / 100)
+            tax_amount_calculado = base_imponible * (tax_percent / 100)
             tax_engine = f"IVA {int(tax_percent)}%" if tax_percent.is_integer() else f"IVA {tax_percent}%"
 
         # --- 4. EL TOTAL SAGRADO ---
-        total_calculado = subtotal_con_descuento + tax_amount_calculado
+        total_calculado = base_imponible + tax_amount_calculado
 
         # --- 5. CUADRAMOS LOS PAGOS ---
         # Si dice que pagó más del total, lo topamos al total real
