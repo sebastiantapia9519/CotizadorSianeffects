@@ -62,6 +62,13 @@ def materiales():
                 precio_compra = 0
                 cantidad_paquete = 1
             
+            # 👇 FIX: Capturamos el Stock Mínimo con red de seguridad 👇
+            try:
+                stock_min_val = request.form.get('stock_minimo')
+                stock_minimo = float(stock_min_val) if stock_min_val else 5.0
+            except ValueError:
+                stock_minimo = 5.0
+            
             # Calculamos el precio unitario (Costo total / Cantidad del paquete)
             es_paquete = 1 if tipo == 'paquete' else 0
             if cantidad_paquete > 0:
@@ -71,16 +78,18 @@ def materiales():
 
             # Ejecutamos la actualización si existe ID, o la inserción si es nuevo
             if id_actualizar:
+                # 👇 FIX: Agregamos stock_minimo al UPDATE 👇
                 conn.execute("""
                     UPDATE materiales 
-                    SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?, unidad_medida=?
+                    SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?, unidad_medida=?, stock_minimo=?
                     WHERE id=? AND user_id=?
-                """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, id_actualizar, user_id))
+                """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo, id_actualizar, user_id))
             else:
+                # 👇 FIX: Agregamos stock_minimo al INSERT 👇
                 conn.execute("""
-                    INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida))
+                    INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                """, (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo))
             
             conn.commit()
             
@@ -325,25 +334,29 @@ def registrar_compra():
         if not mat:
             return jsonify({'success': False, 'error': 'Material no encontrado'}), 404
 
-        # 3. LÓGICA DE PAQUETES: Multiplicador seguro
-        cantidad_a_sumar = cantidad_compra
-        if mat['es_paquete'] and mat['cantidad_paquete'] > 0: # <-- BLINDAJE DIVISIÓN POR CERO
+        # Obtenemos el nuevo parámetro de la UI
+        tipo_ingreso = data.get('tipo_ingreso', 'paquete')
+
+        # 3. LÓGICA DE PAQUETES VS SUELTOS
+        if tipo_ingreso == 'paquete' and mat['es_paquete'] and mat['cantidad_paquete'] > 0:
             cantidad_a_sumar = cantidad_compra * mat['cantidad_paquete']
+        else:
+            # Si eligió 'unidad', la cantidad ingresada entra directa a la bóveda
+            cantidad_a_sumar = cantidad_compra 
 
         sql_update = "UPDATE materiales SET stock_actual = stock_actual + ?"
         params = [cantidad_a_sumar]
 
-        # 4. ACTUALIZACIÓN DE PRECIOS SINCRONIZADA
+        # 4. ACTUALIZACIÓN DE PRECIOS INTELIGENTE
         if nuevo_precio > 0:
-            sql_update += ", precio_compra = ?"
-            params.append(nuevo_precio)
+            # El unitario SIEMPRE es el dinero que pagaste / lo que realmente entró a la bóveda
+            nuevo_unitario = nuevo_precio / cantidad_a_sumar
             
-            # Si es paquete y tiene cantidad válida, calculamos el unitario
-            if mat['es_paquete'] and mat['cantidad_paquete'] > 0:
-                nuevo_unitario = nuevo_precio / mat['cantidad_paquete']
-            else:
-                # Si no es paquete (se vende por pieza), el precio unitario es el mismo de compra
-                nuevo_unitario = nuevo_precio
+            # Solo actualizamos el "Precio de Compra (Base)" si ingresó por paquetes.
+            # Si metió piezas sueltas, no queremos alterar su configuración base, solo el costo unitario para que el cotizador no pierda dinero.
+            if tipo_ingreso == 'paquete':
+                sql_update += ", precio_compra = ?"
+                params.append(nuevo_precio)
                 
             sql_update += ", precio_unitario = ?"
             params.append(nuevo_unitario)

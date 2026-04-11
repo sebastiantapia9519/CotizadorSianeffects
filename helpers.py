@@ -115,7 +115,7 @@ def obtener_alertas(user_id):
                     'tipo': color,
                     'icono': 'box-open',
                     'msg': f"Stock bajo: <b>{mat['nombre']}</b> ({float(mat['stock_actual']):g} restantes)",
-                    'url': '/inventario' 
+                    'url': '/materiales' 
                 })
 
         # 2. REVISAR SUSCRIPCIÓN (SOLO PARA MORTALES - ROL 0)

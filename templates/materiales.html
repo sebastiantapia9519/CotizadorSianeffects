@@ -133,7 +133,8 @@
                                     class="form-control fw-bold" placeholder="Ej. 1, 900, 50..." required>
                                 <select name="unidad_medida" id="unidad_medida"
                                     class="form-select border-start-0 text-muted bg-light"
-                                    style="max-width: 130px; font-size: 0.9rem;">
+                                    style="max-width: 130px; font-size: 0.9rem;"
+                                    onchange="actualizarLabelStockMinimo()">
                                     <option value="pieza">Piezas (pza)</option>
                                     <option value="g">Gramos (g)</option>
                                     <option value="kg">Kilos (kg)</option>
@@ -146,6 +147,19 @@
                         </div>
                     </div>
 
+                    {% if config and config.get('inventario_activo') %}
+                    <div class="col-12 mb-4">
+                        <label class="form-label fw-bold text-muted small text-uppercase">
+                            <i class="fas fa-bell text-warning me-1"></i> Stock Mínimo (Alerta)
+                        </label>
+                        <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
+                            <input type="number" step="0.01" name="stock_minimo" id="stock_minimo" class="form-control bg-light border-0 fw-bold" 
+                                   value="5" placeholder="Ej. 5" required>
+                            <span class="input-group-text bg-white text-muted border-0 fw-bold" id="labelUnidadMinima">Piezas (pza)</span>
+                        </div>
+                        <div class="form-text small mt-1">Recibirás una alerta 🔴 cuando tu inventario baje a este número.</div>
+                    </div>
+                    {% endif %}
                     <div class="form-text text-center mb-4 text-primary"
                         style="font-size: 0.8rem; background: #eef2ff; padding: 10px; border-radius: 10px;">
                         <i class="fas fa-lightbulb me-1"></i> <b>Tip:</b> Ingresa el costo total de tu compra y lo que
@@ -174,24 +188,28 @@
                 <p class="small text-muted mb-1">Material:</p>
                 <h6 class="fw-bold mb-3" id="stock_nombre"></h6>
 
+                <div class="mb-3" id="contenedor_tipo_ingreso">
+                    <label class="small fw-bold text-dark mb-1">¿Cómo lo compraste hoy?</label>
+                    <select id="stock_tipo_ingreso" class="form-select form-select-sm mb-2 bg-light fw-bold text-primary" onchange="cambiarModoIngreso()">
+                        <option value="paquete">Por Paquete/Caja (Como siempre)</option>
+                        <option value="unidad">Por Unidades sueltas</option>
+                    </select>
+                </div>
+
                 <div class="mb-3">
-                    <label class="small fw-bold text-dark mb-1">Compras que ingresan:</label>
+                    <label class="small fw-bold text-dark mb-1" id="stock_cantidad_titulo">Compras que ingresan:</label>
                     <div class="input-group">
-                        <input type="number" id="stock_cantidad" class="form-control fw-bold text-center" value="1"
-                            min="0.1" step="any">
-                        <span class="input-group-text bg-light" id="stock_unidad_label"
-                            style="font-size: 0.8rem;">Compras</span>
+                        <input type="number" id="stock_cantidad" class="form-control fw-bold text-center" value="1" min="0.01" step="any">
+                        <span class="input-group-text bg-light" id="stock_unidad_label" style="font-size: 0.8rem;">Compras</span>
                     </div>
-                    <div class="form-text" style="font-size: 0.7rem;" id="stock_ayuda">Ej: "1" sumará los gramos/piezas
-                        que configuraste por defecto.</div>
+                    <div class="form-text" style="font-size: 0.75rem;" id="stock_ayuda">...</div>
                 </div>
 
                 <div class="mb-3">
                     <label class="small fw-bold text-muted mb-1">¿Cambió el costo? (Opcional)</label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-text bg-light border-0">$</span>
-                        <input type="number" step="0.01" id="stock_nuevo_precio" class="form-control bg-light border-0"
-                            placeholder="Nuevo precio total">
+                        <input type="number" step="0.01" id="stock_nuevo_precio" class="form-control bg-light border-0" placeholder="Lo que pagaste hoy">
                     </div>
                 </div>
 
@@ -235,6 +253,10 @@
         document.getElementById('id_actualizar').value = '';
         document.getElementById('unidad_medida').value = 'pieza';
         document.getElementById('cantidad_paquete').value = '1';
+        
+        const stockMinInput = document.getElementById('stock_minimo');
+        if (stockMinInput) stockMinInput.value = '5';
+        actualizarLabelStockMinimo(); 
     }
 
     function editarMaterial(mat) {
@@ -244,10 +266,26 @@
         document.getElementById('precio_compra').value = mat.precio_compra;
         document.getElementById('cantidad_paquete').value = mat.cantidad_paquete || 1;
         document.getElementById('unidad_medida').value = mat.unidad_medida || 'pieza';
+        
+        const stockMinInput = document.getElementById('stock_minimo');
+        if (stockMinInput) {
+            stockMinInput.value = mat.stock_minimo !== undefined ? mat.stock_minimo : 5;
+        }
+        actualizarLabelStockMinimo();
+
         modal.show();
     }
 
-    // ✅ ELIMINAR RESPETANDO TU RUTA ORIGINAL
+    function actualizarLabelStockMinimo() {
+        const selectUnidad = document.getElementById('unidad_medida');
+        const labelStock = document.getElementById('labelUnidadMinima');
+        
+        if (selectUnidad && labelStock) {
+            labelStock.innerText = selectUnidad.options[selectUnidad.selectedIndex].text;
+        }
+    }
+
+    // ELIMINAR RESPETANDO TU RUTA ORIGINAL
     function confirmarEliminar(urlReal, nombre) {
         Swal.fire({
             title: '¿Eliminar material?',
@@ -266,27 +304,66 @@
         });
     }
 
-    // --- FUNCIONES DE STOCK ---
+    // --- FUNCIONES DE STOCK ACTUALIZADAS ---
     let modalStockObj;
+    let materialActual = null;
 
     function abrirModalStock(mat) {
-        modalStockObj = new bootstrap.Modal(document.getElementById('modalStock'));
+        materialActual = mat;
+        
+        // Asignar valores
         document.getElementById('stock_id').value = mat.id;
         document.getElementById('stock_nombre').innerText = mat.nombre;
-
-        const unidad = mat.unidad_medida || 'pieza';
-        document.getElementById('stock_ayuda').innerText = `1 compra ingresará ${parseFloat(mat.cantidad_paquete).toFixed(2)} ${unidad}(s) al stock.`;
-
-        document.getElementById('stock_cantidad').value = 1;
         document.getElementById('stock_nuevo_precio').value = mat.precio_compra;
-
+        document.getElementById('stock_cantidad').value = 1;
+        
+        const selectorContainer = document.getElementById('contenedor_tipo_ingreso');
+        const tituloCantidad = document.getElementById('stock_cantidad_titulo');
+        const selector = document.getElementById('stock_tipo_ingreso');
+        
+        // Si el material es unitario (1 litro, 1 metro)
+        if (parseFloat(mat.cantidad_paquete) === 1) {
+            selectorContainer.style.display = 'none';
+            tituloCantidad.innerText = "Cantidad que ingresa:";
+            selector.value = 'unidad';
+        } else {
+            selectorContainer.style.display = 'block';
+            tituloCantidad.innerText = "Compras que ingresan:";
+            selector.value = 'paquete';
+        }
+        
+        cambiarModoIngreso();
+        
+        // Inicializar el modal si no existe y mostrarlo
+        if (!modalStockObj) {
+            modalStockObj = new bootstrap.Modal(document.getElementById('modalStock'));
+        }
         modalStockObj.show();
     }
 
+    function cambiarModoIngreso() {
+        if (!materialActual) return;
+        
+        const tipo = document.getElementById('stock_tipo_ingreso').value;
+        const label = document.getElementById('stock_unidad_label');
+        const ayuda = document.getElementById('stock_ayuda');
+        const unidad = materialActual.unidad_medida || 'pieza';
+
+        if (tipo === 'paquete' && parseFloat(materialActual.cantidad_paquete) > 1) {
+            label.innerText = 'Paquetes';
+            ayuda.innerHTML = `1 paquete sumará <b>${parseFloat(materialActual.cantidad_paquete).toFixed(2)} ${unidad}(s)</b> al stock.`;
+        } else {
+            label.innerText = `${unidad}(s) que entran`;
+            ayuda.innerHTML = `Ingresa cuántas <b>${unidad}(s)</b> vas a meter al almacén.`;
+        }
+    }
+
+    // Ojo, esta función la debe usar el botón verde del modal
     function guardarCompra() {
         const id = document.getElementById('stock_id').value;
         const cant = document.getElementById('stock_cantidad').value;
         const precio = document.getElementById('stock_nuevo_precio').value;
+        const tipo_ingreso = document.getElementById('stock_tipo_ingreso').value;
 
         if (!cant || cant <= 0) {
             Swal.fire('Atención', 'Ingresa una cantidad válida.', 'info');
@@ -299,16 +376,20 @@
             body: JSON.stringify({
                 id: id,
                 cantidad: cant,
-                nuevo_precio: precio
+                nuevo_precio: precio,
+                tipo_ingreso: tipo_ingreso
             })
         })
         .then(r => r.json())
         .then(data => {
             if (data.success) {
+                if (modalStockObj) {
+                    modalStockObj.hide();
+                }
                 Swal.fire({
-                    icon: 'success',
-                    title: '¡Stock Actualizado!',
-                    showConfirmButton: false,
+                    icon: 'success', 
+                    title: '¡Stock Actualizado!', 
+                    showConfirmButton: false, 
                     timer: 1500
                 }).then(() => location.reload());
             } else {
