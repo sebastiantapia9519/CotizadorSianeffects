@@ -1,0 +1,238 @@
+{% extends "layout.html" %}
+
+{% block title %}Mi Panel | SianEffects{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dashboard-bg { background-color: #fafafa; min-height: 100vh; padding-bottom: 3rem; }
+    
+    .kpi-card {
+        background: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb;
+        padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .kpi-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
+    
+    .kpi-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.4rem; }
+    .kpi-title { font-size: 0.85rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 16px; margin-bottom: 4px; }
+    .kpi-value { font-size: 1.8rem; font-weight: 800; color: #111827; margin-bottom: 0; line-height: 1; }
+    
+    /* Adaptación de texto para móviles */
+    @media (max-width: 576px) { .kpi-value { font-size: 1.4rem; } }
+
+    .bg-ingresos { background-color: #eff6ff; color: #3b82f6; }
+    .bg-ganancia { background-color: #f0fdf4; color: #10b981; }
+    .bg-deuda { background-color: #fefce8; color: #f59e0b; }
+    .bg-ventas { background-color: #f3e8ff; color: #8b5cf6; }
+
+    .section-card { background: #ffffff; border-radius: 16px; border: 1px solid #e5e7eb; padding: 24px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); height: 100%; }
+    .section-header { font-size: 1.1rem; font-weight: 800; color: #111827; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;}
+    
+    .top-table th { font-size: 0.75rem; text-transform: uppercase; color: #6b7280; font-weight: 700; border-bottom: 2px solid #f3f4f6; }
+    .top-table td { font-size: 0.9rem; color: #374151; font-weight: 500; vertical-align: middle; border-bottom: 1px solid #f3f4f6; }
+    .top-table tr:last-child td { border-bottom: none; }
+    
+    .filter-bar { background: #fff; border-radius: 50px; padding: 8px 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-bg mt-4">
+    <div class="row mb-4 align-items-center">
+        <div class="col-12 col-xl-5 mb-3 mb-xl-0">
+            <h2 class="fw-bold text-dark mb-1" style="letter-spacing: -0.5px;">Tu Resumen Financiero</h2>
+            <p class="text-muted mb-0">Revisa la salud de tu negocio al detalle.</p>
+        </div>
+        
+        <div class="col-12 col-xl-7">
+            <div class="d-flex align-items-center justify-content-xl-end gap-3 flex-wrap">
+                <form action="{{ url_for('user_dash.mi_panel') }}" method="GET" class="filter-bar d-flex align-items-center gap-2 flex-grow-1 flex-md-grow-0">
+                    <i class="fas fa-calendar-alt text-muted me-1 d-none d-md-inline"></i>
+                    <select name="mes" class="form-select form-select-sm border-0 bg-white shadow-none">
+                        {% for val, nom in lista_meses %}
+                        <option value="{{ val }}" {% if val == mes_sel %}selected{% endif %}>{{ nom }}</option>
+                        {% endfor %}
+                    </select>
+                    <select name="anio" class="form-select form-select-sm border-0 bg-white shadow-none">
+                        {% for a in lista_anios %}
+                        <option value="{{ a }}" {% if a|string == anio_sel|string %}selected{% endif %}>{{ a }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </form>
+                
+                <button class="btn btn-outline-success rounded-pill shadow-sm fw-bold">
+                    <i class="fas fa-file-excel me-2"></i>Reporte
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mb-4">
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="kpi-icon bg-ingresos"><i class="fas fa-wallet"></i></div>
+                <div class="kpi-title">Ingresos Brutos</div>
+                <div class="kpi-value">${{ "{:,.2f}".format(kpis['ingresos_brutos']) }}</div>
+            </div>
+        </div>
+        
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card position-relative overflow-hidden" style="border: 2px solid #10b981;">
+                <div class="position-absolute top-0 end-0 bg-success text-white px-2 py-1 rounded-bottom-start small fw-bold" style="font-size: 0.6rem;">LIBRE DE GASTOS</div>
+                <div class="kpi-icon bg-ganancia"><i class="fas fa-chart-line"></i></div>
+                <div class="kpi-title text-success">Ganancia Neta</div>
+                <div class="kpi-value text-success">${{ "{:,.2f}".format(kpis['ganancia_neta']) }}</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="kpi-icon bg-deuda"><i class="fas fa-hand-holding-usd"></i></div>
+                <div class="kpi-title">Por Cobrar</div>
+                <div class="kpi-value">${{ "{:,.2f}".format(kpis['dinero_calle']) }}</div>
+            </div>
+        </div>
+
+        <div class="col-6 col-lg-3">
+            <div class="kpi-card">
+                <div class="kpi-icon bg-ventas"><i class="fas fa-receipt"></i></div>
+                <div class="kpi-title">Ventas Cerradas</div>
+                <div class="kpi-value">{{ kpis['total_ventas'] }}</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-8">
+            <div class="section-card">
+                <div class="section-header">
+                    <span>Flujo de Dinero</span>
+                    <ul class="nav nav-pills bg-light rounded-pill p-1" id="chartTabs" role="tablist" style="font-size: 0.85rem;">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active rounded-pill px-3 py-1" onclick="renderChart('diario')" data-bs-toggle="pill" type="button">Este Mes</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link rounded-pill px-3 py-1" onclick="renderChart('historico')" data-bs-toggle="pill" type="button">Últimos 6 Meses</button>
+                        </li>
+                    </ul>
+                </div>
+                <div id="chartFinanciero" style="min-height: 350px;"></div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="section-card">
+                <div class="section-header">
+                    <span>Top 5 Más Vendidos</span>
+                    <i class="fas fa-fire text-danger"></i>
+                </div>
+                
+                {% if top_productos %}
+                <div class="table-responsive">
+                    <table class="table top-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Producto</th>
+                                <th class="text-center">Cant.</th>
+                                <th class="text-end">$$ Gen.</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for producto in top_productos %}
+                            <tr>
+                                <td>
+                                    <div class="text-truncate fw-bold text-dark" style="max-width: 130px;" title="{{ producto.concepto }}">
+                                        {{ producto.concepto }}
+                                    </div>
+                                </td>
+                                <td class="text-center"><span class="badge bg-light text-dark border">{{ producto.cantidad_vendida|int }}</span></td>
+                                <td class="text-end text-success fw-bold">${{ "{:,.2f}".format(producto.total_generado) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-5">
+                    <i class="fas fa-box-open fa-3x text-muted opacity-25 mb-3"></i>
+                    <p class="text-muted small">Aún no hay ventas en este periodo.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+<script>
+    // Variables globales inyectadas desde Python
+    const chartData = {{ chart_data | tojson }};
+    let currentChart = null;
+
+    function renderChart(tipo) {
+        const data = chartData[tipo];
+        
+        // Destruir la gráfica anterior si existe
+        if(currentChart) { currentChart.destroy(); }
+
+        if(data.labels.length > 0) {
+            var options = {
+                series: [
+                    { name: 'Ingresos Brutos', data: data.ingresos }, 
+                    { name: 'Ganancia Neta', data: data.ganancias }
+                ],
+                chart: {
+                    type: tipo === 'diario' ? 'area' : 'bar', // Área para diario, Barras para meses
+                    height: 350, fontFamily: "'Segoe UI', sans-serif",
+                    toolbar: { show: false }, zoom: { enabled: false }
+                },
+                colors: ['#3b82f6', '#10b981'],
+                dataLabels: { enabled: false },
+                stroke: {
+                    curve: 'smooth',
+                    width: tipo === 'diario' ? [3, 3] : [0, 0] // Sin borde si es barra
+                },
+                fill: {
+                    type: tipo === 'diario' ? 'gradient' : 'solid',
+                    gradient: { shadeIntensity: 1, opacityFrom: 0.4, opacityTo: 0.05, stops: [0, 100] }
+                },
+                xaxis: {
+                    categories: data.labels,
+                    axisBorder: { show: false }, axisTicks: { show: false },
+                    labels: { style: { colors: '#9ca3af' } }
+                },
+                yaxis: {
+                    labels: {
+                        style: { colors: '#9ca3af' },
+                        formatter: function (value) { return "$" + value.toLocaleString(); }
+                    }
+                },
+                grid: { borderColor: '#f3f4f6', strokeDashArray: 4 },
+                legend: { position: 'top', horizontalAlign: 'right' },
+                tooltip: { y: { formatter: function (val) { return "$" + val.toLocaleString() + " MXN" } } }
+            };
+
+            currentChart = new ApexCharts(document.querySelector("#chartFinanciero"), options);
+            currentChart.render();
+        } else {
+            document.querySelector("#chartFinanciero").innerHTML = `
+                <div class="d-flex flex-column justify-content-center align-items-center h-100 py-5">
+                    <i class="fas fa-chart-area fa-3x text-muted opacity-25 mb-3"></i>
+                    <p class="text-muted fw-bold">No hay datos para mostrar en este periodo.</p>
+                </div>
+            `;
+        }
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Arrancamos renderizando la gráfica diaria por defecto
+        renderChart('diario');
+    });
+</script>
+{% endblock %}
+{% endblock %}

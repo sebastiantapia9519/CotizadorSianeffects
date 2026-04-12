@@ -296,6 +296,7 @@ from routes.invitaciones_publicas import invitaciones_publicas_bp
 from routes.invitaciones_clientes import clientes_bp
 from routes.dashboard import dashboard_bp
 from routes.configuracion_bp import config_bp
+from routes.user_dashboard import user_dash_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
@@ -309,6 +310,7 @@ app.register_blueprint(invitaciones_publicas_bp)
 app.register_blueprint(clientes_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(config_bp)
+app.register_blueprint(user_dash_bp)
 
 # =========================
 # ANTI-CACHÉ
