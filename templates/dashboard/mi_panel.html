@@ -17,7 +17,6 @@
     .kpi-title { font-size: 0.85rem; font-weight: 700; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; margin-top: 16px; margin-bottom: 4px; }
     .kpi-value { font-size: 1.8rem; font-weight: 800; color: #111827; margin-bottom: 0; line-height: 1; }
     
-    /* Adaptación de texto para móviles */
     @media (max-width: 576px) { .kpi-value { font-size: 1.4rem; } }
 
     .bg-ingresos { background-color: #eff6ff; color: #3b82f6; }
@@ -63,9 +62,9 @@
                     </button>
                 </form>
                 
-                <button class="btn btn-outline-success rounded-pill shadow-sm fw-bold">
+                <a href="{{ url_for('main.descargar_excel') }}" class="btn btn-outline-success rounded-pill shadow-sm fw-bold">
                     <i class="fas fa-file-excel me-2"></i>Reporte
-                </button>
+                </a>
             </div>
         </div>
     </div>
@@ -105,7 +104,7 @@
         </div>
     </div>
 
-    <div class="row g-4">
+    <div class="row g-4 mb-4">
         <div class="col-12 col-lg-8">
             <div class="section-card">
                 <div class="section-header">
@@ -119,11 +118,23 @@
                         </li>
                     </ul>
                 </div>
-                <div id="chartFinanciero" style="min-height: 350px;"></div>
+                <div id="chartFinanciero" style="min-height: 320px;"></div>
             </div>
         </div>
 
         <div class="col-12 col-lg-4">
+            <div class="section-card">
+                <div class="section-header mb-1">
+                    <span>Radiografía de Ingresos</span>
+                </div>
+                <p class="text-muted small mb-3">¿A dónde se fue tu dinero?</p>
+                <div id="chartDona" class="d-flex justify-content-center"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-12 col-lg-6">
             <div class="section-card">
                 <div class="section-header">
                     <span>Top 5 Más Vendidos</span>
@@ -137,14 +148,14 @@
                             <tr>
                                 <th>Producto</th>
                                 <th class="text-center">Cant.</th>
-                                <th class="text-end">$$ Gen.</th>
+                                <th class="text-end">$$ Generado</th>
                             </tr>
                         </thead>
                         <tbody>
                             {% for producto in top_productos %}
                             <tr>
                                 <td>
-                                    <div class="text-truncate fw-bold text-dark" style="max-width: 130px;" title="{{ producto.concepto }}">
+                                    <div class="text-truncate fw-bold text-dark" style="max-width: 180px;" title="{{ producto.concepto }}">
                                         {{ producto.concepto }}
                                     </div>
                                 </td>
@@ -156,9 +167,55 @@
                     </table>
                 </div>
                 {% else %}
-                <div class="text-center py-5">
-                    <i class="fas fa-box-open fa-3x text-muted opacity-25 mb-3"></i>
+                <div class="text-center py-4">
+                    <i class="fas fa-box-open fa-2x text-muted opacity-25 mb-2"></i>
                     <p class="text-muted small">Aún no hay ventas en este periodo.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-6">
+            <div class="section-card">
+                <div class="section-header">
+                    <span>Material por Agotarse</span>
+                    <i class="fas fa-exclamation-triangle text-warning"></i>
+                </div>
+                
+                {% if stock_bajo %}
+                <div class="table-responsive">
+                    <table class="table top-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>Material</th>
+                                <th class="text-center">Alerta (Mínimo)</th>
+                                <th class="text-end">En Bodega</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for mat in stock_bajo %}
+                            <tr>
+                                <td>
+                                    <div class="text-truncate fw-bold text-dark" style="max-width: 180px;" title="{{ mat.nombre }}">
+                                        {{ mat.nombre }}
+                                    </div>
+                                </td>
+                                <td class="text-center text-muted small">{{ mat.stock_minimo|float|round(2) }} {{ mat.unidad_medida }}</td>
+                                <td class="text-end fw-bold {% if mat.stock_actual <= 0 %}text-danger{% else %}text-warning{% endif %}">
+                                    {{ mat.stock_actual|float|round(2) }} {{ mat.unidad_medida }}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-end mt-3">
+                    <a href="{{ url_for('inventory.materiales') }}" class="btn btn-sm btn-outline-primary rounded-pill">Ir a resurtir <i class="fas fa-arrow-right ms-1"></i></a>
+                </div>
+                {% else %}
+                <div class="text-center py-4">
+                    <i class="fas fa-check-circle fa-2x text-success opacity-50 mb-2"></i>
+                    <p class="text-muted small">Tu bodega está sana. Ningún material bajo.</p>
                 </div>
                 {% endif %}
             </div>
@@ -170,14 +227,12 @@
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
 
 <script>
-    // Variables globales inyectadas desde Python
     const chartData = {{ chart_data | tojson }};
     let currentChart = null;
 
     function renderChart(tipo) {
         const data = chartData[tipo];
         
-        // Destruir la gráfica anterior si existe
         if(currentChart) { currentChart.destroy(); }
 
         if(data.labels.length > 0) {
@@ -187,15 +242,15 @@
                     { name: 'Ganancia Neta', data: data.ganancias }
                 ],
                 chart: {
-                    type: tipo === 'diario' ? 'area' : 'bar', // Área para diario, Barras para meses
-                    height: 350, fontFamily: "'Segoe UI', sans-serif",
+                    type: tipo === 'diario' ? 'area' : 'bar',
+                    height: 320, fontFamily: "'Segoe UI', sans-serif",
                     toolbar: { show: false }, zoom: { enabled: false }
                 },
                 colors: ['#3b82f6', '#10b981'],
                 dataLabels: { enabled: false },
                 stroke: {
                     curve: 'smooth',
-                    width: tipo === 'diario' ? [3, 3] : [0, 0] // Sin borde si es barra
+                    width: tipo === 'diario' ? [3, 3] : [0, 0] 
                 },
                 fill: {
                     type: tipo === 'diario' ? 'gradient' : 'solid',
@@ -204,7 +259,18 @@
                 xaxis: {
                     categories: data.labels,
                     axisBorder: { show: false }, axisTicks: { show: false },
-                    labels: { style: { colors: '#9ca3af' } }
+                    labels: { 
+                        style: { colors: '#9ca3af', fontWeight: 600 },
+                        formatter: function (value) {
+                            if (tipo === 'historico' && value && value.includes('-')) {
+                                const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+                                const partes = value.split('-');
+                                const indiceMes = parseInt(partes[1], 10) - 1;
+                                return meses[indiceMes] + ' ' + partes[0]; 
+                            }
+                            return value; 
+                        }
+                    }
                 },
                 yaxis: {
                     labels: {
@@ -230,8 +296,60 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        // Arrancamos renderizando la gráfica diaria por defecto
         renderChart('diario');
+
+        // --- RENDER DE LA DONA ---
+        const totalGanancia = {{ kpis.ganancia_neta | tojson }};
+        const totalCostos = {{ kpis.costos_produccion | default(0) | tojson }}; 
+
+        if (totalGanancia > 0 || totalCostos > 0) {
+            var optionsDona = {
+                series: [totalGanancia, totalCostos],
+                labels: ['Ganancia Libre', 'Costo de Producción'],
+                chart: {
+                    type: 'donut',
+                    height: 280,
+                    fontFamily: "'Segoe UI', sans-serif",
+                },
+                colors: ['#10b981', '#f59e0b'],
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '75%',
+                            labels: {
+                                show: true,
+                                name: { fontSize: '0.8rem', color: '#6b7280', offsetY: -10 },
+                                value: {
+                                    fontSize: '1.3rem',
+                                    fontWeight: 800,
+                                    color: '#111827',
+                                    offsetY: 5,
+                                    formatter: function (val) { return "$" + val.toLocaleString() }
+                                },
+                                total: {
+                                    show: true,
+                                    showAlways: true,
+                                    label: 'Ingresos',
+                                    fontSize: '0.8rem',
+                                    color: '#6b7280',
+                                    formatter: function (w) {
+                                        return "$" + w.globals.seriesTotals.reduce((a, b) => a + b, 0).toLocaleString()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                dataLabels: { enabled: false }, 
+                legend: { position: 'bottom', markers: { radius: 12 } },
+                stroke: { width: 0 }
+            };
+
+            var chartDona = new ApexCharts(document.querySelector("#chartDona"), optionsDona);
+            chartDona.render();
+        } else {
+            document.querySelector("#chartDona").innerHTML = '<p class="text-center text-muted small py-5">Registra ventas para ver tu radiografía de ingresos.</p>';
+        }
     });
 </script>
 {% endblock %}

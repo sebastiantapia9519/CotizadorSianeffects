@@ -15,8 +15,8 @@ def mi_panel():
     conn = get_db()
     
     try:
-        # --- 1. CONFIGURACIÓN DE FILTROS (MÁQUINA DEL TIEMPO) ---
-        hoy_str = hoy_local() # Ej: '2026-04-12'
+        # --- 1. CONFIGURACIÓN DE FILTROS ---
+        hoy_str = hoy_local()
         anio_actual = hoy_str[:4]
         mes_actual = hoy_str[5:7]
         
@@ -35,20 +35,21 @@ def mi_panel():
         ]
         lista_anios = [str(y) for y in range(2025, int(anio_actual) + 2)]
 
-        current_app.logger.info(f"DASHBOARD_LOAD: Usuario {user_id} consultando métricas de {periodo_str}")
-
-        # --- 2. TARJETAS DE PODER (KPIs del periodo seleccionado) ---
-        kpis = conn.execute("""
+        # --- 2. TARJETAS DE PODER Y DATOS PARA LA DONA ---
+        kpis_row = conn.execute("""
             SELECT 
                 IFNULL(SUM(total), 0) as ingresos_brutos,
                 IFNULL(SUM(total - costo_total), 0) as ganancia_neta,
+                IFNULL(SUM(costo_total), 0) as costos_produccion,
                 IFNULL(SUM(saldo_pendiente), 0) as dinero_calle,
                 COUNT(id) as total_ventas
             FROM ventas 
             WHERE user_id = ? AND substr(fecha, 1, 7) = ? AND estado IN ('pagado', 'anticipo')
         """, (user_id, periodo_str)).fetchone()
+        
+        kpis = dict(kpis_row) if kpis_row else {'ingresos_brutos': 0, 'ganancia_neta': 0, 'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0}
 
-        # --- 3. GRÁFICA 1: DIARIA (Mes seleccionado) ---
+        # --- 3. GRÁFICA 1: DIARIA ---
         grafica_diaria_db = conn.execute("""
             SELECT substr(fecha, 1, 10) as dia, SUM(total) as ingresos, SUM(total - costo_total) as ganancia
             FROM ventas
@@ -62,8 +63,7 @@ def mi_panel():
             ing_diarios.append(round(fila['ingresos'], 2))
             gan_diarias.append(round(fila['ganancia'], 2))
 
-        # --- 4. GRÁFICA 2: HISTÓRICA (Últimos 6 meses) ---
-        # Calculamos la fecha de hace 5 meses para incluir el mes actual (6 meses totales)
+        # --- 4. GRÁFICA 2: HISTÓRICA ---
         hace_6_meses = (datetime.strptime(hoy_str, '%Y-%m-%d') - relativedelta(months=5)).strftime('%Y-%m')
         
         grafica_hist_db = conn.execute("""
@@ -75,11 +75,11 @@ def mi_panel():
 
         meses_hist, ing_hist, gan_hist = [], [], []
         for fila in grafica_hist_db:
-            meses_hist.append(fila['mes']) # Ej: '2026-04'
+            meses_hist.append(fila['mes'])
             ing_hist.append(round(fila['ingresos'], 2))
             gan_hist.append(round(fila['ganancia'], 2))
 
-        # --- 5. TOP 5 PRODUCTOS (Mes seleccionado) ---
+        # --- 5. TOP 5 PRODUCTOS ---
         top_productos = conn.execute("""
             SELECT vd.concepto, SUM(vd.cantidad) as cantidad_vendida, SUM(vd.subtotal) as total_generado
             FROM venta_detalles vd JOIN ventas v ON vd.venta_id = v.id
@@ -87,14 +87,31 @@ def mi_panel():
             GROUP BY vd.concepto ORDER BY cantidad_vendida DESC LIMIT 5
         """, (user_id, periodo_str)).fetchall()
 
+        # --- 6. ALERTAS DE STOCK BAJO (CON FIX DE TIPOS) ---
+        # Primero revisamos si el usuario tiene el módulo de inventario encendido
+        config_row = conn.execute("SELECT inventario_activo FROM configuracion WHERE user_id = ?", (user_id,)).fetchone()
+        inventario_activo = config_row['inventario_activo'] if config_row else 0
+
+        if inventario_activo:
+            # Obligamos a SQLite a comparar todo como números reales (CAST AS REAL)
+            stock_bajo = conn.execute("""
+                SELECT nombre, stock_actual, IFNULL(stock_minimo, 5) as stock_minimo, IFNULL(unidad_medida, 'pza') as unidad_medida
+                FROM materiales
+                WHERE user_id = ? AND CAST(stock_actual AS REAL) <= CAST(IFNULL(stock_minimo, 5) AS REAL)
+                ORDER BY CAST(stock_actual AS REAL) ASC
+                LIMIT 5
+            """, (user_id,)).fetchall()
+        else:
+            stock_bajo = []
+
     except Exception as e:
         current_app.logger.error(f"DASHBOARD_ERROR: Fallo al cargar panel para user {user_id} - {e}")
-        kpis = {'ingresos_brutos': 0, 'ganancia_neta': 0, 'dinero_calle': 0, 'total_ventas': 0}
-        fechas_diarias, ing_diarios, gan_diarias, meses_hist, ing_hist, gan_hist, top_productos = [], [], [], [], [], [], []
+        kpis = {'ingresos_brutos': 0, 'ganancia_neta': 0, 'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0}
+        fechas_diarias, ing_diarios, gan_diarias, meses_hist, ing_hist, gan_hist, top_productos, stock_bajo = [], [], [], [], [], [], [], []
+        inventario_activo = 0
     finally:
         conn.close()
 
-    # Empaquetamos todo para JS
     chart_data = {
         'diario': {'labels': fechas_diarias, 'ingresos': ing_diarios, 'ganancias': gan_diarias},
         'historico': {'labels': meses_hist, 'ingresos': ing_hist, 'ganancias': gan_hist}
@@ -105,6 +122,8 @@ def mi_panel():
         kpis=kpis, 
         chart_data=chart_data, 
         top_productos=[dict(p) for p in top_productos],
+        stock_bajo=[dict(s) for s in stock_bajo],
+        inventario_activo=inventario_activo,
         mes_sel=mes_sel, anio_sel=anio_sel,
         lista_meses=lista_meses, lista_anios=lista_anios
     )
