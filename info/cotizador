@@ -63,7 +63,7 @@ Diseñado para la vida real del emprendedor, cuenta con dos motores de venta:
 El usuario puede encender o apagar el control de inventario según la madurez de su negocio.
 - Impacto Global (Ventas): Al vender, el sistema desglosa todas las recetas del ticket, agrupa los materiales idénticos y hace una sola resta a la base de datos, optimizando el rendimiento de SQLite.
 - Reversiones (Cancelaciones): Si un usuario se equivoca y anula un ticket ("botón de basura"), el sistema reintegra el material exacto a las bodegas. No permite doble cancelación.
-- Alertas de Escasez: El sistema compara el `stock_actual` vs `stock_minimo` configurado por el usuario y dispara notificaciones visuales (`badge danger/warning`) en el Navbar cuando un insumo está por agotarse.
+- Alertas Inteligentes de Escasez: El sistema compara el `stock_actual` vs `stock_minimo` configurado por el usuario. Dispara notificaciones visuales (`badge danger/warning`) en el Navbar y genera una tabla de acción inmediata dentro del Dashboard Financiero cuando un insumo requiere resurtirse.
 
 --------------------------------------------------------------------------------
 7. LOGÍSTICA DE ENVÍOS INTELIGENTE
@@ -76,8 +76,11 @@ El usuario puede encender o apagar el control de inventario según la madurez de
   * Sistema de escalones (Ej. Hasta 1kg, Hasta 3kg, Hasta 15kg). Aplica tarifas zonificadas (Estado específico) o tarifas de la zona "General (ALL)".
 
 --------------------------------------------------------------------------------
-8. EXTRACCIÓN DE DATOS Y FINANZAS
+8. PANEL FINANCIERO (DASHBOARD) Y EXTRACCIÓN DE DATOS
 --------------------------------------------------------------------------------
-- Los usuarios pueden exportar su inteligencia de negocios haciendo clic en "Excel" desde el Historial.
-- El backend utiliza `Pandas` y `openpyxl` para generar un reporte que incluye: Folios, Clientes, Desglose de recetas (JSON decodificado a texto), Costos de producción exactos, Ganancia Unitaria, Impuestos y Estatus de Deuda.
-- Las fechas en BD (guardadas siempre en UTC) se transforman al vuelo a la hora local del usuario (`America/Monterrey` u otra) en la exportación para mantener coherencia contable.
+- Centro de Inteligencia de Negocio: Interfaz visual (Dashboard) construida sobre ApexCharts para análisis financiero en tiempo real.
+- KPIs de Alta Prioridad: Tarjetas de métricas que calculan dinámicamente Ingresos Brutos, Ganancia Neta (Libre de gastos), Dinero por Cobrar (Anticipos pendientes) y Total de Ventas Cerradas.
+- Análisis de Tendencias (Máquina del Tiempo): Gráficas de área y barras que contrastan ingresos vs ganancias. Cuenta con filtros por mes/año y permite alternar entre vista "Mensual Diaria" y vista "Macro Histórica" (Últimos 6 meses).
+- Radiografía de Ingresos: Gráfica de dona interactiva que ilustra el margen de rentabilidad global (Porcentaje de Ganancia vs Porcentaje de Costos de Producción).
+- Inteligencia Operativa: Tablas automatizadas que exponen el "Top 5 Productos Más Vendidos" por volumen y ganancias, guiando la estrategia de ventas del usuario.
+- Exportación Contable: Generación de reportes Excel (utilizando Pandas y openpyxl) accesibles directamente desde el Dashboard. Detallan folios, costos exactos, impuestos y estatus de deuda. Las fechas en BD (guardadas en UTC) se transforman al vuelo a la hora local del usuario para mantener coherencia contable y fiscal.
