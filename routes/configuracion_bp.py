@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 from db import get_db_connection as get_db
 from helpers import login_required
 from utils.datetime_utils import utc_to_local
+from utils.tutorial_utils import debe_mostrar_tutorial, obtener_version_tutorial # <-- NUEVO: Funciones del tutorial
 
 # Carga de variables de entorno
 load_dotenv()
@@ -135,12 +136,18 @@ def configuracion():
         config, user_display, shipping_config, zones = {}, {}, None, []
     finally:
         conn.close()
+
+    # 💡 NUEVO: LÓGICA DEL TUTORIAL
+    mostrar_tour = debe_mostrar_tutorial(uid, 'configuracion')
+    version_tour = obtener_version_tutorial('configuracion')
     
     return render_template('configuracion.html', 
                            config=config, 
                            usuario=user_display, 
                            shipping_config=shipping_config,
-                           zones=zones)
+                           zones=zones,
+                           mostrar_tour=mostrar_tour,  # <-- Se pasa a Jinja
+                           version_tour=version_tour)  # <-- Se pasa a Jinja
 
 # ==============================================================================
 # 2. SERVICIO: ACTUALIZAR PERFIL Y CONTACTO
@@ -217,6 +224,7 @@ def actualizar_negocio():
         
         inventario_activo = True if request.form.get('inventario_activo') else False
         ticket_bw = True if request.form.get('ticket_bw') else False
+        mostrar_ayuda = True if request.form.get('mostrar_ayuda') else False
 
         # --- LÓGICA DE EXCLUSIVIDAD (ÍCONO VS LOGO) ---
         tipo_identidad = request.form.get('tipo_identidad', 'emoji')
@@ -272,15 +280,15 @@ def actualizar_negocio():
             conn.execute('''
                 UPDATE configuracion
                 SET margen_ganancia=?, nombre_empresa=?, slogan=?, website=?, 
-                    inventario_activo=?, ticket_bw=?, icono_empresa=?, logo_empresa=? 
+                    inventario_activo=?, ticket_bw=?, icono_empresa=?, logo_empresa=?, mostrar_ayuda=?
                 WHERE user_id=?
-            ''', (margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, uid))
+            ''', (margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, uid))
         else:
             conn.execute('''
                 INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa, slogan, website, 
-                                           inventario_activo, ticket_bw, icono_empresa, logo_empresa)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (uid, margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final))
+                                           inventario_activo, ticket_bw, icono_empresa, logo_empresa, mostrar_ayuda)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (uid, margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda))
 
         conn.commit()
         flash('Datos del negocio guardados correctamente.', 'success')

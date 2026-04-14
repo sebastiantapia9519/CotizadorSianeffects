@@ -115,6 +115,11 @@
         color: #f5b041;
         margin-right: 12px;
     }
+
+    /* Tutorial Custom Styles */
+    .driver-popover { border-radius: 12px !important; }
+    .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
+    .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
 </style>
 
 <div class="row align-items-center mb-4">
@@ -124,14 +129,19 @@
         </h3>
         <p class="text-muted small m-0 mt-1">Gestiona el costo de desgaste o luz de tus equipos.</p>
     </div>
-    <div class="col-md-6 d-flex justify-content-center justify-content-md-end gap-2">
-        <button class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" onclick="abrirModalNuevo()">
+    <div class="col-md-6 d-flex justify-content-center justify-content-md-end gap-2 flex-wrap">
+        {% if config['mostrar_ayuda'] %}
+        <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm" onclick="repetirTutorialEquipos()">
+            <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
+        </button>
+        {% endif %}
+        <button class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" onclick="abrirModalNuevo()" id="tour-nuevo-equipo">
             <i class="fas fa-plus me-1"></i> Nuevo Equipo
         </button>
     </div>
 </div>
 
-<div class="mb-4">
+<div class="mb-4" id="tour-buscador-equipos">
     <div class="input-group shadow-sm" style="border-radius: 10px;">
         <span class="input-group-text bg-white border-end-0 border-light text-muted" style="border-radius: 10px 0 0 10px;">
             <i class="fas fa-search"></i>
@@ -141,7 +151,7 @@
     </div>
 </div>
 
-<div class="sian-panel mb-5">
+<div class="sian-panel mb-5" id="tour-tabla-equipos">
     <div class="table-responsive">
         <table class="sian-table" id="tablaEquipos">
             <thead>
@@ -237,6 +247,83 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
+    function repetirTutorialEquipos() {
+        if(typeof window.driver === 'undefined') {
+            console.error("Driver.js no está cargado.");
+            return;
+        }
+
+        const driverObj = window.driver.js.driver({
+            showProgress: true,
+            doneBtnText: '¡Entendido!',
+            nextBtnText: 'Siguiente &rarr;',
+            prevBtnText: '&larr; Atrás',
+            allowClose: true,
+            
+            // CONEXIÓN A BASE DE DATOS (Cuando el tour termina o se cierra)
+            onDestroyed: () => {
+                {% if mostrar_tour %}
+                fetch('/api/tutorial/completado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        modulo: 'equipos',
+                        version: {{ version_tour | default(1) }}
+                    })
+                }).catch(e => console.error("Error guardando tutorial:", e));
+                {% endif %}
+            },
+            
+            steps: [
+                {
+                    popover: {
+                        title: 'Maquinaria y Procesos ⚡',
+                        description: 'Las máquinas cuestan, se desgastan y consumen luz. Aquí registraremos esa "renta" para que nunca la pagues de tu bolsa.',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-nuevo-equipo',
+                    popover: {
+                        title: '1. Agrega tu primer equipo',
+                        description: 'Dale clic aquí. Solo necesitas ponerle nombre (ej. "Horno" o "Impresora") y cuánto vas a cobrar de desgaste por cada vez que lo uses (ej. $5.00).',
+                        side: "bottom", align: 'end'
+                    }
+                },
+                {
+                    element: '#tour-tabla-equipos',
+                    popover: {
+                        title: '2. Tu panel de control',
+                        description: 'Aquí se irán listando. Si sube la luz o el mantenimiento, usa el botón del lápiz para ajustar la tarifa.',
+                        side: "top", align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-buscador-equipos',
+                    popover: {
+                        title: '3. Encuentra rápido',
+                        description: 'Si tu taller crece, usa el buscador para filtrar tus máquinas al instante.',
+                        side: "bottom", align: 'start'
+                    }
+                }
+            ]
+        });
+        driverObj.drive();
+    }
+
+    // MAGIA DE JINJA: Solo arranca si Python dice que es su primera vez
+    {% if mostrar_tour %}
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof window.driver !== 'undefined') {
+            setTimeout(() => {
+                repetirTutorialEquipos();
+            }, 800); // 800ms de retraso para carga limpia
+        }
+    });
+    {% endif %}
+
+
     let modalEquipoObj;
 
     // --- BÚSQUEDA EN LA TABLA ---

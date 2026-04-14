@@ -194,14 +194,27 @@
         background: var(--sian-pink-light);
         border-color: var(--sian-pink);
     }
+
+    /* Tutorial Custom Styles */
+    .driver-popover { border-radius: 12px !important; }
+    .driver-popover-title { font-weight: bold !important; color: var(--sian-pink) !important; }
+    .driver-popover-next-btn { background-color: var(--sian-pink) !important; text-shadow: none !important; border: none !important;}
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="container mt-4 mb-5">
+<div class="d-flex justify-content-end mb-3">
+    {% if config['mostrar_ayuda'] %}
+    <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm" onclick="repetirTutorialConfiguracion()">
+        <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
+    </button>
+    {% endif %}
+</div>
+
+<div class="container mt-0 mb-5">
     <div class="row">
 
-        <div class="col-md-3 mb-4">
+        <div class="col-md-3 mb-4" id="tour-sidebar-config">
             <div class="saas-sidebar" id="list-tab" role="tablist">
                 <h6 class="px-3 mb-3 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase;">Ajustes</h6>
                 
@@ -230,10 +243,10 @@
 
                 <div class="tab-pane fade show active" id="list-negocio" role="tabpanel">
                     
-                    <div class="saas-card">
+                    <div class="saas-card" id="tour-card-identidad">
                         <div class="saas-card-header">
                             <h5>Identidad del Negocio</h5>
-                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" onclick="actualizarVistaPrevia()">
+                            <button type="button" id="tour-btn-preview" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold" onclick="actualizarVistaPrevia()">
                                 <i class="fas fa-eye me-1"></i> Preview Ticket
                             </button>
                         </div>
@@ -319,7 +332,7 @@
                             </div>
                     </div>
 
-                    <div class="saas-card">
+                    <div class="saas-card" id="tour-card-sistema">
                         <div class="saas-card-header">
                             <h5>Ajustes del Sistema</h5>
                         </div>
@@ -344,6 +357,18 @@
                                 </div>
                                 <div class="form-check form-switch m-0">
                                     <input class="form-check-input" type="checkbox" id="checkTicketBW" name="ticket_bw" {% if config['ticket_bw'] %}checked{% endif %} onchange="actualizarVistaPrevia()">
+                                </div>
+                            </div>
+
+                            <hr class="border-light my-4">
+
+                            <div class="d-flex justify-content-between align-items-center mb-4">
+                                <div>
+                                    <h6 class="fw-bold text-dark mb-1">Mostrar Guías de Ayuda</h6>
+                                    <p class="text-muted small m-0" style="max-width: 450px;">Muestra u oculta los botones de "¿Cómo funciona?" en todas las secciones.</p>
+                                </div>
+                                <div class="form-check form-switch m-0">
+                                    <input class="form-check-input" type="checkbox" name="mostrar_ayuda" {% if config['mostrar_ayuda'] %}checked{% endif %}>
                                 </div>
                             </div>
 
@@ -716,6 +741,91 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
+    function repetirTutorialConfiguracion() {
+        if(typeof window.driver === 'undefined') {
+            console.error("Driver.js no está cargado.");
+            return;
+        }
+
+        const driverObj = window.driver.js.driver({
+            showProgress: true,
+            doneBtnText: '¡Entendido!',
+            nextBtnText: 'Siguiente &rarr;',
+            prevBtnText: '&larr; Atrás',
+            allowClose: true,
+            
+            // CONEXIÓN A BASE DE DATOS
+            onDestroyed: () => {
+                {% if mostrar_tour %}
+                fetch('/api/tutorial/completado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        modulo: 'configuracion',
+                        version: {{ version_tour | default(1) }}
+                    })
+                }).catch(e => console.error("Error guardando tutorial:", e));
+                {% endif %}
+            },
+            
+            steps: [
+                {
+                    popover: {
+                        title: 'Centro de Control ⚙️',
+                        description: 'Aquí puedes personalizar SianEffects para que hable y luzca exactamente como tu negocio. Vamos a dar un paseo.',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-sidebar-config',
+                    popover: {
+                        title: '1. El Menú Lateral',
+                        description: 'Usa estas pestañas para navegar entre las opciones de tu Negocio, tu Perfil Personal, Seguridad y las tarifas de Envío.',
+                        side: "right", align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-card-identidad',
+                    popover: {
+                        title: '2. Tu Identidad',
+                        description: 'Elige un Emoji representativo o sube tu logotipo. Luego rellena los campos públicos: este será el nombre y link que aparecerá en los tickets de tus clientes.',
+                        side: "top", align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-btn-preview',
+                    popover: {
+                        title: '3. Preview Ticket',
+                        description: '¡No tienes que adivinar! Mientras escribes tu slogan o subes tu logo, pícale a este botón para ver exactamente cómo quedará tu recibo final.',
+                        side: "bottom", align: 'end'
+                    }
+                },
+                {
+                    element: '#tour-card-sistema',
+                    popover: {
+                        title: '4. Ajustes Clave',
+                        description: 'Aquí abajo debes definir tu "Margen de Ganancia Base" (cuánto quieres ganar sobre tus costos) y, si lo deseas, activar el Control Automático de Inventario.',
+                        side: "top", align: 'center'
+                    }
+                }
+            ]
+        });
+        driverObj.drive();
+    }
+
+    // MAGIA DE JINJA: Solo arranca si Python dice que es su primera vez
+    {% if mostrar_tour %}
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof window.driver !== 'undefined') {
+            setTimeout(() => {
+                repetirTutorialConfiguracion();
+            }, 800); 
+        }
+    });
+    {% endif %}
+
+
     // --- 1. PERSISTENCIA Y CARGA INICIAL ---
     document.addEventListener('DOMContentLoaded', function() {
         // Restaurar pestaña activa
@@ -832,6 +942,14 @@
             Swal.fire({ icon: 'warning', title: 'Link no válido', text: 'Copia el LINK LARGO de Google Maps.', borderRadius: '15px' });
             input.classList.add('is-invalid');
         }
+    }
+
+    async function pegarDelPortapapeles() {
+        try {
+            const text = await navigator.clipboard.readText();
+            document.getElementById('inputMapsLink').value = text;
+            extraerCoordenadasConfig(document.getElementById('inputMapsLink'));
+        } catch (err) { }
     }
 
     // --- 5. ELIMINACIONES SEGURAS (RUTEADAS A BLUEPRINT) ---

@@ -82,7 +82,7 @@
         background-color: #fff;
     }
 
-    /* ICONOS DE ACCIÓN MINIMALISTAS (Como en Inventario/Equipos) */
+    /* ICONOS DE ACCIÓN MINIMALISTAS */
     .action-icon {
         color: #868e96;
         background: transparent;
@@ -127,26 +127,37 @@
         font-weight: 600;
         font-size: 0.75rem;
     }
+
+    /* Tutorial Custom Styles */
+    .driver-popover { border-radius: 12px !important; }
+    .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
+    .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="row align-items-center mb-4">
-    <div class="col-md-6 mb-3 mb-md-0 text-center text-md-start">
+    <div class="col-md-5 mb-3 mb-md-0 text-center text-md-start">
         <h3 class="fw-bold m-0 text-dark" style="letter-spacing: -0.5px;">
             <i class="fas fa-book-open text-danger me-2 opacity-75" style="font-size: 1.2rem;"></i>Recetas Guardadas
         </h3>
         <p class="text-muted small m-0 mt-1">Tus combinaciones y productos pre-configurados.</p>
     </div>
-    <div class="col-md-6 d-flex justify-content-center justify-content-md-end gap-2">
-        <a href="{{ url_for('main.cotizador') }}" class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm">
+    
+    <div class="col-md-7 d-flex justify-content-center justify-content-md-end gap-2 flex-wrap">
+        {% if config['mostrar_ayuda'] %}
+        <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm" onclick="repetirTutorialRecetas()">
+            <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
+        </button>
+        {% endif %}
+        <a href="{{ url_for('main.cotizador') }}" class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" id="tour-nueva-receta">
             <i class="fas fa-plus me-1"></i> Nueva Receta
         </a>
     </div>
 </div>
 
 <div class="mb-4">
-    <div class="input-group shadow-sm" style="border-radius: 10px;">
+    <div class="input-group shadow-sm" style="border-radius: 10px;" id="tour-buscador-recetas">
         <span class="input-group-text bg-white border-end-0 border-light text-muted" style="border-radius: 10px 0 0 10px;">
             <i class="fas fa-search"></i>
         </span>
@@ -155,7 +166,7 @@
     </div>
 </div>
 
-<div class="sian-panel mb-5">
+<div class="sian-panel mb-5" id="tour-tabla-recetas">
     <div class="table-responsive">
         <table class="sian-table" id="tablaRecetas">
             <thead>
@@ -277,6 +288,83 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
+    function repetirTutorialRecetas() {
+        if(typeof window.driver === 'undefined') {
+            console.error("Driver.js no está cargado.");
+            return;
+        }
+
+        const driverObj = window.driver.js.driver({
+            showProgress: true,
+            doneBtnText: '¡Entendido!',
+            nextBtnText: 'Siguiente &rarr;',
+            prevBtnText: '&larr; Atrás',
+            allowClose: true,
+            
+            // CONEXIÓN A BASE DE DATOS (Cuando el tour termina o se cierra)
+            onDestroyed: () => {
+                {% if mostrar_tour %}
+                fetch('/api/tutorial/completado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        modulo: 'recetas',
+                        version: {{ version_tour | default(1) }}
+                    })
+                }).catch(e => console.error("Error guardando tutorial:", e));
+                {% endif %}
+            },
+            
+            steps: [
+                {
+                    popover: {
+                        title: 'Tus Recetas Guardadas 📖',
+                        description: 'Aquí se almacenan los productos que ya armaste. Así no tienes que volver a calcular los ingredientes desde cero cada vez que vendes.',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-nueva-receta',
+                    popover: {
+                        title: '1. ¿Cómo crear una?',
+                        description: 'Para crear una receta nueva, debes ir a la pestaña "Cotizador", armar tu producto con los insumos y darle al botón "Guardar esta receta".',
+                        side: "bottom", align: 'end'
+                    }
+                },
+                {
+                    element: '#tour-tabla-recetas',
+                    popover: {
+                        title: '2. Gestión Rápida',
+                        description: 'Puedes ver los ingredientes exactos dándole clic al ojo, cambiarles el nombre (Lápiz), o enviarlas directamente a cobrar usando el botón "Usar".',
+                        side: "top", align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-buscador-recetas',
+                    popover: {
+                        title: '3. Búsqueda Inteligente',
+                        description: 'Encuentra rápidamente ese diseño de taza especial o ese pastel de 3 pisos usando esta barra de búsqueda.',
+                        side: "bottom", align: 'start'
+                    }
+                }
+            ]
+        });
+        driverObj.drive();
+    }
+
+    // MAGIA DE JINJA: Solo arranca si Python dice que es su primera vez
+    {% if mostrar_tour %}
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof window.driver !== 'undefined') {
+            setTimeout(() => {
+                repetirTutorialRecetas();
+            }, 800); // 800ms de retraso para carga limpia
+        }
+    });
+    {% endif %}
+
+
     // --- ALERTAS DE ÉXITO (FEEDBACK VISUAL) ---
     document.addEventListener("DOMContentLoaded", function() {
         const urlParams = new URLSearchParams(window.location.search);

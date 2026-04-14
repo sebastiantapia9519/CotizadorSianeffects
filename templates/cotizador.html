@@ -119,6 +119,11 @@
         -webkit-appearance: none;
         margin: 0;
     }
+    
+    /* Tutorial Custom Styles */
+    .driver-popover { border-radius: 12px !important; }
+    .driver-popover-title { font-weight: bold !important; color: var(--sian-pink) !important; }
+    .driver-popover-next-btn { background-color: var(--sian-pink) !important; text-shadow: none !important; border: none !important;}
 </style>
 {% endblock %}
 
@@ -133,6 +138,15 @@
         data-unidad="{{ mat['unidad_medida']|default('pieza') }}">{{ mat['nombre'] }}</option>
     {% endfor %}
 </select>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div></div> 
+    {% if config['mostrar_ayuda'] %}
+    <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm" onclick="repetirTutorialCotizador()">
+        <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
+    </button>
+    {% endif %}
+</div>
 
 <div class="row g-4">
     <div class="col-lg-7">
@@ -165,7 +179,7 @@
                             </button>
                         </div>
 
-                        <div class="mt-2 d-flex flex-column flex-md-row gap-2 mb-4">
+                        <div id="tour-cargar-receta" class="mt-2 d-flex flex-column flex-md-row gap-2 mb-4 p-2 rounded" style="background: rgba(0,0,0,0.01);">
                             <select class="form-select form-select-sm" id="selectCargarProducto"
                                 onchange="cargarProductoDB()">
                                 <option value="">📂 Cargar Receta Guardada...</option>
@@ -179,15 +193,19 @@
                             </button>
                         </div>
 
-                        <div class="d-none d-md-flex row px-2 mb-2 text-muted small fw-bold text-uppercase">
-                            <div class="col-5">Material</div>
-                            <div class="col-2">$ Unit.</div>
-                            <div class="col-2">Cant.</div>
-                            <div class="col-2">Total</div>
-                            <div class="col-1"></div>
+                        <div id="tour-insumos" class="p-2 rounded">
+                            <div id="tour-insumos" class="p-2 rounded">
+                                <div class="d-none d-md-flex row px-2 mb-2 text-muted small fw-bold text-uppercase">
+                                    <div class="col-5">Material</div>
+                                    <div class="col-2">$ Unit.</div>
+                                    <div class="col-2">Cant.</div>
+                                    <div class="col-2">Total</div>
+                                    <div class="col-1"></div>
+                                </div>
+                                <div id="listaMateriales"></div>
+                            </div>
+                            <div id="listaMateriales"></div>
                         </div>
-
-                        <div id="listaMateriales"></div>
 
                         <div class="p-3 bg-light rounded-4 mt-3 border">
                             <label class="fw-bold small text-muted d-block mb-2">2. Maquinaria y Procesos</label>
@@ -219,7 +237,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-4 p-3 border rounded-4 bg-white shadow-sm">
+                        <div id="tour-resultados" class="mt-4 p-3 border rounded-4 bg-white shadow-sm">
                             <label class="small fw-bold text-muted mb-1">Nombre del Producto Final</label>
                             <input type="text" id="nombreProductoActual"
                                 class="form-control fw-bold mb-3 bg-light border-0" placeholder="Ej. Termo Mágico">
@@ -326,7 +344,7 @@
         </div>
     </div>
 
-    <div class="col-lg-5">
+    <div class="col-lg-5" id="tour-panel-cobro">
         <div class="card h-100 border-0 shadow">
             <div class="card-header bg-dark text-white rounded-top py-3">
                 <h5 class="m-0"><i class="fas fa-shopping-cart me-2"></i> Carrito de Venta</h5>
@@ -351,103 +369,103 @@
                 </div>
 
                 <div class="p-4 bg-light border-top">
-                    <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
-                        <label class="fw-bold small text-muted d-block mb-2">Descuento (%)</label>
-                        <div class="d-flex align-items-center gap-2">
-                            <input type="range" class="form-range flex-grow-1" min="0" max="100" step="5"
-                                id="sliderDescuento" value="0" oninput="actualizarDescuento(this.value)">
-                            <div class="input-group flex-shrink-0 shadow-sm rounded-pill overflow-hidden"
-                                style="width: 85px;">
-                                <input type="number" id="inputDescuento"
-                                    class="form-control text-center fw-bold border-0 bg-light no-arrow" value="0"
-                                    min="0" max="100" oninput="actualizarDescuento(this.value)">
-                                <span class="input-group-text border-0 bg-light px-1 text-muted small">%</span>
+                    <div id="tour-ajustes-finales">
+                        <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
+                            <label class="fw-bold small text-muted d-block mb-2">Descuento (%)</label>
+                            <div class="d-flex align-items-center gap-2">
+                                <input type="range" class="form-range flex-grow-1" min="0" max="100" step="5"
+                                    id="sliderDescuento" value="0" oninput="actualizarDescuento(this.value)">
+                                <div class="input-group flex-shrink-0 shadow-sm rounded-pill overflow-hidden"
+                                    style="width: 85px;">
+                                    <input type="number" id="inputDescuento"
+                                        class="form-control text-center fw-bold border-0 bg-light no-arrow" value="0"
+                                        min="0" max="100" oninput="actualizarDescuento(this.value)">
+                                    <span class="input-group-text border-0 bg-light px-1 text-muted small">%</span>
+                                </div>
                             </div>
                         </div>
-                    </div>
 
-                    <div class="d-flex align-items-center justify-content-between mb-2">
-                        <div class="form-check form-switch">
-                            <input class="form-check-input" type="checkbox" id="taxSwitch" onchange="calcularTotal()">
-                            <label class="form-check-label small fw-bold text-muted" for="taxSwitch">Más Impuestos
-                                (IVA)</label>
+                        <div class="d-flex align-items-center justify-content-between mb-2">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="taxSwitch" onchange="calcularTotal()">
+                                <label class="form-check-label small fw-bold text-muted" for="taxSwitch">Más Impuestos
+                                    (IVA)</label>
+                            </div>
+                            <div class="input-group input-group-sm w-25" id="taxInputContainer" style="display: none;">
+                                <input type="number" class="form-control text-end" id="taxPercent" value="16"
+                                    oninput="calcularTotal()">
+                                <span class="input-group-text">%</span>
+                            </div>
                         </div>
-                        <div class="input-group input-group-sm w-25" id="taxInputContainer" style="display: none;">
-                            <input type="number" class="form-control text-end" id="taxPercent" value="16"
-                                oninput="calcularTotal()">
-                            <span class="input-group-text">%</span>
-                        </div>
-                    </div>
 
-                    <div class="d-flex justify-content-between align-items-center mb-1">
-                        <span class="small text-muted">Subtotal:</span>
-                        <span id="labelSubtotal" class="fw-bold">$0.00</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center mb-1 text-success">
-                        <span class="small fw-bold">Descuento:</span>
-                        <span id="labelDescuento">-$0.00</span>
-                    </div>
-
-                    <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <label class="fw-bold small text-muted m-0"><i class="fas fa-truck-fast me-1"></i>
-                                Envío</label>
-                            <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold"
-                                onclick="abrirModalEnvios()">
-                                <span id="btnTextoEnvio">Cotizar</span>
-                            </button>
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <span class="small text-muted">Subtotal:</span>
+                            <span id="labelSubtotal" class="fw-bold">$0.00</span>
                         </div>
-                        <div id="resumenEnvio" class="mt-2 p-2 bg-light rounded border d-none">
+                        <div class="d-flex justify-content-between align-items-center mb-1 text-success">
+                            <span class="small fw-bold">Descuento:</span>
+                            <span id="labelDescuento">-$0.00</span>
+                        </div>
+
+                        <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
                             <div class="d-flex justify-content-between align-items-center">
-                                <small class="text-muted" id="descEnvio">Local (12km)</small>
-                                <span class="fw-bold text-dark" id="montoEnvioDisplay">$0.00</span>
+                                <label class="fw-bold small text-muted m-0"><i class="fas fa-truck-fast me-1"></i>
+                                    Envío</label>
+                                <button class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-bold"
+                                    onclick="abrirModalEnvios()">
+                                    <span id="btnTextoEnvio">Cotizar</span>
+                                </button>
                             </div>
-                            <small class="text-danger d-block text-end" style="font-size: 0.7rem; cursor:pointer"
-                                onclick="limpiarEnvio()">[Quitar]</small>
+                            <div id="resumenEnvio" class="mt-2 p-2 bg-light rounded border d-none">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <small class="text-muted" id="descEnvio">Local (12km)</small>
+                                    <span class="fw-bold text-dark" id="montoEnvioDisplay">$0.00</span>
+                                </div>
+                                <small class="text-danger d-block text-end" style="font-size: 0.7rem; cursor:pointer"
+                                    onclick="limpiarEnvio()">[Quitar]</small>
+                            </div>
                         </div>
-                    </div>
 
-                    <div class="d-flex justify-content-between mb-1 text-muted" id="taxRow" style="display: none;">
-                        <span class="small">Impuestos:</span>
-                        <span class="fw-bold" id="taxAmountDisplay">+$0.00</span>
-                    </div>
-
-                    <div
-                        class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top position-relative">
-                        <span class="h5 fw-bold text-dark mb-0">Total:</span>
-
-                        <div id="boxTotalInteractuable" class="text-end" style="cursor: pointer;"
-                            onclick="activarAjusteTotal()" title="Haz clic para cuadrar el ticket">
-                            <span id="totalTicket" class="total-ticket text-primary">$0.00</span>
-                            <input type="number" id="inputTotalMagico"
-                                class="form-control form-control-lg text-end total-ticket d-none text-success"
-                                style="width: 160px; font-weight: 900; background-color: #f0fdf4;"
-                                onblur="aplicarMagiaTotal()" onkeyup="if(event.key === 'Enter') this.blur()">
-                            <small class="d-block text-muted" id="hintTotal" style="font-size: 0.65rem;"><i
-                                    class="fas fa-magic me-1"></i>Clic para redondear/ajustar</small>
+                        <div class="d-flex justify-content-between mb-1 text-muted" id="taxRow" style="display: none;">
+                            <span class="small">Impuestos:</span>
+                            <span class="fw-bold" id="taxAmountDisplay">+$0.00</span>
                         </div>
-                    </div>
 
-                    <div class="mb-3">
-                        <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
-                            placeholder="Nombre del Cliente">
-                    </div>
+                        <div id="tour-total-magico" class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top position-relative bg-white p-2 rounded">
+                            <span class="h5 fw-bold text-dark mb-0">Total:</span>
 
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <button class="btn btn-outline-dark w-100 py-3 fw-bold rounded-3"
-                                onclick="finalizarCompra('cotizacion')">
-                                <i class="fas fa-file-invoice me-1"></i> Solo Cotizar
-                            </button>
+                            <div id="boxTotalInteractuable" class="text-end" style="cursor: pointer;"
+                                onclick="activarAjusteTotal()" title="Haz clic para cuadrar el ticket">
+                                <span id="totalTicket" class="total-ticket text-primary">$0.00</span>
+                                <input type="number" id="inputTotalMagico"
+                                    class="form-control form-control-lg text-end total-ticket d-none text-success"
+                                    style="width: 160px; font-weight: 900; background-color: #f0fdf4;"
+                                    onblur="aplicarMagiaTotal()" onkeyup="if(event.key === 'Enter') this.blur()">
+                                <small class="d-block text-muted" id="hintTotal" style="font-size: 0.65rem;"><i
+                                        class="fas fa-magic me-1"></i>Clic para ajustar o redondear</small>
+                            </div>
                         </div>
-                        <div class="col-6">
-                            <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow" data-bs-toggle="modal"
-                                data-bs-target="#modalCobro">
-                                <i class="fas fa-dollar-sign me-1"></i> Cobrar
-                            </button>
+                    </div> <div id="tour-botones-finales">
+                        <div class="mb-3">
+                            <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
+                                placeholder="Nombre del Cliente">
                         </div>
-                    </div>
-                </div>
+
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <button class="btn btn-outline-dark w-100 py-3 fw-bold rounded-3"
+                                    onclick="finalizarCompra('cotizacion')">
+                                    <i class="fas fa-file-invoice me-1"></i> Solo Cotizar
+                                </button>
+                            </div>
+                            <div class="col-6">
+                                <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow" data-bs-toggle="modal"
+                                    data-bs-target="#modalCobro">
+                                    <i class="fas fa-dollar-sign me-1"></i> Cobrar
+                                </button>
+                            </div>
+                        </div>
+                    </div> </div>
             </div>
         </div>
     </div>
@@ -569,6 +587,181 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
+    function repetirTutorialCotizador() {
+        if(typeof window.driver === 'undefined') {
+            console.error("Driver.js no está cargado.");
+            return;
+        }
+
+        const driverObj = window.driver.js.driver({
+            showProgress: true,
+            doneBtnText: '¡A vender!',
+            nextBtnText: 'Siguiente &rarr;',
+            prevBtnText: '&larr; Atrás',
+            allowClose: true,
+            steps: [
+                {
+                    popover: {
+                        title: 'Bienvenido al Cotizador 💸',
+                        description: 'Aquí armarás tus precios asegurando que NUNCA pierdas dinero. ¡Demos un paseo rápido!',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-cargar-receta',
+                    popover: {
+                        title: '1. Carga una Receta (Ahorra tiempo)',
+                        description: 'Si guardaste un producto antes, selecciónalo aquí. Los insumos se agregarán solos.',
+                        side: "bottom", align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-insumos',
+                    popover: {
+                        title: '2. Tus Materiales',
+                        description: 'Elige de la lista, pon cuántos usaste y el sistema calculará el costo exacto.',
+                        side: "top", align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-resultados',
+                    popover: {
+                        title: '3. El Precio Sugerido',
+                        description: 'Sumamos tus materiales, máquinas y Margen de Ganancia para darte un Precio Sugerido. Haz clic en "AGREGAR AL CARRITO" cuando estés listo.',
+                        side: "top", align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-panel-cobro',
+                    popover: {
+                        title: '4. El Carrito',
+                        description: 'Aquí verás el total de tu cliente. Puedes agregar descuentos, envíos o ajustar el total mágico haciendo clic en el número verde.',
+                        side: "left", align: 'start'
+                    }
+                }
+            ]
+        });
+        driverObj.drive();
+    }
+
+    // Arrancar tutorial automáticamente si es la primera vez
+    document.addEventListener('DOMContentLoaded', function() {
+        const yaVioTutorial = localStorage.getItem('sian_tutorial_cotizador_v1');
+        if (!yaVioTutorial && typeof window.driver !== 'undefined') {
+            setTimeout(() => {
+                repetirTutorialCotizador();
+                localStorage.setItem('sian_tutorial_cotizador_v1', 'true');
+            }, 800); // Pequeño retraso para que la app cargue bonito
+        }
+    });
+
+
+ // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
+    function repetirTutorialCotizador() {
+        if(typeof window.driver === 'undefined') {
+            console.error("Driver.js no está cargado.");
+            return;
+        }
+
+        const driverObj = window.driver.js.driver({
+            showProgress: true,
+            doneBtnText: '¡A vender!',
+            nextBtnText: 'Siguiente &rarr;',
+            prevBtnText: '&larr; Atrás',
+            allowClose: true,
+            
+            // 🔥 AQUÍ CONECTAMOS CON LA BASE DE DATOS CUANDO EL TOUR TERMINA O SE CIERRA
+            onDestroyed: () => {
+                {% if mostrar_tour %}
+                // Solo le avisamos a Python si fue un tour automático (no si le picó al botón de ayuda)
+                fetch('/api/tutorial/completado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        modulo: 'cotizador',
+                        version: {{ version_tour | default(1) }}
+                    })
+                }).catch(e => console.error("Error guardando tutorial:", e));
+                {% endif %}
+            },
+
+            steps: [
+                {
+                    popover: {
+                        title: 'Bienvenido al Cotizador 💸',
+                        description: 'Aquí armarás tus precios asegurando que NUNCA pierdas dinero. ¡Demos un paseo rápido de 5 pasos!',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-cargar-receta',
+                    popover: {
+                        title: '1. Carga una Receta (Ahorra tiempo)',
+                        description: 'Si guardaste un producto antes (como "Playera Negra" o "Pastel Vainilla"), selecciónalo aquí. Los insumos se agregarán solos.',
+                        side: "bottom", align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-insumos',
+                    popover: {
+                        title: '2. Tus Materiales',
+                        description: 'Aquí verás todo lo que lleva tu producto. Elige de la lista, pon cuántos usaste y SianEffects calculará el costo exacto por porción.',
+                        side: "top", align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-resultados',
+                    popover: {
+                        title: '3. El Precio Sugerido',
+                        description: 'El sistema sumará tus materiales, desgaste de máquinas y tu Margen de Ganancia para darte un Precio de Venta recomendado. Haz clic en "AGREGAR AL CARRITO" cuando estés listo.',
+                        side: "left", align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-total-magico',
+                    popover: {
+                        title: '4. El Total Mágico ✨',
+                        description: '¿El total quedó en $1,432 y quieres redondearlo a $1,500? Solo haz clic sobre el precio azul. El sistema ajustará todos los insumos matemáticamente para que el cuadro cuadre.',
+                        side: "top", align: 'end'
+                    }
+                },
+                {
+                    element: '#tour-botones-finales',
+                    popover: {
+                        title: '5. Cerrando el Trato',
+                        description: 'Ponle nombre a tu cliente. Usa "Solo Cotizar" si apenas le vas a pasar el precio, o "Cobrar" si te está pagando en este momento o dejando anticipo.',
+                        side: "left", align: 'start'
+                    }
+                }
+            ]
+        });
+        driverObj.drive();
+    }
+
+    // Solo arranca si Python dice que es su primera vez
+    {% if mostrar_tour %}
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof window.driver !== 'undefined') {
+            setTimeout(() => {
+                repetirTutorialCotizador();
+            }, 800); // 800ms de retraso para que cargue la interfaz bonita antes del tour
+        }
+    });
+    {% endif %}
+
+    // Arrancar tutorial automáticamente si es la primera vez
+    document.addEventListener('DOMContentLoaded', function() {
+        const yaVioTutorial = localStorage.getItem('sian_tutorial_cotizador_v1');
+        if (!yaVioTutorial && typeof window.driver !== 'undefined') {
+            setTimeout(() => {
+                repetirTutorialCotizador();
+                localStorage.setItem('sian_tutorial_cotizador_v1', 'true');
+            }, 800); // Pequeño retraso para que la app cargue bonito
+        }
+    });
+
+    // --- AQUÍ EMPIEZA TU LÓGICA EXISTENTE ---
     let precioVentaCalculado = 0;
     let costoProduccionCalculado = 0;
     let carrito = [];
@@ -715,8 +908,6 @@
     }
 
     function calcularTotal() {
-        // Si estamos en la pestaña express, no recalculamos receta
-        // (Aunque no estorba)
         let totalCostosMat = 0;
         document.querySelectorAll('.item-row').forEach(row => {
             const sub = parseFloat(row.querySelector('.subtotal').innerText.replace('$', '')) || 0;
@@ -1126,7 +1317,6 @@
                     setTimeout(() => window.location.reload(), 800);
                 } else {
                     if (ventanaTicket) ventanaTicket.close();
-                    // REEMPLAZO 1: Alert nativo por SweetAlert
                     Swal.fire({
                         icon: 'error',
                         title: 'No se pudo guardar',
@@ -1138,7 +1328,6 @@
             .catch(err => {
                 if (ventanaTicket) ventanaTicket.close();
                 console.error(err);
-                // REEMPLAZO 2: Alert nativo por SweetAlert
                 Swal.fire({
                     icon: 'error',
                     title: 'Error de conexión',
@@ -1147,7 +1336,6 @@
                 });
             });
     }
-
 
     function mostrarGuardar() {
         event.preventDefault();
@@ -1287,7 +1475,7 @@
     }
 
     // --- FUNCION PARA CARGAR UNA VENTA ANTERIOR AL CARRITO ---
-function cargarCotizacion(id) {
+    function cargarCotizacion(id) {
         console.log("Iniciando carga de cotización ID:", id); // Esto nos dirá que sí despertó
         fetch('/api/get_cotizacion/' + id)
             .then(r => r.json())
@@ -1336,14 +1524,14 @@ function cargarCotizacion(id) {
                 console.log("Cotización cargada exitosamente");
             })
             .catch(e => {
-            console.error("Error de conexión:", e);
-            Swal.fire({
-                icon: 'error',
-                title: 'Error de conexión',
-                text: 'Hubo un problema de conexión al intentar cargar los datos.',
-                confirmButtonColor: '#ff4757'
+                console.error("Error de conexión:", e);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error de conexión',
+                    text: 'Hubo un problema de conexión al intentar cargar los datos.',
+                    confirmButtonColor: '#ff4757'
+                });
             });
-        });
     }
 
     function solicitarCotizacion(tipo) {
@@ -1354,15 +1542,15 @@ function cargarCotizacion(id) {
         if (tipo === 'local') {
             const lat = document.getElementById('latDestino').value;
             const lng = document.getElementById('lngDestino').value;
-            if (!lat || !lng) { 
-                loader.classList.add('d-none'); 
+            if (!lat || !lng) {
+                loader.classList.add('d-none');
                 Swal.fire({
                     icon: 'warning',
                     title: 'Falta ubicación',
                     text: 'Por favor ingresa o resuelve el link de Google Maps antes de cotizar.',
                     confirmButtonColor: '#ff4757'
                 });
-                return; 
+                return;
             }
             payload.lat = lat; payload.lng = lng;
         } else {
@@ -1379,7 +1567,7 @@ function cargarCotizacion(id) {
             body: JSON.stringify(payload)
         }).then(r => r.json()).then(data => {
             loader.classList.add('d-none');
-            
+
             if (data.error) {
                 Swal.fire({
                     icon: 'error',
@@ -1405,7 +1593,7 @@ function cargarCotizacion(id) {
             document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
             document.getElementById('btnTextoEnvio').innerText = "Cambiar";
             calcularTotal();
-            
+
         }).catch(e => {
             loader.classList.add('d-none');
             Swal.fire({
@@ -1527,7 +1715,6 @@ function cargarCotizacion(id) {
             console.error("Error cargando recarga:", e);
         }
     });
-
 
 </script>
 {% endblock %}

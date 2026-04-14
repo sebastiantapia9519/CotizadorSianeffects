@@ -10,6 +10,7 @@
         --text-dark: #1e293b;
         --bg-light-gray: #f8fafc;
         --border-color: #e2e8f0;
+        --sian-primary: #ff4a5a;
     }
 
     body { background-color: #f1f5f9; }
@@ -190,6 +191,11 @@
         .search-input { padding-right: 20px; }
         .card-custom { border-radius: 12px; }
     }
+
+    /* Tutorial Custom Styles */
+    .driver-popover { border-radius: 12px !important; }
+    .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
+    .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
 </style>
 {% endblock %}
 
@@ -199,15 +205,22 @@
         <h3 class="fw-bold m-0 text-dark" style="letter-spacing: -0.5px;">Bitácora de Ventas</h3>
         <span class="text-muted text-xs">Consulta pedidos, pagos y cotizaciones pasadas.</span>
     </div>
-    <div>
-        <a href="{{ url_for('user_dash.mi_panel') }}" class="btn btn-outline-custom rounded-pill px-4 shadow-sm d-flex align-items-center justify-content-center gap-2">
-            <i class="fas fa-chart-pie text-primary"></i>
+    
+    <div class="d-flex gap-2 flex-wrap justify-content-center">
+        {% if config['mostrar_ayuda'] %}
+        <button class="btn btn-outline-custom rounded-pill px-3 shadow-sm d-flex align-items-center justify-content-center gap-2" onclick="repetirTutorialHistorial()">
+            <i class="fas fa-question-circle text-primary"></i>
+            <span class="d-none d-sm-inline">¿Cómo funciona?</span>
+        </button>
+        {% endif %}
+        <a href="{{ url_for('user_dash.mi_panel') }}" class="btn btn-primary rounded-pill px-4 shadow-sm d-flex align-items-center justify-content-center gap-2" id="tour-btn-dashboard">
+            <i class="fas fa-chart-pie"></i>
             <span>Dashboard</span>
         </a>
     </div>
 </div>
 
-<div class="mb-4">
+<div class="mb-4" id="tour-buscador-historial">
     <form action="{{ url_for('main.historial') }}" method="GET" class="search-container">
         <i class="fas fa-search search-icon"></i>
         <input type="text" name="q" class="form-control search-input" placeholder="Buscar por Folio (ej. 1) o Nombre del Cliente..." value="{{ q }}">
@@ -216,7 +229,7 @@
     <button type="submit" class="btn btn-primary w-100 d-md-none mt-2 rounded-3 fw-bold shadow-sm" onclick="this.previousElementSibling.submit()">Buscar</button>
 </div>
 
-<div class="card card-custom">
+<div class="card card-custom" id="tour-tabla-historial">
     <div class="table-responsive">
         <table class="table align-middle">
             <thead>
@@ -280,7 +293,7 @@
                         {% endif %}
                     </td>
 
-                    <td class="text-end pe-4">
+                    <td class="text-end pe-4" {% if loop.index == 1 %}id="tour-acciones"{% endif %}>
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm rounded-circle border border-light" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px; background: transparent;">
                                 <i class="fas fa-ellipsis-v text-muted"></i>
@@ -433,6 +446,90 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+    // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
+    function repetirTutorialHistorial() {
+        if(typeof window.driver === 'undefined') {
+            console.error("Driver.js no está cargado.");
+            return;
+        }
+
+        const driverObj = window.driver.js.driver({
+            showProgress: true,
+            doneBtnText: '¡Entendido!',
+            nextBtnText: 'Siguiente &rarr;',
+            prevBtnText: '&larr; Atrás',
+            allowClose: true,
+            
+            // CONEXIÓN A BASE DE DATOS
+            onDestroyed: () => {
+                {% if mostrar_tour %}
+                fetch('/api/tutorial/completado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        modulo: 'historial',
+                        version: {{ version_tour | default(1) }}
+                    })
+                }).catch(e => console.error("Error guardando tutorial:", e));
+                {% endif %}
+            },
+            
+            steps: [
+                {
+                    popover: {
+                        title: 'Tu Bitácora de Ventas 📖',
+                        description: 'Aquí queda registrado absolutamente todo: ventas cobradas, clientes que deben dinero y presupuestos enviados.',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-buscador-historial',
+                    popover: {
+                        title: '1. Encuentra Rápido',
+                        description: 'Busca por nombre de cliente o directamente por número de folio para encontrar ventas pasadas en segundos.',
+                        side: "bottom", align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-tabla-historial',
+                    popover: {
+                        title: '2. Estados Claros',
+                        description: 'Revisa de un vistazo qué está PAGADO (dinero en tu bolsa), qué es ANTICIPO (falta liquidar) y qué es solo COTIZACIÓN.',
+                        side: "top", align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-acciones',
+                    popover: {
+                        title: '3. El menú mágico',
+                        description: 'Haz clic en los 3 puntitos para: ver qué materiales usaste en esa venta, cobrar lo que te deben, imprimir el ticket en PDF o anular la venta si hubo un error.',
+                        side: "left", align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-btn-dashboard',
+                    popover: {
+                        title: '4. Panel de Finanzas',
+                        description: 'Cuando quieras ver resúmenes mensuales, gráficas de ganancias y exportar tu información a Excel, haz clic aquí.',
+                        side: "bottom", align: 'end'
+                    }
+                }
+            ]
+        });
+        driverObj.drive();
+    }
+
+    // MAGIA DE JINJA: Solo arranca si Python dice que es su primera vez
+    {% if mostrar_tour %}
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof window.driver !== 'undefined') {
+            setTimeout(() => {
+                repetirTutorialHistorial();
+            }, 800); 
+        }
+    });
+    {% endif %}
+
     // --- 1. VER DETALLES ---
     function verDetalles(id) {
         const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
@@ -448,7 +545,7 @@
                     document.getElementById('modalFolio').innerText = data.folio;
                     document.getElementById('modalCliente').innerText = data.cliente;
                     
-                    // Estado Badge Styling (Matches CSS classes)
+                    // Estado Badge Styling
                     const estadoDiv = document.getElementById('modalEstadoDiv');
                     let badgeClass = '', icon = '', label = data.estado.toUpperCase();
                     if (data.estado === 'pagado') { badgeClass = 'status-pagado'; icon = 'check-circle'; }
@@ -484,7 +581,6 @@
                             } catch (e) { }
                         }
 
-                        // Table Row Design Update
                         tbody.innerHTML += `
                             <tr class="border-bottom">
                                 <td class="ps-4 py-3" style="min-width: 220px;">
@@ -500,14 +596,10 @@
                     });
 
                     const totalVenta = parseFloat(data.total || 0);
-                    const impuestos = parseFloat(data.impuestos || 0);
-                    const descuento = parseFloat(data.descuento_monto || 0);
                     const pagado = parseFloat(data.monto_pagado || 0);
                     const pendiente = parseFloat(data.saldo_pendiente || 0);
-                    const costoEnvioHistorial = parseFloat(data.envio || 0); 
-                    const gananciaReal = sumaGanancias - descuento;
+                    const gananciaReal = sumaGanancias - parseFloat(data.descuento_monto || 0);
 
-                    // Modern Financial Panel Layout
                     document.getElementById('panelFinanciero').innerHTML = `
                         <div class="col-6 col-sm-3 p-3 border-end border-bottom border-sm-bottom-0">
                             <span class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Monto Total</span>

@@ -124,29 +124,40 @@
         padding: 6px 10px;
         border-radius: 8px;
     }
+
+    /* Tutorial Custom Styles */
+    .driver-popover { border-radius: 12px !important; }
+    .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
+    .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
 </style>
 
 <div class="row align-items-center mb-4">
-    <div class="col-md-6 mb-3 mb-md-0 text-center text-md-start">
+    <div class="col-md-5 mb-3 mb-md-0 text-center text-md-start">
         <h3 class="fw-bold m-0 text-dark" style="letter-spacing: -0.5px;">
             <i class="fas fa-boxes me-2 text-muted" style="font-size: 1.2rem;"></i>Mis Materiales
         </h3>
         <p class="text-muted small m-0 mt-1">Gestiona tus insumos y existencias.</p>
     </div>
-    <div class="col-md-6 d-flex justify-content-center justify-content-md-end gap-2">
+    
+    <div class="col-md-7 d-flex justify-content-center justify-content-md-end gap-2 flex-wrap">
+        {% if config['mostrar_ayuda'] %}
+        <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm" onclick="repetirTutorialMateriales()">
+            <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
+        </button>
+        {% endif %}
         <button class="btn btn-white rounded-3 px-3 border shadow-sm fw-bold text-secondary" style="background: #fff;"
-            type="button" data-bs-toggle="modal" data-bs-target="#modalHistorial" onclick="abrirHistorial()">
+            type="button" data-bs-toggle="modal" data-bs-target="#modalHistorial" onclick="abrirHistorial()" id="tour-historial">
             <i class="fas fa-history me-1 text-muted"></i> Historial
         </button>
         <button class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" data-bs-toggle="modal"
-            data-bs-target="#modalMaterial" onclick="limpiarModal()">
+            data-bs-target="#modalMaterial" onclick="limpiarModal()" id="tour-nuevo-material">
             <i class="fas fa-plus me-1"></i> Nuevo Material
         </button>
     </div>
 </div>
 
 <div class="mb-4">
-    <div class="input-group shadow-sm" style="border-radius: 10px;">
+    <div class="input-group shadow-sm" style="border-radius: 10px;" id="tour-buscador">
         <span class="input-group-text bg-white border-end-0 border-light text-muted"
             style="border-radius: 10px 0 0 10px;">
             <i class="fas fa-search"></i>
@@ -426,6 +437,91 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
+    function repetirTutorialMateriales() {
+        if(typeof window.driver === 'undefined') {
+            console.error("Driver.js no está cargado.");
+            return;
+        }
+
+        const driverObj = window.driver.js.driver({
+            showProgress: true,
+            doneBtnText: '¡Entendido!',
+            nextBtnText: 'Siguiente &rarr;',
+            prevBtnText: '&larr; Atrás',
+            allowClose: true,
+            
+            // CONEXIÓN A BASE DE DATOS (Cuando el tour termina o se cierra)
+            onDestroyed: () => {
+                {% if mostrar_tour %}
+                fetch('/api/tutorial/completado', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        modulo: 'materiales',
+                        version: {{ version_tour | default(1) }}
+                    })
+                }).catch(e => console.error("Error guardando tutorial:", e));
+                {% endif %}
+            },
+            
+            steps: [
+                {
+                    popover: {
+                        title: 'Tus Materiales 📦',
+                        description: 'Esta es tu bodega digital. Aquí registrarás todo lo que compras para fabricar tus productos o realizar tus servicios.',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-nuevo-material',
+                    popover: {
+                        title: '1. Agregar Insumos',
+                        description: 'Haz clic aquí para registrar un material. Pon cuánto te costó el paquete completo y el sistema calculará tu costo unitario matemáticamente.',
+                        side: "bottom", align: 'end'
+                    }
+                },
+                {
+                    element: '#contenedorMateriales', // Apuntamos a la grilla general
+                    popover: {
+                        title: '2. Control Rápido',
+                        description: 'Tus materiales aparecerán aquí. Usa los botones verdes (+) para sumar compras nuevas a tu stock, o los rojos (-) para descontar mermas o errores.',
+                        side: "top", align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-historial',
+                    popover: {
+                        title: '3. Auditoría de Inventario',
+                        description: '¿No te cuadran las cuentas? Haz clic aquí para ver un registro exacto (con fecha y hora) de cada gramo o pieza que entró y salió de tu negocio.',
+                        side: "bottom", align: 'end'
+                    }
+                },
+                {
+                    element: '#tour-buscador',
+                    popover: {
+                        title: '4. Búsqueda Veloz',
+                        description: 'Cuando tu negocio crezca y tengas cientos de materiales, usa esta barra para encontrarlos al instante.',
+                        side: "bottom", align: 'start'
+                    }
+                }
+            ]
+        });
+        driverObj.drive();
+    }
+
+    // MAGIA DE JINJA: Solo arranca si Python dice que es su primera vez
+    {% if mostrar_tour %}
+    document.addEventListener('DOMContentLoaded', function() {
+        if (typeof window.driver !== 'undefined') {
+            setTimeout(() => {
+                repetirTutorialMateriales();
+            }, 800); // 800ms de retraso para carga limpia
+        }
+    });
+    {% endif %}
+
+
     // --- BÚSQUEDA ---
     function filtrarMateriales() {
         const input = document.getElementById('buscadorMateriales');

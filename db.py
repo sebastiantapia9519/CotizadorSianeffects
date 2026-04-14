@@ -48,6 +48,17 @@ def init_db():
     )
     """)
 
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS tutoriales_estado (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        modulo TEXT NOT NULL,
+        version_vista INTEGER DEFAULT 0,
+        UNIQUE(user_id, modulo),
+        FOREIGN KEY (user_id) REFERENCES usuarios(id)
+    )
+    """)
+
     # =========================
     # 2. CONFIGURACIÓN
     # =========================
@@ -62,6 +73,7 @@ def init_db():
         inventario_activo BOOLEAN DEFAULT 0,
         icono_empresa TEXT DEFAULT '🎨',
         logo_empresa TEXT DEFAULT '',
+        mostrar_ayuda BOOLEAN DEFAULT 1,
         ticket_bw BOOLEAN DEFAULT 0
     )
     """)

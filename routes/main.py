@@ -9,6 +9,7 @@ from utils.datetime_utils import now_utc, utc_to_local, ahora_sql
 from db import get_db_connection as get_db
 from dateutil import parser
 from helpers import login_required, subscription_required, obtener_alertas
+from utils.tutorial_utils import debe_mostrar_tutorial, obtener_version_tutorial
 
 main_bp = Blueprint('main', __name__)
 
@@ -84,32 +85,44 @@ def cotizador():
     conn = get_db()
     uid = session['user_id']
     try:
-        # --- VERIFICACIÓN DE TUTORIAL ---
-        user = conn.execute('SELECT tutorial_visto FROM usuarios WHERE id=?', (uid,)).fetchone()
-        
-        # Si no ha visto el tutorial (es 0 o Null)
-        if not user or not user['tutorial_visto']:
-            # 1. Lo marcamos como visto para que no lo moleste la próxima vez
-            conn.execute('UPDATE usuarios SET tutorial_visto=1 WHERE id=?', (uid,))
-            conn.commit()
-            
-            # 2. Le avisamos y lo redirigimos
-            flash('👋 ¡Bienvenido! Te hemos traído al Manual para que conozcas tu nuevo sistema.', 'info')
-            conn.close() # Importante cerrar antes del return
-            return redirect(url_for('main.ayuda'))
-        # ---------------------------------------
-
-        # Si ya lo vio, carga el cotizador normal
+        # ¿Mostramos el tour?
+        mostrar_tour = debe_mostrar_tutorial(uid, 'cotizador')
+        version_tour = obtener_version_tutorial('cotizador')
 
         data = {
             'config': conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone(),
             'materiales': conn.execute('SELECT * FROM materiales WHERE user_id=?', (uid,)).fetchall(),
             'productos': conn.execute('SELECT * FROM productos WHERE user_id=?', (uid,)).fetchall(),
-            'equipos': conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (uid,)).fetchall()
+            'equipos': conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (uid,)).fetchall(),
+            'mostrar_tour': mostrar_tour,
+            'version_tour': version_tour
         }
     finally:
         conn.close()
     return render_template('cotizador.html', **data)
+
+#TUTORIALES
+@main_bp.route('/api/tutorial/completado', methods=['POST'])
+@login_required
+def tutorial_completado():
+    data = request.json
+    uid = session['user_id']
+    modulo = data.get('modulo')
+    version = data.get('version')
+
+    conn = get_db()
+    try:
+        # Usamos INSERT OR REPLACE para actualizar si ya existe o crear si es nuevo
+        conn.execute("""
+            INSERT OR REPLACE INTO tutoriales_estado (user_id, modulo, version_vista)
+            VALUES (?, ?, ?)
+        """, (uid, modulo, version))
+        conn.commit()
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    finally:
+        conn.close()
 
 # --- API PARA CARGAR RECETA EN EL COTIZADOR ---
 @main_bp.route('/api/receta/<int:id>')
@@ -412,6 +425,9 @@ def actualizar_venta():
 def historial():
     conn = get_db()
     uid = session['user_id']
+
+    mostrar_tour = debe_mostrar_tutorial(session['user_id'], 'historial')
+    version_tour = obtener_version_tutorial('historial')
     
     # 1. Variables de Paginación y Búsqueda
     q = request.args.get('q', '').strip()
@@ -462,7 +478,9 @@ def historial():
                            ventas=ventas_display, 
                            page=page, 
                            total_pages=total_pages, 
-                           q=q)
+                           q=q,
+                           mostrar_tour=mostrar_tour,
+                           version_tour=version_tour)
 
 
 @main_bp.route('/ticket/<int:id>')

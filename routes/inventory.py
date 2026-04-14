@@ -4,6 +4,9 @@ from helpers import login_required
 from db import get_db_connection as get_db
 from utils.datetime_utils import now_utc, ahora_sql
 
+# Importamos las herramientas del tutorial
+from utils.tutorial_utils import debe_mostrar_tutorial, obtener_version_tutorial
+
 inventory_bp = Blueprint('inventory', __name__)
 
 # ==========================================
@@ -12,11 +15,11 @@ inventory_bp = Blueprint('inventory', __name__)
 @inventory_bp.route('/materiales', methods=['GET', 'POST'])
 @login_required
 def materiales():
-    conn = get_db()
     user_id = session['user_id']
 
     # --- LÓGICA PARA GUARDAR O EDITAR (MÉTODO POST) ---
     if request.method == 'POST':
+        conn = get_db()
         try:
             # Recibimos los datos del formulario del modal
             id_actualizar = request.form.get('id_actualizar')
@@ -37,7 +40,6 @@ def materiales():
                 ).fetchone()
 
             if duplicado:
-                conn.close()
                 return f"""
                 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
                 <script>
@@ -68,14 +70,10 @@ def materiales():
             except ValueError:
                 stock_minimo = 5.0
             
-            # Calculamos el precio unitario (Costo total / Cantidad del paquete)
+            # Calculamos el precio unitario
             es_paquete = 1 if tipo == 'paquete' else 0
-            if cantidad_paquete > 0:
-                precio_unitario = precio_compra / cantidad_paquete
-            else:
-                precio_unitario = 0
+            precio_unitario = (precio_compra / cantidad_paquete) if cantidad_paquete > 0 else 0
 
-            # Ejecutamos la actualización si existe ID, o la inserción si es nuevo
             if id_actualizar:
                 conn.execute("""
                     UPDATE materiales 
@@ -89,43 +87,39 @@ def materiales():
                 """, (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo))
             
             conn.commit()
-            
-            # Redirigimos a la misma página para ver los cambios
             return redirect(url_for('inventory.materiales'))
             
         except Exception as e:
-            current_app.logger.error(f"MATERIAL_SAVE_ERROR: Fallo al guardar material para usuario {session.get('user_id')} - {e}")
+            current_app.logger.error(f"MATERIAL_SAVE_ERROR: Fallo al guardar material para usuario {user_id} - {e}")
             return f"Error al guardar: {e}"
         finally:
             conn.close()
 
     # --- LÓGICA PARA CARGAR LA VISTA (MÉTODO GET) ---
-    
-    # 1. Obtenemos todos los materiales del usuario
+    conn = get_db()
     rows = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (user_id,)).fetchall()
     materiales_lista = [dict(row) for row in rows]
     
-    # 2. CARGA DE CONFIGURACIÓN (Solución al error del nombre en el Navbar)
-    # Buscamos la configuración para pasar el nombre de la empresa y el estado del inventario
     config_row = conn.execute("SELECT * FROM configuracion WHERE user_id = ?", (user_id,)).fetchone()
-    
-    # Si no existe configuración, creamos un diccionario por defecto para evitar errores en el layout
     if config_row:
         config_dict = dict(config_row)
     else:
-        # Si el SELECT falla, usamos el company_name de la tabla usuarios o uno genérico
         user_info = conn.execute("SELECT company_name FROM usuarios WHERE id = ?", (user_id,)).fetchone()
         config_dict = {
             'nombre_empresa': user_info['company_name'] if user_info['company_name'] else 'Mi Negocio',
             'inventario_activo': 0
         }
-    
     conn.close()
 
-    # Renderizamos la plantilla enviando los materiales y el objeto config (Navbar)
+    # 💡 LÓGICA DEL TUTORIAL
+    mostrar_tour = debe_mostrar_tutorial(user_id, 'materiales')
+    version_tour = obtener_version_tutorial('materiales')
+
     return render_template('materiales.html', 
                            materiales=materiales_lista, 
-                           config=config_dict)
+                           config=config_dict,
+                           mostrar_tour=mostrar_tour,
+                           version_tour=version_tour)
 
 @inventory_bp.route('/materiales/eliminar/<int:id>')
 @login_required
@@ -142,24 +136,20 @@ def eliminar_material(id):
 @inventory_bp.route('/equipos', methods=['GET', 'POST'])
 @login_required
 def equipos():
-    conn = get_db()
+    user_id = session['user_id']
     if request.method == 'POST':
+        conn = get_db()
         try:
-            # 1. Capturamos si es una edición (trae ID) o uno nuevo
             id_actualizar = request.form.get('id_actualizar')
             nombre = request.form.get('nombre', '').strip()
             
-            # 2. Validación de duplicados inteligente
             if id_actualizar:
-                # Si estamos editando, buscamos si hay OTRO con ese nombre, ignorando el actual
-                duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", (nombre, session['user_id'], id_actualizar)).fetchone()
+                duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", (nombre, user_id, id_actualizar)).fetchone()
             else:
-                # Si es nuevo, buscamos en todos
-                duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", (nombre, session['user_id'])).fetchone()
+                duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", (nombre, user_id)).fetchone()
             
             if duplicado:
                 conn.close()
-                # Le puse un fondo gris claro al body para que si vuelve a saltar un error, no sea un pantallazo blanco agresivo
                 return f"""
                 <body style="background-color: #f8f9fa;">
                 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -179,33 +169,41 @@ def equipos():
                 </body>
                 """
 
-            # 3. Conversión segura del costo
             try:
                 costo_desgaste = float(request.form.get('costo_desgaste') or 0)
             except ValueError:
                 costo_desgaste = 0
 
-            # 4. Lógica: UPDATE (Editar) vs INSERT (Nuevo)
             if id_actualizar:
                 conn.execute("UPDATE maquinaria SET nombre=?, costo_desgaste=? WHERE id=? AND user_id=?", 
-                             (nombre, costo_desgaste, id_actualizar, session['user_id']))
+                             (nombre, costo_desgaste, id_actualizar, user_id))
             else:
                 conn.execute("INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (?, ?, ?)", 
-                             (session['user_id'], nombre, costo_desgaste))
+                             (user_id, nombre, costo_desgaste))
             
             conn.commit()
-            conn.close()
             return redirect(url_for('inventory.equipos', guardado='true'))
             
         except Exception as e:
-            conn.close()
-            current_app.logger.error(f"EQUIPMENT_SAVE_ERROR: Fallo al guardar equipo para usuario {session.get('user_id')} - {e}")
+            current_app.logger.error(f"EQUIPMENT_SAVE_ERROR: Fallo al guardar equipo para usuario {user_id} - {e}")
             return f"Error al procesar equipo: {e}"
+        finally:
+            conn.close()
 
-    rows = conn.execute("SELECT * FROM maquinaria WHERE user_id = ?", (session['user_id'],)).fetchall()
+    # --- MÉTODO GET ---
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM maquinaria WHERE user_id = ?", (user_id,)).fetchall()
     conn.close()
     equipos_lista = [dict(row) for row in rows]
-    return render_template('equipos.html', equipos=equipos_lista)
+
+    # 💡 LÓGICA DEL TUTORIAL
+    mostrar_tour = debe_mostrar_tutorial(user_id, 'equipos')
+    version_tour = obtener_version_tutorial('equipos')
+
+    return render_template('equipos.html', 
+                           equipos=equipos_lista,
+                           mostrar_tour=mostrar_tour,
+                           version_tour=version_tour)
 
 @inventory_bp.route('/equipos/eliminar/<int:id>')
 @login_required
@@ -223,41 +221,42 @@ def eliminar_equipo(id):
 @inventory_bp.route('/recetas', methods=['GET', 'POST'])
 @login_required
 def recetas():
-    conn = get_db()
+    user_id = session['user_id']
     if request.method == 'POST':
+        conn = get_db()
         try:
             id_actualizar = request.form.get('id_actualizar')
             nombre = request.form.get('nombre', '').strip()
             
             if id_actualizar and nombre:
-                duplicado = conn.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", (nombre, session['user_id'], id_actualizar)).fetchone()
+                duplicado = conn.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", (nombre, user_id, id_actualizar)).fetchone()
                 if duplicado:
                     conn.close()
                     return f"Error: Ya existe una receta llamada '{nombre}'"
 
-                conn.execute("UPDATE productos SET nombre=? WHERE id=? AND user_id=?", (nombre, id_actualizar, session['user_id']))
+                conn.execute("UPDATE productos SET nombre=? WHERE id=? AND user_id=?", (nombre, id_actualizar, user_id))
                 conn.commit()
-            conn.close()
+            
             return redirect(url_for('inventory.recetas', renombrada='true'))
         except Exception as e:
-            conn.close()
-            current_app.logger.error(f"RECIPE_SAVE_ERROR: Fallo al guardar receta para usuario {session.get('user_id')} - {e}")
+            current_app.logger.error(f"RECIPE_SAVE_ERROR: Fallo al guardar receta para usuario {user_id} - {e}")
             return f"Error al actualizar: {e}"
+        finally:
+            conn.close()
 
+    # --- MÉTODO GET ---
+    conn = get_db()
     try:
-        # 1. Consulta principal (ya no necesitamos traer p.items)
         query = """SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
                    FROM productos p 
                    LEFT JOIN producto_detalles pd ON p.id=pd.producto_id 
                    WHERE p.user_id=? 
                    GROUP BY p.id"""
-        recetas_db = conn.execute(query, (session['user_id'],)).fetchall()
+        recetas_db = conn.execute(query, (user_id,)).fetchall()
         
         recetas_lista = []
         for r in recetas_db:
             receta_dict = dict(r)
-            
-            # 2. Buscamos los nombres reales cruzando detalles con la tabla materiales
             detalles = conn.execute("""
                 SELECT m.nombre, pd.cantidad 
                 FROM producto_detalles pd
@@ -265,17 +264,23 @@ def recetas():
                 WHERE pd.producto_id = ?
             """, (receta_dict['id'],)).fetchall()
             
-            # 3. Empaquetamos el resultado en un nuevo JSON llamado 'ingredientes_reales'
             receta_dict['ingredientes_reales'] = json.dumps([dict(d) for d in detalles])
             recetas_lista.append(receta_dict)
             
     except Exception as e:
-        current_app.logger.error(f"RECIPE_LOAD_ERROR: Fallo al cargar recetas para usuario {session.get('user_id')} - {e}")
+        current_app.logger.error(f"RECIPE_LOAD_ERROR: Fallo al cargar recetas para usuario {user_id} - {e}")
         recetas_lista = []
-        
-    conn.close()
-    return render_template('recetas.html', recetas=recetas_lista)
+    finally:
+        conn.close()
 
+    # 💡 LÓGICA DEL TUTORIAL
+    mostrar_tour = debe_mostrar_tutorial(user_id, 'recetas')
+    version_tour = obtener_version_tutorial('recetas')
+
+    return render_template('recetas.html', 
+                           recetas=recetas_lista,
+                           mostrar_tour=mostrar_tour,
+                           version_tour=version_tour)
 
 @inventory_bp.route('/guardar_receta', methods=['POST'])
 @login_required
@@ -291,14 +296,8 @@ def guardar_receta():
         if duplicado:
             return jsonify({'error': f'Ya existe una receta llamada "{nombre_receta}".'}), 400
 
-        # POSTGRES READY: Quitamos el conn.execute('BEGIN') explícito porque el conector ya maneja la transacción.
-        
         items_json = json.dumps(data.get('materiales', []))
         cur = conn.execute("INSERT INTO productos (user_id, nombre, items) VALUES (?, ?, ?)", (session['user_id'], nombre_receta, items_json))
-        
-        # --- NOTA DE MIGRACIÓN A POSTGRESQL ---
-        # Cambiar el INSERT a: "... VALUES (?, ?, ?) RETURNING id"
-        # Y esta línea a: pid = cur.fetchone()[0]
         pid = cur.lastrowid
 
         for m in data.get('materiales', []):
@@ -321,7 +320,6 @@ def guardar_receta():
 def eliminar_receta(id):
     conn = get_db()
     try:
-        # POSTGRES READY: Quitamos el 'BEGIN'
         conn.execute("DELETE FROM producto_detalles WHERE producto_id=?", (id,))
         conn.execute("DELETE FROM producto_maquinaria WHERE producto_id=?", (id,))
         conn.execute("DELETE FROM productos WHERE id=? AND user_id=?", (id, session['user_id']))
@@ -342,14 +340,12 @@ def registrar_compra():
     data = request.get_json()
     material_id = data.get('id')
     
-    # 1. BLINDAJE NUMÉRICO: Evitar que metan basura
     try:
         cantidad_compra = float(data.get('cantidad', 0))
         nuevo_precio = float(data.get('nuevo_precio', 0))
     except (ValueError, TypeError):
         return jsonify({'success': False, 'error': 'Cantidad o precio inválidos'}), 400
     
-    # 2. ANTI-HACK: No pueden comprar cantidades negativas ni precios negativos
     if not material_id or cantidad_compra <= 0 or nuevo_precio < 0:
         return jsonify({'success': False, 'error': 'Datos inválidos o negativos'}), 400
 
@@ -359,26 +355,18 @@ def registrar_compra():
         if not mat:
             return jsonify({'success': False, 'error': 'Material no encontrado'}), 404
 
-        # Obtenemos el nuevo parámetro de la UI
         tipo_ingreso = data.get('tipo_ingreso', 'paquete')
 
-        # 3. LÓGICA DE PAQUETES VS SUELTOS
         if tipo_ingreso == 'paquete' and mat['es_paquete'] and mat['cantidad_paquete'] > 0:
             cantidad_a_sumar = cantidad_compra * mat['cantidad_paquete']
         else:
-            # Si eligió 'unidad', la cantidad ingresada entra directa a la bóveda
             cantidad_a_sumar = cantidad_compra 
 
         sql_update = "UPDATE materiales SET stock_actual = stock_actual + ?"
         params = [cantidad_a_sumar]
 
-        # 4. ACTUALIZACIÓN DE PRECIOS INTELIGENTE
         if nuevo_precio > 0:
-            # El unitario SIEMPRE es el dinero que pagaste / lo que realmente entró a la bóveda
             nuevo_unitario = nuevo_precio / cantidad_a_sumar
-            
-            # Solo actualizamos el "Precio de Compra (Base)" si ingresó por paquetes.
-            # Si metió piezas sueltas, no queremos alterar su configuración base, solo el costo unitario para que el cotizador no pierda dinero.
             if tipo_ingreso == 'paquete':
                 sql_update += ", precio_compra = ?"
                 params.append(nuevo_precio)
@@ -391,9 +379,7 @@ def registrar_compra():
 
         conn.execute(sql_update, params)
 
-        # 5. REGISTRO DE HISTORIAL SEGURO
         try:
-            # Usamos ahora_sql() en lugar de now_utc() directo para compatibilidad con el formato
             conn.execute("""
                 INSERT INTO movimientos_inventario 
                 (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
@@ -409,7 +395,6 @@ def registrar_compra():
                 ahora_sql()
             ))
         except Exception as aud_error:
-            # Imprimimos el error de auditoría para depuración sin tumbar la compra
             current_app.logger.warning(f"INVENTORY_AUDIT_WARNING: No se pudo registrar historial para material {material_id} - {aud_error}")
             pass 
 
@@ -443,7 +428,6 @@ def registrar_merma():
 
     conn = get_db()
     try:
-        # 1. Verificar existencia y stock suficiente
         mat = conn.execute("SELECT stock_actual FROM materiales WHERE id=? AND user_id=?", 
                            (material_id, session['user_id'])).fetchone()
         
@@ -453,11 +437,9 @@ def registrar_merma():
         if mat['stock_actual'] < cantidad_merma:
             return jsonify({'success': False, 'error': f"Stock insuficiente. Tienes {mat['stock_actual']}"}), 400
 
-        # 2. Restar del stock_actual
         conn.execute("UPDATE materiales SET stock_actual = stock_actual - ? WHERE id = ?", 
                      (cantidad_merma, material_id))
 
-        # 3. Registrar en el historial (opcional, pero ya que tienes la tabla, mejor usarla)
         try:
             conn.execute("""
                 INSERT INTO movimientos_inventario 
@@ -493,7 +475,6 @@ def registrar_merma():
 @inventory_bp.route('/api/inventario/historial', methods=['GET'])
 @login_required
 def obtener_historial():
-    # Recibimos desde qué fila empezar y cuántas traer (por defecto 0 y 20)
     offset = request.args.get('offset', 0, type=int)
     limit = request.args.get('limit', 20, type=int)
     
