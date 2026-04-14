@@ -5,7 +5,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}SianEffects{% endblock %}</title>
-    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
+    {% if config.logo_empresa %}
+        <link rel="shortcut icon" href="{{ config.logo_empresa }}" type="image/png">
+    {% else %}
+        <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
+    {% endif %}
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
@@ -219,9 +223,14 @@
             </button>
 
             <a class="navbar-brand fw-bold text-primary me-auto" href="{{ url_for('main.cotizador') }}">
+                {% if config.logo_empresa %}
+                    <img src="{{ config.logo_empresa }}" alt="Logo" style="height: 32px; width: auto; border-radius: 6px; object-fit: contain;">
+                {% else %}
+                    <span style="font-size: 1.5rem; line-height: 1;">{{ config.icono_empresa or '🎨' }}</span>
+                {% endif %}
+                
                 <span style="color: var(--sian-pink);">
-                    🎨 {{ config['nombre_empresa'] if config and config['nombre_empresa'] else session.get('username',
-                    'SianEffects') }}
+                    {{ config.nombre_empresa or session.get('username', 'SianEffects') }}
                 </span>
             </a>
 
