@@ -62,7 +62,6 @@ def materiales():
                 precio_compra = 0
                 cantidad_paquete = 1
             
-            # 👇 FIX: Capturamos el Stock Mínimo con red de seguridad 👇
             try:
                 stock_min_val = request.form.get('stock_minimo')
                 stock_minimo = float(stock_min_val) if stock_min_val else 5.0
@@ -78,14 +77,12 @@ def materiales():
 
             # Ejecutamos la actualización si existe ID, o la inserción si es nuevo
             if id_actualizar:
-                # 👇 FIX: Agregamos stock_minimo al UPDATE 👇
                 conn.execute("""
                     UPDATE materiales 
                     SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?, unidad_medida=?, stock_minimo=?
                     WHERE id=? AND user_id=?
                 """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo, id_actualizar, user_id))
             else:
-                # 👇 FIX: Agregamos stock_minimo al INSERT 👇
                 conn.execute("""
                     INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -97,6 +94,7 @@ def materiales():
             return redirect(url_for('inventory.materiales'))
             
         except Exception as e:
+            current_app.logger.error(f"MATERIAL_SAVE_ERROR: Fallo al guardar material para usuario {session.get('user_id')} - {e}")
             return f"Error al guardar: {e}"
         finally:
             conn.close()
@@ -147,11 +145,23 @@ def equipos():
     conn = get_db()
     if request.method == 'POST':
         try:
+            # 1. Capturamos si es una edición (trae ID) o uno nuevo
+            id_actualizar = request.form.get('id_actualizar')
             nombre = request.form.get('nombre', '').strip()
-            duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", (nombre, session['user_id'])).fetchone()
+            
+            # 2. Validación de duplicados inteligente
+            if id_actualizar:
+                # Si estamos editando, buscamos si hay OTRO con ese nombre, ignorando el actual
+                duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", (nombre, session['user_id'], id_actualizar)).fetchone()
+            else:
+                # Si es nuevo, buscamos en todos
+                duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", (nombre, session['user_id'])).fetchone()
+            
             if duplicado:
                 conn.close()
+                # Le puse un fondo gris claro al body para que si vuelve a saltar un error, no sea un pantallazo blanco agresivo
                 return f"""
+                <body style="background-color: #f8f9fa;">
                 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
                 <script>
                     window.onload = function() {{
@@ -159,26 +169,38 @@ def equipos():
                             icon: 'error',
                             title: 'Maquinaria duplicada',
                             text: 'Error: Ya existe maquinaria con el nombre "{nombre}".',
-                            confirmButtonColor: '#ff4757'
+                            confirmButtonColor: '#ff4a5a',
+                            borderRadius: '16px'
                         }}).then((result) => {{
                             window.history.back();
                         }});
                     }};
                 </script>
+                </body>
                 """
 
+            # 3. Conversión segura del costo
             try:
                 costo_desgaste = float(request.form.get('costo_desgaste') or 0)
             except ValueError:
                 costo_desgaste = 0
 
-            conn.execute("INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (?, ?, ?)", (session['user_id'], nombre, costo_desgaste))
+            # 4. Lógica: UPDATE (Editar) vs INSERT (Nuevo)
+            if id_actualizar:
+                conn.execute("UPDATE maquinaria SET nombre=?, costo_desgaste=? WHERE id=? AND user_id=?", 
+                             (nombre, costo_desgaste, id_actualizar, session['user_id']))
+            else:
+                conn.execute("INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (?, ?, ?)", 
+                             (session['user_id'], nombre, costo_desgaste))
+            
             conn.commit()
             conn.close()
-            return redirect(url_for('inventory.equipos'))
+            return redirect(url_for('inventory.equipos', guardado='true'))
+            
         except Exception as e:
             conn.close()
-            return f"Error al guardar equipo: {e}"
+            current_app.logger.error(f"EQUIPMENT_SAVE_ERROR: Fallo al guardar equipo para usuario {session.get('user_id')} - {e}")
+            return f"Error al procesar equipo: {e}"
 
     rows = conn.execute("SELECT * FROM maquinaria WHERE user_id = ?", (session['user_id'],)).fetchall()
     conn.close()
@@ -192,7 +214,8 @@ def eliminar_equipo(id):
     conn.execute('DELETE FROM maquinaria WHERE id=? AND user_id=?', (id, session['user_id']))
     conn.commit()
     conn.close()
-    return redirect(url_for('inventory.equipos'))
+    return redirect(url_for('inventory.equipos', eliminado='true'))
+
 
 # =========================
 # 4. RECETAS
@@ -215,9 +238,10 @@ def recetas():
                 conn.execute("UPDATE productos SET nombre=? WHERE id=? AND user_id=?", (nombre, id_actualizar, session['user_id']))
                 conn.commit()
             conn.close()
-            return redirect(url_for('inventory.recetas'))
+            return redirect(url_for('inventory.recetas', renombrada='true'))
         except Exception as e:
             conn.close()
+            current_app.logger.error(f"RECIPE_SAVE_ERROR: Fallo al guardar receta para usuario {session.get('user_id')} - {e}")
             return f"Error al actualizar: {e}"
 
     try:
@@ -272,7 +296,7 @@ def guardar_receta():
         items_json = json.dumps(data.get('materiales', []))
         cur = conn.execute("INSERT INTO productos (user_id, nombre, items) VALUES (?, ?, ?)", (session['user_id'], nombre_receta, items_json))
         
-        # --- 🚨 NOTA DE MIGRACIÓN A POSTGRESQL 🚨 ---
+        # --- NOTA DE MIGRACIÓN A POSTGRESQL ---
         # Cambiar el INSERT a: "... VALUES (?, ?, ?) RETURNING id"
         # Y esta línea a: pid = cur.fetchone()[0]
         pid = cur.lastrowid
@@ -302,11 +326,12 @@ def eliminar_receta(id):
         conn.execute("DELETE FROM producto_maquinaria WHERE producto_id=?", (id,))
         conn.execute("DELETE FROM productos WHERE id=? AND user_id=?", (id, session['user_id']))
         conn.commit()
-    except Exception:
+    except Exception as e:
         conn.rollback()
+        current_app.logger.error(f"RECIPE_DELETE_ERROR: Fallo al eliminar receta para usuario {session.get('user_id')} - {e}")
     finally:
         conn.close()
-    return redirect(url_for('inventory.recetas'))
+    return redirect(url_for('inventory.recetas', eliminada='true'))
 
 # =========================
 # 5. REGISTRAR COMPRA (STOCK)
@@ -394,6 +419,99 @@ def registrar_compra():
 
     except Exception as e:
         conn.rollback()
+        current_app.logger.error(f"STOCK_ADD_ERROR: Fallo al agregar stock para usuario {session.get('user_id')} - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+# =========================
+# 6. REGISTRAR MERMA (AJUSTE NEGATIVO)
+# =========================
+@inventory_bp.route('/api/registrar_merma', methods=['POST'])
+@login_required
+def registrar_merma():
+    data = request.get_json()
+    material_id = data.get('id')
+    
+    try:
+        cantidad_merma = float(data.get('cantidad', 0))
+    except (ValueError, TypeError):
+        return jsonify({'success': False, 'error': 'Cantidad inválida'}), 400
+    
+    if not material_id or cantidad_merma <= 0:
+        return jsonify({'success': False, 'error': 'Datos inválidos o cantidad negativa'}), 400
+
+    conn = get_db()
+    try:
+        # 1. Verificar existencia y stock suficiente
+        mat = conn.execute("SELECT stock_actual FROM materiales WHERE id=? AND user_id=?", 
+                           (material_id, session['user_id'])).fetchone()
+        
+        if not mat:
+            return jsonify({'success': False, 'error': 'Material no encontrado'}), 404
+        
+        if mat['stock_actual'] < cantidad_merma:
+            return jsonify({'success': False, 'error': f"Stock insuficiente. Tienes {mat['stock_actual']}"}), 400
+
+        # 2. Restar del stock_actual
+        conn.execute("UPDATE materiales SET stock_actual = stock_actual - ? WHERE id = ?", 
+                     (cantidad_merma, material_id))
+
+        # 3. Registrar en el historial (opcional, pero ya que tienes la tabla, mejor usarla)
+        try:
+            conn.execute("""
+                INSERT INTO movimientos_inventario 
+                (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
+                VALUES (?, ?, 'salida', ?, 'Merma / Ajuste Manual',
+                    (SELECT stock_actual FROM materiales WHERE id=?),
+                    ?
+                )
+            """, (
+                session['user_id'],
+                material_id,
+                cantidad_merma,
+                material_id,
+                ahora_sql()
+            ))
+        except Exception as aud_error:
+            current_app.logger.warning(f"MERMA_AUDIT_WARNING: {aud_error}")
+            pass 
+
+        conn.commit()
+        return jsonify({'success': True, 'nuevo_stock': mat['stock_actual'] - cantidad_merma})
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"MERMA_SAVE_ERROR: Fallo al guardar merma para usuario {session.get('user_id')} - {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        conn.close()
+
+# =========================
+# 7. OBTENER HISTORIAL OPTIMIZADO (Paginación)
+# =========================
+@inventory_bp.route('/api/inventario/historial', methods=['GET'])
+@login_required
+def obtener_historial():
+    # Recibimos desde qué fila empezar y cuántas traer (por defecto 0 y 20)
+    offset = request.args.get('offset', 0, type=int)
+    limit = request.args.get('limit', 20, type=int)
+    
+    conn = get_db()
+    try:
+        rows = conn.execute("""
+            SELECT mi.tipo, mi.cantidad, mi.motivo, mi.stock_resultante, mi.fecha, 
+                   m.nombre as material_nombre, m.unidad_medida
+            FROM movimientos_inventario mi
+            JOIN materiales m ON mi.material_id = m.id
+            WHERE mi.user_id = ?
+            ORDER BY mi.fecha DESC
+            LIMIT ? OFFSET ?
+        """, (session['user_id'], limit, offset)).fetchall()
+        
+        return jsonify([dict(row) for row in rows])
+    except Exception as e:
+        current_app.logger.error(f"HISTORIAL_LOAD_ERROR: Fallo al cargar historial para usuario {session.get('user_id')} - {e}")
+        return jsonify({'error': str(e)}), 500
     finally:
         conn.close()

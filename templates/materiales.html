@@ -3,172 +3,338 @@
 {% block title %}Materiales | SianEffects{% endblock %}
 
 {% block content %}
+<style>
+    /* VARIABLES DE DISEÑO SIANEFFECTS */
+    :root {
+        --sian-primary: #ff4a5a;
+        --sian-primary-hover: #e03e4c;
+        --sian-bg-soft: #f8f9fa;
+        --sian-border: #eef0f2;
+    }
+
+    /* TARJETAS MODERNAS */
+    .sian-card {
+        border: 1px solid var(--sian-border);
+        border-radius: 16px;
+        background: #ffffff;
+        transition: all 0.25s ease;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+    }
+
+    /* En móvil el hover no importa, pero en PC se ve elegante */
+    @media (hover: hover) {
+        .sian-card:hover {
+            border-color: #dcdfe3;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+            transform: translateY(-2px);
+        }
+    }
+
+    /* BOTÓN PRINCIPAL */
+    .btn-sian {
+        background-color: var(--sian-primary);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 10px rgba(255, 74, 90, 0.2);
+        transition: all 0.2s;
+    }
+
+    .btn-sian:active,
+    .btn-sian:hover {
+        background-color: var(--sian-primary-hover);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    /* BOTONES DE ACCIÓN RÁPIDA (+ y -) 100% VISIBLES EN MÓVIL */
+    .btn-stock-action {
+        width: 34px;
+        height: 34px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.15s;
+        border: none;
+    }
+
+    /* Color permanente pero suave para la psicología del color */
+    .btn-stock-action.minus {
+        background-color: #fff0f0;
+        color: #dc3545;
+    }
+
+    .btn-stock-action.minus:active {
+        background-color: #dc3545;
+        color: #fff;
+        transform: scale(0.95);
+    }
+
+    .btn-stock-action.plus {
+        background-color: #f0fdf4;
+        color: #198754;
+    }
+
+    .btn-stock-action.plus:active {
+        background-color: #198754;
+        color: #fff;
+        transform: scale(0.95);
+    }
+
+    /* INPUTS LIMPIOS */
+    .sian-input {
+        border: 1px solid var(--sian-border);
+        border-radius: 10px;
+        box-shadow: none !important;
+        background-color: var(--sian-bg-soft);
+        transition: border-color 0.2s, background-color 0.2s;
+    }
+
+    .sian-input:focus {
+        border-color: #b0b5ba;
+        background-color: #fff;
+    }
+
+    /* ICONOS SUPERIORES - VISIBLES SIEMPRE */
+    .action-icon {
+        color: #495057;
+        background: #f8f9fa;
+        border: 1px solid #eef0f2;
+        border-radius: 6px;
+        padding: 6px 10px;
+        transition: all 0.2s;
+    }
+    .action-icon:active, .action-icon:hover {
+        background: #e9ecef;
+        color: #0d6efd;
+        border-color: #dee2e6;
+    }
+    .action-icon.danger:active, .action-icon.danger:hover {
+        background: #fff5f5;
+        color: #dc3545;
+        border-color: #ffccd1;
+    }
+
+    /* BADGES */
+    .badge-soft {
+        background-color: var(--sian-bg-soft);
+        color: #6c757d;
+        border: 1px solid var(--sian-border);
+        font-weight: 500;
+        padding: 6px 10px;
+        border-radius: 8px;
+    }
+</style>
+
 <div class="row align-items-center mb-4">
-    <div class="col-md-6">
-        <h3 class="fw-bold m-0 text-dark"><i class="fas fa-boxes text-secondary me-2"></i>Mis Materiales</h3>
-        <small class="text-muted">Gestiona tus insumos y existencias.</small>
+    <div class="col-md-6 mb-3 mb-md-0 text-center text-md-start">
+        <h3 class="fw-bold m-0 text-dark" style="letter-spacing: -0.5px;">
+            <i class="fas fa-boxes me-2 text-muted" style="font-size: 1.2rem;"></i>Mis Materiales
+        </h3>
+        <p class="text-muted small m-0 mt-1">Gestiona tus insumos y existencias.</p>
     </div>
-    <div class="col-md-6 text-end">
-        <button class="btn btn-primary rounded-pill px-4 shadow-sm" data-bs-toggle="modal"
+    <div class="col-md-6 d-flex justify-content-center justify-content-md-end gap-2">
+        <button class="btn btn-white rounded-3 px-3 border shadow-sm fw-bold text-secondary" style="background: #fff;"
+            type="button" data-bs-toggle="modal" data-bs-target="#modalHistorial" onclick="abrirHistorial()">
+            <i class="fas fa-history me-1 text-muted"></i> Historial
+        </button>
+        <button class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" data-bs-toggle="modal"
             data-bs-target="#modalMaterial" onclick="limpiarModal()">
-            <i class="fas fa-plus me-2"></i> Nuevo Material
+            <i class="fas fa-plus me-1"></i> Nuevo Material
         </button>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4" style="border-radius: 15px;">
-    <div class="card-body p-2">
-        <div class="input-group">
-            <span class="input-group-text bg-white border-0 ps-3"><i class="fas fa-search text-muted"></i></span>
-            <input type="text" id="buscadorMateriales" class="form-control border-0 shadow-none"
-                placeholder="Buscar material por nombre..." onkeyup="filtrarMateriales()">
-        </div>
+<div class="mb-4">
+    <div class="input-group shadow-sm" style="border-radius: 10px;">
+        <span class="input-group-text bg-white border-end-0 border-light text-muted"
+            style="border-radius: 10px 0 0 10px;">
+            <i class="fas fa-search"></i>
+        </span>
+        <input type="text" id="buscadorMateriales" class="form-control border-start-0 border-light py-2"
+            style="box-shadow: none; border-radius: 0 10px 10px 0;" placeholder="Buscar material por nombre..."
+            onkeyup="filtrarMateriales()">
     </div>
 </div>
 
-<div class="row g-3" id="contenedorMateriales">
+<div class="row g-4" id="contenedorMateriales">
     {% for mat in materiales %}
-    <div class="col-md-6 col-lg-4 item-material">
-        <div class="card h-100 border-0 shadow-sm" style="border-radius: 15px;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-start mb-2">
-                    <div style="max-width: 70%;">
-                        <h6 class="fw-bold text-dark mb-1 nombre-material text-truncate" title="{{ mat['nombre'] }}">{{
-                            mat['nombre'] }}</h6>
+    <div class="col-12 col-md-6 col-lg-4 col-xl-3 item-material">
+        <div class="card h-100 sian-card p-3 d-flex flex-column">
 
-                        <span class="badge bg-light text-secondary border text-capitalize" style="font-size: 0.65rem;">
-                            <i class="fas fa-box-open me-1"></i>
-                            {{ mat['cantidad_paquete']|float|round(2) }} {{ mat['unidad_medida']|default('pieza') }}(s)
-                            por compra
-                        </span>
-                    </div>
-
-                    <div class="d-flex gap-1">
-                        <button class="btn btn-light btn-sm text-primary rounded-circle border"
-                            onclick='editarMaterial({{ mat|tojson|safe }})' title="Editar">
-                            <i class="fas fa-pen" style="font-size: 0.8rem;"></i>
-                        </button>
-
-                        <button type="button" class="btn btn-light btn-sm text-danger rounded-circle border"
-                            onclick="confirmarEliminar('{{ url_for('inventory.eliminar_material', id=mat['id']) }}', '{{ mat['nombre'] }}')" title="Eliminar">
-                            <i class="fas fa-trash-alt" style="font-size: 0.8rem;"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <div class="row mt-3 align-items-end">
-                    <div class="col-5">
-                        <small class="text-muted fw-bold" style="font-size: 0.65rem;">COSTO POR {{
-                            (mat['unidad_medida']|default('pieza'))|upper }}</small>
-                        <div class="h5 fw-bold text-success mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
-                    </div>
-
-                    {% if config['inventario_activo'] %}
-                    <div class="col-7 text-end border-start ps-3">
-                        <small class="text-muted fw-bold" style="font-size: 0.65rem;">EN STOCK</small>
-                        <div class="d-flex align-items-center justify-content-end gap-2">
-                            {% if mat['stock_actual'] <= mat['stock_minimo'] %} <i
-                                class="fas fa-exclamation-triangle text-warning blink" title="Stock Bajo"></i>
-                                {% endif %}
-
-                                <span class="h5 fw-bold text-dark mb-0 stock-valor">{{
-                                    mat['stock_actual']|float|round(2) }}</span>
-
-                                <button
-                                    class="btn btn-sm btn-outline-primary rounded-circle py-0 px-0 d-flex align-items-center justify-content-center shadow-sm"
-                                    style="width: 24px; height: 24px;" onclick='abrirModalStock({{ mat|tojson|safe }})'
-                                    title="Agregar Stock">
-                                    <i class="fas fa-plus" style="font-size: 0.7rem;"></i>
-                                </button>
-                        </div>
-                        <small class="text-muted text-capitalize" style="font-size: 0.65rem;">{{
-                            mat['unidad_medida']|default('piezas') }}</small>
-                    </div>
-                    {% endif %}
+            <div class="d-flex justify-content-between align-items-start mb-2">
+                <h6 class="fw-bold text-dark mb-0 nombre-material text-truncate"
+                    style="font-size: 1rem; max-width: 70%;" title="{{ mat['nombre'] }}">
+                    {{ mat['nombre'] }}
+                </h6>
+                <div class="d-flex gap-1">
+                    <button class="action-icon" onclick='editarMaterial({{ mat|tojson|safe }})' title="Editar">
+                        <i class="fas fa-pen" style="font-size: 0.9rem;"></i>
+                    </button>
+                    <button class="action-icon danger"
+                        onclick="confirmarEliminar('{{ url_for('inventory.eliminar_material', id=mat['id']) }}', '{{ mat['nombre'] }}')"
+                        title="Eliminar">
+                        <i class="fas fa-trash-alt" style="font-size: 0.9rem;"></i>
+                    </button>
                 </div>
             </div>
+
+            <div class="mb-auto">
+                <span class="badge badge-soft text-capitalize" style="font-size: 0.65rem;">
+                    <i class="fas fa-box-open me-1 opacity-75"></i>
+                    {{ mat['cantidad_paquete']|float|round(2) }} {{ mat['unidad_medida']|default('pieza') }}(s) x compra
+                </span>
+            </div>
+
+            <div class="row mt-4 align-items-end">
+                <div class="col-5">
+                    <p class="text-muted mb-0"
+                        style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+                        Costo Unit.</p>
+                    <div class="h5 fw-bold text-dark mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
+                </div>
+
+                {% if config['inventario_activo'] %}
+                <div class="col-7 text-end">
+                    <p class="text-muted mb-0"
+                        style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+                        En Stock</p>
+                    <div class="d-flex align-items-center justify-content-end gap-1 mb-2">
+                        {% if mat['stock_actual'] <= mat['stock_minimo'] %} <i
+                            class="fas fa-circle text-warning border border-white rounded-circle"
+                            style="font-size: 0.7rem; box-shadow: 0 0 0 2px #fff;" title="Stock Bajo"></i>
+                            {% endif %}
+                            <span class="h4 fw-bold text-dark mb-0 lh-1" style="letter-spacing: -0.5px;">{{
+                                mat['stock_actual']|float|round(2) }}</span>
+                            <small class="text-muted text-lowercase align-self-end pb-1" style="font-size: 0.75rem;">{{
+                                mat['unidad_medida']|default('pza') }}</small>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-1">
+                        <button class="btn-stock-action minus" onclick='abrirModalMerma({{ mat|tojson|safe }})'
+                            title="Registrar Merma">
+                            <i class="fas fa-minus" style="font-size: 0.9rem;"></i>
+                        </button>
+                        <button class="btn-stock-action plus" onclick='abrirModalStock({{ mat|tojson|safe }})'
+                            title="Registrar Compra">
+                            <i class="fas fa-plus" style="font-size: 0.9rem;"></i>
+                        </button>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
         </div>
     </div>
     {% else %}
-    <div class="col-12 text-center py-5 opacity-50">
-        <i class="fas fa-box-open fa-3x mb-3 text-secondary"></i>
-        <p>No tienes materiales registrados.</p>
+    <div class="col-12 text-center py-5">
+        <div class="p-5 sian-card bg-light border-dashed"
+            style="border-style: dashed !important; border-color: #cbd5e1 !important;">
+            <i class="fas fa-box-open fa-3x mb-3 text-muted opacity-25"></i>
+            <h5 class="fw-bold text-dark">Tu inventario está vacío</h5>
+            <p class="text-muted">Empieza agregando tu primer material o insumo.</p>
+        </div>
     </div>
     {% endfor %}
 </div>
 
 <div id="sinResultados" class="text-center py-5 d-none">
-    <i class="fas fa-search fa-3x mb-3 text-muted opacity-25"></i>
+    <i class="fas fa-search fa-2x mb-3 text-muted opacity-25"></i>
     <p class="text-muted fw-bold">No se encontraron materiales con ese nombre.</p>
+</div>
+
+<div class="modal fade" id="modalHistorial" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom bg-white p-3">
+                <h6 class="modal-title fw-bold text-dark" style="letter-spacing: -0.5px;">
+                    <i class="fas fa-list-ul me-2 text-muted"></i>Registro de Movimientos
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-0" style="background: #fafafa;">
+                <div id="listaHistorial" class="list-group list-group-flush"></div>
+
+                <div id="loadingHistorial" class="text-center py-4 d-none">
+                    <div class="spinner-border text-primary border-2" role="status"
+                        style="width: 1.5rem; height: 1.5rem;"></div>
+                </div>
+
+                <div id="contenedorCargarMas" class="text-center p-3 d-none border-top bg-white">
+                    <button class="btn btn-sm btn-outline-secondary rounded-pill fw-bold px-4"
+                        onclick="cargarMasHistorial()">
+                        <i class="fas fa-chevron-down me-1"></i> Cargar anteriores
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <div class="modal fade" id="modalMaterial" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header border-0 pb-0">
-                <h5 class="modal-title fw-bold">Gestión de Material</h5>
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-dark">Gestión de Material</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <form action="{{ url_for('inventory.materiales') }}" method="POST" id="formMaterial">
                     <input type="hidden" name="id_actualizar" id="id_actualizar">
                     <input type="hidden" name="tipo_entrada" value="paquete">
 
-                    <div class="mb-4">
-                        <label class="form-label small fw-bold text-muted">Nombre del Insumo / Material</label>
-                        <input type="text" name="nombre" id="nombre" class="form-control form-control-lg" required
-                            placeholder="Ej. Taza Blanca 11oz, Harina, Vinil...">
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Nombre del Insumo</label>
+                        <input type="text" name="nombre" id="nombre" class="form-control sian-input py-2" required
+                            placeholder="Ej. Taza Blanca 11oz">
                     </div>
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-5">
                             <label class="form-label small fw-bold text-muted">Costo Total ($)</label>
                             <input type="number" step="0.01" name="precio_compra" id="precio_compra"
-                                class="form-control form-control-lg text-success fw-bold" placeholder="0.00" required>
+                                class="form-control sian-input py-2 fw-bold text-success" placeholder="0.00" required>
                         </div>
                         <div class="col-md-7">
-                            <label class="form-label small fw-bold text-muted">¿Qué cantidad incluye este costo?</label>
-                            <div class="input-group input-group-lg">
+                            <label class="form-label small fw-bold text-muted">¿Qué cantidad incluye?</label>
+                            <div class="input-group shadow-sm rounded-3">
                                 <input type="number" step="any" name="cantidad_paquete" id="cantidad_paquete"
-                                    class="form-control fw-bold" placeholder="Ej. 1, 900, 50..." required>
+                                    class="form-control border-light border-end-0 fw-bold" placeholder="Ej. 50"
+                                    required>
                                 <select name="unidad_medida" id="unidad_medida"
-                                    class="form-select border-start-0 text-muted bg-light"
-                                    style="max-width: 130px; font-size: 0.9rem;"
-                                    onchange="actualizarLabelStockMinimo()">
-                                    <option value="pieza">Piezas (pza)</option>
-                                    <option value="g">Gramos (g)</option>
-                                    <option value="kg">Kilos (kg)</option>
-                                    <option value="ml">Mililitros (ml)</option>
-                                    <option value="l">Litros (l)</option>
-                                    <option value="cm">Centímetros (cm)</option>
-                                    <option value="m">Metros (m)</option>
+                                    class="form-select border-light bg-light text-muted fw-bold"
+                                    style="max-width: 90px;" onchange="actualizarLabelStockMinimo()">
+                                    <option value="pieza">Pza</option>
+                                    <option value="g">g</option>
+                                    <option value="kg">kg</option>
+                                    <option value="ml">ml</option>
+                                    <option value="l">l</option>
+                                    <option value="cm">cm</option>
+                                    <option value="m">m</option>
                                 </select>
                             </div>
                         </div>
                     </div>
 
                     {% if config and config.get('inventario_activo') %}
-                    <div class="col-12 mb-4">
-                        <label class="form-label fw-bold text-muted small text-uppercase">
+                    <div class="mb-4 p-3 bg-white rounded-3 border border-warning border-opacity-25"
+                        style="box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);">
+                        <label class="form-label fw-bold text-dark small m-0">
                             <i class="fas fa-bell text-warning me-1"></i> Stock Mínimo (Alerta)
                         </label>
-                        <div class="input-group shadow-sm" style="border-radius: 8px; overflow: hidden;">
-                            <input type="number" step="0.01" name="stock_minimo" id="stock_minimo" class="form-control bg-light border-0 fw-bold" 
-                                   value="5" placeholder="Ej. 5" required>
-                            <span class="input-group-text bg-white text-muted border-0 fw-bold" id="labelUnidadMinima">Piezas (pza)</span>
+                        <p class="small text-muted mb-2 mt-1" style="font-size: 0.75rem;">Te avisaremos cuando tu stock
+                            caiga por debajo de este número.</p>
+                        <div class="input-group input-group-sm rounded-2 shadow-sm">
+                            <input type="number" step="0.01" name="stock_minimo" id="stock_minimo"
+                                class="form-control fw-bold border-light" value="5" required>
+                            <span class="input-group-text bg-light text-muted border-light fw-bold"
+                                id="labelUnidadMinima">pieza</span>
                         </div>
-                        <div class="form-text small mt-1">Recibirás una alerta 🔴 cuando tu inventario baje a este número.</div>
                     </div>
                     {% endif %}
-                    <div class="form-text text-center mb-4 text-primary"
-                        style="font-size: 0.8rem; background: #eef2ff; padding: 10px; border-radius: 10px;">
-                        <i class="fas fa-lightbulb me-1"></i> <b>Tip:</b> Ingresa el costo total de tu compra y lo que
-                        contiene. Ej: <b>$150</b> por <b>50 Piezas</b>, o <b>$80</b> por <b>5 Metros</b>.
-                    </div>
 
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-primary fw-bold rounded-pill py-3">Guardar
-                            Material</button>
+                    <div class="d-grid mt-4">
+                        <button type="submit" class="btn btn-sian fw-bold rounded-3 py-2">Guardar Material</button>
                     </div>
                 </form>
             </div>
@@ -178,45 +344,79 @@
 
 <div class="modal fade" id="modalStock" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header bg-success text-white">
-                <h6 class="modal-title fw-bold"><i class="fas fa-shopping-cart me-2"></i>Registrar Compra</h6>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom p-3" style="background: #f8fff9;">
+                <h6 class="modal-title fw-bold text-success"><i class="fas fa-arrow-down me-2"></i>Registrar Compra</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <input type="hidden" id="stock_id">
-                <p class="small text-muted mb-1">Material:</p>
-                <h6 class="fw-bold mb-3" id="stock_nombre"></h6>
+                <h6 class="fw-bold mb-4 text-dark text-truncate text-center" id="stock_nombre"></h6>
 
                 <div class="mb-3" id="contenedor_tipo_ingreso">
-                    <label class="small fw-bold text-dark mb-1">¿Cómo lo compraste hoy?</label>
-                    <select id="stock_tipo_ingreso" class="form-select form-select-sm mb-2 bg-light fw-bold text-primary" onchange="cambiarModoIngreso()">
-                        <option value="paquete">Por Paquete/Caja (Como siempre)</option>
+                    <label class="small fw-bold text-muted mb-1">Formato de compra</label>
+                    <select id="stock_tipo_ingreso" class="form-select form-select-sm sian-input"
+                        onchange="cambiarModoIngreso()">
+                        <option value="paquete">Por Paquete/Caja</option>
                         <option value="unidad">Por Unidades sueltas</option>
                     </select>
                 </div>
 
                 <div class="mb-3">
-                    <label class="small fw-bold text-dark mb-1" id="stock_cantidad_titulo">Compras que ingresan:</label>
-                    <div class="input-group">
-                        <input type="number" id="stock_cantidad" class="form-control fw-bold text-center" value="1" min="0.01" step="any">
-                        <span class="input-group-text bg-light" id="stock_unidad_label" style="font-size: 0.8rem;">Compras</span>
+                    <label class="small fw-bold text-muted mb-1" id="stock_cantidad_titulo">Cantidad a ingresar</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" id="stock_cantidad"
+                            class="form-control sian-input text-center fw-bold text-success" style="font-size: 1.1rem;"
+                            value="1" min="0.01" step="any">
+                        <span class="input-group-text bg-white sian-input fw-bold" id="stock_unidad_label">...</span>
                     </div>
-                    <div class="form-text" style="font-size: 0.75rem;" id="stock_ayuda">...</div>
+                    <div class="form-text mt-1 text-secondary" style="font-size: 0.7rem;" id="stock_ayuda">...</div>
                 </div>
 
-                <div class="mb-3">
-                    <label class="small fw-bold text-muted mb-1">¿Cambió el costo? (Opcional)</label>
+                <div class="mb-4">
+                    <label class="small fw-bold text-muted mb-1">Costo pagado (Opcional)</label>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-light border-0">$</span>
-                        <input type="number" step="0.01" id="stock_nuevo_precio" class="form-control bg-light border-0" placeholder="Lo que pagaste hoy">
+                        <span class="input-group-text bg-light border-end-0 sian-input">$</span>
+                        <input type="number" step="0.01" id="stock_nuevo_precio"
+                            class="form-control border-start-0 sian-input ps-0 fw-bold" placeholder="0.00">
                     </div>
                 </div>
 
                 <div class="d-grid">
-                    <button type="button" class="btn btn-success fw-bold" onclick="guardarCompra()">
-                        <i class="fas fa-save me-1"></i> Agregar al Inventario
-                    </button>
+                    <button type="button" class="btn btn-success fw-bold rounded-3 py-2 shadow-sm"
+                        onclick="guardarCompra()">Confirmar Ingreso</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalMerma" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom p-3" style="background: #fff5f5;">
+                <h6 class="modal-title fw-bold text-danger"><i class="fas fa-arrow-up me-2"></i>Registrar Merma</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <input type="hidden" id="merma_id">
+                <h6 class="fw-bold mb-4 text-dark text-truncate text-center" id="merma_nombre"></h6>
+
+                <div class="mb-4">
+                    <label class="small fw-bold text-muted mb-1">Cantidad a descontar</label>
+                    <div class="input-group input-group-sm">
+                        <input type="number" id="merma_cantidad"
+                            class="form-control sian-input text-center fw-bold text-danger" style="font-size: 1.1rem;"
+                            value="1" min="0.01" step="any">
+                        <span class="input-group-text bg-white sian-input fw-bold" id="merma_unidad_label">...</span>
+                    </div>
+                    <div class="form-text mt-2 text-danger opacity-75" style="font-size: 0.75rem; line-height: 1.2;"><i
+                            class="fas fa-info-circle me-1"></i>Esto se restará directamente de tu inventario.</div>
+                </div>
+
+                <div class="d-grid">
+                    <button type="button" class="btn btn-danger fw-bold rounded-3 py-2 shadow-sm"
+                        onclick="guardarMerma()">Confirmar Descuento</button>
                 </div>
             </div>
         </div>
@@ -242,21 +442,19 @@
                 items[i].classList.add('d-none');
             }
         }
-        const msg = document.getElementById('sinResultados');
-        if (visibles === 0 && items.length > 0) msg.classList.remove('d-none');
-        else msg.classList.add('d-none');
+        document.getElementById('sinResultados').classList.toggle('d-none', visibles !== 0 || items.length === 0);
     }
 
-    // --- LÓGICA DE UI MODAL PRINCIPAL ---
+    // --- LÓGICA MODAL MATERIAL ---
     function limpiarModal() {
         document.getElementById('formMaterial').reset();
         document.getElementById('id_actualizar').value = '';
         document.getElementById('unidad_medida').value = 'pieza';
         document.getElementById('cantidad_paquete').value = '1';
-        
+
         const stockMinInput = document.getElementById('stock_minimo');
         if (stockMinInput) stockMinInput.value = '5';
-        actualizarLabelStockMinimo(); 
+        actualizarLabelStockMinimo();
     }
 
     function editarMaterial(mat) {
@@ -266,141 +464,223 @@
         document.getElementById('precio_compra').value = mat.precio_compra;
         document.getElementById('cantidad_paquete').value = mat.cantidad_paquete || 1;
         document.getElementById('unidad_medida').value = mat.unidad_medida || 'pieza';
-        
-        const stockMinInput = document.getElementById('stock_minimo');
-        if (stockMinInput) {
-            stockMinInput.value = mat.stock_minimo !== undefined ? mat.stock_minimo : 5;
-        }
-        actualizarLabelStockMinimo();
 
+        const stockMinInput = document.getElementById('stock_minimo');
+        if (stockMinInput) stockMinInput.value = mat.stock_minimo !== undefined ? mat.stock_minimo : 5;
+        actualizarLabelStockMinimo();
         modal.show();
     }
 
     function actualizarLabelStockMinimo() {
         const selectUnidad = document.getElementById('unidad_medida');
         const labelStock = document.getElementById('labelUnidadMinima');
-        
         if (selectUnidad && labelStock) {
             labelStock.innerText = selectUnidad.options[selectUnidad.selectedIndex].text;
         }
     }
 
-    // ELIMINAR RESPETANDO TU RUTA ORIGINAL
+    // --- ELIMINAR ---
     function confirmarEliminar(urlReal, nombre) {
         Swal.fire({
             title: '¿Eliminar material?',
-            text: `Vas a borrar "${nombre}". Esta acción no se puede deshacer.`,
+            text: `Vas a borrar "${nombre}".`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
+            cancelButtonColor: '#e9ecef',
+            cancelButtonText: '<span style="color:#495057; font-weight: bold;">Cancelar</span>',
             confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar',
-            borderRadius: '15px'
+            customClass: { popup: 'rounded-4' }
         }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = urlReal;
-            }
+            if (result.isConfirmed) window.location.href = urlReal;
         });
     }
 
-    // --- FUNCIONES DE STOCK ACTUALIZADAS ---
+    // --- LÓGICA COMPRA (ENTRADA) ---
     let modalStockObj;
     let materialActual = null;
 
     function abrirModalStock(mat) {
         materialActual = mat;
-        
-        // Asignar valores
         document.getElementById('stock_id').value = mat.id;
         document.getElementById('stock_nombre').innerText = mat.nombre;
         document.getElementById('stock_nuevo_precio').value = mat.precio_compra;
         document.getElementById('stock_cantidad').value = 1;
-        
+
         const selectorContainer = document.getElementById('contenedor_tipo_ingreso');
-        const tituloCantidad = document.getElementById('stock_cantidad_titulo');
         const selector = document.getElementById('stock_tipo_ingreso');
-        
-        // Si el material es unitario (1 litro, 1 metro)
+
         if (parseFloat(mat.cantidad_paquete) === 1) {
             selectorContainer.style.display = 'none';
-            tituloCantidad.innerText = "Cantidad que ingresa:";
             selector.value = 'unidad';
         } else {
             selectorContainer.style.display = 'block';
-            tituloCantidad.innerText = "Compras que ingresan:";
             selector.value = 'paquete';
         }
-        
+
         cambiarModoIngreso();
-        
-        // Inicializar el modal si no existe y mostrarlo
-        if (!modalStockObj) {
-            modalStockObj = new bootstrap.Modal(document.getElementById('modalStock'));
-        }
+        if (!modalStockObj) modalStockObj = new bootstrap.Modal(document.getElementById('modalStock'));
         modalStockObj.show();
     }
 
     function cambiarModoIngreso() {
         if (!materialActual) return;
-        
         const tipo = document.getElementById('stock_tipo_ingreso').value;
         const label = document.getElementById('stock_unidad_label');
         const ayuda = document.getElementById('stock_ayuda');
         const unidad = materialActual.unidad_medida || 'pieza';
 
         if (tipo === 'paquete' && parseFloat(materialActual.cantidad_paquete) > 1) {
-            label.innerText = 'Paquetes';
-            ayuda.innerHTML = `1 paquete sumará <b>${parseFloat(materialActual.cantidad_paquete).toFixed(2)} ${unidad}(s)</b> al stock.`;
+            label.innerText = 'Cajas/Paquetes';
+            ayuda.innerHTML = `Suma <b>${parseFloat(materialActual.cantidad_paquete).toFixed(2)} ${unidad}(s)</b> por paquete al inventario.`;
         } else {
-            label.innerText = `${unidad}(s) que entran`;
-            ayuda.innerHTML = `Ingresa cuántas <b>${unidad}(s)</b> vas a meter al almacén.`;
+            label.innerText = unidad;
+            ayuda.innerHTML = `Entrada directa de unidades al almacén.`;
         }
     }
 
-    // Ojo, esta función la debe usar el botón verde del modal
     function guardarCompra() {
         const id = document.getElementById('stock_id').value;
         const cant = document.getElementById('stock_cantidad').value;
         const precio = document.getElementById('stock_nuevo_precio').value;
         const tipo_ingreso = document.getElementById('stock_tipo_ingreso').value;
 
-        if (!cant || cant <= 0) {
-            Swal.fire('Atención', 'Ingresa una cantidad válida.', 'info');
-            return;
-        }
+        if (!cant || cant <= 0) return Swal.fire('Atención', 'Ingresa una cantidad válida.', 'warning');
 
         fetch('/api/registrar_compra', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                id: id,
-                cantidad: cant,
-                nuevo_precio: precio,
-                tipo_ingreso: tipo_ingreso
-            })
+            body: JSON.stringify({ id, cantidad: cant, nuevo_precio: precio, tipo_ingreso })
         })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                if (modalStockObj) {
-                    modalStockObj.hide();
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Inventario Sumado', showConfirmButton: false, timer: 1200 }).then(() => location.reload());
+                } else {
+                    Swal.fire('Error', data.error, 'error');
                 }
-                Swal.fire({
-                    icon: 'success', 
-                    title: '¡Stock Actualizado!', 
-                    showConfirmButton: false, 
-                    timer: 1500
-                }).then(() => location.reload());
-            } else {
-                Swal.fire('Error', data.error, 'error');
-            }
+            });
+    }
+
+    // --- LÓGICA MERMA (SALIDA) ---
+    let modalMermaObj;
+
+    function abrirModalMerma(mat) {
+        document.getElementById('merma_id').value = mat.id;
+        document.getElementById('merma_nombre').innerText = mat.nombre;
+        document.getElementById('merma_cantidad').value = 1;
+        document.getElementById('merma_unidad_label').innerText = mat.unidad_medida || 'pieza';
+
+        if (!modalMermaObj) modalMermaObj = new bootstrap.Modal(document.getElementById('modalMerma'));
+        modalMermaObj.show();
+    }
+
+    function guardarMerma() {
+        const id = document.getElementById('merma_id').value;
+        const cant = document.getElementById('merma_cantidad').value;
+
+        if (!cant || cant <= 0) return Swal.fire('Atención', 'Ingresa una cantidad válida.', 'warning');
+
+        fetch('/api/registrar_merma', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, cantidad: cant })
         })
-        .catch(e => {
-            Swal.fire('Error', 'Error de conexión al servidor.', 'error');
-        });
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: 'Merma Registrada', showConfirmButton: false, timer: 1200 }).then(() => location.reload());
+                } else {
+                    Swal.fire('Error', data.error, 'error');
+                }
+            });
+    }
+
+    // --- HISTORIAL ESCALABLE (PAGINACIÓN) ---
+    // Variables movidas a nivel global para que todo funcione
+    let historialOffset = 0;
+    const HISTORIAL_LIMIT = 20; // Cuántos registros trae por clic
+
+    // Se dispara al abrir el modal por primera vez
+    function abrirHistorial() {
+        historialOffset = 0; // Reiniciamos el conteo
+        document.getElementById('listaHistorial').innerHTML = ''; // Limpiamos la lista
+        cargarDatosHistorial();
+    }
+
+    // Se dispara al darle click al botón "Cargar anteriores"
+    function cargarMasHistorial() {
+        historialOffset += HISTORIAL_LIMIT;
+        cargarDatosHistorial();
+    }
+
+    // La función principal que hace el fetch a tu backend
+    function cargarDatosHistorial() {
+        const contenedor = document.getElementById('listaHistorial');
+        const loading = document.getElementById('loadingHistorial');
+        const btnMas = document.getElementById('contenedorCargarMas');
+
+        btnMas.classList.add('d-none'); // Ocultamos el botón mientras carga
+        loading.classList.remove('d-none');
+
+        fetch(`/api/inventario/historial?offset=${historialOffset}&limit=${HISTORIAL_LIMIT}`)
+            .then(r => r.json())
+            .then(data => {
+                loading.classList.add('d-none');
+
+                if (data.length === 0 && historialOffset === 0) {
+                    contenedor.innerHTML = `
+                    <div class="text-center py-5 text-muted opacity-50">
+                        <i class="fas fa-wind fa-2x mb-3"></i>
+                        <p class="small">No hay movimientos recientes.</p>
+                    </div>`;
+                    return;
+                }
+
+                data.forEach(mov => {
+                    const isEntrada = mov.tipo === 'entrada';
+                    const color = isEntrada ? 'text-success' : 'text-danger';
+                    const icon = isEntrada ? 'fa-arrow-down' : 'fa-arrow-up';
+                    const sign = isEntrada ? '+' : '-';
+                    const bg = isEntrada ? 'bg-success' : 'bg-danger';
+
+                    const fecha = new Date(mov.fecha).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+
+                    contenedor.insertAdjacentHTML('beforeend', `
+                    <div class="list-group-item bg-white border-bottom border-light p-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <small class="text-muted fw-bold" style="font-size: 0.7rem;">${fecha}</small>
+                            <span class="badge ${bg} bg-opacity-10 ${color} rounded-pill border-0"><i class="fas ${icon} me-1"></i>${mov.tipo.toUpperCase()}</span>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">${mov.material_nombre}</h6>
+                                <small class="text-secondary" style="font-size: 0.75rem;">${mov.motivo}</small>
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold ${color} mb-0" style="font-size: 1.1rem;">${sign}${mov.cantidad}</div>
+                                <small class="text-muted" style="font-size: 0.65rem;">Quedan: ${mov.stock_resultante}</small>
+                            </div>
+                        </div>
+                    </div>
+                `);
+                });
+
+                // Si la BD nos trajo exactamente el límite que pedimos, significa que probablemente hay más registros por descubrir
+                if (data.length === HISTORIAL_LIMIT) {
+                    btnMas.classList.remove('d-none');
+                } else if (historialOffset > 0 && data.length < HISTORIAL_LIMIT) {
+                    // Si ya no hay más, ponemos un mensajito amigable
+                    contenedor.insertAdjacentHTML('beforeend', `<div class="text-center p-3 small text-muted">No hay más movimientos en el historial.</div>`);
+                }
+            })
+            .catch(() => {
+                loading.classList.add('d-none');
+                if (historialOffset === 0) {
+                    contenedor.innerHTML = '<div class="p-4 text-center text-danger small">Error al cargar el historial.</div>';
+                }
+            });
     }
 </script>
 {% endblock %}
-
 {% endblock %}

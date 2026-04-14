@@ -3,116 +3,280 @@
 {% block title %}Equipos | SianEffects{% endblock %}
 
 {% block content %}
-<div class="row align-items-center mb-4 g-3 mt-3">
-    <div class="col-md-6">
-        <h3 class="fw-bold text-secondary m-0">⚡ Maquinaria y Procesos</h3>
-        <small class="text-muted">Gestiona el costo de uso de tus equipos.</small>
+<style>
+    /* VARIABLES DE DISEÑO SIANEFFECTS */
+    :root {
+        --sian-primary: #ff4a5a;
+        --sian-primary-hover: #e03e4c;
+        --sian-bg-soft: #f8f9fa;
+        --sian-border: #eef0f2;
+    }
+
+    /* CONTENEDOR PRINCIPAL TIPO PANEL */
+    .sian-panel {
+        background: #ffffff;
+        border: 1px solid var(--sian-border);
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        overflow: hidden; /* Para que la tabla respete las esquinas redondeadas */
+    }
+
+    /* ESTILOS DE LA TABLA PREMIUM */
+    .sian-table {
+        margin-bottom: 0;
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .sian-table th {
+        background-color: var(--sian-bg-soft);
+        color: #6c757d;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 12px 20px;
+        border-bottom: 1px solid var(--sian-border);
+        border-top: none;
+    }
+    .sian-table td {
+        padding: 14px 20px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--sian-border);
+        color: #212529;
+        font-size: 0.95rem;
+        transition: background-color 0.2s;
+    }
+    .sian-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    @media (hover: hover) {
+        .sian-table tbody tr:hover td {
+            background-color: #fafbfa;
+        }
+    }
+
+    /* BOTÓN PRINCIPAL */
+    .btn-sian {
+        background-color: var(--sian-primary);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 10px rgba(255, 74, 90, 0.2);
+        transition: all 0.2s;
+    }
+    .btn-sian:active, .btn-sian:hover {
+        background-color: var(--sian-primary-hover);
+        color: #fff;
+        transform: translateY(-1px);
+    }
+
+    /* INPUTS LIMPIOS */
+    .sian-input {
+        border: 1px solid var(--sian-border);
+        border-radius: 10px;
+        box-shadow: none !important;
+        background-color: var(--sian-bg-soft);
+        transition: border-color 0.2s, background-color 0.2s;
+    }
+    .sian-input:focus {
+        border-color: #b0b5ba;
+        background-color: #fff;
+    }
+
+    /* ICONOS DE ACCIÓN MINIMALISTAS */
+    .action-icon {
+        color: #868e96;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 10px;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .action-icon:active, .action-icon:hover {
+        background: var(--sian-bg-soft);
+        color: #0d6efd;
+    }
+    .action-icon.danger:active, .action-icon.danger:hover {
+        background: #fff5f5;
+        color: #dc3545;
+    }
+
+    /* ICONO DE EQUIPO EN LA TABLA */
+    .icon-box {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #fff8e6;
+        color: #f5b041;
+        margin-right: 12px;
+    }
+</style>
+
+<div class="row align-items-center mb-4">
+    <div class="col-md-6 mb-3 mb-md-0 text-center text-md-start">
+        <h3 class="fw-bold m-0 text-dark" style="letter-spacing: -0.5px;">
+            <i class="fas fa-bolt me-2 text-warning opacity-75" style="font-size: 1.2rem;"></i>Maquinaria y Procesos
+        </h3>
+        <p class="text-muted small m-0 mt-1">Gestiona el costo de desgaste o luz de tus equipos.</p>
     </div>
-    <div class="col-md-6">
-        <div class="d-flex gap-2">
-            <input type="text" id="buscador" class="form-control search-input" placeholder="🔍 Buscar equipo..."
-                onkeyup="filtrarTabla()">
-            <button class="btn btn-primary rounded-pill px-4 fw-bold shadow-sm" onclick="abrirModalNuevo()">
-                <i class="fas fa-plus"></i> Nuevo
-            </button>
-        </div>
+    <div class="col-md-6 d-flex justify-content-center justify-content-md-end gap-2">
+        <button class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" onclick="abrirModalNuevo()">
+            <i class="fas fa-plus me-1"></i> Nuevo Equipo
+        </button>
     </div>
 </div>
 
-<div class="card card-custom overflow-hidden">
+<div class="mb-4">
+    <div class="input-group shadow-sm" style="border-radius: 10px;">
+        <span class="input-group-text bg-white border-end-0 border-light text-muted" style="border-radius: 10px 0 0 10px;">
+            <i class="fas fa-search"></i>
+        </span>
+        <input type="text" id="buscadorEquipos" class="form-control border-start-0 border-light py-2"
+            style="box-shadow: none; border-radius: 0 10px 10px 0;" placeholder="Buscar maquinaria por nombre..." onkeyup="filtrarTabla()">
+    </div>
+</div>
+
+<div class="sian-panel mb-5">
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" id="tablaEquipos">
-            <thead class="bg-light text-uppercase small text-muted">
+        <table class="sian-table" id="tablaEquipos">
+            <thead>
                 <tr>
-                    <th class="ps-4 py-3">Equipo / Proceso</th>
-                    <th>Costo Desgaste</th>
-                    <th class="text-end pe-4">Acciones</th>
+                    <th style="width: 50%;">Equipo / Proceso</th>
+                    <th style="width: 30%;">Costo Desgaste</th>
+                    <th style="width: 20%; text-align: right;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for eq in equipos %}
-                <tr>
-                    <td class="ps-4 fw-bold text-dark">
-                        <i class="fas fa-bolt text-warning me-2"></i> {{ eq['nombre'] }}
+                <tr class="item-equipo">
+                    <td>
+                        <div class="d-flex align-items-center">
+                            <div class="icon-box">
+                                <i class="fas fa-bolt" style="font-size: 0.8rem;"></i>
+                            </div>
+                            <span class="fw-bold nombre-equipo">{{ eq['nombre'] }}</span>
+                        </div>
                     </td>
                     <td>
-                        <span
-                            class="badge bg-success bg-opacity-10 text-success border border-success px-3 rounded-pill">
+                        <span class="fw-bold text-success" style="font-size: 0.95rem;">
                             + ${{ "%.2f"|format(eq['costo_desgaste']) }}
                         </span>
                     </td>
-                    <td class="text-end pe-4">
-                        <button class="btn btn-light text-primary border rounded-circle btn-sm shadow-sm me-1"
-                            onclick='editarEquipo({{ eq|tojson }})' title="Editar">
-                            <i class="fas fa-pen"></i>
-                        </button>
-                        <button type="button" 
-                            class="btn btn-light text-danger border rounded-circle btn-sm shadow-sm"
-                            onclick="confirmarEliminarEquipo('{{ url_for('inventory.eliminar_equipo', id=eq['id']) }}', '{{ eq['nombre'] }}')" 
-                            title="Eliminar">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                    <td style="text-align: right;">
+                        <div class="d-flex justify-content-end gap-1">
+                            <button class="action-icon" onclick='editarEquipo({{ eq|tojson|safe }})' title="Editar">
+                                <i class="fas fa-pen" style="font-size: 0.9rem;"></i>
+                            </button>
+                            <button class="action-icon danger" onclick="confirmarEliminarEquipo('{{ url_for('inventory.eliminar_equipo', id=eq['id']) }}', '{{ eq['nombre'] }}')" title="Eliminar">
+                                <i class="fas fa-trash-alt" style="font-size: 0.9rem;"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="3" class="text-center py-5 text-muted opacity-50">
-                        <i class="fas fa-plug fa-3x mb-3"></i><br>No hay equipos registrados.
+                    <td colspan="3" class="text-center py-5 bg-white">
+                        <i class="fas fa-plug fa-3x mb-3 text-muted opacity-25"></i>
+                        <h6 class="fw-bold text-dark">No hay equipos registrados</h6>
+                        <p class="text-muted small m-0">Agrega tu primer plotter, plancha o impresora.</p>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    
+    <div id="sinResultados" class="text-center py-5 d-none bg-white">
+        <p class="text-muted fw-bold m-0"><i class="fas fa-search me-2"></i>No se encontró ese equipo.</p>
+    </div>
 </div>
 
 <div class="modal fade" id="modalEquipo" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header bg-primary text-white">
-                <h5 class="modal-title fw-bold" id="modalTitle">Nuevo Equipo</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-dark" id="modalTitle">Nuevo Equipo</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post">
                 <div class="modal-body p-4">
                     <input type="hidden" name="id_actualizar" id="inputId">
 
-                    <div class="mb-3">
-                        <label class="fw-bold small text-muted">Nombre del Equipo</label>
-                        <input type="text" name="nombre" id="inputNombre" class="form-control"
-                            placeholder="Ej. Corte Láser" required>
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold text-muted">Nombre de la Maquinaria</label>
+                        <input type="text" name="nombre" id="inputNombre" class="form-control sian-input py-2 fw-bold text-dark"
+                            placeholder="Ej. Plotter de Corte Silhouette" required>
                     </div>
 
-                    <div class="mb-3">
-                        <label class="fw-bold small text-muted">Costo por Uso ($)</label>
-                        <input type="number" step="any" name="costo_desgaste" id="inputCosto" class="form-control"
-                            placeholder="0.00" required>
-                        <div class="form-text small"><i class="fas fa-info-circle"></i> Costo de luz, desgaste o
-                            mantenimiento por cada venta.</div>
+                    <div class="mb-4 p-3 bg-white rounded-3 border border-light shadow-sm">
+                        <label class="form-label small fw-bold text-muted mb-1">Costo por Uso o Desgaste</label>
+                        <p class="small text-muted mb-3" style="font-size: 0.75rem; line-height: 1.3;">
+                            Costo de luz, tinta o desgaste estimado por cada vez que utilizas este equipo.
+                        </p>
+                        <div class="input-group shadow-sm" style="border-radius: 10px;">
+                            <span class="input-group-text bg-white border-end-0 border-light text-success fw-bold" style="border-radius: 10px 0 0 10px;">$</span>
+                            <input type="number" step="any" name="costo_desgaste" id="inputCosto" 
+                                class="form-control border-start-0 border-light py-2 fw-bold text-success"
+                                style="border-radius: 0 10px 10px 0; box-shadow: none;" placeholder="0.00" required>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-light">
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold w-100">Guardar
-                        Equipo</button>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-sian rounded-3 px-4 py-2 fw-bold w-100 shadow-sm">Guardar Equipo</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-{% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    const modalEl = document.getElementById('modalEquipo');
-    const modal = new bootstrap.Modal(modalEl);
+    let modalEquipoObj;
 
+    // --- BÚSQUEDA EN LA TABLA ---
+    function filtrarTabla() {
+        const input = document.getElementById('buscadorEquipos');
+        const filter = input.value.toLowerCase();
+        const rows = document.getElementsByClassName('item-equipo');
+        let visibles = 0;
+
+        for (let i = 0; i < rows.length; i++) {
+            const nombre = rows[i].querySelector('.nombre-equipo').innerText || "";
+            if (nombre.toLowerCase().indexOf(filter) > -1) {
+                rows[i].style.display = ""; // Muestra la fila
+                visibles++;
+            } else {
+                rows[i].style.display = "none"; // Oculta la fila
+            }
+        }
+        
+        const tabla = document.getElementById('tablaEquipos');
+        const msj = document.getElementById('sinResultados');
+        
+        if (visibles === 0 && rows.length > 0) {
+            tabla.classList.add('d-none');
+            msj.classList.remove('d-none');
+        } else {
+            tabla.classList.remove('d-none');
+            msj.classList.add('d-none');
+        }
+    }
+
+    // --- MODALES ---
     function abrirModalNuevo() {
         document.getElementById('modalTitle').innerText = "Nuevo Equipo";
         document.getElementById('inputId').value = "";
         document.getElementById('inputNombre').value = "";
         document.getElementById('inputCosto').value = "";
-        modal.show();
+        
+        if (!modalEquipoObj) modalEquipoObj = new bootstrap.Modal(document.getElementById('modalEquipo'));
+        modalEquipoObj.show();
     }
 
     function editarEquipo(eq) {
@@ -120,39 +284,61 @@
         document.getElementById('inputId').value = eq.id;
         document.getElementById('inputNombre').value = eq.nombre;
         document.getElementById('inputCosto').value = eq.costo_desgaste;
-        modal.show();
+        
+        if (!modalEquipoObj) modalEquipoObj = new bootstrap.Modal(document.getElementById('modalEquipo'));
+        modalEquipoObj.show();
     }
 
-    function filtrarTabla() {
-        const filter = document.getElementById('buscador').value.toUpperCase();
-        const rows = document.getElementById('tablaEquipos').getElementsByTagName('tr');
-        for (let i = 0; i < rows.length; i++) {
-            const td = rows[i].getElementsByTagName('td')[0];
-            if (td) {
-                const txt = td.textContent || td.innerText;
-                rows[i].style.display = txt.toUpperCase().indexOf(filter) > -1 ? "" : "none";
-            }
-        }
-    }
-
+    // --- ELIMINAR ---
     function confirmarEliminarEquipo(urlReal, nombre) {
+        Swal.fire({
+            title: '¿Eliminar equipo?',
+            text: `Vas a borrar "${nombre}". Esta acción no se puede deshacer.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#e9ecef',
+            cancelButtonText: '<span style="color:#495057; font-weight: bold;">Cancelar</span>',
+            confirmButtonText: 'Sí, borrar',
+            customClass: { popup: 'rounded-4' }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                window.location.href = urlReal;
+            }
+        });
+    }
+
+    // --- ALERTAS DE ÉXITO (FEEDBACK VISUAL) ---
+    document.addEventListener("DOMContentLoaded", function() {
+        // Leemos la URL actual
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Si Python nos mandó "?guardado=true"
+        if (urlParams.has('guardado')) {
             Swal.fire({
-                title: '¿Eliminar equipo?',
-                text: `Vas a borrar "${nombre}". Esta acción no se puede deshacer.`,
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#6c757d',
-                confirmButtonText: 'Sí, borrar equipo',
-                cancelButtonText: 'Cancelar',
-                borderRadius: '16px'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    // ✅ USAMOS LA RUTA GENERADA POR FLASK
-                    window.location.href = urlReal;
-                }
+                icon: 'success',
+                title: '¡Cambios Guardados!',
+                text: 'El equipo se actualizó correctamente en tu cuenta.',
+                showConfirmButton: false,
+                timer: 2000,
+                customClass: { popup: 'rounded-4' }
             });
+            // Limpiamos la URL para que no salga la alerta si el usuario recarga la página
+            window.history.replaceState(null, null, window.location.pathname);
         }
 
+        // Si Python nos mandó "?eliminado=true"
+        if (urlParams.has('eliminado')) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Equipo Eliminado',
+                showConfirmButton: false,
+                timer: 1500,
+                customClass: { popup: 'rounded-4' }
+            });
+            window.history.replaceState(null, null, window.location.pathname);
+        }
+    });
 </script>
+{% endblock %}
 {% endblock %}

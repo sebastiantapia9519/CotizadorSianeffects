@@ -4,104 +4,179 @@
 
 {% block extra_css %}
 <style>
-    /* Variables locales */
+    /* VARIABLES DE DISEÑO SIANEFFECTS */
     :root {
-        --sian-pink-hover: #ff4757;
-        --text-dark: #2f3542;
+        --sian-primary: #ff4a5a;
+        --sian-primary-hover: #e03e4c;
+        --sian-bg-soft: #f8f9fa;
+        --sian-border: #eef0f2;
+        --sian-teal: #20c997; /* El color verde agua de tus ingredientes */
     }
 
-    /* UI Elements específicos */
-    .card-custom {
-        border: none;
-        border-radius: 20px;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.04);
-        background: white;
-        transition: transform 0.2s;
+    /* CONTENEDOR PRINCIPAL TIPO PANEL */
+    .sian-panel {
+        background: #ffffff;
+        border: 1px solid var(--sian-border);
+        border-radius: 16px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
     }
 
-    .search-input {
-        border-radius: 50px;
-        padding-left: 20px;
-        border: 2px solid #eee;
-        background-color: white;
-        transition: all 0.3s;
+    /* ESTILOS DE LA TABLA PREMIUM */
+    .sian-table {
+        margin-bottom: 0;
+        width: 100%;
+        border-collapse: collapse;
     }
-
-    .search-input:focus {
-        border-color: var(--sian-pink);
-        box-shadow: 0 0 0 4px var(--sian-pink-light);
-    }
-
-    /* Botones */
-    .btn-primary {
-        background-color: var(--sian-pink);
-        border-color: var(--sian-pink);
-        border-radius: 50px;
-        padding: 8px 24px;
+    .sian-table th {
+        background-color: var(--sian-bg-soft);
+        color: #6c757d;
+        font-size: 0.7rem;
         font-weight: 700;
-        transition: all 0.3s;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        padding: 12px 24px;
+        border-bottom: 1px solid var(--sian-border);
+        border-top: none;
+    }
+    .sian-table td {
+        padding: 16px 24px;
+        vertical-align: middle;
+        border-bottom: 1px solid var(--sian-border);
+        color: #212529;
+        transition: background-color 0.2s;
+    }
+    .sian-table tbody tr:last-child td {
+        border-bottom: none;
+    }
+    @media (hover: hover) {
+        .sian-table tbody tr:hover td {
+            background-color: #fafbfa;
+        }
     }
 
-    .btn-primary:hover {
-        background-color: var(--sian-pink-hover);
-        border-color: var(--sian-pink-hover);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(255, 107, 129, 0.3);
+    /* BOTÓN PRINCIPAL */
+    .btn-sian {
+        background-color: var(--sian-primary);
+        color: #fff;
+        border: none;
+        box-shadow: 0 4px 10px rgba(255, 74, 90, 0.2);
+        transition: all 0.2s;
+    }
+    .btn-sian:active, .btn-sian:hover {
+        background-color: var(--sian-primary-hover);
+        color: #fff;
+        transform: translateY(-1px);
     }
 
-    /* Tabla Hover Color */
-    .table-hover tbody tr:hover {
-        background-color: var(--sian-pink-light);
+    /* INPUTS LIMPIOS */
+    .sian-input {
+        border: 1px solid var(--sian-border);
+        border-radius: 10px;
+        box-shadow: none !important;
+        background-color: var(--sian-bg-soft);
+        transition: border-color 0.2s, background-color 0.2s;
+    }
+    .sian-input:focus {
+        border-color: #b0b5ba;
+        background-color: #fff;
     }
 
-    /* Badge Personalizado */
+    /* ICONOS DE ACCIÓN MINIMALISTAS (Como en Inventario/Equipos) */
+    .action-icon {
+        color: #868e96;
+        background: transparent;
+        border: none;
+        border-radius: 6px;
+        padding: 6px 10px;
+        transition: all 0.2s;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .action-icon:active, .action-icon:hover {
+        background: var(--sian-bg-soft);
+        color: #0d6efd;
+    }
+    .action-icon.danger:active, .action-icon.danger:hover {
+        background: #fff5f5;
+        color: #dc3545;
+    }
+
+    /* BOTÓN USAR */
+    .btn-usar {
+        color: #198754;
+        font-weight: 700;
+        font-size: 0.85rem;
+        background: transparent;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 6px;
+        transition: all 0.2s;
+        text-decoration: none;
+    }
+    .btn-usar:hover {
+        background: #f0fdf4;
+        color: #146c43;
+    }
+
+    /* BADGE INGREDIENTES */
     .badge-sian {
         background-color: var(--sian-teal);
         color: white;
         font-weight: 600;
+        font-size: 0.75rem;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="row align-items-center mb-4 g-3">
-    <div class="col-md-6">
-        <h3 class="fw-bold text-dark m-0"><i class="fas fa-book-open text-danger me-2"></i>Recetas Guardadas</h3>
-        <small class="text-muted">Tus combinaciones y productos pre-configurados.</small>
+<div class="row align-items-center mb-4">
+    <div class="col-md-6 mb-3 mb-md-0 text-center text-md-start">
+        <h3 class="fw-bold m-0 text-dark" style="letter-spacing: -0.5px;">
+            <i class="fas fa-book-open text-danger me-2 opacity-75" style="font-size: 1.2rem;"></i>Recetas Guardadas
+        </h3>
+        <p class="text-muted small m-0 mt-1">Tus combinaciones y productos pre-configurados.</p>
     </div>
-    <div class="col-md-6">
-        <div class="d-flex gap-2 justify-content-md-end">
-            <input type="text" id="buscador" class="form-control search-input w-50" placeholder="🔍 Buscar receta..."
-                onkeyup="filtrarTabla()">
-            <a href="{{ url_for('main.cotizador') }}" class="btn btn-primary shadow-sm">
-                <i class="fas fa-plus-circle me-1"></i> Nueva
-            </a>
-        </div>
+    <div class="col-md-6 d-flex justify-content-center justify-content-md-end gap-2">
+        <a href="{{ url_for('main.cotizador') }}" class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm">
+            <i class="fas fa-plus me-1"></i> Nueva Receta
+        </a>
     </div>
 </div>
 
-<div class="card card-custom overflow-hidden">
+<div class="mb-4">
+    <div class="input-group shadow-sm" style="border-radius: 10px;">
+        <span class="input-group-text bg-white border-end-0 border-light text-muted" style="border-radius: 10px 0 0 10px;">
+            <i class="fas fa-search"></i>
+        </span>
+        <input type="text" id="buscadorRecetas" class="form-control border-start-0 border-light py-2"
+            style="box-shadow: none; border-radius: 0 10px 10px 0;" placeholder="Buscar receta por nombre..." onkeyup="filtrarTabla()">
+    </div>
+</div>
+
+<div class="sian-panel mb-5">
     <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" id="tablaRecetas">
-            <thead class="bg-light text-uppercase small text-muted">
+        <table class="sian-table" id="tablaRecetas">
+            <thead>
                 <tr>
-                    <th class="ps-4 py-3 border-0">Nombre de la Receta</th>
-                    <th class="border-0">Composición</th>
-                    <th class="text-end pe-4 border-0">Acciones</th>
+                    <th style="width: 45%;">Nombre de la Receta</th>
+                    <th style="width: 30%;">Composición</th>
+                    <th style="width: 25%; text-align: right;">Acciones</th>
                 </tr>
             </thead>
-            <tbody class="border-top-0">
+            <tbody>
                 {% for receta in recetas %}
-                <tr>
-                    <td class="ps-4">
+                <tr class="item-receta">
+                    <td>
                         <div class="d-flex align-items-center">
-                            <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-danger me-3"
-                                style="width: 40px; height: 40px;">
+                            <div class="bg-light rounded-circle d-flex align-items-center justify-content-center text-danger me-3 border"
+                                style="width: 42px; height: 42px;">
                                 <i class="fas fa-flask"></i>
                             </div>
                             <div>
-                                <h6 class="fw-bold text-dark mb-0">{{ receta['nombre'] }}</h6>
-                                <small class="text-muted" style="font-size: 0.75rem;">ID: #{{ receta['id'] }}</small>
+                                <h6 class="fw-bold text-dark mb-0 nombre-receta" style="font-size: 0.95rem;">{{ receta['nombre'] }}</h6>
+                                <small class="text-muted" style="font-size: 0.7rem; font-weight: 600;">ID: #{{ receta['id'] }}</small>
                             </div>
                         </div>
                     </td>
@@ -111,95 +186,88 @@
                             onmouseover="this.style.transform='scale(1.05)'"
                             onmouseout="this.style.transform='scale(1)'"
                             onclick='verDetallesReceta({{ receta|tojson|safe }})' title="Ver lista de ingredientes">
-                            <i class="fas fa-eye me-1"></i> {{ receta['num_materiales'] }} Ingredientes
+                            <i class="fas fa-eye me-1 opacity-75"></i> {{ receta['num_materiales'] }} Ingredientes
                         </span>
                     </td>
-                    <td class="text-end pe-4">
-                        <a href="{{ url_for('main.cotizador', cargar_receta=receta['id']) }}"
-                            class="btn btn-sm btn-outline-success border-0 rounded-pill me-1 fw-bold"
-                            title="Usar en Cotizador">
-                            <i class="fas fa-play"></i> Usar
-                        </a>
-
-                        <button class="btn btn-sm btn-light text-primary rounded-circle shadow-sm me-1"
-                            onclick='editarReceta({{ receta|tojson }})' title="Renombrar">
-                            <i class="fas fa-pen"></i>
-                        </button>
-
-                        <button type="button" class="btn btn-sm btn-light text-danger rounded-circle shadow-sm"
-                            onclick="confirmarEliminarReceta('{{ url_for('inventory.eliminar_receta', id=receta['id']) }}', '{{ receta['nombre'] }}')" 
-                            title="Eliminar">
-                            <i class="fas fa-trash-alt"></i>
-                        </button>
+                    <td style="text-align: right;">
+                        <div class="d-flex justify-content-end align-items-center gap-1">
+                            <a href="{{ url_for('main.cotizador', cargar_receta=receta['id']) }}" class="btn-usar me-2" title="Cargar en Cotizador">
+                                <i class="fas fa-play me-1"></i> Usar
+                            </a>
+                            <button class="action-icon" onclick='editarReceta({{ receta|tojson }})' title="Renombrar">
+                                <i class="fas fa-pen" style="font-size: 0.9rem;"></i>
+                            </button>
+                            <button type="button" class="action-icon danger"
+                                onclick="confirmarEliminarReceta('{{ url_for('inventory.eliminar_receta', id=receta['id']) }}', '{{ receta['nombre'] }}')" 
+                                title="Eliminar">
+                                <i class="fas fa-trash-alt" style="font-size: 0.9rem;"></i>
+                            </button>
+                        </div>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="3" class="text-center py-5">
-                        <div class="opacity-50">
-                            <i class="fas fa-clipboard-list fa-4x mb-3 text-secondary"></i>
-                            <h5 class="fw-bold text-muted">No hay recetas guardadas</h5>
-                            <p class="small text-muted">Ve al Cotizador y guarda tu primera combinación.</p>
-                            <a href="{{ url_for('main.cotizador') }}"
-                                class="btn btn-outline-primary rounded-pill btn-sm mt-2">Ir al Cotizador</a>
-                        </div>
+                    <td colspan="3" class="text-center py-5 bg-white">
+                        <i class="fas fa-clipboard-list fa-3x mb-3 text-muted opacity-25"></i>
+                        <h6 class="fw-bold text-dark">No hay recetas guardadas</h6>
+                        <p class="text-muted small m-0">Ve al Cotizador y guarda tu primera combinación.</p>
+                        <a href="{{ url_for('main.cotizador') }}" class="btn btn-outline-secondary rounded-pill btn-sm mt-3 fw-bold px-3">Ir al Cotizador</a>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
     </div>
+    <div id="sinResultados" class="text-center py-5 d-none bg-white">
+        <p class="text-muted fw-bold m-0"><i class="fas fa-search me-2"></i>No se encontró esa receta.</p>
+    </div>
 </div>
 
 <div class="modal fade" id="modalReceta" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header bg-primary text-white border-0">
-                <h5 class="modal-title fw-bold"><i class="fas fa-edit me-2"></i>Renombrar Receta</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        <div class="modal-content border-0 rounded-4 shadow-lg">
+            <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2 text-muted"></i>Renombrar Receta</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="post">
                 <div class="modal-body p-4">
                     <input type="hidden" name="id_actualizar" id="inputId">
 
-                    <div class="form-floating mb-3">
-                        <input type="text" name="nombre" id="inputNombre" class="form-control rounded-3"
-                            placeholder="Nombre" required>
-                        <label for="inputNombre">Nombre de la Receta</label>
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold text-muted">Nombre de la Receta</label>
+                        <input type="text" name="nombre" id="inputNombre" class="form-control sian-input py-2 fw-bold text-dark" required>
                     </div>
 
-                    <div class="alert alert-warning small border-0 d-flex align-items-center rounded-3">
-                        <i class="fas fa-info-circle fs-4 me-3"></i>
-                        <div>
-                            <strong>Nota:</strong> Solo puedes cambiar el nombre aquí. Para modificar ingredientes,
-                            carga la receta en el Cotizador, edítala y guárdala de nuevo.
+                    <div class="alert alert-warning small border-0 d-flex align-items-center rounded-3 shadow-sm mt-4 mb-0" style="background-color: #fff8e6; color: #856404;">
+                        <i class="fas fa-info-circle fs-4 me-3 opacity-75"></i>
+                        <div style="line-height: 1.4;">
+                            <strong>Nota importante:</strong> Solo puedes cambiar el nombre aquí. Para modificar insumos, carga la receta en el <b>Cotizador</b>, edítala y guárdala.
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-light rounded-bottom-4">
-                    <button type="button" class="btn btn-light rounded-pill fw-bold text-muted"
-                        data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 fw-bold">Guardar Cambios</button>
+                <div class="modal-footer border-0 p-4 pt-0">
+                    <button type="submit" class="btn btn-sian rounded-3 px-4 py-2 fw-bold w-100 shadow-sm">Guardar Nombre</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
+
 <div class="modal fade" id="modalDetallesReceta" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
-        <div class="modal-content border-0 rounded-4 shadow">
+        <div class="modal-content border-0 rounded-4 shadow-lg">
             <div class="modal-header text-white border-0 rounded-top-4" style="background-color: var(--sian-teal);">
                 <h5 class="modal-title fw-bold fs-6"><i class="fas fa-flask me-2"></i>Contenido de la Receta</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <h6 id="detallesNombreReceta" class="fw-bold text-dark mb-3 border-bottom pb-2"></h6>
+                <h6 id="detallesNombreReceta" class="fw-bold text-dark mb-3 border-bottom pb-2 text-truncate"></h6>
                 <ul id="listaIngredientes" class="list-unstyled mb-0" style="line-height: 1.8;">
                 </ul>
             </div>
             <div class="modal-footer border-0 bg-light rounded-bottom-4 py-2">
-                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4 fw-bold"
-                    data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
@@ -209,25 +277,38 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- ALERTAS DE ÉXITO (FEEDBACK VISUAL) ---
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        if (urlParams.has('renombrada')) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Nombre Actualizado',
+                showConfirmButton: false,
+                timer: 1500,
+                customClass: { popup: 'rounded-4' }
+            });
+            window.history.replaceState(null, null, window.location.pathname);
+        }
+
+        if (urlParams.has('eliminada')) {
+            Swal.fire({
+                icon: 'success',
+                title: 'Receta Eliminada',
+                showConfirmButton: false,
+                timer: 1500,
+                customClass: { popup: 'rounded-4' }
+            });
+            window.history.replaceState(null, null, window.location.pathname);
+        }
+    });
+
+    // --- MODALES ---
     function editarReceta(r) {
         document.getElementById('inputId').value = r.id;
         document.getElementById('inputNombre').value = r.nombre;
         new bootstrap.Modal(document.getElementById('modalReceta')).show();
-    }
-
-    function filtrarTabla() {
-        const filter = document.getElementById('buscador').value.toUpperCase();
-        const tbody = document.querySelector("#tablaRecetas tbody");
-        const tr = tbody.getElementsByTagName("tr");
-
-        for (let i = 0; i < tr.length; i++) {
-            if (tr[i].cells.length === 1) continue;
-            const tdName = tr[i].getElementsByTagName("td")[0];
-            if (tdName) {
-                const txtValue = tdName.textContent || tdName.innerText;
-                tr[i].style.display = txtValue.toUpperCase().indexOf(filter) > -1 ? "" : "none";
-            }
-        }
     }
 
     function verDetallesReceta(receta) {
@@ -244,7 +325,8 @@
                     lista.innerHTML += `
                     <li class="d-flex align-items-center mb-2 text-secondary" style="font-size: 0.9rem;">
                         <i class="fas fa-circle me-2" style="font-size: 0.35rem; color: var(--sian-teal);"></i>
-                        <span class="text-dark fw-bold me-1">${item.cantidad} x</span> ${item.nombre}
+                        <span class="text-dark fw-bold me-1" style="min-width: 35px;">${item.cantidad} x</span> 
+                        <span class="text-truncate">${item.nombre}</span>
                     </li>`;
                 });
             }
@@ -255,21 +337,49 @@
         new bootstrap.Modal(document.getElementById('modalDetallesReceta')).show();
     }
 
-    // ✅ ELIMINACIÓN SEGURA CON SWEETALERT
+    // --- BÚSQUEDA ---
+    function filtrarTabla() {
+        const input = document.getElementById('buscadorRecetas');
+        const filter = input.value.toLowerCase();
+        const rows = document.getElementsByClassName('item-receta');
+        let visibles = 0;
+
+        for (let i = 0; i < rows.length; i++) {
+            const nombre = rows[i].querySelector('.nombre-receta').innerText || "";
+            if (nombre.toLowerCase().indexOf(filter) > -1) {
+                rows[i].style.display = ""; 
+                visibles++;
+            } else {
+                rows[i].style.display = "none";
+            }
+        }
+        
+        const tabla = document.getElementById('tablaRecetas');
+        const msj = document.getElementById('sinResultados');
+        
+        if (visibles === 0 && rows.length > 0) {
+            tabla.parentNode.classList.add('d-none');
+            msj.classList.remove('d-none');
+        } else {
+            tabla.parentNode.classList.remove('d-none');
+            msj.classList.add('d-none');
+        }
+    }
+
+    // --- ELIMINACIÓN SEGURA ---
     function confirmarEliminarReceta(urlReal, nombre) {
         Swal.fire({
             title: '¿Eliminar receta?',
-            text: `Vas a borrar permanentemente "${nombre}". No podrás recuperarla después.`,
+            text: `Vas a borrar permanentemente "${nombre}".`,
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Sí, eliminar permanentemente',
-            cancelButtonText: 'Cancelar',
-            borderRadius: '15px'
+            cancelButtonColor: '#e9ecef',
+            cancelButtonText: '<span style="color:#495057; font-weight: bold;">Cancelar</span>',
+            confirmButtonText: 'Sí, borrar',
+            customClass: { popup: 'rounded-4' }
         }).then((result) => {
             if (result.isConfirmed) {
-                // Navegamos a la URL exacta que Flask nos dio
                 window.location.href = urlReal;
             }
         });
