@@ -50,35 +50,6 @@ def index():
     return redirect(url_for('main.cotizador'))
 
 
-
-# --- RUTA DE MIGRACIÓN PARA INVENTARIO ---
-@main_bp.route('/migrar-inventario')
-@login_required
-def migrar_inventario_db():
-    conn = get_db()
-    try:
-        try: conn.execute("ALTER TABLE configuracion ADD COLUMN inventario_activo BOOLEAN DEFAULT 0")
-        except: pass
-        try: conn.execute("ALTER TABLE materiales ADD COLUMN stock_actual REAL DEFAULT 0")
-        except: pass
-        try: conn.execute("ALTER TABLE materiales ADD COLUMN stock_minimo REAL DEFAULT 5")
-        except: pass
-        conn.execute("""
-        CREATE TABLE IF NOT EXISTS movimientos_inventario (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            material_id INTEGER,
-            tipo TEXT, cantidad REAL, motivo TEXT, stock_resultante REAL,
-            fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
-            FOREIGN KEY(material_id) REFERENCES materiales(id)
-        )""")
-        conn.commit()
-        return "Base de datos actualizada con éxito. <a href='/configuracion'>Ir a Configuración</a>"
-    except Exception as e:
-        return f"Error en migración: {e}"
-    finally:
-        conn.close()
-
 @main_bp.route('/cotizador')
 @subscription_required
 def cotizador():
