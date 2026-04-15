@@ -1,20 +1,26 @@
 import os
-import sqlite3
+import psycopg2
+import psycopg2.extras
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timezone
 from dotenv import load_dotenv
 
-# Cargamos dotenv aquí también por si ejecutamos db.py por separado (scripts)
 load_dotenv()
 
-DB_NAME = os.getenv('DB_NAME', 'papeleria.db')
-
 # ======================================================
-# CONEXIÓN
+# CONEXIÓN (100% PostgreSQL)
 # ======================================================
 def get_db_connection():
-    conn = sqlite3.connect(DB_NAME)
-    conn.row_factory = sqlite3.Row
+    database_url = os.getenv("DATABASE_URL")
+    
+    if not database_url:
+        raise ValueError("Falta la variable DATABASE_URL en el entorno (.env o Railway).")
+    
+    conn = psycopg2.connect(
+        database_url,
+        cursor_factory=psycopg2.extras.DictCursor
+    )
+    conn.autocommit = True
     return conn
 
 # ======================================================
@@ -22,35 +28,36 @@ def get_db_connection():
 # ======================================================
 def init_db():
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     # =========================
     # 1. USUARIOS
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS usuarios (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         username TEXT UNIQUE,
         email TEXT UNIQUE,
         password TEXT,
         telefono TEXT,
         company_name TEXT,
         role INTEGER DEFAULT 0,
-        subscription_end DATETIME,
-        created_at DATETIME,
-        terms_accepted BOOLEAN DEFAULT 0,
+        subscription_end TIMESTAMP,
+        created_at TIMESTAMP,
+        terms_accepted BOOLEAN DEFAULT FALSE,
         country_code TEXT DEFAULT 'MX',
-        last_login DATETIME,
+        last_login TIMESTAMP,
         origen_registro TEXT DEFAULT 'desconocido',
         utm_campaign TEXT,
         estado_suscripcion TEXT DEFAULT 'activa',
-        fecha_cancelacion DATETIME,
-        tutorial_visto BOOLEAN DEFAULT 0
+        fecha_cancelacion TIMESTAMP,
+        tutorial_visto BOOLEAN DEFAULT FALSE
     )
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS tutoriales_estado (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         modulo TEXT NOT NULL,
         version_vista INTEGER DEFAULT 0,
@@ -62,29 +69,29 @@ def init_db():
     # =========================
     # 2. CONFIGURACIÓN
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS configuracion (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         margen_ganancia INTEGER DEFAULT 200,
         nombre_empresa TEXT DEFAULT 'Mi Negocio',
         slogan TEXT DEFAULT 'Servicios Creativos',
         website TEXT DEFAULT '',
-        inventario_activo BOOLEAN DEFAULT 0,
+        inventario_activo BOOLEAN DEFAULT FALSE,
         icono_empresa TEXT DEFAULT '🎨',
         logo_empresa TEXT DEFAULT '',
-        mostrar_ayuda BOOLEAN DEFAULT 1,
-        modo_oscuro BOOLEAN DEFAULT 0,
-        ticket_bw BOOLEAN DEFAULT 0
+        mostrar_ayuda BOOLEAN DEFAULT TRUE,
+        modo_oscuro BOOLEAN DEFAULT FALSE,
+        ticket_bw BOOLEAN DEFAULT FALSE
     )
     """)
 
     # =========================
     # 3. MAQUINARIA
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS maquinaria (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         nombre TEXT,
         costo_desgaste REAL
@@ -94,9 +101,9 @@ def init_db():
     # =========================
     # 4. MATERIALES (CON STOCK)
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS materiales (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         nombre TEXT,
         es_paquete BOOLEAN,
@@ -112,16 +119,16 @@ def init_db():
     # =========================
     # 4.5 MOVIMIENTOS DE INVENTARIO (HISTORIAL)
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS movimientos_inventario (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         material_id INTEGER,
-        tipo TEXT,          -- 'entrada' (compra) o 'salida' (venta/uso)
+        tipo TEXT,          
         cantidad REAL,
-        motivo TEXT,        -- Ej: 'Venta #123', 'Compra Factura A', 'Ajuste Manual'
-        stock_resultante REAL, -- Cuánto quedó después del movimiento
-        fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+        motivo TEXT,        
+        stock_resultante REAL, 
+        fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY(material_id) REFERENCES materiales(id)
     )
     """)
@@ -129,18 +136,18 @@ def init_db():
     # =========================
     # 5. PRODUCTOS (Cotizador)
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS productos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         nombre TEXT,
         items TEXT
     )
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS producto_detalles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         producto_id INTEGER,
         material_id INTEGER,
         cantidad REAL,
@@ -149,9 +156,9 @@ def init_db():
     )
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS producto_maquinaria (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         producto_id INTEGER,
         maquinaria_id INTEGER,
         FOREIGN KEY(producto_id) REFERENCES productos(id),
@@ -162,9 +169,9 @@ def init_db():
     # =========================
     # 6. VENTAS
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS ventas (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         cliente TEXT,
         fecha TIMESTAMPTZ NOT NULL,
@@ -175,7 +182,7 @@ def init_db():
         estado TEXT DEFAULT 'pagado',
         monto_pagado REAL DEFAULT 0,
         saldo_pendiente REAL DEFAULT 0,
-        fecha_vencimiento DATETIME,
+        fecha_vencimiento TIMESTAMP,
         resumen_items TEXT,
         costo_total REAL DEFAULT 0,
         document_type TEXT DEFAULT 'receipt',
@@ -184,9 +191,9 @@ def init_db():
     )
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS venta_detalles (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         venta_id INTEGER,
         concepto TEXT,
         cantidad REAL,
@@ -199,64 +206,22 @@ def init_db():
     """)
 
     # =========================
-    # 7. SUPER ADMIN (SEED BLINDADO)
-    # =========================
-    admin = conn.execute(
-        "SELECT id FROM usuarios WHERE email = 'contacto@sianeffects.com'"
-    ).fetchone()
-
-    if not admin:
-        now_utc_str = datetime.now(timezone.utc).isoformat()
-        hashed_pw = generate_password_hash('admin123')
-
-        conn.execute("""
-        INSERT INTO usuarios (
-            username, email, password, company_name, role,
-            subscription_end, created_at, terms_accepted,
-            country_code, last_login
-        )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            'admin', 'contacto@sianeffects.com', hashed_pw, 'SianEffects HQ', 2,
-            '2099-12-31T23:59:59Z', now_utc_str, 1, 'MX', now_utc_str
-        ))
-        
-        # Guardamos los cambios para poder consultar el ID insertado
-        conn.commit()
-
-        admin_id = conn.execute(
-            "SELECT id FROM usuarios WHERE email = 'contacto@sianeffects.com'"
-        ).fetchone()['id']
-
-        conn.execute("""
-        INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa)
-        VALUES (?, ?, ?)
-        """, (admin_id, 200, 'SianEffects Admin'))
-
-        for nombre, costo in [('Corte Plotter', 5.0), ('Impresión', 1.5), ('Plancha Calor', 12.0)]:
-            conn.execute("""
-            INSERT INTO maquinaria (user_id, nombre, costo_desgaste)
-            VALUES (?, ?, ?)
-            """, (admin_id, nombre, costo))
-
-    # =========================
     # 8. CATÁLOGO
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS categorias (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         nombre TEXT NOT NULL,
         descripcion TEXT,
         orden INTEGER DEFAULT 0,      
-        activo BOOLEAN DEFAULT 1,    
+        activo BOOLEAN DEFAULT TRUE,    
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
-    # Aquí respetamos tu tabla confirmada: catalogo_productos
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS catalogo_productos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         categoria_id INTEGER,     
         sku TEXT NOT NULL,
         titulo TEXT NOT NULL,
@@ -266,7 +231,7 @@ def init_db():
         precio REAL DEFAULT 0,
         stock INTEGER DEFAULT 1,
         orden INTEGER DEFAULT 0,
-        activo BOOLEAN DEFAULT 1,
+        activo BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (categoria_id) REFERENCES categorias (id)
     )
@@ -275,9 +240,9 @@ def init_db():
     # =========================
     # 9. ENVÍOS (LOGÍSTICA)
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS shipping_configs (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         origin_address TEXT, 
         origin_lat REAL,
@@ -290,9 +255,9 @@ def init_db():
     )
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS shipping_zones (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         user_id INTEGER,
         zone_name TEXT,
         states_included TEXT, 
@@ -300,9 +265,9 @@ def init_db():
     )
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS shipping_rates (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         zone_id INTEGER,
         max_weight_kg REAL,
         price REAL,
@@ -313,23 +278,23 @@ def init_db():
     # =========================
     # 10. INVITACIONES Y PLANNERS
     # =========================
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS lista_musica (
-        id INTEGER PRIMARY KEY,
+        id SERIAL PRIMARY KEY,
         nombre_cancion TEXT,
         url_cloudflare TEXT,
-        activa BOOLEAN DEFAULT 1
+        activa BOOLEAN DEFAULT TRUE
     );
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS invitaciones (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         slug TEXT UNIQUE,           
         config_json TEXT,           
         musica_id INTEGER,          
-        fecha_evento DATETIME,
-        vigencia DATETIME,          
+        fecha_evento TIMESTAMP,
+        vigencia TIMESTAMP,         
         datos_cliente_json TEXT,     
         fotos_json TEXT,
         foto_portada_url TEXT,
@@ -337,22 +302,22 @@ def init_db():
         color_fondo TEXT DEFAULT '#fdfbf7',
         url_fondo TEXT,
         mesas_regalos_json TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         dress_code TEXT,
         hospedaje_json TEXT,
         album_url TEXT,
         color_acentos TEXT DEFAULT '#D4AF37',
-        camara_premium BOOLEAN DEFAULT 0,
+        camara_premium BOOLEAN DEFAULT FALSE,
         padres_novia TEXT,
         padres_novio TEXT,
         padrinos TEXT,
         frase_final TEXT,
         historia_json TEXT,
-        es_demo INTEGER DEFAULT 0,
+        es_demo BOOLEAN DEFAULT FALSE,
         tipo_evento TEXT DEFAULT 'boda',
-        bloquear_edicion_invitados BOOLEAN DEFAULT 0,
+        bloquear_edicion_invitados BOOLEAN DEFAULT FALSE,
         template_id TEXT DEFAULT 'clasico',
-        tiene_modulo_invitados BOOLEAN DEFAULT 0,
+        tiene_modulo_invitados BOOLEAN DEFAULT FALSE,
         estilo_apertura TEXT DEFAULT 'simple',
         codigo_acceso_cliente TEXT UNIQUE,
         mesas_json TEXT DEFAULT '[]',
@@ -361,19 +326,19 @@ def init_db():
     );
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS fotos_invitados (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         invitacion_id INTEGER NOT NULL,
         url TEXT NOT NULL,
-        camara_premium BOOLEAN DEFAULT 0,
+        camara_premium BOOLEAN DEFAULT FALSE,
         fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     );
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS pases_invitados (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         invitacion_id INTEGER,
         nombre_familia TEXT NOT NULL,
         pases_totales INTEGER DEFAULT 2,
@@ -388,47 +353,84 @@ def init_db():
     )
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS buenos_deseos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         invitacion_id INTEGER,
         nombre TEXT NOT NULL,
         mensaje TEXT NOT NULL,
-        fecha DATETIME DEFAULT CURRENT_TIMESTAMP,
+        fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (invitacion_id) REFERENCES invitaciones(id)
     )
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS planners (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         nombre_contacto TEXT,
         nombre_empresa TEXT,
         telefono TEXT,
         codigo_acceso_planner TEXT UNIQUE, 
         notas TEXT,
         estado TEXT DEFAULT 'activo',
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
     """)
 
-    conn.execute("""
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS planner_paquetes (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        id SERIAL PRIMARY KEY,
         planner_id INTEGER,
         cantidad_total INTEGER,   
         cantidad_usada INTEGER DEFAULT 0,
-        fecha_compra DATETIME DEFAULT CURRENT_TIMESTAMP,
-        fecha_vencimiento DATETIME, 
-        activo BOOLEAN DEFAULT 1,
+        fecha_compra TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        fecha_vencimiento TIMESTAMP, 
+        activo BOOLEAN DEFAULT TRUE,
         notas TEXT,
         FOREIGN KEY(planner_id) REFERENCES planners(id)
     )
     """)
     
-    conn.commit()
+    # =========================
+    # 7. SUPER ADMIN (SEED BLINDADO)
+    # =========================
+    cursor.execute("SELECT id FROM usuarios WHERE email = 'contacto@sianeffects.com'")
+    admin = cursor.fetchone()
+
+    if not admin:
+        now_utc_str = datetime.now(timezone.utc).isoformat()
+        hashed_pw = generate_password_hash('admin123')
+
+        # Insertamos el admin y obtenemos el ID generado en Postgres
+        cursor.execute("""
+        INSERT INTO usuarios (
+            username, email, password, company_name, role,
+            subscription_end, created_at, terms_accepted,
+            country_code, last_login
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+        """, (
+            'admin', 'contacto@sianeffects.com', hashed_pw, 'SianEffects HQ', 2,
+            '2099-12-31 23:59:59', now_utc_str, True, 'MX', now_utc_str
+        ))
+        
+        admin_id = cursor.fetchone()['id']
+
+        cursor.execute("""
+        INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa)
+        VALUES (%s, %s, %s)
+        """, (admin_id, 200, 'SianEffects Admin'))
+
+        for nombre, costo in [('Corte Plotter', 5.0), ('Impresión', 1.5), ('Plancha Calor', 12.0)]:
+            cursor.execute("""
+            INSERT INTO maquinaria (user_id, nombre, costo_desgaste)
+            VALUES (%s, %s, %s)
+            """, (admin_id, nombre, costo))
+
+    cursor.close()
     conn.close()
 
 if __name__ == '__main__':
     init_db()
-    print("Base de datos inicializada correctamente.")
+    print("Base de datos PostgreSQL inicializada correctamente.")
