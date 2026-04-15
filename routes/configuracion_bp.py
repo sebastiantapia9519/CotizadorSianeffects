@@ -317,55 +317,62 @@ def actualizar_logistica_base():
     cursor = conn.cursor()
     uid = session['user_id']
     
+    # 1. Recibimos los datos del formulario primero
     origin_address = request.form.get('origin_address', '').strip()
     origin_lat = request.form.get('origin_lat')
     origin_lng = request.form.get('origin_lng')
+    
+    # Definimos estas variables aquí para que no den error de "not defined"
+    try:
+        local_base = float(request.form.get('local_base_rate') or 0)
+        local_km = float(request.form.get('local_km_rate') or 0)
+        safety_margin = int(request.form.get('safety_margin') or 10)
+    except ValueError:
+        flash('Los costos y márgenes de envío deben ser numéricos.', 'danger')
+        return redirect(url_for('configuracion.configuracion') + '#list-envios')
 
-    # --- LÓGICA PRO: RESOLUCIÓN DE LINKS CORTOS ---
+    # 2. LÓGICA PRO: RESOLUCIÓN DE LINKS CORTOS
     if origin_address and ("goo.gl" in origin_address or "googleusercontent" in origin_address):
         try:
-            # Hacemos una petición rápida para seguir las redirecciones
+            import requests
+            import re
+            # Seguimos la redirección para obtener el link largo
             response = requests.get(origin_address, allow_redirects=True, timeout=5)
-            final_url = response.url # Esta es la URL larga de Google Maps
+            final_url = response.url 
             
-            # Buscamos coordenadas en la URL final (@lat,lng)
+            # Buscamos coordenadas (@lat,lng) en la URL final
             match = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', final_url)
             if match:
                 origin_lat = match.group(1)
                 origin_lng = match.group(2)
-                current_app.logger.info(f"GEO_RESOLVE: Link corto resuelto a {origin_lat}, {origin_lng}")
+                current_app.logger.info(f"GEO_RESOLVE: Link resuelto a {origin_lat}, {origin_lng}")
         except Exception as e:
-            current_app.logger.error(f"GEO_RESOLVE_ERROR: No se pudo resolver link corto - {e}")
-            # Si falla, no pasa nada, usará las coordenadas que ya venían en el form
-    # -----------------------------------------------
+            current_app.logger.error(f"GEO_RESOLVE_ERROR: {e}")
 
+    # 3. GUARDADO EN BASE DE DATOS
     try:
-        # Aquí sigue tu código de INSERT/UPDATE igual que antes
         cursor.execute("SELECT id FROM shipping_configs WHERE user_id=%s", (uid,))
         existing = cursor.fetchone()
 
         if existing:
             cursor.execute("""
                 UPDATE shipping_configs 
-                SET origin_address=%s, origin_lat=%s, origin_lng=%s, local_base_rate=%s, local_km_rate=%s, safety_margin_percent=%s
+                SET origin_address=%s, origin_lat=%s, origin_lng=%s, 
+                    local_base_rate=%s, local_km_rate=%s, safety_margin_percent=%s
                 WHERE user_id=%s
-            """, (origin_address, origin_lat, origin_lng, float(request.form.get('local_base_rate') or 0), 
-                  float(request.form.get('local_km_rate') or 0), int(request.form.get('safety_margin') or 10), uid))
+            """, (origin_address, origin_lat, origin_lng, local_base, local_km, safety_margin, uid))
         else:
             cursor.execute("""
-                INSERT INTO shipping_configs (user_id, origin_address, origin_lat, origin_lng, local_base_rate, local_km_rate, safety_margin_percent)
+                INSERT INTO shipping_configs (user_id, origin_address, origin_lat, origin_lng, 
+                                            local_base_rate, local_km_rate, safety_margin_percent)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (uid, origin_address, origin_lat, origin_lng, local_base, local_km, safety_margin))
 
         conn.commit()
-        current_app.logger.info(f"SHIPPING_BASE_UPDATE: Usuario {uid} actualizó tarifas logísticas locales.")
-        flash('Configuración de envíos actualizada.', 'success')
-    except ValueError:
-        current_app.logger.warning(f"SHIPPING_BASE_WARNING: Usuario {uid} metió caracteres inválidos en costo logístico.")
-        flash('Los costos y márgenes de envío deben ser numéricos.', 'danger')
+        flash('Configuración de envíos actualizada con éxito.', 'success')
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"SHIPPING_CONFIG_ERROR: Usuario {uid} - {e}")
+        current_app.logger.error(f"SHIPPING_CONFIG_ERROR: {e}")
         flash(f'Error al guardar envíos: {e}', 'danger')
     finally:
         cursor.close()
