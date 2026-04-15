@@ -410,12 +410,12 @@
                 </thead>
                 <tbody>
                     {% for u in users %}
-                    {% set sub_end = u['subscription_end']|string if u['subscription_end'] else '2000-01-01' %}
+                    {% set sub_end = u['subscription_end'].strftime('%Y-%m-%d %H:%M:%S') if u['subscription_end'] else '2000-01-01 00:00:00' %}
                     {% set is_active = sub_end[:19] > now|string %}
 
                     <tr data-role="{{ 'DUEÑO' if u['role'] == 2 else 'Admin' if u['role'] == 1 else 'Usuario' }}"
                         data-online="{{ 'true' if u['last_login'] and u['last_login'].strftime('%Y-%m-%d %H:%M') > hace_24h_str else 'false' }}"
-                        data-riesgo="{{ 'true' if u['role'] == 0 and u['subscription_end'] and u['subscription_end'][:10] < limite_riesgo else 'false' }}">
+                        data-riesgo="{{ 'true' if u['role'] == 0 and u['subscription_end'] and u['subscription_end'].strftime('%Y-%m-%d') < limite_riesgo else 'false' }}">
                         <td class="ps-4 py-3">
                             <div class="d-flex align-items-center gap-3">
                                 <div class="avatar-circle">
@@ -449,13 +449,12 @@
                         </td>
 
                         <td>
-                            {% if u['last_login'] %} <small class="fw-bold text-dark">{{ u['last_login'][:16] }}</small>
+                            {% if u['last_login'] %} <small class="fw-bold text-dark">{{ u['last_login'].strftime('%Y-%m-%d %H:%M') }}</small>
                             {% else %} <span class="badge bg-light text-muted border">Nunca</span> {% endif %}
                         </td>
 
                         <td>
-                            {% if u['subscription_end'] %} <small class="fw-bold text-dark">{{
-                                u['subscription_end'][:10] }}</small>
+                            {% if u['subscription_end'] %} <small class="fw-bold text-dark">{{ u['subscription_end'].strftime('%Y-%m-%d') }}</small>
                             {% else %} <small class="text-muted">Sin fecha</small> {% endif %}
                         </td>
 

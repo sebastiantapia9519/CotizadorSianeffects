@@ -170,19 +170,22 @@
     </nav>
 
     <div class="container">
-        {% if alertas_vencimiento and saldo > 0 %}
-            
-            {% set total_en_riesgo = alertas_vencimiento | sum(attribute='remanente') %}
-            {% set en_riesgo_real = total_en_riesgo if total_en_riesgo <= saldo else saldo %}
-            
-            {% set fecha_mas_proxima = alertas_vencimiento[0].fecha_vencimiento[:10] %}
-            
-            {% set conteo = namespace(total=0) %}
-            {% for alerta in alertas_vencimiento %}
-                {% if alerta.fecha_vencimiento[:10] == fecha_mas_proxima %}
-                    {% set conteo.total = conteo.total + alerta.remanente %}
-                {% endif %}
-            {% endfor %}
+            {% if alertas_vencimiento and saldo > 0 %}
+                
+                {% set total_en_riesgo = alertas_vencimiento | sum(attribute='remanente') %}
+                {% set en_riesgo_real = total_en_riesgo if total_en_riesgo <= saldo else saldo %}
+                
+                {# 1. Corregimos la extracción de la fecha más próxima #}
+                {% set fecha_mas_proxima = alertas_vencimiento[0].fecha_vencimiento.strftime('%Y-%m-%d') %}
+                
+                {% set conteo = namespace(total=0) %}
+                {% for alerta in alertas_vencimiento %}
+                    {# 2. Corregimos la comparación en el bucle #}
+                    {% if alerta.fecha_vencimiento.strftime('%Y-%m-%d') == fecha_mas_proxima %}
+                        {% set conteo.total = conteo.total + alerta.remanente %}
+                    {% endif %}
+                {% endfor %}
+            {% endif %}
             
             {% set primer_vencimiento_real = conteo.total if conteo.total <= en_riesgo_real else en_riesgo_real %}
 
@@ -280,7 +283,7 @@
                                             <small class="fw-bold text-dark">
                                                 {{ p.notas if p.notas else 'Paquete de Créditos' }}
                                             </small><br>
-                                            <small class="text-muted" style="font-size: 0.65rem;">Ref: #{{ p.id }} | {{ p.fecha_compra[:10] }}</small>
+                                            <small class="text-muted" style="font-size: 0.65rem;">Ref: #{{ p.id }} | {{ p.fecha_compra.strftime('%d/%m/%Y') }}</small>
                                         </td>
 
                                         <td class="text-center">
@@ -397,7 +400,7 @@
                                 </td>
 
                                 <td class="text-center" data-label="Fecha">
-                                    <span class="fw-bold text-dark">{{ inv.fecha_evento[:10] }}</span>
+                                    <span class="fw-bold text-dark">{{ inv.fecha_evento.strftime('%d/%m/%Y') }}</span>
                                 </td>
 
                                 <td class="text-center" data-label="Acceso">

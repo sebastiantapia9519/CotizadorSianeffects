@@ -375,7 +375,9 @@
                 <tr class="{{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}">
                     <td class="ps-4">
                         <div class="fw-bold text-dark folio-text">#{{ v['id'] }}</div>
-                        <div class="text-muted text-xs mt-1">{{ v['fecha'][:10] if v['fecha'] else '--/--/----' }}</div>
+                        <div class="text-muted text-xs mt-1">
+                            {{ v['fecha'].strftime('%d/%m/%Y') if v['fecha'] else '--/--/----' }}
+                        </div>
                     </td>
 
                     <td>
@@ -400,7 +402,7 @@
                         </span>
                         {% if v['fecha_vencimiento'] %}
                         <div class="text-danger text-xs font-medium mt-1">
-                            Expira: {{ v['fecha_vencimiento'][:10] if v['fecha_vencimiento'] else '' }}
+                            Expira: {{ v['fecha_vencimiento'].strftime('%d/%m/%Y') if v['fecha_vencimiento'] else '' }}
                         </div>
                         {% endif %}
                         {% elif v['estado'] == 'cancelada' %}
