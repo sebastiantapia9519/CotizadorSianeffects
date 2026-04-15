@@ -31,12 +31,12 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev_key_fallback_insegura')
 app.config['DEBUG'] = os.getenv('FLASK_DEBUG') == '1'
 
 # Configuración del log (puedes poner esto al inicio de tu app.py)
-logging.basicConfig(
-    filename='limpieza.log',
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    encoding='utf-8'
-)
+#logging.basicConfig(
+#    filename='limpieza.log',
+#    level=logging.INFO,
+#    format='%(asctime)s - %(levelname)s - %(message)s',
+#    encoding='utf-8'
+#)
 
 # Configuración del Log
 log_path = os.path.join(app.root_path, 'limpieza.log')
