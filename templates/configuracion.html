@@ -1057,23 +1057,29 @@
     }
 
     function extraerCoordenadasConfig(input, silencioso = false) {
-        const url = input.value.trim();
-        if (!url) return;
+    const url = input.value.trim();
+    if (!url) return;
 
-        const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-        const match = url.match(regex);
-        const matchFinal = match || url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+    const match = url.match(regex);
 
-        if (matchFinal) {
-            document.getElementById('latConfig').value = matchFinal[1];
-            document.getElementById('lngConfig').value = matchFinal[2];
+    if (match) {
+        document.getElementById('latConfig').value = match[1];
+        document.getElementById('lngConfig').value = match[2];
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+    } else {
+        // SI NO HAY COORDENADAS, PERO ES UN LINK DE GOOGLE, NO MANDAMOS ERROR
+        const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());
+        if (esGoogle) {
             input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
+            // No hacemos nada más, dejamos que el servidor lo resuelva al Guardar
         } else if (!silencioso) {
-            Swal.fire({ icon: 'warning', title: 'Link no válido', text: 'Copia el LINK LARGO de Google Maps.', borderRadius: '15px' });
+            Swal.fire({ icon: 'warning', title: 'Link no reconocido', text: 'Asegúrate de que sea un enlace de Google Maps.' });
             input.classList.add('is-invalid');
         }
     }
+}
 
     async function pegarDelPortapapeles() {
         try {

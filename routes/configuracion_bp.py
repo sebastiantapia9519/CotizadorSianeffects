@@ -317,15 +317,30 @@ def actualizar_logistica_base():
     cursor = conn.cursor()
     uid = session['user_id']
     
-    origin_address = request.form.get('origin_address') 
+    origin_address = request.form.get('origin_address', '').strip()
     origin_lat = request.form.get('origin_lat')
     origin_lng = request.form.get('origin_lng')
-    
+
+    # --- LÓGICA PRO: RESOLUCIÓN DE LINKS CORTOS ---
+    if origin_address and ("goo.gl" in origin_address or "googleusercontent" in origin_address):
+        try:
+            # Hacemos una petición rápida para seguir las redirecciones
+            response = requests.get(origin_address, allow_redirects=True, timeout=5)
+            final_url = response.url # Esta es la URL larga de Google Maps
+            
+            # Buscamos coordenadas en la URL final (@lat,lng)
+            match = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', final_url)
+            if match:
+                origin_lat = match.group(1)
+                origin_lng = match.group(2)
+                current_app.logger.info(f"GEO_RESOLVE: Link corto resuelto a {origin_lat}, {origin_lng}")
+        except Exception as e:
+            current_app.logger.error(f"GEO_RESOLVE_ERROR: No se pudo resolver link corto - {e}")
+            # Si falla, no pasa nada, usará las coordenadas que ya venían en el form
+    # -----------------------------------------------
+
     try:
-        local_base = float(request.form.get('local_base_rate') or 0)
-        local_km = float(request.form.get('local_km_rate') or 0)
-        safety_margin = int(request.form.get('safety_margin') or 10)
-        
+        # Aquí sigue tu código de INSERT/UPDATE igual que antes
         cursor.execute("SELECT id FROM shipping_configs WHERE user_id=%s", (uid,))
         existing = cursor.fetchone()
 
@@ -334,7 +349,8 @@ def actualizar_logistica_base():
                 UPDATE shipping_configs 
                 SET origin_address=%s, origin_lat=%s, origin_lng=%s, local_base_rate=%s, local_km_rate=%s, safety_margin_percent=%s
                 WHERE user_id=%s
-            """, (origin_address, origin_lat, origin_lng, local_base, local_km, safety_margin, uid))
+            """, (origin_address, origin_lat, origin_lng, float(request.form.get('local_base_rate') or 0), 
+                  float(request.form.get('local_km_rate') or 0), int(request.form.get('safety_margin') or 10), uid))
         else:
             cursor.execute("""
                 INSERT INTO shipping_configs (user_id, origin_address, origin_lat, origin_lng, local_base_rate, local_km_rate, safety_margin_percent)
