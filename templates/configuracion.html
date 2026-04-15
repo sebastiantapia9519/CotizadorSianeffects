@@ -622,12 +622,15 @@
                             <div class="saas-card-body">
                                 
                                 <h6 class="fw-bold text-dark mb-3 fs-6">📍 Punto de Despacho</h6>
-                                <div class="input-group shadow-sm mb-3 border border-light" style="border-radius: 8px;">
+                                <div class="input-group shadow-sm mb-4 border border-light" style="border-radius: 8px;">
                                     <span class="input-group-text bg-white border-0 text-danger"><i class="fas fa-map-marker-alt"></i></span>
-                                    <input type="text" name="origin_address" id="inputMapsConfig" class="form-control border-0 bg-white text-dark" 
-                                        placeholder="Pega el link de Google Maps aquí..."
+                                    <input type="text" name="origin_address" id="inputMapsConfig" class="form-control border-0 bg-white text-dark py-2" 
+                                        placeholder="Pega el link de Google Maps (corto o largo) aquí..."
                                         value="{{ shipping_config['origin_address'] if shipping_config else '' }}"
                                         onchange="extraerCoordenadasConfig(this)">
+                                </div>
+                                <div id="geo-status" class="mt-1 small fw-bold text-success" style="display: none;">
+                                    <i class="fas fa-check-circle"></i> Ubicación detectada correctamente
                                 </div>
                                 <div class="row g-3 mb-4" style="display: none;">
                                     <div class="col-6">
@@ -1068,6 +1071,7 @@
         document.getElementById('lngConfig').value = match[2];
         input.classList.remove('is-invalid');
         input.classList.add('is-valid');
+        document.getElementById('geo-status').style.display = 'block';
     } else {
         // SI NO HAY COORDENADAS, PERO ES UN LINK DE GOOGLE, NO MANDAMOS ERROR
         const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());

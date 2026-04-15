@@ -555,13 +555,13 @@
                             <button class="btn btn-outline-secondary" type="button" onclick="pegarDelPortapapeles()"><i
                                     class="fas fa-paste"></i></button>
                         </div>
-                        <div class="row g-2 mb-3">
+                        <div class="row g-2 mb-3"> 
                             <div class="col-6"><input type="text" id="latDestino"
                                     class="form-control form-control-sm text-muted bg-light" placeholder="Latitud"
                                     readonly></div>
-                            <div class="col-6"><input type="text" id="lngDestino"
-                                    class="form-control form-control-sm text-muted bg-light" placeholder="Longitud"
-                                    readonly></div>
+                            <div class="row g-2 mb-3 d-none"> <div class="col-6"><input type="hidden" id="latDestino"></div>
+                                <div class="col-6"><input type="hidden" id="lngDestino"></div>
+                            </div>
                         </div>
                         <button class="btn btn-primary w-100 fw-bold rounded-pill"
                             onclick="solicitarCotizacion('local')">Calcular Tarifa Local</button>
@@ -1385,27 +1385,38 @@
     }
 
     function extraerCoordenadas(input) {
-        const url = input.value.trim();
-        if (!url) return;
-        const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-        const match = url.match(regex);
-        if (match) {
-            document.getElementById('latDestino').value = match[1];
-            document.getElementById('lngDestino').value = match[2];
+    const url = input.value.trim();
+    if (!url) return;
+
+    // 1. Intentamos extraer coordenadas formato largo
+    const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+    const match = url.match(regex);
+    const matchBusqueda = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+    const matchFinal = match || matchBusqueda;
+
+    if (matchFinal) {
+        document.getElementById('latDestino').value = matchFinal[1];
+        document.getElementById('lngDestino').value = matchFinal[2];
+        input.classList.remove('is-invalid');
+        input.classList.add('is-valid');
+    } else {
+        // 2. Si es un link de Google pero no tiene coordenadas (corto o googleusercontent)
+        const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());
+        if (esGoogle) {
             input.classList.remove('is-invalid');
-            input.classList.add('is-valid');
-            return;
-        }
-        if (url.includes('goo.gl') || url.includes('maps.app')) {
+            // No hacemos nada, dejamos que el servidor (Python) lo resuelva al cotizar
+        } else {
+            // 3. Solo si no es Google en absoluto, mandamos alerta
             Swal.fire({
                 icon: 'warning',
-                title: 'Enlace corto detectado',
-                text: 'Por favor, usa el enlace largo de Google Maps (el que aparece en la barra de direcciones del navegador).',
+                title: 'Link no reconocido',
+                text: 'Asegúrate de copiar un enlace de Google Maps para que el cálculo sea exacto.',
                 confirmButtonColor: '#ff4757'
             });
-            input.value = "";
+            input.classList.add('is-invalid');
         }
     }
+}
 
     async function pegarDelPortapapeles() {
         try {
@@ -1483,17 +1494,26 @@
         if (tipo === 'local') {
             const lat = document.getElementById('latDestino').value;
             const lng = document.getElementById('lngDestino').value;
+            const link = document.getElementById('inputMapsLink').value; // <-- Agregamos el link
+
+            // Si no hay coordenadas, pero HAY link, dejamos pasar para que el servidor lo resuelva
             if (!lat || !lng) {
-                loader.classList.add('d-none');
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Falta ubicación',
-                    text: 'Por favor ingresa o resuelve el link de Google Maps antes de cotizar.',
-                    confirmButtonColor: '#ff4757'
-                });
-                return;
+                if (!link) {
+                    loader.classList.add('d-none');
+                    Swal.fire({
+                        icon: 'warning',
+                        title: 'Falta ubicación',
+                        text: 'Ingresa un link de Google Maps para calcular la distancia.',
+                        confirmButtonColor: '#ff4757'
+                    });
+                    return;
+                }
+                // Si hay link pero no lat/lng, enviamos el link como "direccion" para que Python haga la magia
+                payload.direccion = link; 
+            } else {
+                payload.lat = lat; 
+                payload.lng = lng;
             }
-            payload.lat = lat; payload.lng = lng;
         } else {
             payload.peso = document.getElementById('envioPeso').value;
             payload.largo = document.getElementById('envioLargo').value || 10;
