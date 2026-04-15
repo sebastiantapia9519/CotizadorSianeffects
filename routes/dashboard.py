@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, request, current_app, session
 from db import get_db_connection
 from helpers import admin_required
-from utils.datetime_utils import ahora_sql
+from utils.datetime_utils import ahora_sql, now_utc
 from datetime import datetime, timedelta
-# IMPORTANTE: Asegúrate de tener psycopg2-binary en tu requirements.txt
 from psycopg2.extras import RealDictCursor 
+
+
 
 dashboard_bp = Blueprint('dashboard', __name__)
 
@@ -19,7 +20,7 @@ def index():
     mes_sel = request.args.get('mes', "")
     anio_sel = request.args.get('anio', "")
     
-    ahora = datetime.now()
+    ahora = now_utc()
     semana_proxima = ahora + timedelta(days=7)
     
     try:
