@@ -305,4 +305,7 @@ def now_local_format(value=None, tz_name='America/Monterrey'):
 # MAIN
 # =========================
 if __name__ == '__main__':
-    app.run(debug=True)
+    # Railway inyecta el puerto en la variable de entorno PORT
+    port = int(os.environ.get("PORT", 5000))
+    # '0.0.0.0' es vital para que sea visible en la red de Railway
+    app.run(host='0.0.0.0', port=port, debug=os.getenv('FLASK_DEBUG') == '1')
