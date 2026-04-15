@@ -74,6 +74,7 @@ def init_db():
         icono_empresa TEXT DEFAULT '🎨',
         logo_empresa TEXT DEFAULT '',
         mostrar_ayuda BOOLEAN DEFAULT 1,
+        modo_oscuro BOOLEAN DEFAULT 0,
         ticket_bw BOOLEAN DEFAULT 0
     )
     """)

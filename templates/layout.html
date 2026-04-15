@@ -1,50 +1,64 @@
 <!doctype html>
-<html lang="es">
+<html lang="es" data-bs-theme="{{ 'dark' if config['modo_oscuro'] else 'light' }}">
 
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}SianEffects{% endblock %}</title>
-    {% if config.logo_empresa %}
-        <link rel="shortcut icon" href="{{ config.logo_empresa }}" type="image/png">
-    {% else %}
-        <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
-    {% endif %}
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
     <style>
+        /* TEMA BASE - COLORES DE MARCA */
         :root {
             --sian-pink: #ff6b81;
             --sian-pink-light: #fff0f3;
             --sian-teal: #2ec4b6;
             --sian-teal-dark: #1f8c82;
-            --bg-cream: #fffdf9;
+            
+            /* Colores modo claro por defecto */
+            --sian-bg-body: #fffdf9;
+            --sian-bg-nav: #ffffff;
+            --sian-text-main: #555555;
+            --sian-text-nav: #333333;
+        }
+
+        /* TEMA OSCURO (Reemplaza las variables base cuando está activo) */
+        [data-bs-theme="dark"] {
+            --sian-bg-body: var(--bs-body-bg); /* Usa el fondo nativo de Bootstrap Dark */
+            --sian-bg-nav: var(--bs-body-bg);
+            --sian-text-main: var(--bs-body-color);
+            --sian-text-nav: var(--bs-emphasis-color);
+            --sian-pink-light: rgba(255, 107, 129, 0.15); /* Adaptación del rosa claro */
         }
 
         body {
             font-family: 'Nunito', sans-serif;
-            background-color: var(--bg-cream);
+            background-color: var(--sian-bg-body); /* Variable dinámica */
             padding-top: 80px;
-            color: #555;
+            color: var(--sian-text-main); /* Variable dinámica */
         }
 
+        /* NAVBAR DINÁMICO */
         .navbar-sian {
-            background-color: #ffffff;
+            background-color: var(--sian-bg-nav) !important; /* Forzamos para sobreescribir Bootstrap */
             border-bottom: 3px solid var(--sian-pink-light);
+            transition: background-color 0.3s;
         }
 
         .navbar-brand {
             font-weight: 800;
-            color: #333 !important;
+            color: var(--sian-text-nav) !important; /* Variable dinámica */
         }
 
         .card-custom {
             border: none;
             border-radius: 20px;
             box-shadow: 0 10px 20px rgba(0, 0, 0, 0.05);
+            background-color: var(--bs-card-bg); /* Adaptación Dark Mode Bootstrap */
         }
 
         /* Avatar del Usuario */
@@ -64,7 +78,7 @@
         /* CAMPANA DE NOTIFICACIONES */
         .nav-icon-btn {
             position: relative;
-            color: #555;
+            color: var(--sian-text-main); /* Variable dinámica */
             font-size: 1.3rem;
             padding: 8px;
             transition: color 0.2s;
@@ -83,7 +97,7 @@
             height: 10px;
             background-color: #dc3545;
             border-radius: 50%;
-            border: 2px solid white;
+            border: 2px solid var(--sian-bg-nav); /* Variable dinámica para el borde */
         }
 
         .pulse-animation {
@@ -175,14 +189,12 @@
 
             /* Ajuste específico para el menú de notificaciones en móvil */
             .dropdown-menu[data-bs-popper] {
-                background-color: #ffffff;
-                /* Aseguramos fondo blanco */
+                background-color: var(--bs-body-bg); /* Dark Mode Fix */
                 box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1) !important;
-                border: 1px solid #eee;
+                border: 1px solid var(--bs-border-color); /* Dark Mode Fix */
                 right: 0 !important;
                 left: auto !important;
                 width: 280px !important;
-                /* Evitamos que se salga de la pantalla */
                 margin-top: 10px !important;
             }
         }
@@ -192,18 +204,33 @@
             border-radius: 16px;
             min-width: 260px;
             padding: 10px;
+            background-color: var(--bs-body-bg); /* Dark Mode Fix */
+            border-color: var(--bs-border-color); /* Dark Mode Fix */
         }
 
         .profile-dropdown .dropdown-item {
             border-radius: 8px;
             padding: 8px 15px;
             font-weight: 600;
-            color: #555;
+            color: var(--sian-text-main); /* Dark Mode Fix */
         }
 
         .profile-dropdown .dropdown-item:hover {
             background-color: var(--sian-pink-light);
             color: var(--sian-pink);
+        }
+        
+        /* FIX: Menú links en Nav (Cotizador, Historial, etc) */
+        .nav-link.text-dark {
+            color: var(--bs-body-color) !important;
+        }
+        
+        .bg-light {
+             background-color: var(--bs-tertiary-bg) !important;
+        }
+        
+        .border {
+             border-color: var(--bs-border-color) !important;
         }
     </style>
     {% block extra_css %}{% endblock %}
@@ -214,7 +241,7 @@
 <body>
 
     {% block navbar %}
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top navbar-sian">
+    <nav class="navbar navbar-expand-lg shadow-sm fixed-top navbar-sian">
         <div class="container">
 
             <button class="navbar-toggler border-0 me-2" type="button" data-bs-toggle="offcanvas"
@@ -255,7 +282,7 @@
                                 <i class="fas fa-{{ n.icono }}"></i>
                             </div>
                             <div>
-                                <small class="d-block text-dark">{{ n.msg|safe }}</small>
+                                <small class="d-block" style="color: var(--bs-body-color);">{{ n.msg|safe }}</small>
                             </div>
                         </a>
                     </li>
@@ -270,7 +297,7 @@
             </div>
             {% endif %}
 
-            <div class="offcanvas offcanvas-start" tabindex="-1" id="miMenuMobile" aria-labelledby="miMenuLabel">
+            <div class="offcanvas offcanvas-start" tabindex="-1" id="miMenuMobile" aria-labelledby="miMenuLabel" data-bs-theme="{{ 'dark' if config['modo_oscuro'] else 'light' }}">
 
                 <div class="offcanvas-header border-bottom">
                     <h5 class="offcanvas-title fw-bold" id="miMenuLabel" style="color: var(--sian-pink);">Menú Principal
@@ -284,20 +311,20 @@
 
                         <li class="nav-item">
                             <a class="nav-link d-flex align-items-center justify-content-start justify-content-lg-center gap-2 {% if request.endpoint == 'main.cotizador' %}active fw-bold bg-light border{% endif %} rounded-pill px-3"
-                                href="{{ url_for('main.cotizador') }}">🧮 <span>Cotizador</span></a>
+                                href="{{ url_for('main.cotizador') }}" style="color: var(--sian-text-main);">🧮 <span>Cotizador</span></a>
                         </li>
 
                         <li class="nav-item">
                             <a class="nav-link d-flex align-items-center justify-content-start justify-content-lg-center gap-2 {% if request.endpoint == 'main.historial' %}active fw-bold bg-light border{% endif %} rounded-pill px-3"
-                                href="{{ url_for('main.historial') }}">📜 <span>Historial</span></a>
+                                href="{{ url_for('main.historial') }}" style="color: var(--sian-text-main);">📜 <span>Historial</span></a>
                         </li>
 
                         <li class="nav-item dropdown">
                             <a class="nav-link dropdown-toggle d-flex align-items-center justify-content-start justify-content-lg-center gap-2 {% if 'inventory' in request.endpoint %}active fw-bold bg-light border{% endif %} rounded-pill px-3"
-                                href="#" role="button" data-bs-toggle="dropdown">📦
+                                href="#" role="button" data-bs-toggle="dropdown" style="color: var(--sian-text-main);">📦
                                 <span>Inventario</span>
                             </a>
-                            <ul class="dropdown-menu border-0 shadow-sm mt-2" style="border-radius: 12px;">
+                            <ul class="dropdown-menu shadow-sm mt-2" style="border-radius: 12px; background-color: var(--bs-body-bg); border: 1px solid var(--bs-border-color);">
                                 <li><a class="dropdown-item py-2"
                                         href="{{ url_for('inventory.materiales') }}">Materiales</a></li>
                                 <li><a class="dropdown-item py-2" href="{{ url_for('inventory.equipos') }}">Equipos</a>
@@ -323,9 +350,9 @@
                                 <i class="fas fa-chevron-down ms-1 text-muted" style="font-size: 0.7rem;"></i>
                             </a>
 
-                            <ul class="dropdown-menu dropdown-menu-end shadow border-0 mt-3 profile-dropdown">
+                            <ul class="dropdown-menu dropdown-menu-end shadow mt-3 profile-dropdown border">
                                 <li class="px-3 py-2 border-bottom mb-2">
-                                    <div class="fw-bold text-dark fs-6">{{ session.get('username', 'Usuario') }}</div>
+                                    <div class="fw-bold fs-6" style="color: var(--bs-emphasis-color);">{{ session.get('username', 'Usuario') }}</div>
                                     <small class="text-muted">Mi Cuenta</small>
                                 </li>
                                 <li>
@@ -383,13 +410,13 @@
                         <div class="d-lg-none mt-3">
                             <h6 class="text-muted fw-bold px-3 mb-2 small text-uppercase">👤 Mi Perfil</h6>
                             <li class="nav-item">
-                                <a class="nav-link px-4 py-2 text-dark"
-                                    href="{{ url_for('configuracion.configuracion') }}">
+                                <a class="nav-link px-4 py-2"
+                                    href="{{ url_for('configuracion.configuracion') }}" style="color: var(--bs-body-color);">
                                     <i class="fas fa-cog text-secondary w-20px me-2"></i> Configuración
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link px-4 py-2 text-dark" href="{{ url_for('main.ayuda') }}">
+                                <a class="nav-link px-4 py-2" href="{{ url_for('main.ayuda') }}" style="color: var(--bs-body-color);">
                                     <i class="fas fa-question-circle text-secondary w-20px me-2"></i> Ayuda
                                 </a>
                             </li>
@@ -398,19 +425,19 @@
                                 style="color: var(--sian-pink) !important;">👑
                                 Administración</h6>
                             <li class="nav-item">
-                                <a class="nav-link px-4 py-2 text-dark fw-bold" href="{{ url_for('admin.dashboard') }}">
+                                <a class="nav-link px-4 py-2 fw-bold" href="{{ url_for('admin.dashboard') }}" style="color: var(--bs-body-color);">
                                     <i class="fas fa-hammer text-warning w-20px me-2"></i> Admin Cotizador
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link px-4 py-2 text-dark"
-                                    href="{{ url_for('catalogo.admin_categorias') }}">
+                                <a class="nav-link px-4 py-2"
+                                    href="{{ url_for('catalogo.admin_categorias') }}" style="color: var(--bs-body-color);">
                                     <i class="fas fa-images text-info w-20px me-2"></i> Gestión Catálogo
                                 </a>
                             </li>
                             <li class="nav-item">
-                                <a class="nav-link px-4 py-2 text-dark"
-                                    href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}">
+                                <a class="nav-link px-4 py-2"
+                                    href="{{ url_for('invitaciones_admin.gestionar_invitaciones') }}" style="color: var(--bs-body-color);">
                                     <i class="fas fa-envelope-open-text text-success w-20px me-2"></i> Invitaciones
                                 </a>
                             </li>

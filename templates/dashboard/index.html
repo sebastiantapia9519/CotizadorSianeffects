@@ -2,6 +2,9 @@
 
 {% block content %}
 <style>
+    /* ===================================================
+       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       =================================================== */
     .dashboard-bg { background-color: #fcfcfc; min-height: 100vh; padding: 1.5rem 0 3rem 0; }
     .sian-stat-card {
         background: #ffffff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
@@ -24,14 +27,98 @@
     .table-minimal { font-size: 0.85rem; }
     .table-minimal th { font-weight: 600; color: #86868b; text-transform: uppercase; font-size: 0.7rem; border: none; }
     .filter-bar { background: #fff; border-radius: 50px; padding: 8px 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+
+    /* ===================================================
+       2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
+       =================================================== */
+    [data-bs-theme="dark"] .dashboard-bg { 
+        background-color: #0f172a !important; 
+    }
+    
+    /* Tarjetas y Contenedores */
+    [data-bs-theme="dark"] .sian-stat-card {
+        background-color: #1e293b !important;
+        box-shadow: none !important;
+        border-top: 1px solid #334155;
+        border-right: 1px solid #334155;
+        border-bottom: 1px solid #334155;
+    }
+    
+    [data-bs-theme="dark"] .filter-bar {
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+        box-shadow: none !important;
+    }
+
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+    }
+
+    /* Textos Genéricos */
+    [data-bs-theme="dark"] h3,
+    [data-bs-theme="dark"] .stat-value,
+    [data-bs-theme="dark"] .fw-bold,
+    [data-bs-theme="dark"] .text-dark,
+    [data-bs-theme="dark"] strong {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] p,
+    [data-bs-theme="dark"] .stat-label,
+    [data-bs-theme="dark"] .text-muted,
+    [data-bs-theme="dark"] small {
+        color: #94a3b8 !important;
+    }
+
+    /* Iconos (Ajuste de opacidad) */
+    [data-bs-theme="dark"] .bg-blue-light { background-color: rgba(13, 110, 253, 0.15) !important; color: #60a5fa !important; }
+    [data-bs-theme="dark"] .bg-green-light { background-color: rgba(25, 135, 84, 0.15) !important; color: #34d399 !important; }
+    [data-bs-theme="dark"] .bg-red-light { background-color: rgba(220, 53, 69, 0.15) !important; color: #f87171 !important; }
+    [data-bs-theme="dark"] .bg-yellow-light { background-color: rgba(255, 193, 7, 0.15) !important; color: #fbbf24 !important; }
+
+    /* Inputs y Formularios */
+    [data-bs-theme="dark"] .form-select,
+    [data-bs-theme="dark"] .form-control {
+        background-color: #0f172a !important;
+        border: 1px solid #334155 !important;
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .form-select option {
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+    }
+
+    /* Tablas */
+    [data-bs-theme="dark"] .table-minimal th {
+        color: #94a3b8 !important;
+    }
+    [data-bs-theme="dark"] .table-minimal td {
+        border-color: #334155 !important;
+    }
+
+    /* Modal Extras */
+    [data-bs-theme="dark"] .modal-header.border-0 {
+        border-bottom: 1px solid #334155 !important;
+    }
+    
+    [data-bs-theme="dark"] #resultado_link {
+        background-color: #0f172a !important;
+        border-color: #3b82f6 !important;
+    }
+
+    [data-bs-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
 </style>
 
 <div class="dashboard-bg">
     <div class="container">
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
             <div>
-                <h3 style="font-weight: 600; color: #2c3e50; margin-bottom: 0;">Salud de Sianeffects</h3>
-                <p style="color: #6c757d; font-size: 0.85rem; margin-bottom: 0;">Métricas de crecimiento y retención</p>
+                <h3 style="font-weight: 600; margin-bottom: 0;">Salud de Sianeffects</h3>
+                <p style="font-size: 0.85rem; margin-bottom: 0;">Métricas de crecimiento y retención</p>
             </div>
             <button class="btn btn-primary shadow-sm" style="border-radius: 50px; font-weight: 600;" data-bs-toggle="modal" data-bs-target="#modalEnlaces">
                 <i class="fas fa-link me-2"></i> Crear Enlace
@@ -195,7 +282,7 @@
                 <button class="btn btn-primary w-100 fw-bold py-2 rounded-3" onclick="generarEnlace()">Crear Link Mágico</button>
                 <div id="resultado_link" class="mt-4 p-3 rounded-3" style="display: none; background: #f0f7ff; border: 1px dashed #0d6efd;">
                     <div class="input-group">
-                        <input type="text" id="link_final" class="form-control form-control-sm border-0 bg-transparent" readonly>
+                        <input type="text" id="link_final" class="form-control form-control-sm border-0 bg-transparent text-dark" readonly>
                         <button class="btn btn-sm btn-primary rounded-3 px-3" onclick="copiarEnlace()"><i class="fas fa-copy"></i></button>
                     </div>
                 </div>
@@ -207,8 +294,16 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
+        // 🔥 MAGIA DARK MODE EN CHART.JS 🔥
+        // Verificamos si el modo oscuro está activo leyendo el atributo del <html>
+        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        
+        // Configuramos colores base dependiendo del tema
+        const textColor = isDarkMode ? '#94a3b8' : '#86868b';
+        const gridColor = isDarkMode ? '#334155' : '#e5e7eb';
+        
         Chart.defaults.font.family = "'Segoe UI', sans-serif";
-        Chart.defaults.color = "#86868b";
+        Chart.defaults.color = textColor;
 
         // 1. Gráfica de Adquisición
         const ctxLine = document.getElementById('chartCrecimiento').getContext('2d');
@@ -229,7 +324,7 @@
                     tension: 0.4,
                     borderWidth: 3,
                     pointRadius: 4,
-                    pointBackgroundColor: '#fff',
+                    pointBackgroundColor: isDarkMode ? '#1e293b' : '#fff', // El fondo del punto
                     pointBorderWidth: 2
                 }]
             },
@@ -237,8 +332,15 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 scales: {
-                    y: { beginAtZero: true, ticks: { stepSize: 1 } },
-                    x: { grid: { display: false } }
+                    y: { 
+                        beginAtZero: true, 
+                        ticks: { stepSize: 1, color: textColor },
+                        grid: { color: gridColor, drawBorder: false }
+                    },
+                    x: { 
+                        grid: { display: false },
+                        ticks: { color: textColor }
+                    }
                 },
                 plugins: { legend: { display: false } }
             }
@@ -252,7 +354,8 @@
                 datasets: [{
                     data: {{ origen_data | tojson }},
                     backgroundColor: ['#0d6efd', '#34c759', '#5856d6', '#ff9500', '#ff2d55'],
-                    borderWidth: 0
+                    borderWidth: isDarkMode ? 2 : 0,
+                    borderColor: isDarkMode ? '#1e293b' : '#fff' // Separador oscuro en la dona
                 }]
             },
             options: {
@@ -260,7 +363,7 @@
                 maintainAspectRatio: false,
                 cutout: '80%',
                 plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } }
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, color: textColor } }
                 }
             }
         });
@@ -284,8 +387,15 @@
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { beginAtZero: true, ticks: { stepSize: 1 } },
-                    y: { grid: { display: false } }
+                    x: { 
+                        beginAtZero: true, 
+                        ticks: { stepSize: 1, color: textColor },
+                        grid: { color: gridColor, drawBorder: false }
+                    },
+                    y: { 
+                        grid: { display: false },
+                        ticks: { color: textColor }
+                    }
                 }
             }
         });

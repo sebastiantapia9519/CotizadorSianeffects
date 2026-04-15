@@ -137,7 +137,7 @@ def configuracion():
     finally:
         conn.close()
 
-    # 💡 NUEVO: LÓGICA DEL TUTORIAL
+    # LÓGICA DEL TUTORIAL
     mostrar_tour = debe_mostrar_tutorial(uid, 'configuracion')
     version_tour = obtener_version_tutorial('configuracion')
     
@@ -221,6 +221,8 @@ def actualizar_negocio():
         empresa = request.form.get('nombre_empresa', '')
         slogan = request.form.get('slogan', '')
         website = request.form.get('website', '')
+
+        modo_oscuro = True if request.form.get('modo_oscuro') else False
         
         inventario_activo = True if request.form.get('inventario_activo') else False
         ticket_bw = True if request.form.get('ticket_bw') else False
@@ -280,15 +282,16 @@ def actualizar_negocio():
             conn.execute('''
                 UPDATE configuracion
                 SET margen_ganancia=?, nombre_empresa=?, slogan=?, website=?, 
-                    inventario_activo=?, ticket_bw=?, icono_empresa=?, logo_empresa=?, mostrar_ayuda=?
+                    inventario_activo=?, ticket_bw=?, icono_empresa=?, logo_empresa=?,
+                    mostrar_ayuda=?, modo_oscuro=? 
                 WHERE user_id=?
-            ''', (margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, uid))
+            ''', (margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, modo_oscuro, uid))
         else:
             conn.execute('''
                 INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa, slogan, website, 
-                                           inventario_activo, ticket_bw, icono_empresa, logo_empresa, mostrar_ayuda)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (uid, margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda))
+                                           inventario_activo, ticket_bw, icono_empresa, logo_empresa, mostrar_ayuda, modo_oscuro)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (uid, margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, modo_oscuro))
 
         conn.commit()
         flash('Datos del negocio guardados correctamente.', 'success')

@@ -4,7 +4,9 @@
 
 {% block extra_css %}
 <style>
-    /* Variables locales */
+    /* ===================================================
+       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       =================================================== */
     :root {
         --sian-pink-hover: #ff4757;
         --text-dark: #1e293b;
@@ -21,7 +23,7 @@
         border-radius: 16px;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
         background: white;
-        overflow: hidden; /* Mantiene los bordes redondeados en la tabla */
+        overflow: hidden; 
     }
 
     /* Buscador Vercel-Style */
@@ -196,6 +198,133 @@
     .driver-popover { border-radius: 12px !important; }
     .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
     .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
+
+
+    /* ===================================================
+       2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
+       =================================================== */
+    [data-bs-theme="dark"] {
+        --text-dark: #f8fafc;
+        --bg-light-gray: #0f172a;
+        --border-color: #334155;
+    }
+    
+    [data-bs-theme="dark"] body {
+        background-color: #0f172a !important; /* Azul marino profundo */
+    }
+    
+    /* Forzamos colores sólidos en tarjetas y modales para evitar transparencias */
+    [data-bs-theme="dark"] .card-custom,
+    [data-bs-theme="dark"] .modal-content,
+    [data-bs-theme="dark"] .dropdown-menu-custom,
+    [data-bs-theme="dark"] .card-footer {
+        background-color: #1e293b !important; /* Azul pizarra (Sólido) */
+        border-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .search-input {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .search-input:focus {
+        border-color: var(--sian-pink) !important;
+    }
+
+    [data-bs-theme="dark"] .btn-outline-custom {
+        background-color: transparent !important;
+        border-color: #334155 !important;
+        color: #94a3b8 !important;
+    }
+    
+    [data-bs-theme="dark"] .btn-outline-custom:hover {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .table th {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+        color: #94a3b8 !important;
+    }
+
+    [data-bs-theme="dark"] .table td {
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+
+    /* 🔥 SOLUCIÓN AL HOVER BLANCO EN LA TABLA 🔥 */
+    [data-bs-theme="dark"] .table tbody tr:hover {
+        background-color: #334155 !important; 
+    }
+    [data-bs-theme="dark"] .table tbody tr:hover td {
+        background-color: transparent !important; 
+    }
+
+    /* Ajuste visual para la fila de canceladas */
+    [data-bs-theme="dark"] .row-cancelada,
+    [data-bs-theme="dark"] .row-cancelada td {
+        background-color: rgba(220, 53, 69, 0.1) !important;
+        color: #ef4444 !important;
+    }
+
+    /* 🔥 SOLUCIÓN AL FONDO BLANCO / TRANSPARENTE EN MODALES 🔥 */
+    [data-bs-theme="dark"] .bg-light, 
+    [data-bs-theme="dark"] .bg-white,
+    [data-bs-theme="dark"] .bg-light-gray {
+        background-color: #0f172a !important;
+    }
+
+    [data-bs-theme="dark"] .text-dark {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    [data-bs-theme="dark"] .border,
+    [data-bs-theme="dark"] .border-light,
+    [data-bs-theme="dark"] .border-bottom {
+        border-color: #334155 !important;
+    }
+
+    /* Paginación en Dark Mode */
+    [data-bs-theme="dark"] .page-link {
+        color: #94a3b8 !important;
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+    }
+    [data-bs-theme="dark"] .page-link:hover:not(.active) {
+        background-color: #334155 !important;
+    }
+
+    /* Dropdown Menú en Dark Mode */
+    [data-bs-theme="dark"] .dropdown-menu-custom .dropdown-item {
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .dropdown-menu-custom .dropdown-item:hover {
+        background-color: #334155 !important;
+    }
+    [data-bs-theme="dark"] .dropdown-menu-custom .dropdown-divider {
+        border-color: #334155 !important;
+    }
+    
+    /* Botón X de modales */
+    [data-bs-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    /* Modales internos */
+    [data-bs-theme="dark"] .modal-body {
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .modal-body .table-borderless thead th {
+        background-color: #1e293b !important;
+        box-shadow: 0 1px 0 #334155 !important;
+        color: #94a3b8 !important;
+    }
 </style>
 {% endblock %}
 
@@ -295,8 +424,8 @@
 
                     <td class="text-end pe-4" {% if loop.index == 1 %}id="tour-acciones"{% endif %}>
                         <div class="dropdown">
-                            <button class="btn btn-light btn-sm rounded-circle border border-light" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px; background: transparent;">
-                                <i class="fas fa-ellipsis-v text-muted"></i>
+                            <button class="btn btn-light btn-sm rounded-circle border" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
+                                <i class="fas fa-ellipsis-v"></i>
                             </button>
 
                             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-custom">
@@ -354,7 +483,7 @@
     </div>
 
     {% if total_pages > 1 %}
-    <div class="card-footer bg-white border-top border-light py-3 d-flex flex-column align-items-center justify-content-center">
+    <div class="card-footer py-3 d-flex flex-column align-items-center justify-content-center">
         <nav aria-label="Navegación de historial">
             <ul class="pagination m-0">
                 <li class="page-item {% if page == 1 %}disabled{% endif %}">
@@ -394,7 +523,7 @@
             </div>
 
             <div class="modal-body p-4">
-                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4 p-4 rounded-4" style="background-color: var(--bg-light-gray); border: 1px solid var(--border-color);">
+                <div class="bg-light-gray d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4 p-4 rounded-4" style="background-color: var(--bg-light-gray); border: 1px solid var(--border-color);">
                     <div>
                         <span class="text-muted text-xs fw-bold text-uppercase tracking-wider">Cliente</span>
                         <h4 class="fw-bold m-0 text-dark mt-1" id="modalCliente"></h4>
@@ -403,9 +532,9 @@
                 </div>
 
                 <h6 class="fw-bold text-dark mb-3">Detalle de Productos</h6>
-                <div class="table-responsive rounded-4 border border-light mb-4" style="max-height: 300px;">
+                <div class="table-responsive rounded-4 border mb-4" style="max-height: 300px;">
                     <table class="table table-borderless mb-0 align-middle">
-                        <thead class="sticky-top bg-white" style="box-shadow: 0 1px 0 var(--border-color);">
+                        <thead class="sticky-top bg-white">
                             <tr>
                                 <th class="ps-4 py-3" style="min-width: 220px;">Concepto</th>
                                 <th class="text-center py-3">Cant.</th>
@@ -426,7 +555,7 @@
                     </div>
                 </div>
 
-                <div id="avisoCotizacion" class="alert alert-light border border-warning rounded-4 mt-4 mb-0 d-none">
+                <div id="avisoCotizacion" class="alert border border-warning rounded-4 mt-4 mb-0 d-none" style="background-color: rgba(255, 193, 7, 0.1);">
                     <div class="d-flex align-items-center text-warning font-medium">
                         <i class="fas fa-info-circle fs-5 me-3"></i>
                         <span>Esta cotización es solo de referencia y no representa un ingreso real.</span>
@@ -435,7 +564,7 @@
             </div>
             
             <div class="modal-footer border-top-0 px-4 pb-4 pt-0">
-                <button type="button" class="btn btn-light rounded-pill px-4 fw-bold text-dark w-100" style="background-color: #f1f5f9;" data-bs-dismiss="modal">Cerrar Detalles</button>
+                <button type="button" class="btn border rounded-pill px-4 fw-bold text-dark w-100 bg-light" data-bs-dismiss="modal">Cerrar Detalles</button>
             </div>
         </div>
     </div>
@@ -582,7 +711,7 @@
                         }
 
                         tbody.innerHTML += `
-                            <tr class="border-bottom">
+                            <tr class="border-bottom border-light">
                                 <td class="ps-4 py-3" style="min-width: 220px;">
                                     <div class="fw-bold text-dark">${item.concepto}</div>
                                     ${htmlIngredientes}
@@ -601,15 +730,15 @@
                     const gananciaReal = sumaGanancias - parseFloat(data.descuento_monto || 0);
 
                     document.getElementById('panelFinanciero').innerHTML = `
-                        <div class="col-6 col-sm-3 p-3 border-end border-bottom border-sm-bottom-0">
+                        <div class="col-6 col-sm-3 p-3 border-end border-bottom border-sm-bottom-0 border-light">
                             <span class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Monto Total</span>
                             <span class="h5 fw-bold text-dark m-0">$${totalVenta.toFixed(2)}</span>
                         </div>
-                        <div class="col-6 col-sm-3 p-3 border-end border-bottom border-sm-bottom-0">
+                        <div class="col-6 col-sm-3 p-3 border-end border-bottom border-sm-bottom-0 border-light">
                             <span class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Pagado</span>
                             <span class="h5 fw-bold text-primary m-0">$${pagado.toFixed(2)}</span>
                         </div>
-                        <div class="col-6 col-sm-3 p-3 border-end">
+                        <div class="col-6 col-sm-3 p-3 border-end border-light">
                             <span class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Por Cobrar</span>
                             <span class="h5 fw-bold ${pendiente > 0.1 ? 'text-danger' : 'text-success'} m-0">$${pendiente.toFixed(2)}</span>
                         </div>

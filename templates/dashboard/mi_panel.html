@@ -4,6 +4,9 @@
 
 {% block extra_css %}
 <style>
+    /* ===================================================
+       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       =================================================== */
     .dashboard-bg { background-color: #fafafa; min-height: 100vh; padding-bottom: 3rem; }
     
     .kpi-card {
@@ -32,6 +35,199 @@
     .top-table tr:last-child td { border-bottom: none; }
     
     .filter-bar { background: #fff; border-radius: 50px; padding: 8px 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
+
+    /* ===================================================
+       2. ESTILOS DEL CALENDARIO DE ACTIVIDAD
+       =================================================== */
+    .calendar-container-wrapper {
+        max-width: 750px; /* Limita el ancho máximo en PC */
+        margin: 0 auto;
+    }
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 8px;
+    }
+    .cal-day {
+        aspect-ratio: 1 / 1;
+        max-height: 80px; /* Altura máxima para que no se vea gigante */
+        background: #fff;
+        border: 1px solid var(--border-color, #e2e8f0);
+        border-radius: 12px;
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+    }
+    .cal-day:hover:not(.empty) {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        border-color: var(--sian-pink, #ff6b81);
+    }
+    .cal-day.empty { background: transparent; border: none; cursor: default; }
+    .cal-date { font-weight: 800; color: #64748b; font-size: 0.85rem; line-height: 1; margin-bottom: 4px; }
+    .cal-indicators { display: flex; gap: 3px; margin-top: auto; flex-wrap: wrap; justify-content: center; }
+    .cal-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+    /* Botones de navegación del calendario */
+    .btn-light.rounded-circle {
+        background-color: #fff;
+        border-color: #e5e7eb;
+    }
+
+
+    /* ===================================================
+       3. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
+       =================================================== */
+    [data-bs-theme="dark"] .dashboard-bg { 
+        background-color: #0f172a !important; 
+    }
+    
+    /* Tarjetas y Paneles */
+    [data-bs-theme="dark"] .kpi-card,
+    [data-bs-theme="dark"] .section-card,
+    [data-bs-theme="dark"] .card-custom {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+    }
+    
+    /* Textos Base */
+    [data-bs-theme="dark"] .kpi-value,
+    [data-bs-theme="dark"] .section-header,
+    [data-bs-theme="dark"] .text-dark,
+    [data-bs-theme="dark"] .saas-card-header h5 {
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .kpi-title,
+    [data-bs-theme="dark"] .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    /* Iconos KPI (Ajuste de opacidad para que resalten sobre fondo oscuro) */
+    [data-bs-theme="dark"] .bg-ingresos { background-color: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; }
+    [data-bs-theme="dark"] .bg-ganancia { background-color: rgba(16, 185, 129, 0.15) !important; color: #34d399 !important; }
+    [data-bs-theme="dark"] .bg-deuda { background-color: rgba(245, 158, 11, 0.15) !important; color: #fbbf24 !important; }
+    [data-bs-theme="dark"] .bg-ventas { background-color: rgba(139, 92, 246, 0.15) !important; color: #a78bfa !important; }
+
+    /* Barra de Filtros y Selects */
+    [data-bs-theme="dark"] .filter-bar {
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+        box-shadow: none !important;
+    }
+    
+    [data-bs-theme="dark"] .form-select,
+    [data-bs-theme="dark"] .bg-white {
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .form-select option {
+        background-color: #1e293b !important;
+        color: #f8fafc !important;
+    }
+
+    /* Pestañas de la gráfica y Calendario */
+    [data-bs-theme="dark"] .nav-pills.bg-light,
+    [data-bs-theme="dark"] .card-body.bg-light {
+        background-color: #0f172a !important;
+    }
+    [data-bs-theme="dark"] .nav-pills .nav-link:not(.active) {
+        color: #94a3b8 !important;
+    }
+
+    /* Tabla Top Productos / Alertas */
+    [data-bs-theme="dark"] .top-table th {
+        border-bottom-color: #334155 !important;
+        color: #94a3b8 !important;
+    }
+    [data-bs-theme="dark"] .top-table td {
+        border-bottom-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .badge.bg-light {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+        border-color: #475569 !important;
+    }
+
+    /* 🔥 FIX HOVER BLANCO EN LA TABLA 🔥 */
+    [data-bs-theme="dark"] .table tbody tr:hover {
+        background-color: #334155 !important; 
+    }
+    [data-bs-theme="dark"] .table tbody tr:hover td {
+        background-color: transparent !important; 
+    }
+
+    /* ===================================================
+       4. APEXCHARTS DARK MODE FIXES (SVG OVERRIDES)
+       =================================================== */
+    /* Texto general y Leyendas */
+    [data-bs-theme="dark"] .apexcharts-text tspan,
+    [data-bs-theme="dark"] .apexcharts-legend-text {
+        fill: #94a3b8 !important;
+        color: #94a3b8 !important;
+    }
+    
+    /* El número gigante en el centro de la Dona */
+    [data-bs-theme="dark"] .apexcharts-datalabel-value {
+        fill: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .apexcharts-datalabel-label {
+        fill: #94a3b8 !important;
+    }
+    
+    /* Líneas de cuadrícula del fondo */
+    [data-bs-theme="dark"] .apexcharts-gridline {
+        stroke: #334155 !important;
+    }
+    
+    /* Borde blanco entre las rebanadas de la dona */
+    [data-bs-theme="dark"] .apexcharts-pie-area {
+        stroke: #1e293b !important;
+    }
+    
+    /* Tooltip Flotante (Cuadro al pasar el mouse) */
+    [data-bs-theme="dark"] .apexcharts-tooltip {
+        background: #1e293b !important;
+        border: 1px solid #334155 !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.3) !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .apexcharts-tooltip-title {
+        background: #0f172a !important;
+        border-bottom: 1px solid #334155 !important;
+    }
+    [data-bs-theme="dark"] .apexcharts-tooltip-text {
+        color: #f8fafc !important;
+    }
+
+    /* ===================================================
+       5. CALENDARIO DARK MODE
+       =================================================== */
+    [data-bs-theme="dark"] .cal-day {
+        background: #1e293b !important;
+        border-color: #334155 !important;
+    }
+    [data-bs-theme="dark"] .cal-day:hover:not(.empty) {
+        border-color: var(--sian-pink, #ff6b81) !important;
+        background-color: #334155 !important;
+    }
+    [data-bs-theme="dark"] .cal-date { color: #94a3b8 !important; }
+    
+    [data-bs-theme="dark"] .btn-light.rounded-circle {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .btn-light.rounded-circle:hover {
+        background-color: #334155 !important;
+    }
 </style>
 {% endblock %}
 
@@ -221,10 +417,37 @@
             </div>
         </div>
     </div>
-</div>
+
+    <div class="card card-custom border-0 shadow-sm rounded-4 mt-5 mb-4" id="tour-calendario" style="overflow: hidden;">
+        <div class="saas-card-header d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 p-4 border-bottom bg-white">
+            <h5 class="m-0 fw-bold text-dark text-center text-sm-start"><i class="fas fa-calendar-alt text-primary me-2"></i>Calendario de Actividad</h5>
+            <div class="d-flex align-items-center gap-2 gap-sm-3">
+                <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center shadow-sm" onclick="cambiarMes(-1)" style="width: 36px; height: 36px;"><i class="fas fa-chevron-left"></i></button>
+                <h6 id="mesAnioDisplay" class="m-0 fw-bold text-dark text-uppercase" style="min-width: 140px; text-align: center; letter-spacing: 0.5px;">...</h6>
+                <button class="btn btn-sm btn-light border rounded-circle d-flex align-items-center justify-content-center shadow-sm" onclick="cambiarMes(1)" style="width: 36px; height: 36px;"><i class="fas fa-chevron-right"></i></button>
+            </div>
+        </div>
+        <div class="card-body p-4 bg-light">
+            <div class="calendar-container-wrapper">
+                <div class="calendar-grid text-center text-muted fw-bold small mb-2 text-uppercase" style="font-size: 0.75rem;">
+                    <div>Dom</div><div>Lun</div><div>Mar</div><div>Mié</div><div>Jue</div><div>Vie</div><div>Sáb</div>
+                </div>
+                <div id="diasCalendario" class="calendar-grid">
+                    </div>
+            </div>
+            
+            <div class="mt-4 d-flex justify-content-center flex-wrap gap-4 small text-muted fw-bold border-top pt-3">
+                <span class="d-flex align-items-center"><span class="d-inline-block rounded-circle bg-success me-2 shadow-sm" style="width: 12px; height: 12px;"></span> Venta Cerrada</span>
+                <span class="d-flex align-items-center"><span class="d-inline-block rounded-circle bg-secondary me-2 shadow-sm" style="width: 12px; height: 12px;"></span> Cotización</span>
+                <span class="d-flex align-items-center"><span class="d-inline-block rounded-circle bg-warning me-2 shadow-sm" style="width: 12px; height: 12px;"></span> Anticipo</span>
+            </div>
+        </div>
+    </div>
+    </div>
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
 
 <script>
     const chartData = {{ chart_data | tojson }};
@@ -350,7 +573,162 @@
         } else {
             document.querySelector("#chartDona").innerHTML = '<p class="text-center text-muted small py-5">Registra ventas para ver tu radiografía de ingresos.</p>';
         }
+
+        // Iniciar Calendario
+        renderizarCalendario();
     });
+
+
+    // ==============================================================================
+    // LÓGICA DEL CALENDARIO DE VENTAS
+    // ==============================================================================
+    let calFechaActual = new Date(); // Fecha que el usuario está viendo
+    
+    // Nombres de meses para el título
+    const nombresMeses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+    function cambiarMes(delta) {
+        calFechaActual.setMonth(calFechaActual.getMonth() + delta);
+        renderizarCalendario();
+    }
+
+    function renderizarCalendario() {
+        const year = calFechaActual.getFullYear();
+        const month = calFechaActual.getMonth();
+        
+        document.getElementById('mesAnioDisplay').innerText = `${nombresMeses[month]} ${year}`;
+        
+        // Calcular días del mes y en qué día de la semana empieza
+        const primerDia = new Date(year, month, 1).getDay(); // 0 = Dom, 1 = Lun...
+        const diasEnMes = new Date(year, month + 1, 0).getDate();
+        
+        const contenedor = document.getElementById('diasCalendario');
+        contenedor.innerHTML = '';
+
+        // Rellenar días vacíos al principio
+        for (let i = 0; i < primerDia; i++) {
+            contenedor.innerHTML += `<div class="cal-day empty"></div>`;
+        }
+
+        // Crear los cuadros de los días
+        for (let i = 1; i <= diasEnMes; i++) {
+            // Formato de fecha para cruzar con la base de datos (YYYY-MM-DD)
+            const mesStr = String(month + 1).padStart(2, '0');
+            const diaStr = String(i).padStart(2, '0');
+            const fechaKey = `${year}-${mesStr}-${diaStr}`;
+            
+            contenedor.innerHTML += `
+                <div class="cal-day shadow-sm" id="day-${fechaKey}" onclick="verResumenDia('${fechaKey}')">
+                    <span class="cal-date">${i}</span>
+                    <div class="cal-indicators w-100" id="ind-${fechaKey}"></div>
+                </div>
+            `;
+        }
+
+        // Llenar espacios vacíos al final para cuadrar el grid
+        const celdasUsadas = primerDia + diasEnMes;
+        const celdasFaltantes = (Math.ceil(celdasUsadas / 7) * 7) - celdasUsadas;
+        for (let i = 0; i < celdasFaltantes; i++) {
+            contenedor.innerHTML += `<div class="cal-day empty"></div>`;
+        }
+
+        // Llamar a la Base de Datos para pedir las ventas de ESTE mes
+        fetchResumenMensual(year, month + 1);
+    }
+
+    function fetchResumenMensual(year, month) {
+        fetch(`/api/historial/calendario?anio=${year}&mes=${month}`)
+            .then(r => r.json())
+            .then(data => {
+                // data debe ser un objeto: { "2026-04-14": [{estado: "pagado", total: 1500}, ...], ... }
+                for (const [fecha, eventos] of Object.entries(data)) {
+                    const divIndicadores = document.getElementById(`ind-${fecha}`);
+                    const diaBox = document.getElementById(`day-${fecha}`);
+                    
+                    if (divIndicadores && eventos.length > 0) {
+                        // Guardamos la info en el div para usarla al hacer click
+                        diaBox.setAttribute('data-ventas', JSON.stringify(eventos));
+                        
+                        // Límite de puntitos visuales a mostrar en el cuadro para no saturarlo
+                        const maxDots = 3;
+
+                        eventos.forEach((evt, index) => {
+                            let bgClass = "bg-secondary"; // cotizacion
+                            if (evt.estado === 'pagado') bgClass = "bg-success";
+                            if (evt.estado === 'anticipo') bgClass = "bg-warning";
+                            if (evt.estado === 'cancelada') bgClass = "bg-danger";
+                            
+                            if (index < maxDots) {
+                                divIndicadores.innerHTML += `<div class="cal-dot ${bgClass} shadow-sm"></div>`;
+                            } else if (index === maxDots) {
+                                // Si hay más de 3 ventas, pintamos un puntito gris oscuro con un "+" chiquito
+                                divIndicadores.innerHTML += `
+                                    <div class="cal-dot bg-dark shadow-sm d-flex align-items-center justify-content-center" style="width: 10px; height: 10px;">
+                                        <span style="font-size: 0.4rem; color: white;">+</span>
+                                    </div>`;
+                            }
+                        });
+                    }
+                }
+            })
+            .catch(e => console.error("Error cargando calendario:", e));
+    }
+
+    // Al hacer click en un día, mostramos un resumen rápido con SweetAlert
+    function verResumenDia(fecha) {
+        const diaBox = document.getElementById(`day-${fecha}`);
+        const ventasData = diaBox.getAttribute('data-ventas');
+        
+        if (!ventasData) {
+            Swal.fire({
+                toast: true, position: 'bottom-end', icon: 'info',
+                title: 'No hay actividad este día', showConfirmButton: false, timer: 1500
+            });
+            return;
+        }
+
+        const eventos = JSON.parse(ventasData);
+        let totalDinero = 0;
+        let htmlLista = '<div class="text-start mt-3 px-2" style="max-height: 250px; overflow-y: auto;">';
+        
+        eventos.forEach(evt => {
+            let icono = '⚪';
+            if (evt.estado === 'pagado') { icono = '🟢'; totalDinero += evt.total; }
+            if (evt.estado === 'anticipo') { icono = '🟡'; totalDinero += evt.total; }
+            if (evt.estado === 'cancelada') { icono = '🔴'; }
+            
+            htmlLista += `<div class="border-bottom border-light py-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                        <span style="font-size: 0.8rem;">${icono}</span> <span>${evt.cliente}</span>
+                    </div>
+                    <small class="text-muted ms-4 ps-1">Folio #${evt.id}</small>
+                </div>
+                <div class="fw-bold text-dark">$${evt.total.toFixed(2)}</div>
+            </div>`;
+        });
+        htmlLista += '</div>';
+
+        // Determinamos si el fondo del modal será claro u oscuro
+        const isDark = document.documentElement.getAttribute('data-bs-theme') === 'dark';
+        const bgColor = isDark ? '#1e293b' : '#ffffff';
+        const txtColor = isDark ? '#f8fafc' : '#334155';
+
+        Swal.fire({
+            title: `<span style="color: ${txtColor}; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 1px;">Resumen del ${fecha.split('-').reverse().join('/')}</span>`,
+            html: `
+                <div class="py-3 px-4 rounded-4" style="background-color: ${isDark ? '#0f172a' : '#f8f9fa'};">
+                    <h2 class="text-success fw-bold mb-0" style="font-size: 2.5rem;">$${totalDinero.toFixed(2)}</h2>
+                    <small class="text-muted fw-bold text-uppercase" style="letter-spacing: 1px; font-size: 0.7rem;">Ingresos cerrados hoy</small>
+                </div>
+                ${htmlLista}
+            `,
+            confirmButtonText: 'Cerrar',
+            confirmButtonColor: '#0d6efd',
+            background: bgColor,
+            customClass: { popup: 'rounded-4 shadow-lg border-0' }
+        });
+    }
 </script>
 {% endblock %}
 {% endblock %}

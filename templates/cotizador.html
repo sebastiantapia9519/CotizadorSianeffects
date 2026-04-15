@@ -4,21 +4,20 @@
 
 {% block extra_css %}
 <style>
-    /* Estilos SianEffects (Estables) */
+    /* ===================================================
+       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       =================================================== */
     .card {
         border: none;
         border-radius: 20px;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
     }
-
     .card-header-sian {
         background-color: #ffffff;
         border-bottom: 2px solid var(--sian-pink-light);
         padding: 15px;
         border-radius: 20px 20px 0 0;
     }
-
-    /* Pestañas Personalizadas Sian */
     .nav-tabs .nav-link {
         color: #6c757d;
         border: none;
@@ -30,32 +29,22 @@
         display: flex;
         align-items: center;
     }
-
     .nav-tabs .nav-link.active {
         background-color: var(--sian-pink);
         color: white;
         font-weight: 800;
         box-shadow: 0 4px 10px rgba(255, 107, 129, 0.3);
     }
-
-    .nav-tabs {
-        border-bottom: none;
-    }
-
-    /* Inputs y Botones */
-    .form-control,
-    .form-select {
+    .nav-tabs { border-bottom: none; }
+    .form-control, .form-select {
         border-radius: 10px;
         border: 2px solid #eee;
         font-weight: 600;
     }
-
-    .form-control:focus,
-    .form-select:focus {
+    .form-control:focus, .form-select:focus {
         border-color: var(--sian-pink);
         box-shadow: none;
     }
-
     .btn-primary {
         background-color: var(--sian-pink);
         border: none;
@@ -63,12 +52,10 @@
         font-weight: 800;
         padding: 12px;
     }
-
     .btn-primary:hover {
         background-color: #ff4765;
         transform: translateY(-2px);
     }
-
     .btn-add-cart {
         background-color: var(--sian-teal);
         color: white;
@@ -78,24 +65,20 @@
         padding: 12px;
         width: 100%;
     }
-
     .btn-add-cart:hover {
         background-color: var(--sian-teal-dark);
         color: white;
     }
-
     .text-price-main {
         color: var(--sian-teal);
         font-size: 1.2rem;
         font-weight: 900;
     }
-
     .total-ticket {
         font-size: 2rem;
         font-weight: 900;
         color: var(--sian-pink);
     }
-
     .check-maquinaria-label {
         cursor: pointer;
         user-select: none;
@@ -104,26 +87,64 @@
         color: #555;
         transition: all 0.2s;
     }
-
-    .check-maquinaria-label:hover {
-        background-color: #f8f9fa;
-    }
-
+    .check-maquinaria-label:hover { background-color: #f8f9fa; }
     .check-maquinaria-input:checked+span {
         color: var(--sian-teal-dark);
         font-weight: 800;
     }
-
     .no-arrow::-webkit-outer-spin-button,
     .no-arrow::-webkit-inner-spin-button {
         -webkit-appearance: none;
         margin: 0;
     }
-    
-    /* Tutorial Custom Styles */
     .driver-popover { border-radius: 12px !important; }
     .driver-popover-title { font-weight: bold !important; color: var(--sian-pink) !important; }
     .driver-popover-next-btn { background-color: var(--sian-pink) !important; text-shadow: none !important; border: none !important;}
+
+    /* ===================================================
+       2. MODO OSCURO (OVERRIDE AUTOMÁTICO)
+       =================================================== */
+    [data-bs-theme="dark"] .card, 
+    [data-bs-theme="dark"] .card-header-sian, 
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+    }
+    [data-bs-theme="dark"] .bg-light, 
+    [data-bs-theme="dark"] .bg-white {
+        background-color: #0f172a !important; /* Azul marino profundo */
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .text-dark {
+        color: #f8fafc !important; /* Vuelve el texto negro a blanco */
+    }
+    [data-bs-theme="dark"] .text-muted {
+        color: #94a3b8 !important;
+    }
+    [data-bs-theme="dark"] .border {
+        border-color: #334155 !important;
+    }
+    [data-bs-theme="dark"] .form-control, 
+    [data-bs-theme="dark"] .form-select, 
+    [data-bs-theme="dark"] .input-group-text {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .check-maquinaria-label {
+        color: #f8fafc;
+    }
+    [data-bs-theme="dark"] .check-maquinaria-label:hover {
+        background-color: #334155 !important;
+    }
+    /* Protegemos los headers originales de los modales */
+    [data-bs-theme="dark"] .modal-header.bg-dark {
+        background-color: #0f172a !important;
+        border-bottom: 1px solid #334155;
+    }
+    [data-bs-theme="dark"] .modal-header.bg-primary {
+        background-color: var(--sian-pink) !important;
+    }
 </style>
 {% endblock %}
 
@@ -142,7 +163,7 @@
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div></div> 
     {% if config['mostrar_ayuda'] %}
-    <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm" onclick="repetirTutorialCotizador()">
+    <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm border border-light" onclick="repetirTutorialCotizador()">
         <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
     </button>
     {% endif %}
@@ -194,15 +215,12 @@
                         </div>
 
                         <div id="tour-insumos" class="p-2 rounded">
-                            <div id="tour-insumos" class="p-2 rounded">
-                                <div class="d-none d-md-flex row px-2 mb-2 text-muted small fw-bold text-uppercase">
-                                    <div class="col-5">Material</div>
-                                    <div class="col-2">$ Unit.</div>
-                                    <div class="col-2">Cant.</div>
-                                    <div class="col-2">Total</div>
-                                    <div class="col-1"></div>
-                                </div>
-                                <div id="listaMateriales"></div>
+                            <div class="d-none d-md-flex row px-2 mb-2 text-muted small fw-bold text-uppercase">
+                                <div class="col-5">Material</div>
+                                <div class="col-2">$ Unit.</div>
+                                <div class="col-2">Cant.</div>
+                                <div class="col-2">Total</div>
+                                <div class="col-1"></div>
                             </div>
                             <div id="listaMateriales"></div>
                         </div>
@@ -213,7 +231,7 @@
                                 {% for eq in equipos %}
                                 <div class="col-6 col-md-4">
                                     <label
-                                        class="check-maquinaria-label d-flex align-items-center gap-2 border bg-white p-2 rounded shadow-sm h-100">
+                                        class="check-maquinaria-label d-flex align-items-center gap-2 border p-2 rounded shadow-sm h-100">
                                         <input type="checkbox" class="form-check-input check-maquinaria-input m-0"
                                             value="{{ eq['costo_desgaste'] }}" data-id="{{ eq['id'] }}"
                                             onchange="calcularTotal()">
@@ -229,7 +247,7 @@
                             class="p-3 bg-light rounded-4 mt-3 d-flex align-items-center justify-content-between border">
                             <label class="fw-bold small text-muted m-0">Extras (Mano de Obra)</label>
                             <div class="input-group w-50">
-                                <span class="input-group-text border-0 bg-white">$</span>
+                                <span class="input-group-text border-0">$</span>
                                 <input type="number" class="form-control border-0" id="costosExtra" value="0"
                                     onfocus="if(this.value=='0') this.value=''"
                                     onblur="if(this.value=='') { this.value='0'; } calcularTotal()"
@@ -237,10 +255,10 @@
                             </div>
                         </div>
 
-                        <div id="tour-resultados" class="mt-4 p-3 border rounded-4 bg-white shadow-sm">
+                        <div id="tour-resultados" class="mt-4 p-3 border rounded-4 bg-light shadow-sm">
                             <label class="small fw-bold text-muted mb-1">Nombre del Producto Final</label>
                             <input type="text" id="nombreProductoActual"
-                                class="form-control fw-bold mb-3 bg-light border-0" placeholder="Ej. Termo Mágico">
+                                class="form-control fw-bold mb-3 border-0" placeholder="Ej. Termo Mágico">
 
                             <div class="row align-items-end g-3">
                                 <div class="col-4">
@@ -269,7 +287,7 @@
                                 </a>
                             </div>
 
-                            <div class="mt-2 p-3 border rounded d-none bg-light" id="boxGuardar">
+                            <div class="mt-2 p-3 border rounded d-none" id="boxGuardar" style="background-color: var(--bs-body-bg);">
                                 <div class="input-group">
                                     <input type="text" id="nombreNuevoProducto" class="form-control"
                                         placeholder="Nombre para guardar">
@@ -323,9 +341,9 @@
                                     data-bs-parent="#accordionCosto">
                                     <div class="accordion-body px-0 pt-2">
                                         <div class="input-group">
-                                            <span class="input-group-text bg-light border-0 small text-muted">Costo Real
+                                            <span class="input-group-text border-0 small text-muted">Costo Real
                                                 $</span>
-                                            <input type="number" class="form-control bg-light border-0"
+                                            <input type="number" class="form-control border-0"
                                                 id="expressCosto" placeholder="0.00">
                                         </div>
                                     </div>
@@ -370,7 +388,7 @@
 
                 <div class="p-4 bg-light border-top">
                     <div id="tour-ajustes-finales">
-                        <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
+                        <div class="mb-3 p-3 rounded-4 border shadow-sm" style="background-color: var(--bs-card-bg);">
                             <label class="fw-bold small text-muted d-block mb-2">Descuento (%)</label>
                             <div class="d-flex align-items-center gap-2">
                                 <input type="range" class="form-range flex-grow-1" min="0" max="100" step="5"
@@ -378,9 +396,9 @@
                                 <div class="input-group flex-shrink-0 shadow-sm rounded-pill overflow-hidden"
                                     style="width: 85px;">
                                     <input type="number" id="inputDescuento"
-                                        class="form-control text-center fw-bold border-0 bg-light no-arrow" value="0"
+                                        class="form-control text-center fw-bold border-0 no-arrow" value="0"
                                         min="0" max="100" oninput="actualizarDescuento(this.value)">
-                                    <span class="input-group-text border-0 bg-light px-1 text-muted small">%</span>
+                                    <span class="input-group-text border-0 px-1 text-muted small">%</span>
                                 </div>
                             </div>
                         </div>
@@ -407,7 +425,7 @@
                             <span id="labelDescuento">-$0.00</span>
                         </div>
 
-                        <div class="mb-3 bg-white p-3 rounded-4 border shadow-sm">
+                        <div class="mb-3 p-3 rounded-4 border shadow-sm" style="background-color: var(--bs-card-bg);">
                             <div class="d-flex justify-content-between align-items-center">
                                 <label class="fw-bold small text-muted m-0"><i class="fas fa-truck-fast me-1"></i>
                                     Envío</label>
@@ -416,7 +434,7 @@
                                     <span id="btnTextoEnvio">Cotizar</span>
                                 </button>
                             </div>
-                            <div id="resumenEnvio" class="mt-2 p-2 bg-light rounded border d-none">
+                            <div id="resumenEnvio" class="mt-2 p-2 rounded border d-none" style="background-color: var(--bs-body-bg);">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <small class="text-muted" id="descEnvio">Local (12km)</small>
                                     <span class="fw-bold text-dark" id="montoEnvioDisplay">$0.00</span>
@@ -431,7 +449,7 @@
                             <span class="fw-bold" id="taxAmountDisplay">+$0.00</span>
                         </div>
 
-                        <div id="tour-total-magico" class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top position-relative bg-white p-2 rounded">
+                        <div id="tour-total-magico" class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top position-relative p-2 rounded" style="background-color: var(--bs-card-bg);">
                             <span class="h5 fw-bold text-dark mb-0">Total:</span>
 
                             <div id="boxTotalInteractuable" class="text-end" style="cursor: pointer;"
@@ -439,13 +457,15 @@
                                 <span id="totalTicket" class="total-ticket text-primary">$0.00</span>
                                 <input type="number" id="inputTotalMagico"
                                     class="form-control form-control-lg text-end total-ticket d-none text-success"
-                                    style="width: 160px; font-weight: 900; background-color: #f0fdf4;"
+                                    style="width: 160px; font-weight: 900; background-color: var(--bs-tertiary-bg);"
                                     onblur="aplicarMagiaTotal()" onkeyup="if(event.key === 'Enter') this.blur()">
                                 <small class="d-block text-muted" id="hintTotal" style="font-size: 0.65rem;"><i
                                         class="fas fa-magic me-1"></i>Clic para ajustar o redondear</small>
                             </div>
                         </div>
-                    </div> <div id="tour-botones-finales">
+                    </div> 
+                    
+                    <div id="tour-botones-finales">
                         <div class="mb-3">
                             <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
                                 placeholder="Nombre del Cliente">
@@ -454,7 +474,7 @@
                         <div class="row g-2">
                             <div class="col-6">
                                 <button class="btn btn-outline-dark w-100 py-3 fw-bold rounded-3"
-                                    onclick="finalizarCompra('cotizacion')">
+                                    onclick="finalizarCompra('cotizacion')" style="color: var(--bs-body-color); border-color: var(--bs-border-color);">
                                     <i class="fas fa-file-invoice me-1"></i> Solo Cotizar
                                 </button>
                             </div>
@@ -465,7 +485,8 @@
                                 </button>
                             </div>
                         </div>
-                    </div> </div>
+                    </div> 
+                </div>
             </div>
         </div>
     </div>
@@ -600,76 +621,6 @@
             nextBtnText: 'Siguiente &rarr;',
             prevBtnText: '&larr; Atrás',
             allowClose: true,
-            steps: [
-                {
-                    popover: {
-                        title: 'Bienvenido al Cotizador 💸',
-                        description: 'Aquí armarás tus precios asegurando que NUNCA pierdas dinero. ¡Demos un paseo rápido!',
-                        align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-cargar-receta',
-                    popover: {
-                        title: '1. Carga una Receta (Ahorra tiempo)',
-                        description: 'Si guardaste un producto antes, selecciónalo aquí. Los insumos se agregarán solos.',
-                        side: "bottom", align: 'start'
-                    }
-                },
-                {
-                    element: '#tour-insumos',
-                    popover: {
-                        title: '2. Tus Materiales',
-                        description: 'Elige de la lista, pon cuántos usaste y el sistema calculará el costo exacto.',
-                        side: "top", align: 'start'
-                    }
-                },
-                {
-                    element: '#tour-resultados',
-                    popover: {
-                        title: '3. El Precio Sugerido',
-                        description: 'Sumamos tus materiales, máquinas y Margen de Ganancia para darte un Precio Sugerido. Haz clic en "AGREGAR AL CARRITO" cuando estés listo.',
-                        side: "top", align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-panel-cobro',
-                    popover: {
-                        title: '4. El Carrito',
-                        description: 'Aquí verás el total de tu cliente. Puedes agregar descuentos, envíos o ajustar el total mágico haciendo clic en el número verde.',
-                        side: "left", align: 'start'
-                    }
-                }
-            ]
-        });
-        driverObj.drive();
-    }
-
-    // Arrancar tutorial automáticamente si es la primera vez
-    document.addEventListener('DOMContentLoaded', function() {
-        const yaVioTutorial = localStorage.getItem('sian_tutorial_cotizador_v1');
-        if (!yaVioTutorial && typeof window.driver !== 'undefined') {
-            setTimeout(() => {
-                repetirTutorialCotizador();
-                localStorage.setItem('sian_tutorial_cotizador_v1', 'true');
-            }, 800); // Pequeño retraso para que la app cargue bonito
-        }
-    });
-
-
- // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
-    function repetirTutorialCotizador() {
-        if(typeof window.driver === 'undefined') {
-            console.error("Driver.js no está cargado.");
-            return;
-        }
-
-        const driverObj = window.driver.js.driver({
-            showProgress: true,
-            doneBtnText: '¡A vender!',
-            nextBtnText: 'Siguiente &rarr;',
-            prevBtnText: '&larr; Atrás',
-            allowClose: true,
             
             // 🔥 AQUÍ CONECTAMOS CON LA BASE DE DATOS CUANDO EL TOUR TERMINA O SE CIERRA
             onDestroyed: () => {
@@ -750,16 +701,6 @@
     });
     {% endif %}
 
-    // Arrancar tutorial automáticamente si es la primera vez
-    document.addEventListener('DOMContentLoaded', function() {
-        const yaVioTutorial = localStorage.getItem('sian_tutorial_cotizador_v1');
-        if (!yaVioTutorial && typeof window.driver !== 'undefined') {
-            setTimeout(() => {
-                repetirTutorialCotizador();
-                localStorage.setItem('sian_tutorial_cotizador_v1', 'true');
-            }, 800); // Pequeño retraso para que la app cargue bonito
-        }
-    });
 
     // --- AQUÍ EMPIEZA TU LÓGICA EXISTENTE ---
     let precioVentaCalculado = 0;

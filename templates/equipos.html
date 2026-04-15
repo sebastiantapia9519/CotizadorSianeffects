@@ -4,7 +4,9 @@
 
 {% block content %}
 <style>
-    /* VARIABLES DE DISEÑO SIANEFFECTS */
+    /* ===================================================
+       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       =================================================== */
     :root {
         --sian-primary: #ff4a5a;
         --sian-primary-hover: #e03e4c;
@@ -12,7 +14,6 @@
         --sian-border: #eef0f2;
     }
 
-    /* CONTENEDOR PRINCIPAL TIPO PANEL */
     .sian-panel {
         background: #ffffff;
         border: 1px solid var(--sian-border);
@@ -21,7 +22,6 @@
         overflow: hidden; /* Para que la tabla respete las esquinas redondeadas */
     }
 
-    /* ESTILOS DE LA TABLA PREMIUM */
     .sian-table {
         margin-bottom: 0;
         width: 100%;
@@ -55,7 +55,6 @@
         }
     }
 
-    /* BOTÓN PRINCIPAL */
     .btn-sian {
         background-color: var(--sian-primary);
         color: #fff;
@@ -69,7 +68,6 @@
         transform: translateY(-1px);
     }
 
-    /* INPUTS LIMPIOS */
     .sian-input {
         border: 1px solid var(--sian-border);
         border-radius: 10px;
@@ -82,7 +80,6 @@
         background-color: #fff;
     }
 
-    /* ICONOS DE ACCIÓN MINIMALISTAS */
     .action-icon {
         color: #868e96;
         background: transparent;
@@ -103,7 +100,6 @@
         color: #dc3545;
     }
 
-    /* ICONO DE EQUIPO EN LA TABLA */
     .icon-box {
         width: 32px;
         height: 32px;
@@ -120,6 +116,79 @@
     .driver-popover { border-radius: 12px !important; }
     .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
     .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
+
+
+    /* ===================================================
+       2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
+       =================================================== */
+    [data-bs-theme="dark"] .sian-panel,
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1e293b !important; /* Azul pizarra (Sólido) */
+        border-color: #334155 !important;
+    }
+    
+    [data-bs-theme="dark"] .sian-table th {
+        background-color: #0f172a !important; /* Azul marino profundo */
+        color: #94a3b8 !important;
+        border-color: #334155 !important;
+    }
+    
+    [data-bs-theme="dark"] .sian-table td {
+        color: #f8fafc !important;
+        border-color: #334155 !important;
+    }
+    
+    /* 🔥 SOLUCIÓN AL HOVER BLANCO EN LA TABLA 🔥 */
+    @media (hover: hover) {
+        [data-bs-theme="dark"] .sian-table tbody tr:hover td {
+            background-color: #334155 !important;
+        }
+    }
+    
+    [data-bs-theme="dark"] .sian-input {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .sian-input:focus {
+        border-color: var(--sian-primary) !important;
+    }
+    
+    [data-bs-theme="dark"] .action-icon:hover {
+        background-color: #334155 !important;
+    }
+    
+    [data-bs-theme="dark"] .icon-box {
+        background-color: rgba(245, 176, 65, 0.1) !important;
+    }
+
+    /* 🔥 SOLUCIÓN AL FONDO BLANCO / TRANSPARENTE EN MODALES Y PÁGINA 🔥 */
+    [data-bs-theme="dark"] .bg-white {
+        background-color: #0f172a !important;
+    }
+    
+    [data-bs-theme="dark"] .border-light {
+        border-color: #334155 !important;
+    }
+    
+    [data-bs-theme="dark"] .text-dark {
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .text-muted {
+        color: #94a3b8 !important;
+    }
+    
+    [data-bs-theme="dark"] .input-group-text {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
 </style>
 
 <div class="row align-items-center mb-4">
@@ -146,7 +215,7 @@
         <span class="input-group-text bg-white border-end-0 border-light text-muted" style="border-radius: 10px 0 0 10px;">
             <i class="fas fa-search"></i>
         </span>
-        <input type="text" id="buscadorEquipos" class="form-control border-start-0 border-light py-2"
+        <input type="text" id="buscadorEquipos" class="form-control border-start-0 border-light py-2 sian-input"
             style="box-shadow: none; border-radius: 0 10px 10px 0;" placeholder="Buscar maquinaria por nombre..." onkeyup="filtrarTabla()">
     </div>
 </div>
@@ -231,7 +300,7 @@
                         <div class="input-group shadow-sm" style="border-radius: 10px;">
                             <span class="input-group-text bg-white border-end-0 border-light text-success fw-bold" style="border-radius: 10px 0 0 10px;">$</span>
                             <input type="number" step="any" name="costo_desgaste" id="inputCosto" 
-                                class="form-control border-start-0 border-light py-2 fw-bold text-success"
+                                class="form-control sian-input border-start-0 border-light py-2 fw-bold text-success"
                                 style="border-radius: 0 10px 10px 0; box-shadow: none;" placeholder="0.00" required>
                         </div>
                     </div>

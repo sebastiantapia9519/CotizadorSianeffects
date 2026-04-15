@@ -4,7 +4,9 @@
 
 {% block content %}
 <style>
-    /* Estilos del nuevo SianEffects R2 Widget */
+    /* ===================================================
+       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       =================================================== */
     .r2-upload-zone {
         border: 2px dashed #FF6B81;
         border-radius: 15px;
@@ -45,6 +47,92 @@
         background-color: #e65a6f;
         color: white;
     }
+
+
+    /* ===================================================
+       2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
+       =================================================== */
+    [data-bs-theme="dark"] body {
+        background-color: #0f172a !important;
+    }
+
+    [data-bs-theme="dark"] .text-dark {
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    /* Tarjetas de Producto */
+    [data-bs-theme="dark"] .card {
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .card .bg-light {
+        background-color: #0f172a !important; /* El área donde va la imagen/video */
+    }
+
+    [data-bs-theme="dark"] .card-footer.bg-white {
+        background-color: transparent !important;
+        border-top: 1px solid #334155 !important;
+    }
+
+    /* Botón Atrás */
+    [data-bs-theme="dark"] .btn-light {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .btn-light:hover {
+        background-color: #334155 !important;
+    }
+
+    /* Switches */
+    [data-bs-theme="dark"] .form-check-input {
+        background-color: #0f172a;
+        border-color: #475569;
+    }
+    [data-bs-theme="dark"] .form-check-input:checked {
+        background-color: #3b82f6;
+        border-color: #3b82f6;
+    }
+
+    /* Modal */
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .form-control {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .form-control:focus {
+        border-color: #FF6B81 !important;
+    }
+
+    /* Zona de Subida R2 en Dark Mode */
+    [data-bs-theme="dark"] .r2-upload-zone {
+        background: #0f172a !important;
+        border-color: #FF6B81 !important;
+    }
+
+    [data-bs-theme="dark"] .r2-upload-zone:hover,
+    [data-bs-theme="dark"] .r2-upload-zone.dragover {
+        background: #1e293b !important;
+    }
+
+    [data-bs-theme="dark"] .progress {
+        background-color: #334155 !important;
+    }
+    
+    [data-bs-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
 </style>
 
 <div class="d-flex align-items-center mb-4">
@@ -52,7 +140,7 @@
         <i class="fas fa-arrow-left"></i>
     </a>
     <div>
-        <h2 class="fw-bold m-0">{{ categoria['nombre'] }}</h2>
+        <h2 class="fw-bold m-0 text-dark">{{ categoria['nombre'] }}</h2>
         <span class="badge bg-secondary rounded-pill">Gestionando Productos</span>
     </div>
     <div class="ms-auto">
@@ -96,7 +184,7 @@
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-start mb-2">
                     <div style="max-width: 60%;">
-                        <span class="badge bg-light text-dark border mb-1">{{ prod['sku'] }}</span>
+                        <span class="badge text-dark border mb-1" style="background-color: var(--bs-tertiary-bg); border-color: var(--bs-border-color) !important;">{{ prod['sku'] }}</span>
                         <h5 class="fw-bold text-dark mb-0 text-truncate">{{ prod['titulo'] }}</h5>
                         <span id="badge-agotado-{{ prod.id }}"
                             class="badge bg-danger rounded-pill {{ 'd-none' if prod['stock'] > 0 }}">
@@ -106,13 +194,13 @@
 
                     <div class="text-end">
                         <div class="form-check form-switch small mb-1">
-                            <input class="form-check-input" type="checkbox" role="switch"
+                            <input class="form-check-input shadow-none" type="checkbox" role="switch"
                                 onchange="toggleEstado('producto', {{ prod['id'] }}, this)" {% if prod['activo']
                                 %}checked{% endif %}>
                             <label class="small text-muted">Visible</label>
                         </div>
                         <div class="form-check form-switch small">
-                            <input class="form-check-input" type="checkbox" role="switch"
+                            <input class="form-check-input shadow-none" type="checkbox" role="switch"
                                 onchange="toggleStock({{ prod['id'] }}, this)" {% if prod['stock']> 0 %}checked{% endif
                             %}>
                             <label class="small text-muted">En Stock</label>
@@ -129,12 +217,12 @@
             </div>
 
             <div class="card-footer bg-white border-0 pt-0 text-end pb-3">
-                <button class="btn btn-sm btn-outline-primary border-0 rounded-pill me-2"
+                <button class="btn btn-sm btn-outline-primary rounded-pill me-2"
                     onclick='cargarDatosEdicion({{ prod | tojson }})'>
                     <i class="fas fa-edit me-1"></i> Editar
                 </button>
                 <a href="{{ url_for('catalogo.delete_item', tipo='producto', id_obj=prod['id']) }}"
-                    class="btn btn-sm btn-outline-danger border-0 rounded-pill"
+                    class="btn btn-sm btn-outline-danger rounded-pill"
                     onclick="return confirm('¿Eliminar este producto?');">
                     <i class="fas fa-trash-alt me-1"></i> Eliminar
                 </a>
@@ -149,7 +237,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0">
             <div class="modal-header border-0">
-                <h5 class="modal-title fw-bold">Subir a {{ categoria['nombre'] }}</h5>
+                <h5 class="modal-title fw-bold text-dark">Subir a {{ categoria['nombre'] }}</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
@@ -159,14 +247,14 @@
                     <div class="r2-upload-zone" id="dropZone" onclick="document.getElementById('r2_file').click()">
                         <div id="uploadPrompt">
                             <i class="fas fa-cloud-upload-alt fa-3x mb-3" style="color: #FF6B81;"></i>
-                            <h6 class="fw-bold">Arrastra o haz clic aquí</h6>
+                            <h6 class="fw-bold text-dark">Arrastra o haz clic aquí</h6>
                             <p class="text-muted small">Soporta videos pesados (+150MB)</p>
                             <span class="btn btn-pink btn-sm rounded-pill px-3">Elegir Archivo</span>
                         </div>
 
                         <div id="uploadStatus" class="d-none">
                             <div id="previewMedia" class="rounded shadow-sm overflow-hidden mb-3"
-                                style="max-height: 150px;"></div>
+                                style="max-height: 150px; background-color: var(--bs-body-bg);"></div>
                             <div class="progress mb-2">
                                 <div id="r2ProgressBar" class="progress-bar progress-bar-striped progress-bar-animated"
                                     style="width: 0%"></div>
@@ -180,30 +268,30 @@
                     <input type="hidden" name="media_url" id="media_url" required>
                     <input type="hidden" name="media_type" id="media_type" required>
 
-                    <div class="alert alert-info py-2 px-3 small border-0 my-3">
+                    <div class="alert alert-info py-2 px-3 small border-0 my-3" style="background-color: rgba(13, 110, 253, 0.1); color: #60a5fa;">
                         <i class="fas fa-magic me-2"></i> SKU automático: {{ categoria['nombre'][:3]|upper }}-XXXXX
                     </div>
 
                     <div class="form-floating mb-3">
-                        <input type="text" name="titulo" class="form-control rounded-3" placeholder="Título" required>
-                        <label>Título del Producto</label>
+                        <input type="text" name="titulo" class="form-control rounded-3 text-dark" placeholder="Título" required>
+                        <label class="text-muted">Título del Producto</label>
                     </div>
 
                     <div class="form-floating mb-3">
-                        <textarea name="descripcion" class="form-control rounded-3" placeholder="Desc"
+                        <textarea name="descripcion" class="form-control rounded-3 text-dark" placeholder="Desc"
                             style="height: 80px;"></textarea>
-                        <label>Descripción corta</label>
+                        <label class="text-muted">Descripción corta</label>
                     </div>
 
                     <div class="form-floating mb-3">
-                        <input type="number" step="0.01" name="precio" class="form-control rounded-3"
+                        <input type="number" step="0.01" name="precio" class="form-control rounded-3 text-dark"
                             placeholder="Precio">
-                        <label>Precio (Opcional)</label>
+                        <label class="text-muted">Precio (Opcional)</label>
                     </div>
                 </div>
-                <div class="form-check form-switch mb-3 ms-1">
+                <div class="form-check form-switch mb-3 ms-4">
                     <input class="form-check-input" type="checkbox" name="en_stock" id="en_stock" checked>
-                    <label class="form-check-label fw-bold" for="en_stock">Producto en Stock</label>
+                    <label class="form-check-label fw-bold text-dark" for="en_stock">Producto en Stock</label>
                 </div>
                 <div class="modal-footer border-0">
                     <button type="submit" class="btn btn-success w-100 rounded-pill fw-bold py-2" id="btnGuardar"
@@ -218,6 +306,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // --- LÓGICA DE SUBIDA R2 CON PROGRESO ---
     function handleR2Upload(input) {
@@ -271,14 +360,22 @@
                         if (type === 'video') {
                             mediaBox.innerHTML = `<video src="${res.url}" class="img-fluid" controls></video>`;
                         } else if (type === 'audio') {
-                            mediaBox.innerHTML = `<div class="p-3 bg-white border text-center"><i class="fas fa-music fa-2x"></i><br>Audio Listo</div>`;
+                            mediaBox.innerHTML = `<div class="p-3 text-center"><i class="fas fa-music fa-2x text-muted"></i><br><span class="text-muted">Audio Listo</span></div>`;
                         } else {
-                            mediaBox.innerHTML = `<img src="${res.url}" class="img-fluid">`;
+                            mediaBox.innerHTML = `<img src="${res.url}" class="img-fluid" style="max-height: 150px; object-fit: contain;">`;
                         }
 
                         progressText.innerHTML = "✅ ¡Archivo listo!";
                         progressBar.classList.remove('progress-bar-animated');
                         btnGuardar.disabled = false;
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error de subida',
+                            text: res.error || 'Hubo un problema al procesar la respuesta.',
+                            confirmButtonColor: '#ff4757'
+                        });
+                        resetearFormulario();
                     }
                 } else {
                     Swal.fire({
@@ -300,7 +397,7 @@
         const hayStock = checkbox.checked ? 1 : 0;
         const badge = document.getElementById(`badge-agotado-${id}`);
 
-        fetch('/api/catalogo/update-stock', { // Asegúrate de crear esta ruta en tu Python
+        fetch('/api/catalogo/update-stock', { 
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: id, stock: hayStock })
@@ -359,9 +456,9 @@
         if (prod.media_type === 'video') {
             mediaBox.innerHTML = `<video src="${prod.media_url}" class="img-fluid" controls></video>`;
         } else if (prod.media_type === 'audio') {
-            mediaBox.innerHTML = `<div class="p-3 bg-white text-center"><i class="fas fa-music fa-2x"></i></div>`;
+            mediaBox.innerHTML = `<div class="p-3 text-center"><i class="fas fa-music fa-2x text-muted"></i></div>`;
         } else {
-            mediaBox.innerHTML = `<img src="${prod.media_url}" class="img-fluid">`;
+            mediaBox.innerHTML = `<img src="${prod.media_url}" class="img-fluid" style="max-height: 150px; object-fit: contain;">`;
         }
 
         const btn = document.getElementById('btnGuardar');

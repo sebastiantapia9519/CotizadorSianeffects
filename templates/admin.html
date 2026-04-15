@@ -4,6 +4,9 @@
 
 {% block extra_css %}
 <style>
+    /* ===================================================
+       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       =================================================== */
     body {
         background-color: #f8f9fa;
     }
@@ -132,6 +135,136 @@
         text-align: center;
         margin-right: 8px;
     }
+
+    /* ===================================================
+       2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
+       =================================================== */
+    [data-bs-theme="dark"] body {
+        background-color: #0f172a !important;
+    }
+
+    /* Tarjetas principales */
+    [data-bs-theme="dark"] .stat-card,
+    [data-bs-theme="dark"] .table-card {
+        background-color: #1e293b !important;
+    }
+    
+    [data-bs-theme="dark"] .table-card {
+        border: 1px solid #334155 !important;
+    }
+
+    /* Elementos genéricos con fondo blanco/claro */
+    [data-bs-theme="dark"] .bg-white {
+        background-color: #1e293b !important;
+    }
+    
+    [data-bs-theme="dark"] .bg-light {
+        background-color: #0f172a !important;
+    }
+
+    /* Textos Universales */
+    [data-bs-theme="dark"] .text-dark { color: #f8fafc !important; }
+    [data-bs-theme="dark"] .text-muted, 
+    [data-bs-theme="dark"] .text-secondary { color: #94a3b8 !important; }
+
+    /* Bordes generales (Protegiendo el border-start de las tarjetas KPI) */
+    [data-bs-theme="dark"] .border:not(.border-start),
+    [data-bs-theme="dark"] .border-bottom {
+        border-color: #334155 !important;
+    }
+
+    /* Inputs, Selects y Buscador */
+    [data-bs-theme="dark"] .form-control,
+    [data-bs-theme="dark"] .form-select,
+    [data-bs-theme="dark"] .input-group-text {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    
+    [data-bs-theme="dark"] .form-control:focus,
+    [data-bs-theme="dark"] .form-select:focus {
+        border-color: #3b82f6 !important;
+    }
+
+    /* Botones Superiores e Inferiores */
+    [data-bs-theme="dark"] .btn-white {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .btn-white:hover {
+        background-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .action-btn {
+        color: #94a3b8 !important;
+    }
+    [data-bs-theme="dark"] .action-btn:hover,
+    [data-bs-theme="dark"] .action-btn[aria-expanded="true"] {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+        border-color: #475569 !important;
+    }
+
+    /* Avatars y Badges */
+    [data-bs-theme="dark"] .avatar-circle {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .badge.bg-light {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+        border-color: #475569 !important;
+    }
+
+    /* Tabla */
+    [data-bs-theme="dark"] .table { color: #f8fafc !important; }
+    [data-bs-theme="dark"] .table td, 
+    [data-bs-theme="dark"] .table th { border-color: #334155 !important; }
+    
+    @media (hover: hover) {
+        [data-bs-theme="dark"] .table-hover tbody tr:hover td {
+            background-color: rgba(255,255,255,0.05) !important;
+        }
+    }
+
+    /* Menú Desplegable (3 Puntitos) */
+    [data-bs-theme="dark"] .custom-dropdown-menu {
+        background-color: #1e293b !important;
+        border: 1px solid #334155 !important;
+    }
+    [data-bs-theme="dark"] .dropdown-item {
+        color: #f8fafc !important;
+    }
+    [data-bs-theme="dark"] .dropdown-item:hover {
+        background-color: #334155 !important;
+    }
+    [data-bs-theme="dark"] .dropdown-header {
+        color: #94a3b8 !important;
+    }
+    [data-bs-theme="dark"] .dropdown-divider {
+        border-color: #334155 !important;
+    }
+    [data-bs-theme="dark"] .dropdown-item.text-dark {
+        color: #f8fafc !important;
+    }
+
+    /* Modal de Reset */
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+    }
+    [data-bs-theme="dark"] .modal-header.bg-warning {
+        background-color: rgba(245, 158, 11, 0.2) !important;
+        border-bottom: 1px solid rgba(245, 158, 11, 0.4) !important;
+    }
+    [data-bs-theme="dark"] .modal-header.bg-warning .modal-title {
+        color: #fbbf24 !important;
+    }
+    [data-bs-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
 </style>
 {% endblock %}
 
@@ -165,7 +298,7 @@
         <div class="card stat-card shadow-sm bg-white h-100 border-start border-primary border-4">
             <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
                 <div class="icon-box bg-primary bg-opacity-10 text-primary mb-2"><i class="fas fa-users"></i></div>
-                <h4 class="fw-bold m-0">{{ stats['total'] }}</h4>
+                <h4 class="fw-bold m-0 text-dark">{{ stats['total'] }}</h4>
                 <small class="text-muted smaller fw-bold">Total</small>
             </div>
         </div>
@@ -176,7 +309,7 @@
             <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
                 <div class="icon-box bg-success bg-opacity-10 text-success mb-2"><i class="fas fa-check-circle"></i>
                 </div>
-                <h4 class="fw-bold m-0">{{ stats['activos'] }}</h4>
+                <h4 class="fw-bold m-0 text-dark">{{ stats['activos'] }}</h4>
                 <small class="text-muted smaller fw-bold">Activos</small>
             </div>
         </div>
@@ -186,7 +319,7 @@
         <div class="card stat-card shadow-sm bg-white h-100 border-start border-danger border-4">
             <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
                 <div class="icon-box bg-danger bg-opacity-10 text-danger mb-2"><i class="fas fa-clock"></i></div>
-                <h4 class="fw-bold m-0">{{ stats['vencidos'] }}</h4>
+                <h4 class="fw-bold m-0 text-dark">{{ stats['vencidos'] }}</h4>
                 <small class="text-muted smaller fw-bold">Vencidos</small>
             </div>
         </div>
@@ -196,7 +329,7 @@
         <div class="card stat-card shadow-sm bg-white h-100 border-start border-warning border-4">
             <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
                 <div class="icon-box bg-warning bg-opacity-10 text-dark mb-2"><i class="fas fa-crown"></i></div>
-                <h4 class="fw-bold m-0">{{ stats['admins'] }}</h4>
+                <h4 class="fw-bold m-0 text-dark">{{ stats['admins'] }}</h4>
                 <small class="text-muted smaller fw-bold">Staff</small>
             </div>
         </div>
@@ -206,7 +339,7 @@
         <div class="card stat-card shadow-sm bg-white h-100 border-start border-info border-4">
             <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
                 <div class="icon-box bg-info bg-opacity-10 text-info mb-2"><i class="fas fa-bolt"></i></div>
-                <h4 class="fw-bold m-0">{{ stats['online_hoy'] }}</h4>
+                <h4 class="fw-bold m-0 text-dark">{{ stats['online_hoy'] }}</h4>
                 <small class="text-muted smaller fw-bold">Vistos Hoy</small>
             </div>
         </div>
@@ -216,14 +349,14 @@
         <div class="card stat-card shadow-sm bg-white h-100 border-start border-dark border-4">
             <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
                 <div class="icon-box bg-dark bg-opacity-10 text-dark mb-2"><i class="fas fa-biohazard"></i></div>
-                <h4 class="fw-bold m-0">{{ stats['en_riesgo'] }}</h4>
+                <h4 class="fw-bold m-0 text-dark">{{ stats['en_riesgo'] }}</h4>
                 <small class="text-muted smaller fw-bold">En Riesgo</small>
             </div>
         </div>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4">
+<div class="card border-0 shadow-sm mb-4 table-card">
     <div class="card-body p-3">
         <div class="row g-3 align-items-center">
             <div class="col-md-4">
@@ -458,7 +591,7 @@
                 <div class="modal-body">
                     <p class="small text-muted mb-2">Usuario: <strong id="resetUsername" class="text-dark"></strong></p>
                     <input type="hidden" name="user_id" id="resetUserId">
-                    <label class="small fw-bold">Nueva Contraseña</label>
+                    <label class="small fw-bold text-dark">Nueva Contraseña</label>
                     <input type="text" name="new_password" class="form-control text-center fw-bold mt-1"
                         placeholder="Mínimo 6 caracteres" 
                         required 
@@ -467,7 +600,7 @@
                     <small class="text-muted" style="font-size: 0.6rem;">No se permiten espacios.</small>
                 </div>
                 <div class="modal-footer border-0 p-2">
-                    <button type="submit" class="btn btn-dark w-100 rounded-pill">Guardar Cambio</button>
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill border-0" style="background-color: #3b82f6;">Guardar Cambio</button>
                 </div>
             </form>
         </div>

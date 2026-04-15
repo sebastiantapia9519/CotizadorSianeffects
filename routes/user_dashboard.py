@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, session, current_app, request
+from flask import Blueprint, render_template, session, current_app, request, jsonify
 from helpers import login_required
 from db import get_db_connection as get_db
 from utils.datetime_utils import hoy_local
@@ -127,3 +127,54 @@ def mi_panel():
         mes_sel=mes_sel, anio_sel=anio_sel,
         lista_meses=lista_meses, lista_anios=lista_anios
     )
+
+# ==============================================================================
+# NUEVO ENDPOINT: CALENDARIO DE VENTAS (HEATMAP)
+# ==============================================================================
+@user_dash_bp.route('/api/historial/calendario')
+@login_required
+def api_calendario_historial():
+    user_id = session['user_id']
+    anio = request.args.get('anio', type=int)
+    mes = request.args.get('mes', type=int)
+    
+    # Si por alguna razón no mandan año o mes, abortamos limpiamente
+    if not anio or not mes:
+        return jsonify({})
+
+    # Formateamos el mes a dos dígitos (ej. 4 -> "04")
+    mes_str = f"{mes:02d}"
+    periodo_str = f"{anio}-{mes_str}"
+    
+    conn = get_db()
+    try:
+        # Traemos todas las ventas de ese mes exacto para este usuario
+        ventas = conn.execute("""
+            SELECT id, cliente, total, estado, fecha 
+            FROM ventas 
+            WHERE user_id = ? AND substr(fecha, 1, 7) = ?
+        """, (user_id, periodo_str)).fetchall()
+        
+        calendario = {}
+        
+        # Agrupamos las ventas por día ("YYYY-MM-DD")
+        for v in ventas:
+            fecha_exacta = str(v['fecha'])[:10]
+            
+            if fecha_exacta not in calendario:
+                calendario[fecha_exacta] = []
+                
+            calendario[fecha_exacta].append({
+                'id': v['id'],
+                'cliente': v['cliente'],
+                'total': float(v['total']),
+                'estado': v['estado']
+            })
+            
+        return jsonify(calendario)
+        
+    except Exception as e:
+        current_app.logger.error(f"CALENDAR_ERROR: Fallo al cargar calendario para user {user_id} - {e}")
+        return jsonify({})
+    finally:
+        conn.close()
