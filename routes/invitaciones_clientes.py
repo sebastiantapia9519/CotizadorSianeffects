@@ -14,7 +14,7 @@ from utils.datetime_utils import hoy_sqlite, hoy_local, ahora_sql
 clientes_bp = Blueprint('invitaciones_clientes', __name__)
 
 # Variable estandarizada para comparaciones de fecha a nivel de dia (SQLite/Postgres)
-hoy = hoy_sqlite()
+hoy = now_utc()
 
 # ==============================================================================
 # DECORADORES DE SEGURIDAD
