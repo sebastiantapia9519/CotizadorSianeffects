@@ -146,10 +146,10 @@ def registro():
             # -----------------------------
             conn.execute('''
                 INSERT INTO configuracion (
-                    user_id, margen_ganancia, inventario_activo, ticket_bw
+                    user_id, margen_ganancia, inventario_activo, ticket_bw, nombre_empresa
                 )
-                VALUES (?, ?, ?, ?)
-            ''', (user_id, 100, 0, 0))
+                VALUES (?, ?, ?, ?, ?)
+            ''', (user_id, 100, 0, 0, company_name))
 
             conn.execute('''
                 INSERT INTO shipping_configs (
