@@ -231,13 +231,13 @@
                                     <i class="fas fa-pencil-alt"></i>
                                 </button>
 
-                                <a href="{{ url_for('catalogo.delete_item', tipo='categoria', id_obj=cat['id']) }}"
-                                    class="btn btn-sm btn-light text-danger rounded-circle border shadow-sm"
-                                    style="width: 34px; height: 34px;"
-                                    onclick="return confirm('⚠️ ¿Borrar esta categoría Y TODOS sus productos?');"
-                                    title="Borrar">
+                                <button type="button" 
+                                        class="btn btn-sm btn-light text-danger rounded-circle border shadow-sm"
+                                        style="width: 34px; height: 34px;"
+                                        onclick="confirmarEliminarCat({{ cat['id'] }}, '{{ cat['nombre'] }}')"
+                                        title="Borrar">
                                     <i class="fas fa-trash-alt"></i>
-                                </a>
+                                </button>
                             </div>
                         </td>
                     </tr>
@@ -355,5 +355,37 @@
                 checkbox.checked = !checkbox.checked;
             });
     }
+
+    function confirmarEliminarCat(id, nombre) {
+    Swal.fire({
+        title: `¿Borrar categoría "${nombre}"?`,
+        text: "¡CUIDADO! Se eliminarán todos los productos y archivos de imagen/video asociados a esta categoría. Esta acción no se puede deshacer.",
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444', // Rojo intenso de peligro
+        cancelButtonColor: '#adb5bd',
+        confirmButtonText: 'Sí, borrar todo',
+        cancelButtonText: 'Cancelar',
+        reverseButtons: true, // Pone el botón de cancelar a la izquierda
+        customClass: {
+            confirmButton: 'rounded-pill px-4 fw-bold',
+            cancelButton: 'rounded-pill px-4'
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Mostramos un loader de "Borrando..." para que el usuario no se desespere
+            Swal.fire({
+                title: 'Borrando archivos...',
+                text: 'Estamos limpiando la nube y la base de datos.',
+                allowOutsideClick: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+            // Redirigimos a la ruta de Flask que ya tienes lista
+            window.location.href = `/admin/catalogo/delete/categoria/${id}`;
+        }
+    });
+}
 </script>
 {% endblock %}
