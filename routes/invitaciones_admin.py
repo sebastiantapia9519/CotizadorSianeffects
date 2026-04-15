@@ -6,7 +6,7 @@ import zipfile
 import string
 import random
 import requests
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, send_file
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, send_file, current_app
 from datetime import datetime, timedelta, timezone
 from utils.datetime_utils import hoy_local, ahora_sql
 from helpers import admin_required, guardar_pase_bd, obtener_estado_mesas
@@ -58,23 +58,27 @@ def usar_credito_planner(planner_id):
     Busca el paquete mas proximo a vencer que tenga saldo y le descuenta 1 credito.
     """
     conn = get_db_connection()
-    now_str = ahora_sql() # Blindaje Postgres: Evaluamos la fecha en Python, no en SQL
+    cursor = conn.cursor()
+    now_str = ahora_sql() 
     
-    paquete = conn.execute("""
+    cursor.execute("""
         SELECT id, cantidad_total, cantidad_usada 
         FROM planner_paquetes 
-        WHERE planner_id = ? AND activo = 1 
-        AND fecha_vencimiento > ?
+        WHERE planner_id = %s AND activo = True 
+        AND fecha_vencimiento > %s
         AND cantidad_usada < cantidad_total
         ORDER BY fecha_vencimiento ASC LIMIT 1
-    """, (planner_id, now_str)).fetchone()
+    """, (planner_id, now_str))
+    paquete = cursor.fetchone()
 
     if paquete:
-        conn.execute("UPDATE planner_paquetes SET cantidad_usada = cantidad_usada + 1 WHERE id = ?", (paquete['id'],))
+        cursor.execute("UPDATE planner_paquetes SET cantidad_usada = cantidad_usada + 1 WHERE id = %s", (paquete['id'],))
         conn.commit()
+        cursor.close()
         conn.close()
         return True 
     
+    cursor.close()
     conn.close()
     return False
 
@@ -83,14 +87,16 @@ def usar_credito_planner(planner_id):
 # ==============================================================================
 @invitaciones_bp.route('/admin/api/verificar-slug', methods=['POST'])
 def verificar_slug():
-    """Verifica mediante AJAX si la URL personalizada (slug) ya esta registrada."""
     data = request.get_json()
     slug = data.get('slug', '').strip()
     
     slug_limpio = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', slug.lower()))
     
     conn = get_db_connection()
-    existente = conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug_limpio,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id FROM invitaciones WHERE slug = %s", (slug_limpio,))
+    existente = cursor.fetchone()
+    cursor.close()
     conn.close()
     
     return jsonify({'disponible': existente is None, 'slug_sugerido': slug_limpio})
@@ -100,7 +106,6 @@ def verificar_slug():
 # ==============================================================================
 @invitaciones_bp.route('/admin/nueva-invitacion', methods=['GET', 'POST'])
 def crear_invitacion():
-    """Motor principal para ensamblar una nueva invitacion premium."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -109,6 +114,7 @@ def crear_invitacion():
         return redirect(url_for('invitaciones_clientes.login_cliente'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     if request.method == 'POST':
         try:
@@ -122,16 +128,18 @@ def crear_invitacion():
                 id_creador_registrado = planner_id
                 tipo_creador = 'planner'
                 
-                paquete_disp = conn.execute("""
+                cursor.execute("""
                     SELECT id FROM planner_paquetes 
-                    WHERE planner_id = ? AND activo = 1 
-                    AND fecha_vencimiento > ?
+                    WHERE planner_id = %s AND activo = True 
+                    AND fecha_vencimiento > %s
                     AND cantidad_usada < cantidad_total
                     LIMIT 1
-                """, (planner_id, now_str)).fetchone()
+                """, (planner_id, now_str))
+                paquete_disp = cursor.fetchone()
                 
                 if not paquete_disp:
                     flash("No tienes creditos disponibles o tus paquetes han vencido.", "danger")
+                    cursor.close()
                     conn.close()
                     return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
@@ -142,9 +150,12 @@ def crear_invitacion():
             raw_slug = request.form.get('slug', '').strip()
             slug = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
             
-            slug_existente = conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug,)).fetchone()
+            cursor.execute("SELECT id FROM invitaciones WHERE slug = %s", (slug,))
+            slug_existente = cursor.fetchone()
+            
             if slug_existente:
                 flash("Ese enlace ya esta ocupado por otro evento. Por favor, elige uno diferente.", "danger")
+                cursor.close()
                 conn.close()
                 return redirect(url_for('invitaciones_admin.crear_invitacion'))
 
@@ -172,29 +183,32 @@ def crear_invitacion():
             tipo_evento = request.form.get('tipo_evento', 'boda')
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url') 
-            camara_premium = 1 if 'camara_premium' in request.form else 0
+            camara_premium = True if 'camara_premium' in request.form else False
             color_acentos = request.form.get('color_acentos', '#D4AF37')
             padres_novia = request.form.get('padres_novia')
             padres_novio = request.form.get('padres_novio')
             padrinos = request.form.get('padrinos')
             frase_final = request.form.get('frase_final')
             template_id = request.form.get('template_id')
-            tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
+            tiene_modulo_invitados = True if 'modulo_invitados' in request.form else False
             codigo_cliente = generar_codigo_cliente() 
-            bloquear_edicion = 1 if 'bloquear_edicion_invitados' in request.form else 0
+            bloquear_edicion = True if 'bloquear_edicion_invitados' in request.form else False
             estilo_apertura = request.form.get('estilo_apertura', 'simple')
 
-            es_demo = 1 if request.form.get('action') == 'demo' else 0
+            es_demo = True if request.form.get('action') == 'demo' else False
 
             if es_demo and es_planner:
-                planner_data = conn.execute("SELECT nombre_empresa FROM planners WHERE id = ?", (planner_id,)).fetchone()
+                cursor.execute("SELECT nombre_empresa FROM planners WHERE id = %s", (planner_id,))
+                planner_data = cursor.fetchone()
                 empresa_str = planner_data['nombre_empresa'] if planner_data else 'agencia'
                 
                 slug_base = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', empresa_str.lower()))
                 slug = f"demo-{slug_base}"
                 
-                while conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug,)).fetchone():
+                cursor.execute("SELECT id FROM invitaciones WHERE slug = %s", (slug,))
+                while cursor.fetchone():
                     slug = f"demo-{slug_base}-{str(uuid.uuid4())[:3]}"
+                    cursor.execute("SELECT id FROM invitaciones WHERE slug = %s", (slug,))
 
                 fecha_obj = datetime.now() + timedelta(days=60)
                 fecha_evento_limpia = fecha_obj.strftime('%Y-%m-%d %H:%M:%S')
@@ -204,8 +218,10 @@ def crear_invitacion():
                 raw_slug = request.form.get('slug', '').strip()
                 slug = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
                 
-                if conn.execute("SELECT id FROM invitaciones WHERE slug = ?", (slug,)).fetchone():
+                cursor.execute("SELECT id FROM invitaciones WHERE slug = %s", (slug,))
+                if cursor.fetchone():
                     flash("Ese enlace ya esta ocupado por otro evento. Elige uno diferente.", "danger")
+                    cursor.close()
                     conn.close()
                     return redirect(url_for('invitaciones_admin.crear_invitacion'))
 
@@ -258,7 +274,6 @@ def crear_invitacion():
             nombres_proto = request.form.getlist('nombres_protocolo[]')
             protocolo_familiar = [{'rol': r, 'nombres': n} for r, n in zip(roles_proto, nombres_proto) if r and n]
 
-            # [NUEVO] Extracción y subida de foto exclusiva para el STD
             activar_std = True if request.form.get('activar_std') == '1' else False
             foto_std = request.files.get('foto_std')
             url_foto_std = upload_to_cloudflare(foto_std, folder=f"invitaciones/{slug}/std") if foto_std and foto_std.filename else None
@@ -279,7 +294,6 @@ def crear_invitacion():
                 "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip(),
                 "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip(),
                 
-                # [NUEVO] Almacenar la configuracion del STD dentro del JSON
                 "activar_std": activar_std,
                 "foto_std_url": url_foto_std,
                 "std_frase_calendario": request.form.get('std_frase_calendario', 'Save the Date').strip(),
@@ -308,7 +322,7 @@ def crear_invitacion():
 
             fecha_creacion_local = hoy_local() 
 
-            conn.execute("""
+            cursor.execute("""
                 INSERT INTO invitaciones 
                 (slug, config_json, musica_id, fecha_evento, vigencia, datos_cliente_json, 
                 fotos_json, foto_portada_url, estilo_fuente, color_fondo, url_fondo, mesas_regalos_json,
@@ -316,7 +330,7 @@ def crear_invitacion():
                 codigo_acceso_cliente, color_acentos, padres_novia, padres_novio, padrinos, 
                 frase_final, bloquear_edicion_invitados, template_id, estilo_apertura, 
                 tipo_evento, historia_json, planner_id, created_at, es_demo) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 slug, json.dumps(orden_items), musica_id or None, 
                 fecha_evento_limpia, vigencia, json.dumps(datos_cliente), 
@@ -344,6 +358,7 @@ def crear_invitacion():
             flash(f"Error al crear: Verifique que todos los datos esten completos. (Detalle: {str(e)})", "danger")
             return redirect(url_for('invitaciones_admin.crear_invitacion')) 
         finally:
+            cursor.close()
             conn.close()
 
     # GET REQUEST RENDERING
@@ -352,21 +367,27 @@ def crear_invitacion():
     
     if es_planner:
         now_str = ahora_sql()
-        saldo_row = conn.execute("""
+        cursor.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as s 
             FROM planner_paquetes 
-            WHERE planner_id = ? AND activo = 1 
-            AND fecha_vencimiento > ?
-        """, (session.get('planner_id'), now_str)).fetchone()
+            WHERE planner_id = %s AND activo = True 
+            AND fecha_vencimiento > %s
+        """, (session.get('planner_id'), now_str))
+        saldo_row = cursor.fetchone()
         
         if saldo_row:
             saldo_real = saldo_row['s']
             
-        demo_db = conn.execute("SELECT id FROM invitaciones WHERE planner_id = ? AND es_demo = 1", (session.get('planner_id'),)).fetchone()
+        cursor.execute("SELECT id FROM invitaciones WHERE planner_id = %s AND es_demo = True", (session.get('planner_id'),))
+        demo_db = cursor.fetchone()
+        
         if demo_db:
             tiene_demo = True
 
-    canciones = conn.execute("SELECT id, nombre_cancion FROM lista_musica WHERE activa = 1 ORDER BY nombre_cancion ASC").fetchall()
+    cursor.execute("SELECT id, nombre_cancion FROM lista_musica WHERE activa = True ORDER BY nombre_cancion ASC")
+    canciones = cursor.fetchall()
+    
+    cursor.close()
     conn.close()
     
     return render_template('invitaciones/crear.html', 
@@ -386,7 +407,6 @@ def crear_invitacion():
 @invitaciones_bp.route('/admin/api/subir-musica', methods=['POST'])
 @admin_required
 def api_subir_musica():
-    """Permite al Admin subir audios globales para el selector de invitaciones."""
     nombre = request.form.get('nombre')
     archivo = request.files.get('archivo')
     
@@ -403,9 +423,13 @@ def api_subir_musica():
 
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO lista_musica (nombre_cancion, url_cloudflare, activa) VALUES (?, ?, 1)", (nombre.strip(), url_audio))
-        nuevo_id = cursor.lastrowid
+        
+        # POSTGRESQL RETURNING
+        cursor.execute("INSERT INTO lista_musica (nombre_cancion, url_cloudflare, activa) VALUES (%s, %s, True) RETURNING id", (nombre.strip(), url_audio))
+        nuevo_id = cursor.fetchone()['id']
+        
         conn.commit()
+        cursor.close()
         conn.close()
         
         return jsonify({'success': True, 'id': nuevo_id, 'nombre': nombre.strip()})
@@ -447,15 +471,16 @@ def fondo_tarjeta(hex_color):
 @invitaciones_bp.route('/admin/invitaciones')
 @admin_required
 def gestionar_invitaciones():
-    """Panel general administrativo que lista todas las invitaciones creadas."""
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        invs_db = conn.execute("""
+        cursor.execute("""
             SELECT i.*, p.nombre_contacto as planner_nombre 
             FROM invitaciones i
             LEFT JOIN planners p ON i.planner_id = p.id
             ORDER BY i.id DESC
-        """).fetchall()
+        """)
+        invs_db = cursor.fetchall()
         
         invitaciones = []
         for inv in invs_db:
@@ -472,6 +497,7 @@ def gestionar_invitaciones():
         flash(f"Error cargando el panel: {str(e)}", "danger")
         return redirect(url_for('admin.dashboard')) 
     finally:
+        cursor.close()
         conn.close()
 
 
@@ -480,7 +506,6 @@ def gestionar_invitaciones():
 # ==============================================================================
 @invitaciones_bp.route('/admin/editar-invitacion/<int:id>', methods=['GET', 'POST'])
 def editar_invitacion(id):
-    """Renderiza el constructor pre-llenado y actualiza registros y multimedia."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -489,24 +514,30 @@ def editar_invitacion(id):
         return redirect(url_for('auth.login')) 
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     
-    inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
+    cursor.execute("SELECT planner_id FROM invitaciones WHERE id = %s", (id,))
+    inv_seguridad = cursor.fetchone()
+    
     if not inv_seguridad:
         flash("Invitacion no encontrada.", "danger")
+        cursor.close()
         conn.close()
         return redirect(url_for('invitaciones_clientes.dashboard_planner') if es_planner else url_for('invitaciones_admin.gestionar_invitaciones'))
         
     if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
         flash("No tienes permiso para editar esta invitacion.", "danger")
+        cursor.close()
         conn.close()
         return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
     if request.method == 'POST':
         try:
-            inv_old = conn.execute("""
+            cursor.execute("""
                 SELECT slug, tipo_evento, datos_cliente_json, foto_portada_url, fotos_json, url_fondo, codigo_acceso_cliente 
-                FROM invitaciones WHERE id=?
-            """, (id,)).fetchone()
+                FROM invitaciones WHERE id=%s
+            """, (id,))
+            inv_old = cursor.fetchone()
             
             datos_viejos = json.loads(inv_old['datos_cliente_json']) if inv_old['datos_cliente_json'] else {}
 
@@ -518,9 +549,11 @@ def editar_invitacion(id):
                 raw_slug = request.form.get('slug', '').strip()
                 slug_limpio = re.sub(r'[^\w\-]+', '', re.sub(r'[\s]+', '-', raw_slug.lower()))
                 
-                slug_existente = conn.execute("SELECT id FROM invitaciones WHERE slug = ? AND id != ?", (slug_limpio, id)).fetchone()
+                cursor.execute("SELECT id FROM invitaciones WHERE slug = %s AND id != %s", (slug_limpio, id))
+                slug_existente = cursor.fetchone()
                 if slug_existente:
                     flash("Ese enlace ya esta ocupado.", "danger")
+                    cursor.close()
                     conn.close()
                     return redirect(url_for('invitaciones_admin.editar_invitacion', id=id))
                 
@@ -554,17 +587,17 @@ def editar_invitacion(id):
             
             dress_code = request.form.get('dress_code')
             album_url = request.form.get('album_url')
-            camara_premium = 1 if 'camara_premium' in request.form else 0
+            camara_premium = True if 'camara_premium' in request.form else False
             color_acentos = request.form.get('color_acentos', '#D4AF37')
             padres_novia = request.form.get('padres_novia')
             padres_novio = request.form.get('padres_novio')
             padrinos = request.form.get('padrinos')
             frase_final = request.form.get('frase_final')
             template_id = request.form.get('template_id')
-            tiene_modulo_invitados = 1 if 'modulo_invitados' in request.form else 0
-            bloquear_edicion = 1 if 'bloquear_edicion_invitados' in request.form else 0
+            tiene_modulo_invitados = True if 'modulo_invitados' in request.form else False
+            bloquear_edicion = True if 'bloquear_edicion_invitados' in request.form else False
             estilo_apertura = request.form.get('estilo_apertura', 'simple')
-            es_demo = 1 if 'es_demo' in request.form else 0
+            es_demo = True if 'es_demo' in request.form else False
 
             anios_hist = request.form.getlist('anio_historia[]')
             textos_hist = request.form.getlist('texto_historia[]')
@@ -604,13 +637,12 @@ def editar_invitacion(id):
             for rol, nombres in zip(roles_proto, nombres_proto):
                 if rol and nombres: protocolo_familiar.append({'rol': rol, 'nombres': nombres})
 
-            # [MODIFICACION] Extraemos y procesamos la foto del STD si se subió una nueva
             activar_std = True if request.form.get('activar_std') == '1' else False
             foto_std = request.files.get('foto_std')
             if foto_std and foto_std.filename != '':
                 url_foto_std = upload_to_cloudflare(foto_std, folder=f"invitaciones/{slug}/std")
             else:
-                url_foto_std = datos_viejos.get('foto_std_url') # Mantenemos la que ya tenía
+                url_foto_std = datos_viejos.get('foto_std_url')
 
             datos_cliente = {
                 "novios": request.form.get('nombres_novios') if not es_planner else nombres_novios_final,
@@ -628,7 +660,6 @@ def editar_invitacion(id):
                 "mensaje_no_ninos": request.form.get('mensaje_no_ninos', '').strip(),
                 "mensaje_envio_pases": request.form.get('mensaje_envio_pases', '').strip(),
                 
-                # [NUEVO] Actualizamos los datos del STD en la base de datos
                 "activar_std": activar_std,
                 "foto_std_url": url_foto_std,
                 "std_frase_calendario": request.form.get('std_frase_calendario', 'Save the Date').strip(),
@@ -669,15 +700,15 @@ def editar_invitacion(id):
             
             urls_finales_galeria = fotos_viejas + urls_galeria_nuevas
 
-            conn.execute("""
+            cursor.execute("""
                 UPDATE invitaciones SET 
-                slug=?, config_json=?, musica_id=?, fecha_evento=?, vigencia=?, datos_cliente_json=?, 
-                fotos_json=?, foto_portada_url=?, estilo_fuente=?, color_fondo=?, url_fondo=?, mesas_regalos_json=?,
-                dress_code=?, hospedaje_json=?, album_url=?, camara_premium=?, color_acentos=?,
-                padres_novia=?, padres_novio=?, padrinos=?, frase_final=?, template_id=?,
-                tiene_modulo_invitados=?, codigo_acceso_cliente=?, bloquear_edicion_invitados=?, estilo_apertura=?,
-                tipo_evento=?, historia_json=?, es_demo=?
-                WHERE id=?
+                slug=%s, config_json=%s, musica_id=%s, fecha_evento=%s, vigencia=%s, datos_cliente_json=%s, 
+                fotos_json=%s, foto_portada_url=%s, estilo_fuente=%s, color_fondo=%s, url_fondo=%s, mesas_regalos_json=%s,
+                dress_code=%s, hospedaje_json=%s, album_url=%s, camara_premium=%s, color_acentos=%s,
+                padres_novia=%s, padres_novio=%s, padrinos=%s, frase_final=%s, template_id=%s,
+                tiene_modulo_invitados=%s, codigo_acceso_cliente=%s, bloquear_edicion_invitados=%s, estilo_apertura=%s,
+                tipo_evento=%s, historia_json=%s, es_demo=%s
+                WHERE id=%s
             """, (
                 slug, json.dumps(orden_items), musica_id or None, fecha_evento_limpia, vigencia, json.dumps(datos_cliente), 
                 json.dumps(urls_finales_galeria), url_portada, estilo_fuente, color_fondo, url_fondo, json.dumps(mesas_regalos),
@@ -699,23 +730,30 @@ def editar_invitacion(id):
             flash(f"Error al actualizar. Verifique los datos. (Detalle: {str(e)})", "danger")
             return redirect(url_for('invitaciones_admin.editar_invitacion', id=id)) 
         finally:
+            cursor.close()
             conn.close()
 
-    inv = conn.execute("SELECT * FROM invitaciones WHERE id = ?", (id,)).fetchone()
-    canciones = conn.execute("SELECT id, nombre_cancion FROM lista_musica WHERE activa = 1 ORDER BY nombre_cancion ASC").fetchall()
+    cursor.execute("SELECT * FROM invitaciones WHERE id = %s", (id,))
+    inv = cursor.fetchone()
+    
+    cursor.execute("SELECT id, nombre_cancion FROM lista_musica WHERE activa = True ORDER BY nombre_cancion ASC")
+    canciones = cursor.fetchall()
     
     saldo_real = 0
     if es_planner:
         now_str = ahora_sql()
-        saldo_row = conn.execute("""
+        cursor.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as s 
             FROM planner_paquetes 
-            WHERE planner_id = ? AND activo = 1 
-            AND fecha_vencimiento > ?
-        """, (session.get('planner_id'), now_str)).fetchone()
+            WHERE planner_id = %s AND activo = True 
+            AND fecha_vencimiento > %s
+        """, (session.get('planner_id'), now_str))
+        saldo_row = cursor.fetchone()
+        
         if saldo_row:
             saldo_real = saldo_row['s']
             
+    cursor.close()
     conn.close()
 
     if not inv:
@@ -744,11 +782,11 @@ def editar_invitacion(id):
 @invitaciones_bp.route('/admin/eliminar-invitacion/<int:id>', methods=['POST'])
 @admin_required
 def eliminar_invitacion(id):
-    """Purga la invitacion y libera todo el almacenamiento asociado en R2."""
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        # [MODIFICACION] Agregamos 'datos_cliente_json' al SELECT para purgar la foto del STD si existe.
-        inv = conn.execute("SELECT foto_portada_url, url_fondo, fotos_json, datos_cliente_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        cursor.execute("SELECT foto_portada_url, url_fondo, fotos_json, datos_cliente_json FROM invitaciones WHERE id = %s", (id,))
+        inv = cursor.fetchone()
         
         if inv:
             if inv['foto_portada_url']: delete_from_cloudflare(inv['foto_portada_url'])
@@ -757,18 +795,18 @@ def eliminar_invitacion(id):
                 fotos_galeria = json.loads(inv['fotos_json'])
                 for foto_url in fotos_galeria: delete_from_cloudflare(foto_url)
 
-            # [NUEVO] Eliminación de la foto exclusiva del Save the Date
             datos_cliente = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
             if datos_cliente.get('foto_std_url'):
                 delete_from_cloudflare(datos_cliente['foto_std_url'])
 
-            fotos_invitados = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (id,)).fetchall()
+            cursor.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = %s", (id,))
+            fotos_invitados = cursor.fetchall()
             for foto in fotos_invitados:
                 if foto['url']: delete_from_cloudflare(foto['url'])
             
-            conn.execute("DELETE FROM fotos_invitados WHERE invitacion_id = ?", (id,))
+            cursor.execute("DELETE FROM fotos_invitados WHERE invitacion_id = %s", (id,))
 
-        conn.execute("DELETE FROM invitaciones WHERE id = ?", (id,))
+        cursor.execute("DELETE FROM invitaciones WHERE id = %s", (id,))
         conn.commit()
         flash("Invitacion y fotos eliminadas permanentemente.", "success")
         
@@ -776,6 +814,7 @@ def eliminar_invitacion(id):
         conn.rollback()
         flash(f"Error al eliminar: {str(e)}", "danger")
     finally:
+        cursor.close()
         conn.close()
         
     return redirect(url_for('invitaciones_admin.gestionar_invitaciones'))
@@ -790,22 +829,22 @@ def eliminar_invitacion(id):
 @invitaciones_bp.route('/std/<slug>') 
 @invitaciones_bp.route('/fiesta/<slug>') 
 def ver_invitacion(slug):
-    """Renderiza el front-end final que ven los invitados (Boda, XV o STD)."""
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        inv = conn.execute("""
+        cursor.execute("""
             SELECT i.*, m.url_cloudflare as musica_url 
             FROM invitaciones i
             LEFT JOIN lista_musica m ON i.musica_id = m.id
-            WHERE i.slug = ?
-        """, (slug,)).fetchone()
+            WHERE i.slug = %s
+        """, (slug,))
+        inv = cursor.fetchone()
         
         if not inv:
             return "<h1>404 - Invitación no encontrada</h1>", 404
 
         inv = dict(inv)
 
-        # Blindaje Date String Lexicográfico (Seguro en SQLite y Postgres)
         hoy_str = str(hoy_local())[:10]
         vigencia_str = str(inv['vigencia'])[:10] if inv['vigencia'] else None
 
@@ -815,21 +854,23 @@ def ver_invitacion(slug):
         codigo_pase = request.args.get('pass') 
         datos_pase = None
         if codigo_pase:
-            datos_pase = conn.execute("""
+            cursor.execute("""
                 SELECT * FROM pases_invitados 
-                WHERE invitacion_id = ? AND codigo_qr_unique = ?
-            """, (inv['id'], codigo_pase)).fetchone()
+                WHERE invitacion_id = %s AND codigo_qr_unique = %s
+            """, (inv['id'], codigo_pase))
+            datos_pase = cursor.fetchone()
 
         config = json.loads(inv['config_json'])
         datos = json.loads(inv['datos_cliente_json'])
         fotos = json.loads(inv['fotos_json'])
 
-        buenos_deseos = conn.execute("""
+        cursor.execute("""
             SELECT nombre, mensaje, fecha 
             FROM buenos_deseos 
-            WHERE invitacion_id = ? 
+            WHERE invitacion_id = %s 
             ORDER BY fecha DESC
-        """, (inv['id'],)).fetchall()
+        """, (inv['id'],))
+        buenos_deseos = cursor.fetchall()
 
         template_colors = {}
         if inv['template_id'] and inv['template_id'] != 'personalizado':
@@ -840,15 +881,11 @@ def ver_invitacion(slug):
                     'template_color_fondo': template['color_fondo']
                 }
 
-        # [MODIFICACION] --- SELECCIÓN DINÁMICA DE PLANTILLA BASADA EN LA URL ---
         if request.path.startswith('/std/') or request.path.startswith('/save-the-date/'):
-            # Si entran por el link del STD, revisamos si el Planner lo tiene activado
             if not datos.get('activar_std'):
                 return "<h1>404 - El Save the Date no está activo para este evento.</h1>", 404
             
             plantilla_render = 'invitaciones/std.html'
-            
-            # Ajustamos la foto principal a mandar a la vista (para que si hay foto_std la prefiera)
             inv['foto_portada_url'] = datos.get('foto_std_url') if datos.get('foto_std_url') else inv['foto_portada_url']
             
         elif inv['tipo_evento'] == 'xv':
@@ -873,6 +910,7 @@ def ver_invitacion(slug):
     except Exception as e:
         return f"Error: {str(e)}", 500
     finally:
+        cursor.close()
         conn.close()
 
 
@@ -881,7 +919,6 @@ def ver_invitacion(slug):
 # ==============================================================================
 @invitaciones_bp.route('/admin/ver-fotos/<int:id>')
 def ver_fotos_invitados(id):
-    """Galeria administrativa de las fotos que tomaron los invitados."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -889,33 +926,34 @@ def ver_fotos_invitados(id):
         return redirect(url_for('auth.login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        inv = conn.execute("SELECT slug, datos_cliente_json, planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        cursor.execute("SELECT slug, datos_cliente_json, planner_id FROM invitaciones WHERE id = %s", (id,))
+        inv = cursor.fetchone()
         
         if es_planner and str(inv['planner_id']) != str(session.get('planner_id')):
             flash("Permiso denegado.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
         datos = json.loads(inv['datos_cliente_json'])
-        fotos = conn.execute("""
+        
+        cursor.execute("""
             SELECT * FROM fotos_invitados 
-            WHERE invitacion_id = ? 
+            WHERE invitacion_id = %s 
             ORDER BY fecha_creacion DESC
-        """, (id,)).fetchall()
+        """, (id,))
+        fotos = cursor.fetchall()
         
         return render_template('invitaciones/galeria_admin.html', inv=inv, datos=datos, fotos=fotos, inv_id=id)
     except Exception as e:
         flash(f"Error al cargar la galeria: {str(e)}", "danger")
         return redirect(url_for('invitaciones_clientes.dashboard_planner') if es_planner else url_for('invitaciones_admin.gestionar_invitaciones'))
     finally:
+        cursor.close()
         conn.close()
 
 @invitaciones_bp.route('/admin/descargar-rollo/<int:id>')
 def descargar_rollo_zip(id):
-    """
-    Genera un archivo .zip en memoria RAM extrayendo las fotos de la URL publica.
-    Blindaje: Evita usar la libreria boto3 y resuelve riesgos de importaciones circulares.
-    """
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -923,13 +961,16 @@ def descargar_rollo_zip(id):
         return redirect(url_for('auth.login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        inv = conn.execute("SELECT slug, planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        cursor.execute("SELECT slug, planner_id FROM invitaciones WHERE id = %s", (id,))
+        inv = cursor.fetchone()
         if es_planner and str(inv['planner_id']) != str(session.get('planner_id')):
             flash("Permiso denegado.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
-        fotos = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (id,)).fetchall()
+        cursor.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = %s", (id,))
+        fotos = cursor.fetchall()
 
         if not fotos:
             flash("No hay fotos para descargar.", "warning")
@@ -941,8 +982,6 @@ def descargar_rollo_zip(id):
         with zipfile.ZipFile(memory_file, 'w', zipfile.ZIP_DEFLATED) as zf:
             for i, foto in enumerate(fotos):
                 try:
-                    # BLINDAJE R2: Descargamos por HTTP directamente de la URL publica
-                    # Evitamos usar s3_client que genera dependencias ciclicas
                     respuesta = requests.get(foto['url'], timeout=10)
                     if respuesta.status_code == 200:
                         zf.writestr(f"foto_{i+1}.jpg", respuesta.content)
@@ -967,6 +1006,7 @@ def descargar_rollo_zip(id):
         flash(f"Error: {str(e)}", "danger")
         return redirect(url_for('invitaciones_admin.ver_fotos_invitados', id=id))
     finally:
+        cursor.close()
         conn.close()
 
 # ==============================================================================
@@ -974,7 +1014,6 @@ def descargar_rollo_zip(id):
 # ==============================================================================
 @invitaciones_bp.route('/admin/invitacion/<int:id>/invitados', methods=['GET', 'POST'])
 def gestionar_pases(id):
-    """Crea o edita pases VIP y genera QRs."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -983,15 +1022,20 @@ def gestionar_pases(id):
         return redirect(url_for('auth.login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     
-    inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
+    cursor.execute("SELECT planner_id FROM invitaciones WHERE id = %s", (id,))
+    inv_seguridad = cursor.fetchone()
+    
     if not inv_seguridad:
         flash("Invitacion no encontrada.", "danger")
+        cursor.close()
         conn.close()
         return redirect(url_for('invitaciones_clientes.dashboard_planner') if es_planner else url_for('invitaciones_admin.gestionar_invitaciones'))
         
     if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
         flash("Permiso denegado.", "danger")
+        cursor.close()
         conn.close()
         return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
@@ -1002,8 +1046,13 @@ def gestionar_pases(id):
         else:
             flash(f"Error al guardar: {msj}", "danger")
 
-    inv = conn.execute("SELECT slug, id, codigo_acceso_cliente, datos_cliente_json FROM invitaciones WHERE id = ?", (id,)).fetchone()
-    invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY id DESC", (id,)).fetchall()
+    cursor.execute("SELECT slug, id, codigo_acceso_cliente, datos_cliente_json FROM invitaciones WHERE id = %s", (id,))
+    inv = cursor.fetchone()
+    
+    cursor.execute("SELECT * FROM pases_invitados WHERE invitacion_id = %s ORDER BY id DESC", (id,))
+    invitados = cursor.fetchall()
+    
+    cursor.close()
     conn.close()
 
     estado_mesas = obtener_estado_mesas(id)
@@ -1012,26 +1061,29 @@ def gestionar_pases(id):
 
 @invitaciones_bp.route('/admin/invitacion/<int:inv_id>/eliminar-pase/<int:pase_id>', methods=['POST'])
 def eliminar_pase(inv_id, pase_id):
-    """Revoca un pase desde la base de datos."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
     if not es_admin_master and not es_planner: return redirect(url_for('auth.login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+        cursor.execute("SELECT planner_id FROM invitaciones WHERE id = %s", (inv_id,))
+        inv_seguridad = cursor.fetchone()
+        
         if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
             flash("Permiso denegado.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_planner'))
 
-        conn.execute("DELETE FROM pases_invitados WHERE id = ? AND invitacion_id = ?", (pase_id, inv_id))
+        cursor.execute("DELETE FROM pases_invitados WHERE id = %s AND invitacion_id = %s", (pase_id, inv_id))
         conn.commit()
         flash("Pase revocado exitosamente.", "success")
     except Exception as e:
         conn.rollback()
         flash(f"Error al revocar: {str(e)}", "danger")
     finally:
+        cursor.close()
         conn.close()
         
     return redirect(url_for('invitaciones_admin.gestionar_pases', id=inv_id))
@@ -1042,8 +1094,8 @@ def eliminar_pase(inv_id, pase_id):
 @invitaciones_bp.route('/admin/socios', methods=['GET', 'POST'])
 @admin_required
 def gestionar_socios():
-    """Lista el directorio de agencias y calcula la vigencia de creditos de forma segura."""
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     if request.method == 'POST':
         nombre = request.form.get('nombre')
@@ -1052,9 +1104,9 @@ def gestionar_socios():
         codigo_plan = generar_codigo_planner() 
         
         try:
-            conn.execute("""
+            cursor.execute("""
                 INSERT INTO planners (nombre_contacto, nombre_empresa, telefono, codigo_acceso_planner)
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s)
             """, (nombre, empresa, telefono, codigo_plan))
             conn.commit()
             flash(f"Socio {nombre} registrado. Codigo: {codigo_plan}", "success")
@@ -1062,25 +1114,26 @@ def gestionar_socios():
             flash(f"Error al registrar socio: {e}", "danger")
 
     now_str = ahora_sql()
-    socios = conn.execute("""
+    cursor.execute("""
         SELECT p.*, 
                COALESCE(SUM(pp.cantidad_total - pp.cantidad_usada), 0) as creditos_disponibles
         FROM planners p
         LEFT JOIN planner_paquetes pp 
           ON p.id = pp.planner_id 
-          AND pp.activo = 1 
-          AND pp.fecha_vencimiento > ?
+          AND pp.activo = True 
+          AND pp.fecha_vencimiento > %s
         GROUP BY p.id
         ORDER BY p.created_at DESC
-    """, (now_str,)).fetchall()
+    """, (now_str,))
+    socios = cursor.fetchall()
     
+    cursor.close()
     conn.close()
     return render_template('invitaciones/admin_socios.html', socios=socios)
 
 @invitaciones_bp.route('/admin/socios/cargar-paquete', methods=['POST'])
 @admin_required
 def cargar_paquete():
-    """Recarga inventario de paquetes calculando vencimientos de forma dinamica."""
     planner_id = request.form.get('planner_id')
     cantidad = int(request.form.get('cantidad', 0))
     
@@ -1094,16 +1147,18 @@ def cargar_paquete():
         vencimiento = ahora_sql(meses=12) 
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        conn.execute("""
+        cursor.execute("""
             INSERT INTO planner_paquetes (planner_id, cantidad_total, fecha_vencimiento)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
         """, (planner_id, cantidad, vencimiento))
         conn.commit()
         flash(f"Se cargaron {cantidad} creditos exitosamente. Vigencia hasta {vencimiento[:10]}.", "success")
     except Exception as e:
         flash(f"Error al cargar creditos: {e}", "danger")
     finally:
+        cursor.close()
         conn.close()
         
     return redirect(url_for('invitaciones_admin.gestionar_socios'))
@@ -1117,8 +1172,10 @@ def editar_planner():
     telefono = request.form.get('telefono')
 
     conn = get_db_connection()
-    conn.execute('UPDATE planners SET nombre_contacto = ?, nombre_empresa = ?, telefono = ? WHERE id = ?', (nombre, empresa, telefono, planner_id))
+    cursor = conn.cursor()
+    cursor.execute('UPDATE planners SET nombre_contacto = %s, nombre_empresa = %s, telefono = %s WHERE id = %s', (nombre, empresa, telefono, planner_id))
     conn.commit()
+    cursor.close()
     conn.close()
 
     flash(f'Perfil de {empresa} actualizado.', 'success')
@@ -1127,34 +1184,36 @@ def editar_planner():
 @invitaciones_bp.route('/admin/socios/eliminar', methods=['POST'])
 @admin_required
 def eliminar_planner():
-    """Purga completa de Planners, liberando todo su espacio en Cloudflare R2."""
     planner_id = request.form.get('planner_id')
     now_str = ahora_sql()
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        saldo_row = conn.execute("""
+        cursor.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as saldo
             FROM planner_paquetes 
-            WHERE planner_id = ? AND activo = 1 AND fecha_vencimiento > ?
-        """, (planner_id, now_str)).fetchone()
+            WHERE planner_id = %s AND activo = True AND fecha_vencimiento > %s
+        """, (planner_id, now_str))
+        saldo_row = cursor.fetchone()
         
         saldo = saldo_row['saldo'] if saldo_row else 0
 
-        invitaciones_activas = conn.execute("""
+        cursor.execute("""
             SELECT COUNT(id) as total_activas
             FROM invitaciones
-            WHERE planner_id = ? AND vigencia >= ? AND es_demo = 0
-        """, (planner_id, now_str[:10])).fetchone()['total_activas']
+            WHERE planner_id = %s AND vigencia >= %s AND es_demo = False
+        """, (planner_id, now_str[:10]))
+        invitaciones_activas = cursor.fetchone()['total_activas']
 
         if saldo > 0 or invitaciones_activas > 0:
-            conn.execute("UPDATE planners SET estado = 'suspendido' WHERE id = ?", (planner_id,))
+            cursor.execute("UPDATE planners SET estado = 'suspendido' WHERE id = %s", (planner_id,))
             conn.commit()
             flash(f"Cuenta suspendida. No se puede eliminar: tiene {saldo} creditos o {invitaciones_activas} eventos vigentes.", "warning")
             return redirect(url_for('invitaciones_admin.gestionar_socios'))
 
-        # [MODIFICACION] Extraemos también 'datos_cliente_json' para borrar fotos del STD si existen
-        invs_a_borrar = conn.execute("SELECT id, foto_portada_url, url_fondo, fotos_json, datos_cliente_json FROM invitaciones WHERE planner_id = ?", (planner_id,)).fetchall()
+        cursor.execute("SELECT id, foto_portada_url, url_fondo, fotos_json, datos_cliente_json FROM invitaciones WHERE planner_id = %s", (planner_id,))
+        invs_a_borrar = cursor.fetchall()
         
         for inv in invs_a_borrar:
             inv_id = inv['id']
@@ -1165,23 +1224,23 @@ def eliminar_planner():
                 fotos_galeria = json.loads(inv['fotos_json'])
                 for foto_url in fotos_galeria: delete_from_cloudflare(foto_url)
                 
-            # [NUEVO] Purga de la foto de STD de Cloudflare
             datos_cliente = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
             if datos_cliente.get('foto_std_url'):
                 delete_from_cloudflare(datos_cliente['foto_std_url'])
                 
-            fotos_invitados = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,)).fetchall()
+            cursor.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = %s", (inv_id,))
+            fotos_invitados = cursor.fetchall()
             for foto in fotos_invitados:
                 if foto['url']: delete_from_cloudflare(foto['url'])
 
-            conn.execute("DELETE FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,))
-            conn.execute("DELETE FROM pases_invitados WHERE invitacion_id = ?", (inv_id,))
-            conn.execute("DELETE FROM buenos_deseos WHERE invitacion_id = ?", (inv_id,)) 
+            cursor.execute("DELETE FROM fotos_invitados WHERE invitacion_id = %s", (inv_id,))
+            cursor.execute("DELETE FROM pases_invitados WHERE invitacion_id = %s", (inv_id,))
+            cursor.execute("DELETE FROM buenos_deseos WHERE invitacion_id = %s", (inv_id,)) 
 
-            conn.execute("DELETE FROM invitaciones WHERE id = ?", (inv_id,))
+            cursor.execute("DELETE FROM invitaciones WHERE id = %s", (inv_id,))
 
-        conn.execute("DELETE FROM planner_paquetes WHERE planner_id = ?", (planner_id,))
-        conn.execute("DELETE FROM planners WHERE id = ?", (planner_id,))
+        cursor.execute("DELETE FROM planner_paquetes WHERE planner_id = %s", (planner_id,))
+        cursor.execute("DELETE FROM planners WHERE id = %s", (planner_id,))
         
         conn.commit()
         flash("Planner y todo su rastro (BD e Imagenes) eliminados permanentemente.", "success")
@@ -1190,6 +1249,7 @@ def eliminar_planner():
         conn.rollback() 
         flash(f"Error critico al intentar eliminar: {str(e)}", "danger")
     finally:
+        cursor.close()
         conn.close()
 
     return redirect(url_for('invitaciones_admin.gestionar_socios'))
@@ -1197,7 +1257,6 @@ def eliminar_planner():
 @invitaciones_bp.route('/ajustar_saldo', methods=['POST'])
 @admin_required
 def ajustar_saldo():
-    """Genera ajustes de creditos arbitrarios registrando una huella de auditoria."""
     planner_id = request.form.get('planner_id')
     ajuste = int(request.form.get('ajuste'))
     motivo = request.form.get('motivo')
@@ -1206,11 +1265,13 @@ def ajustar_saldo():
     fecha_venc = ahora_sql(meses=12)
 
     conn = get_db_connection()
-    conn.execute('''
+    cursor = conn.cursor()
+    cursor.execute('''
         INSERT INTO planner_paquetes (planner_id, cantidad_total, fecha_compra, fecha_vencimiento, notas)
-        VALUES (?, ?, ?, ?, ?)
+        VALUES (%s, %s, %s, %s, %s)
     ''', (planner_id, ajuste, fecha_hoy, fecha_venc, f"AJUSTE MANUAL: {motivo}"))
     conn.commit()
+    cursor.close()
     conn.close()
     
     flash('Saldo ajustado.', 'warning')
@@ -1223,8 +1284,10 @@ def regenerar_codigo():
     nuevo_codigo = "PLAN-" + ''.join(random.choices(string.ascii_uppercase + string.digits, k=5))
     
     conn = get_db_connection()
-    conn.execute('UPDATE planners SET codigo_acceso_planner = ? WHERE id = ?', (nuevo_codigo, planner_id))
+    cursor = conn.cursor()
+    cursor.execute('UPDATE planners SET codigo_acceso_planner = %s WHERE id = %s', (nuevo_codigo, planner_id))
     conn.commit()
+    cursor.close()
     conn.close()
 
     flash(f'Nuevo acceso: {nuevo_codigo}', 'success')
@@ -1237,34 +1300,38 @@ def suspender_planner():
     accion = request.form.get('accion') 
     
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     if accion == 'activar':
-        conn.execute("UPDATE planners SET estado = 'activo' WHERE id = ?", (planner_id,))
+        cursor.execute("UPDATE planners SET estado = 'activo' WHERE id = %s", (planner_id,))
         flash('Socio activado correctamente.', 'success')
     else:
-        conn.execute("UPDATE planners SET estado = 'suspendido' WHERE id = ?", (planner_id,))
+        cursor.execute("UPDATE planners SET estado = 'suspendido' WHERE id = %s", (planner_id,))
         flash('Socio suspendido. Se le negara el acceso.', 'danger')
         
     conn.commit()
+    cursor.close()
     conn.close()
     return redirect(url_for('invitaciones_admin.gestionar_socios'))
 
 @invitaciones_bp.route('/api/socios/<int:id>/auditoria')
 @admin_required
 def api_auditoria_planner(id):
-    """API para consultar el historial de compras y gastos de un socio."""
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
         now_str = ahora_sql() 
         
-        saldo_row = conn.execute("""
+        cursor.execute("""
             SELECT COALESCE(SUM(cantidad_total - cantidad_usada), 0) as saldo
             FROM planner_paquetes 
-            WHERE planner_id = ? AND activo = 1 AND fecha_vencimiento > ?
-        """, (id, now_str)).fetchone()
+            WHERE planner_id = %s AND activo = True AND fecha_vencimiento > %s
+        """, (id, now_str))
+        saldo_row = cursor.fetchone()
         saldo = saldo_row['saldo'] if saldo_row else 0
 
-        movs_db = conn.execute("SELECT * FROM planner_paquetes WHERE planner_id = ? ORDER BY fecha_compra DESC", (id,)).fetchall()
+        cursor.execute("SELECT * FROM planner_paquetes WHERE planner_id = %s ORDER BY fecha_compra DESC", (id,))
+        movs_db = cursor.fetchall()
         
         movimientos = []
         saldo_paquetes = 0
@@ -1280,7 +1347,8 @@ def api_auditoria_planner(id):
             fecha_venc = m_dict.get('fecha_vencimiento')
             
             expirado = False
-            if m_dict.get('activo') == 0:
+            # Manejo nativo de booleanos de Postgres
+            if m_dict.get('activo') is False:
                 expirado = True
             elif fecha_venc and str(fecha_venc) < now_str:
                 expirado = True
@@ -1298,7 +1366,9 @@ def api_auditoria_planner(id):
                 else:
                     saldo_paquetes += restantes
 
-        cons_db = conn.execute("SELECT id, slug, created_at, fecha_evento, datos_cliente_json FROM invitaciones WHERE planner_id = ? ORDER BY id DESC", (id,)).fetchall()
+        cursor.execute("SELECT id, slug, created_at, fecha_evento, datos_cliente_json FROM invitaciones WHERE planner_id = %s ORDER BY id DESC", (id,))
+        cons_db = cursor.fetchall()
+        
         consumos = []
         for c in cons_db:
             c_dict = dict(c)
@@ -1323,6 +1393,7 @@ def api_auditoria_planner(id):
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)})
     finally:
+        cursor.close()
         conn.close()
 
 # ==============================================================================
@@ -1330,18 +1401,16 @@ def api_auditoria_planner(id):
 # ==============================================================================
 @invitaciones_bp.route('/admin/invitacion/<int:id>/eliminar-imagen/<string:tipo_imagen>', methods=['POST'])
 def eliminar_imagen_invitacion(id, tipo_imagen):
-    """
-    Elimina archivos de Cloudflare R2 usando el servicio importado para
-    mantener la logica estandarizada.
-    """
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
     if not es_admin_master and not es_planner: return jsonify({"success": False, "error": "Acceso denegado"}), 403
 
-    import json # Asegúrate de tener json importado arriba en tu archivo
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        inv = conn.execute("SELECT *, planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        cursor.execute("SELECT *, planner_id FROM invitaciones WHERE id = %s", (id,))
+        inv = cursor.fetchone()
+        
         if not inv: return jsonify({"success": False, "error": "Invitacion no encontrada"}), 404
         if es_planner and str(inv['planner_id']) != str(session.get('planner_id')): return jsonify({"success": False, "error": "Permiso denegado"}), 403
 
@@ -1358,13 +1427,12 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
             fotos_actuales = json.loads(inv['fotos_json']) if inv['fotos_json'] else []
             if foto_url_a_borrar in fotos_actuales:
                 fotos_actuales.remove(foto_url_a_borrar)
-                conn.execute("UPDATE invitaciones SET fotos_json = ? WHERE id = ?", (json.dumps(fotos_actuales), id))
+                cursor.execute("UPDATE invitaciones SET fotos_json = %s WHERE id = %s", (json.dumps(fotos_actuales), id))
                 conn.commit()
             
             return jsonify({"success": True})
             
         elif tipo_imagen == 'std':
-            # AQUÍ ESTÁ LA MAGIA: Usamos el nombre real de tu columna: datos_cliente_json
             datos_cliente = json.loads(inv['datos_cliente_json']) if inv['datos_cliente_json'] else {}
             url_imagen_cloudflare = datos_cliente.get('foto_std_url')
             
@@ -1375,9 +1443,8 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
             except Exception as e:
                 current_app.logger.error(f"R2_DELETE_ERROR: Fallo al eliminar foto STD {url_imagen_cloudflare[-30:]} - {e}")
                 
-            # Quitamos la llave 'foto_std_url' del JSON y actualizamos la base de datos con el nombre de columna correcto
             datos_cliente.pop('foto_std_url', None)
-            conn.execute("UPDATE invitaciones SET datos_cliente_json = ? WHERE id = ?", (json.dumps(datos_cliente), id))
+            cursor.execute("UPDATE invitaciones SET datos_cliente_json = %s WHERE id = %s", (json.dumps(datos_cliente), id))
             conn.commit()
             
             return jsonify({"success": True})
@@ -1395,7 +1462,7 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
             except Exception as e:
                 current_app.logger.error(f"R2_DELETE_ERROR: Fallo al eliminar {tipo_imagen} {url_imagen_cloudflare[-30:]} - {e}")
 
-            conn.execute(f"UPDATE invitaciones SET {columna_db} = NULL WHERE id = ?", (id,))
+            cursor.execute(f"UPDATE invitaciones SET {columna_db} = NULL WHERE id = %s", (id,))
             conn.commit()
             return jsonify({"success": True})
 
@@ -1403,6 +1470,7 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
         conn.rollback()
         return jsonify({"success": False, "error": str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
 
 # ==============================================================================
@@ -1410,7 +1478,6 @@ def eliminar_imagen_invitacion(id, tipo_imagen):
 # ==============================================================================
 @invitaciones_bp.route('/admin/invitacion/<int:id>/mesas', methods=['POST'])
 def guardar_configuracion_mesas(id):
-    """Guarda la estructura dinamica del seating plan protegiendo los datos numéricos."""
     es_admin_master = session.get('role', 0) >= 1
     es_planner = session.get('user_type') == 'planner' and 'planner_id' in session
 
@@ -1419,8 +1486,11 @@ def guardar_configuracion_mesas(id):
         return redirect(url_for('auth.login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (id,)).fetchone()
+        cursor.execute("SELECT planner_id FROM invitaciones WHERE id = %s", (id,))
+        inv_seguridad = cursor.fetchone()
+        
         if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
             flash("Permiso denegado.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_planner'))
@@ -1431,7 +1501,6 @@ def guardar_configuracion_mesas(id):
         mesas_config = []
         for nombre, cap in zip(nombres, capacidades):
             if nombre.strip() and cap.strip():
-                # BLINDAJE: Evita crashear si el formulario envia texto en vez de numero
                 try:
                     cap_int = int(cap)
                 except ValueError:
@@ -1444,7 +1513,7 @@ def guardar_configuracion_mesas(id):
 
         mesas_json = json.dumps(mesas_config)
 
-        conn.execute("UPDATE invitaciones SET mesas_json = ? WHERE id = ?", (mesas_json, id))
+        cursor.execute("UPDATE invitaciones SET mesas_json = %s WHERE id = %s", (mesas_json, id))
         conn.commit()
         
         flash(f"Distribucion actualizada. ({len(mesas_config)} mesas configuradas)", "success")
@@ -1452,6 +1521,7 @@ def guardar_configuracion_mesas(id):
         conn.rollback()
         flash(f"Error al guardar configuracion de mesas: {str(e)}", "danger")
     finally:
+        cursor.close()
         conn.close()
 
     return redirect(url_for('invitaciones_admin.gestionar_pases', id=id))
@@ -1465,8 +1535,11 @@ def editar_pase_admin(inv_id, pase_id):
         return redirect(url_for('auth.login'))
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        inv_seguridad = conn.execute("SELECT planner_id FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+        cursor.execute("SELECT planner_id FROM invitaciones WHERE id = %s", (inv_id,))
+        inv_seguridad = cursor.fetchone()
+        
         if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
             flash("Permiso denegado.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_planner'))
@@ -1479,6 +1552,7 @@ def editar_pase_admin(inv_id, pase_id):
         else:
             flash(f"Error al editar: {msj}", "danger")
     finally:
+        cursor.close()
         conn.close()
         
     return redirect(url_for('invitaciones_admin.gestionar_pases', id=inv_id))

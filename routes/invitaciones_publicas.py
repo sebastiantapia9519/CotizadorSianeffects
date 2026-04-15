@@ -9,7 +9,7 @@ from utils.datetime_utils import ahora_sql
 from db import get_db_connection as get_db
 import boto3
 from botocore.config import Config
-from helpers import admin_required # Importamos tu decorador de administración
+from helpers import admin_required 
 
 invitaciones_publicas_bp = Blueprint('invitaciones_publicas', __name__)
 
@@ -63,14 +63,16 @@ def upload_rollo(invitacion_id):
         
         url_final = f"{PUBLIC_URL}/{nombre_archivo}"
         conn = get_db()
-        conn.execute(
+        cursor = conn.cursor()
+        cursor.execute(
             """
             INSERT INTO fotos_invitados (invitacion_id, url, fecha_creacion)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
             """,
             (invitacion_id, url_final, ahora_sql())
         )
         conn.commit()
+        cursor.close()
         conn.close()
         
         current_app.logger.info(f"GUEST_CAM_UPLOAD: Foto subida con éxito para la invitación ID {invitacion_id}.")
@@ -92,11 +94,13 @@ def api_confirmar_asistencia(invitado_id):
             return jsonify({'success': False, 'error': 'Estado no válido'}), 400
 
         conn = get_db()
-        conn.execute(
-            "UPDATE pases_invitados SET estado_asistencia = ? WHERE id = ?",
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE pases_invitados SET estado_asistencia = %s WHERE id = %s",
             (nuevo_estado, invitado_id)
         )
         conn.commit()
+        cursor.close()
         conn.close()
         return jsonify({'success': True, 'mensaje': 'Confirmación guardada'})
     except Exception as e:
@@ -108,13 +112,16 @@ def api_confirmar_asistencia(invitado_id):
 
 # --- RUTA PARA EL CLIENTE (Dashboard de Novios) ---
 @invitaciones_publicas_bp.route('/recepcion/<slug>')
-def recepcion_boda(slug): # <--- Cambiamos el nombre aquí para que coincida con el dashboard
+def recepcion_boda(slug): 
     # Validamos la sesión manual del cliente
     if 'cliente_inv_id' not in session or session.get('cliente_slug') != slug:
         return "<h1>Acceso Denegado</h1><p>Debes ingresar con tu código de evento para usar el escáner.</p>", 403
         
     conn = get_db()
-    inv = conn.execute("SELECT id, slug FROM invitaciones WHERE slug = ?", (slug,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, slug FROM invitaciones WHERE slug = %s", (slug,))
+    inv = cursor.fetchone()
+    cursor.close()
     conn.close()
     
     if not inv:
@@ -126,38 +133,41 @@ def recepcion_boda(slug): # <--- Cambiamos el nombre aquí para que coincida con
 # --- RUTA PARA TI (Administrador Maestro de SianEffects) ---
 @invitaciones_publicas_bp.route('/admin/scanner-global')
 @admin_required 
-def scanner_global(): # <--- Este nombre debe coincidir con url_for('invitaciones_publicas.scanner_global')
+def scanner_global(): 
     return render_template('invitaciones/scanner.html', inv=None)
 
 # --- API DE VALIDACIÓN QR ---
-# --- API DE VALIDACIÓN QR (CON CHECK-IN PARCIAL) ---
 @invitaciones_publicas_bp.route('/api/validar-qr', methods=['POST'])
 def validar_qr():
     import json
     data = request.get_json()
     codigo = data.get('codigo')
-    invitacion_id = data.get('invitacion_id') # Viene null desde el Scanner Maestro
-    pases_a_ingresar = data.get('pases_a_ingresar') # <--- NUEVA VARIABLE
+    invitacion_id = data.get('invitacion_id') 
+    pases_a_ingresar = data.get('pases_a_ingresar') 
 
     conn = get_db()
+    cursor = conn.cursor()
     
     # 1. Buscamos al invitado según el modo
     if invitacion_id:
-        invitado = conn.execute("""
+        cursor.execute("""
             SELECT p.*, i.slug as boda_nombre 
             FROM pases_invitados p
             JOIN invitaciones i ON p.invitacion_id = i.id
-            WHERE p.codigo_qr_unique = ? AND p.invitacion_id = ?
-        """, (codigo, invitacion_id)).fetchone()
+            WHERE p.codigo_qr_unique = %s AND p.invitacion_id = %s
+        """, (codigo, invitacion_id))
+        invitado = cursor.fetchone()
     else:
-        invitado = conn.execute("""
+        cursor.execute("""
             SELECT p.*, i.slug as boda_nombre 
             FROM pases_invitados p
             JOIN invitaciones i ON p.invitacion_id = i.id
-            WHERE p.codigo_qr_unique = ?
-        """, (codigo,)).fetchone()
+            WHERE p.codigo_qr_unique = %s
+        """, (codigo,))
+        invitado = cursor.fetchone()
 
     if not invitado:
+        cursor.close()
         conn.close()
         current_app.logger.warning(f"QR_SCAN_DENIED: Intento de acceso con QR inválido o ajeno al evento: '{codigo}'")
         return jsonify({'success': False, 'error': 'Código QR no válido para este evento'})
@@ -169,6 +179,7 @@ def validar_qr():
 
     # Si ya entraron todos, bloqueamos
     if pases_disponibles <= 0:
+        cursor.close()
         conn.close()
         current_app.logger.warning(f"QR_SCAN_EMPTY: La familia {invitado['nombre_familia']} intentó ingresar sin pases disponibles.")
         return jsonify({
@@ -188,10 +199,11 @@ def validar_qr():
     # MODO A: Solo Consulta (Cuando escanean el QR por primera vez)
     # ---------------------------------------------------------
     if not pases_a_ingresar:
+        cursor.close()
         conn.close()
         return jsonify({
             'success': True,
-            'requiere_confirmacion': True, # Le avisa al frontend que debe preguntar cuántos entran
+            'requiere_confirmacion': True, 
             'familia': invitado['nombre_familia'],
             'pases_totales': pases_totales,
             'pases_usados': pases_usados,
@@ -208,14 +220,16 @@ def validar_qr():
     
     # Validamos que no intenten meter a más gente de la que tienen disponible
     if pases_a_ingresar > pases_disponibles:
+        cursor.close()
         conn.close()
         return jsonify({'success': False, 'error': f'Solo le quedan {pases_disponibles} pases disponibles.'})
 
     # Sumamos los nuevos ingresos a los que ya estaban adentro
     nuevo_usados = pases_usados + pases_a_ingresar
     
-    conn.execute("UPDATE pases_invitados SET pases_usados = ? WHERE id = ?", (nuevo_usados, invitado['id']))
+    cursor.execute("UPDATE pases_invitados SET pases_usados = %s WHERE id = %s", (nuevo_usados, invitado['id']))
     conn.commit()
+    cursor.close()
     conn.close()
 
     current_app.logger.info(f"QR_SCAN_SUCCESS: Ingresaron {pases_a_ingresar} personas de la familia {invitado['nombre_familia']} al evento {invitado['boda_nombre']}.")
@@ -248,14 +262,16 @@ def guardar_buen_deseo():
 
         # 3. Guardar en Base de Datos
         conn = get_db()
-        conn.execute(
+        cursor = conn.cursor()
+        cursor.execute(
             """
             INSERT INTO buenos_deseos (invitacion_id, nombre, mensaje)
-            VALUES (?, ?, ?)
+            VALUES (%s, %s, %s)
             """,
             (invitacion_id, nombre_limpio, mensaje_limpio)
         )
         conn.commit()
+        cursor.close()
         conn.close()
 
         return jsonify({'success': True, 'mensaje': '¡Gracias por tus buenos deseos!'})

@@ -22,10 +22,16 @@ def login():
         current_app.logger.info(f"Intento de login para: {login_input}") # Monitor!
 
         conn = get_db()
-        user = conn.execute('''
+        cursor = conn.cursor() # 1. ABRIMOS CURSOR
+        
+        # 2. CAMBIAMOS ? POR %s
+        cursor.execute('''
             SELECT * FROM usuarios
-            WHERE LOWER(email) = ? OR LOWER(username) = ?
-        ''', (login_input, login_input)).fetchone()
+            WHERE LOWER(email) = %s OR LOWER(username) = %s
+        ''', (login_input, login_input))
+        
+        user = cursor.fetchone()
+        cursor.close()
         conn.close()
 
         if user:
@@ -120,42 +126,46 @@ def registro():
         subscription_end = created_at + timedelta(days=7)
 
         conn = get_db()
+        cursor = conn.cursor()
+        
         try:
             # -----------------------------
-            # 4. INSERTAR USUARIO (ACTUALIZADO CON UTMS)
+            # 4. INSERTAR USUARIO (CON RETURNING id Y %s)
             # -----------------------------
-            cursor = conn.execute('''
+            cursor.execute('''
                 INSERT INTO usuarios (
                     username, email, password, telefono, company_name,
                     role, subscription_end, created_at, last_login, terms_accepted,
                     origen_registro, utm_campaign
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
             ''', (
                 username, email, hashed_pw, telefono, company_name,
                 0, 
                 subscription_end, created_at, last_login,
-                1,
+                True, # Boolean en lugar de 1
                 origen_registro, utm_campaign 
             ))
 
-            user_id = cursor.lastrowid
+            # 3. EXTRAER EL ID RETORNADO
+            user_id = cursor.fetchone()['id']
 
             # -----------------------------
-            # 5. CREAR CONFIGURACIÓN DEFAULT
+            # 5. CREAR CONFIGURACIÓN DEFAULT (CON %s)
             # -----------------------------
-            conn.execute('''
+            cursor.execute('''
                 INSERT INTO configuracion (
                     user_id, margen_ganancia, inventario_activo, ticket_bw, nombre_empresa
                 )
-                VALUES (?, ?, ?, ?, ?)
-            ''', (user_id, 100, 0, 0, company_name))
+                VALUES (%s, %s, %s, %s, %s)
+            ''', (user_id, 100, False, False, company_name)) # Booleans
 
-            conn.execute('''
+            cursor.execute('''
                 INSERT INTO shipping_configs (
                     user_id, local_base_rate, local_km_rate, safety_margin_percent
                 )
-                VALUES (?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s)
             ''', (user_id, 35.00, 8.00, 10))
 
             conn.commit()
@@ -170,12 +180,13 @@ def registro():
 
         except Exception as e:
             conn.rollback()
-            if "UNIQUE" in str(e).upper():
+            if "UNIQUE" in str(e).upper() or "DUPLICATE" in str(e).upper():
                 flash('Ese usuario o correo ya existe.', 'error')
             else:
                 current_app.logger.error(f"REGISTER_ERROR: Fallo al crear cuenta para '{email}' - {str(e)}")
                 flash('Error al crear la cuenta.', 'error')
         finally:
+            cursor.close()
             conn.close()
 
     # Esto asegura que si hay un error y no entra al try, de todos modos regrese el form

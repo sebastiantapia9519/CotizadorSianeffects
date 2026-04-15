@@ -13,7 +13,7 @@ from utils.datetime_utils import hoy_sqlite, hoy_local, ahora_sql
 # ==============================================================================
 clientes_bp = Blueprint('invitaciones_clientes', __name__)
 
-# Variable estandarizada para comparaciones de fecha a nivel de dia (SQLite)
+# Variable estandarizada para comparaciones de fecha a nivel de dia (SQLite/Postgres)
 hoy = hoy_sqlite()
 
 # ==============================================================================
@@ -33,7 +33,10 @@ def planner_required(f):
         
         # 2. Verificacion en Base de Datos (Seguridad en tiempo real)
         conn = get_db_connection()
-        planner = conn.execute("SELECT estado FROM planners WHERE id = ?", (session['planner_id'],)).fetchone()
+        cursor = conn.cursor()
+        cursor.execute("SELECT estado FROM planners WHERE id = %s", (session['planner_id'],))
+        planner = cursor.fetchone()
+        cursor.close()
         conn.close()
 
         # Si el administrador suspendio al planner mientras estaba logueado, lo expulsa
@@ -58,13 +61,15 @@ def login_cliente():
     if request.method == 'POST':
         codigo = request.form.get('codigo', '').strip().upper()
         conn = get_db_connection()
+        cursor = conn.cursor()
         try:
             # --- CASO 1: ES UN PLANNER (PLAN-XXXXX) ---
             if codigo.startswith('PLAN-'):
-                planner = conn.execute("""
+                cursor.execute("""
                     SELECT id, nombre_contacto, nombre_empresa, estado 
-                    FROM planners WHERE codigo_acceso_planner = ?
-                """, (codigo,)).fetchone()
+                    FROM planners WHERE codigo_acceso_planner = %s
+                """, (codigo,))
+                planner = cursor.fetchone()
                 
                 if planner:
                     if planner['estado'] != 'activo':
@@ -83,10 +88,11 @@ def login_cliente():
 
             # --- CASO 2: ES UN CLIENTE FINAL (SIA-XXXXX) ---
             else:
-                inv = conn.execute("""
+                cursor.execute("""
                     SELECT id, slug, datos_cliente_json 
-                    FROM invitaciones WHERE codigo_acceso_cliente = ?
-                """, (codigo,)).fetchone()
+                    FROM invitaciones WHERE codigo_acceso_cliente = %s
+                """, (codigo,))
+                inv = cursor.fetchone()
                 
                 if inv:
                     session.clear()
@@ -103,6 +109,7 @@ def login_cliente():
                 else:
                     flash("Codigo de acceso no valido.", "danger")
         finally:
+            cursor.close()
             conn.close()
             
     return render_template('clientes/login.html')
@@ -118,41 +125,45 @@ def dashboard_planner():
     """
     planner_id = session['planner_id']
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
         # 1. Calculo de Saldo Neto Vigente
-        creditos_info = conn.execute("""
+        cursor.execute("""
             SELECT SUM(cantidad_total - cantidad_usada) as saldo
             FROM planner_paquetes 
-            WHERE planner_id = ? 
-            AND activo = 1 
-            AND fecha_vencimiento > ?
-        """, (planner_id, hoy)).fetchone()
+            WHERE planner_id = %s 
+            AND activo = True 
+            AND fecha_vencimiento > %s
+        """, (planner_id, hoy))
+        creditos_info = cursor.fetchone()
         
         saldo = creditos_info['saldo'] if creditos_info['saldo'] else 0
 
         # 2. Historial de compras/recargas
-        paquetes_raw = conn.execute("""
+        cursor.execute("""
             SELECT id, cantidad_total, cantidad_usada, fecha_vencimiento, notas, fecha_compra
             FROM planner_paquetes
-            WHERE planner_id = ? AND activo = 1
+            WHERE planner_id = %s AND activo = True
             ORDER BY fecha_compra ASC
-        """, (planner_id,)).fetchall()
+        """, (planner_id,))
+        paquetes_raw = cursor.fetchall()
 
         # Blindaje: Calculo de fechas directo en Python para evitar conflictos Postgres/SQLite
         fecha_hoy = hoy_local()[:10] 
         fecha_limite = ahora_sql(dias=15)[:10] 
 
         # Alertas de vencimiento proximo (15 dias)
-        proximos_vencimientos = conn.execute("""
+        cursor.execute("""
             SELECT id, (cantidad_total - cantidad_usada) as remanente, fecha_vencimiento
             FROM planner_paquetes
-            WHERE planner_id = ? 
-            AND activo = 1 
+            WHERE planner_id = %s 
+            AND activo = True 
             AND (cantidad_total - cantidad_usada) > 0
-            AND substring(fecha_vencimiento, 1, 10) BETWEEN ? AND ?
+            AND substring(CAST(fecha_vencimiento AS TEXT), 1, 10) BETWEEN %s AND %s
             ORDER BY fecha_vencimiento ASC
-        """, (planner_id, fecha_hoy, fecha_limite)).fetchall()
+        """, (planner_id, fecha_hoy, fecha_limite))
+        proximos_vencimientos = cursor.fetchall()
 
         paquetes_procesados = []
         saldo_acumulado = 0
@@ -169,20 +180,21 @@ def dashboard_planner():
             if not p['fecha_vencimiento'] or cambio < 0:
                 p_dict['vence_display'] = "---"
             else:
-                p_dict['vence_display'] = p['fecha_vencimiento'][:10]
+                p_dict['vence_display'] = str(p['fecha_vencimiento'])[:10]
             
             paquetes_procesados.append(p_dict)
 
         paquetes_procesados.reverse()
 
         # 3. Historial de Eventos (Consumo)
-        invitaciones_db = conn.execute("""
+        cursor.execute("""
             SELECT id, slug, datos_cliente_json, fecha_evento, created_at, 
                    codigo_acceso_cliente, tipo_evento, tiene_modulo_invitados, camara_premium
             FROM invitaciones 
-            WHERE planner_id = ? 
+            WHERE planner_id = %s 
             ORDER BY created_at DESC
-        """, (planner_id,)).fetchall()
+        """, (planner_id,))
+        invitaciones_db = cursor.fetchall()
 
         invitaciones = []
         for inv in invitaciones_db:
@@ -194,7 +206,8 @@ def dashboard_planner():
             invitaciones.append(item)
 
         # Verificacion del cupon de Demo
-        demo_db = conn.execute("SELECT id FROM invitaciones WHERE planner_id = ? AND es_demo = 1", (planner_id,)).fetchone()
+        cursor.execute("SELECT id FROM invitaciones WHERE planner_id = %s AND es_demo = True", (planner_id,))
+        demo_db = cursor.fetchone()
         tiene_demo = True if demo_db else False
 
         return render_template('clientes/dashboard_planner.html', 
@@ -208,6 +221,7 @@ def dashboard_planner():
         flash(f"Error cargando dashboard: {e}", "danger")
         return redirect(url_for('invitaciones_clientes.login_cliente'))
     finally:
+        cursor.close()
         conn.close()
 
 # ==============================================================================
@@ -224,6 +238,7 @@ def dashboard_cliente():
         
     inv_id = session['cliente_inv_id']
     conn = get_db_connection()
+    cursor = conn.cursor()
 
     # Paginacion para la galeria de fotos (evita sobrecargar el navegador)
     PER_PAGE = 12
@@ -232,7 +247,8 @@ def dashboard_cliente():
     
     try:
         # 1. Blindaje: Verificar que el evento no haya sido borrado
-        inv = conn.execute("SELECT * FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+        cursor.execute("SELECT * FROM invitaciones WHERE id = %s", (inv_id,))
+        inv = cursor.fetchone()
         if not inv:
             session.clear()
             flash("Evento no encontrado. Ingresa tu codigo de nuevo.", "danger")
@@ -243,27 +259,32 @@ def dashboard_cliente():
         # 2. Modulo de Invitados (RSVP)
         invitados = []
         if inv['tiene_modulo_invitados']:
-             invitados = conn.execute("SELECT * FROM pases_invitados WHERE invitacion_id = ? ORDER BY nombre_familia ASC", (inv_id,)).fetchall()
+             cursor.execute("SELECT * FROM pases_invitados WHERE invitacion_id = %s ORDER BY nombre_familia ASC", (inv_id,))
+             invitados = cursor.fetchall()
         
         # 3. Modulo de Camara (Fotos)
         fotos = []
         total_fotos = 0
         if inv['camara_premium']:
-            total_fotos = conn.execute("SELECT COUNT(*) FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,)).fetchone()[0]
-            fotos = conn.execute("""
+            cursor.execute("SELECT COUNT(*) FROM fotos_invitados WHERE invitacion_id = %s", (inv_id,))
+            total_fotos = cursor.fetchone()[0]
+            
+            cursor.execute("""
                 SELECT url FROM fotos_invitados 
-                WHERE invitacion_id = ? ORDER BY fecha_creacion DESC LIMIT ? OFFSET ?
-            """, (inv_id, PER_PAGE, offset)).fetchall()
+                WHERE invitacion_id = %s ORDER BY fecha_creacion DESC LIMIT %s OFFSET %s
+            """, (inv_id, PER_PAGE, offset))
+            fotos = cursor.fetchall()
 
         # 4. Modulo de Buenos Deseos
         buenos_deseos = []
         if 'deseos' in config_modulos:
-            buenos_deseos = conn.execute("""
+            cursor.execute("""
                 SELECT nombre, mensaje, fecha 
                 FROM buenos_deseos 
-                WHERE invitacion_id = ? 
+                WHERE invitacion_id = %s 
                 ORDER BY fecha DESC
-            """, (inv_id,)).fetchall()
+            """, (inv_id,))
+            buenos_deseos = cursor.fetchall()
 
         # 5. Estado de mesas
         estado_mesas = obtener_estado_mesas(inv_id)
@@ -273,6 +294,7 @@ def dashboard_cliente():
         flash("Ocurrio un error al cargar la informacion de tu evento.", "danger")
         return redirect(url_for('invitaciones_clientes.login_cliente'))
     finally:
+        cursor.close()
         conn.close()
 
     # El render_template ocurre fuera del bloque try/except para evitar enmascarar errores de Jinja
@@ -293,12 +315,13 @@ def dashboard_cliente():
 # ==============================================================================
 # LOGICA DE CONTROL DE INVITADOS (RSVP CLIENTE)
 # ==============================================================================
-def edicion_permitida(inv_id, conn):
+def edicion_permitida(inv_id, cursor):
     """
     Verifica si el Planner/Admin bloqueo la modificacion de la lista de invitados.
     Retorna False si el evento no existe o si la edicion esta bloqueada.
     """
-    inv = conn.execute("SELECT bloquear_edicion_invitados FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+    cursor.execute("SELECT bloquear_edicion_invitados FROM invitaciones WHERE id = %s", (inv_id,))
+    inv = cursor.fetchone()
     if not inv: 
         return False
     return not inv['bloquear_edicion_invitados']
@@ -309,7 +332,9 @@ def agregar_invitado_cliente():
     
     inv_id = session['cliente_inv_id']
     conn = get_db_connection()
-    permitido = edicion_permitida(inv_id, conn)
+    cursor = conn.cursor()
+    permitido = edicion_permitida(inv_id, cursor)
+    cursor.close()
     conn.close()
 
     if not permitido:
@@ -328,7 +353,9 @@ def editar_invitado_cliente(pase_id):
     
     inv_id = session['cliente_inv_id']
     conn = get_db_connection()
-    permitido = edicion_permitida(inv_id, conn)
+    cursor = conn.cursor()
+    permitido = edicion_permitida(inv_id, cursor)
+    cursor.close()
     conn.close()
 
     if not permitido:
@@ -346,17 +373,19 @@ def eliminar_invitado_cliente(pase_id):
     
     inv_id = session['cliente_inv_id']
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        if not edicion_permitida(inv_id, conn):
+        if not edicion_permitida(inv_id, cursor):
             flash("La edicion esta bloqueada para este evento.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
-        conn.execute("DELETE FROM pases_invitados WHERE id = ? AND invitacion_id = ?", (pase_id, inv_id))
+        cursor.execute("DELETE FROM pases_invitados WHERE id = %s AND invitacion_id = %s", (pase_id, inv_id))
         conn.commit()
         flash("Invitado eliminado correctamente.", "success")
     except Exception as e:
         flash("Error al eliminar.", "danger")
     finally:
+        cursor.close()
         conn.close()
     return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
 
@@ -375,15 +404,18 @@ def descargar_fotos_cliente():
         
     inv_id = session['cliente_inv_id']
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        inv = conn.execute("SELECT slug FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+        cursor.execute("SELECT slug FROM invitaciones WHERE id = %s", (inv_id,))
+        inv = cursor.fetchone()
         
         # Blindaje: Si la invitacion fue purgada, aborta limpiamente
         if not inv:
             flash("Evento no encontrado.", "danger")
             return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
             
-        fotos = conn.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = ?", (inv_id,)).fetchall()
+        cursor.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = %s", (inv_id,))
+        fotos = cursor.fetchall()
 
         if not fotos:
             flash("No hay fotos para descargar.", "warning")
@@ -414,6 +446,7 @@ def descargar_fotos_cliente():
         flash(f"Error general al descargar fotos: {str(e)}", "danger")
         return redirect(url_for('invitaciones_clientes.dashboard_cliente'))
     finally:
+        cursor.close()
         conn.close()
 
 # ==============================================================================

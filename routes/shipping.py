@@ -1,7 +1,7 @@
 import requests
 import re
 from flask import Blueprint, request, jsonify, session, current_app
-from services.shipping_service import ShippingService
+from services.shipping_service import ShippingService, obtener_coordenadas_universales
 
 shipping_bp = Blueprint('shipping', __name__)
 
@@ -51,8 +51,12 @@ def cotizar():
         # Retornamos el error real temporalmente para ayudarte a depurar si falla la DB
         return jsonify({"error": f"Fallo en el servicio: {str(e)}"}), 500
 
+
 @shipping_bp.route('/api/resolver-mapa', methods=['POST'])
 def resolver_mapa():
+    """
+    Ruta API para que el frontend envíe un link y reciba las coordenadas.
+    """
     data = request.json
     url = data.get('url')
     
@@ -60,53 +64,19 @@ def resolver_mapa():
         return jsonify({"error": "No se envió ningún link"}), 400
 
     try:
-        # Headers para parecer un navegador real
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-        }
-        
-        # Intentamos seguir el link
-        # timeout=10 evita que se quede colgado eternamente
-        response = requests.get(url, headers=headers, allow_redirects=True, timeout=10)
-        url_final = response.url
-        
-        # Logueamos la resolución del mapa en una sola línea
-        current_app.logger.info(f"MAPS_RESOLVE: Original -> {url} | Final -> {url_final}")
+        # Usamos nuestra nueva función "Universal" desde el servicio
+        lat, lng = obtener_coordenadas_universales(url)
 
-        # 1. Búsqueda Estándar (@lat,lng)
-        match = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', url_final)
-        if match:
+        if lat and lng:
             return jsonify({
                 "success": True, 
-                "lat": match.group(1), 
-                "lng": match.group(2),
-                "debug_url": url_final
+                "lat": lat, 
+                "lng": lng
             })
-        
-        # 2. Búsqueda Secundaria (?q=lat,lng)
-        match_q = re.search(r'q=(-?\d+\.\d+),(-?\d+\.\d+)', url_final)
-        if match_q:
+        else:
              return jsonify({
-                "success": True, 
-                "lat": match_q.group(1), 
-                "lng": match_q.group(2),
-                "debug_url": url_final
-            })
-        
-        # 3. Búsqueda Terciaria (!3dlat!4dlng) - A veces Google usa este formato raro
-        match_3d = re.search(r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)', url_final)
-        if match_3d:
-             return jsonify({
-                "success": True, 
-                "lat": match_3d.group(1), 
-                "lng": match_3d.group(2),
-                "debug_url": url_final
-            })
-
-        # Si llegamos aquí, conectamos bien pero el Regex falló
-        return jsonify({
-            "error": f"Conexión OK, pero no hallé coordenadas. URL final: {url_final[:60]}..."
-        }), 400
+                "error": "No pude encontrar coordenadas válidas en ese link. Por favor revisa que sea un link válido de Google Maps."
+            }), 400
 
     except Exception as e:
         # Devolvemos el error real (str(e)) para verlo en la alerta

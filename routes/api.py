@@ -16,10 +16,13 @@ def obtener_material(id):
         return jsonify({'error': 'No autorizado'}), 401
 
     conn = get_db()
-    material = conn.execute(
-        'SELECT * FROM materiales WHERE id = ? AND user_id = ?',
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT * FROM materiales WHERE id = %s AND user_id = %s',
         (id, session['user_id'])
-    ).fetchone()
+    )
+    material = cursor.fetchone()
+    cursor.close()
     conn.close()
 
     if not material:
@@ -29,7 +32,7 @@ def obtener_material(id):
         'id': material['id'],
         'nombre': material['nombre'],
         'precio': material['precio_unitario'],
-        'tipo': material['tipo_entrada']
+        'tipo': material['tipo_entrada'] # Asegúrate de que esta columna exista en tu tabla actual
     })
 
 
@@ -39,29 +42,35 @@ def obtener_receta(id):
         return jsonify({'error': 'No autorizado'}), 401
 
     conn = get_db()
-    producto = conn.execute(
-        'SELECT * FROM productos WHERE id = ? AND user_id = ?',
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT * FROM productos WHERE id = %s AND user_id = %s',
         (id, session['user_id'])
-    ).fetchone()
+    )
+    producto = cursor.fetchone()
 
     if not producto:
+        cursor.close()
         conn.close()
         return jsonify({'error': 'Receta no encontrada'}), 404
 
-    detalles = conn.execute('''
+    cursor.execute('''
         SELECT m.id, m.nombre, m.precio_unitario, pd.cantidad
         FROM producto_detalles pd
         JOIN materiales m ON pd.material_id = m.id
-        WHERE pd.producto_id = ?
-    ''', (id,)).fetchall()
+        WHERE pd.producto_id = %s
+    ''', (id,))
+    detalles = cursor.fetchall()
 
-    maquinaria = conn.execute('''
+    cursor.execute('''
         SELECT mq.id, mq.nombre, mq.costo_desgaste
         FROM producto_maquinaria pm
         JOIN maquinaria mq ON pm.maquinaria_id = mq.id
-        WHERE pm.producto_id = ?
-    ''', (id,)).fetchall()
+        WHERE pm.producto_id = %s
+    ''', (id,))
+    maquinaria = cursor.fetchall()
 
+    cursor.close()
     conn.close()
 
     return jsonify({
@@ -82,20 +91,25 @@ def obtener_detalles_venta(id):
         return jsonify({'error': 'No autorizado'}), 401
 
     conn = get_db()
-    venta = conn.execute(
-        'SELECT * FROM ventas WHERE id = ? AND user_id = ?',
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT * FROM ventas WHERE id = %s AND user_id = %s',
         (id, session['user_id'])
-    ).fetchone()
+    )
+    venta = cursor.fetchone()
 
     if not venta:
+        cursor.close()
         conn.close()
         return jsonify({'success': False, 'message': 'No encontrado'}), 404
 
-    detalles = conn.execute(
-        'SELECT * FROM venta_detalles WHERE venta_id = ?',
+    cursor.execute(
+        'SELECT * FROM venta_detalles WHERE venta_id = %s',
         (id,)
-    ).fetchall()
+    )
+    detalles = cursor.fetchall()
 
+    cursor.close()
     conn.close()
 
     items = [{
@@ -122,7 +136,7 @@ def obtener_detalles_venta(id):
 
 
 @api_bp.route('/actualizar_venta', methods=['POST'])
-@login_required # Usamos tu decorador en lugar de revisar la sesión a mano
+@login_required 
 def actualizar_venta():
     data = request.get_json()
     venta_id = data.get('id')
@@ -141,10 +155,11 @@ def actualizar_venta():
     cursor = conn.cursor()
 
     try:
-        venta = cursor.execute(
-            'SELECT total, monto_pagado FROM ventas WHERE id = ? AND user_id = ?',
+        cursor.execute(
+            'SELECT total, monto_pagado FROM ventas WHERE id = %s AND user_id = %s',
             (venta_id, session['user_id'])
-        ).fetchone()
+        )
+        venta = cursor.fetchone()
 
         if not venta:
             return jsonify({'success': False, 'error': 'Venta no encontrada'}), 404
@@ -167,8 +182,8 @@ def actualizar_venta():
 
         cursor.execute('''
             UPDATE ventas
-            SET monto_pagado = ?, saldo_pendiente = ?, estado = ?
-            WHERE id = ?
+            SET monto_pagado = %s, saldo_pendiente = %s, estado = %s
+            WHERE id = %s
         ''', (nuevo_pagado, nuevo_saldo, estado, venta_id))
 
         conn.commit()
@@ -182,6 +197,7 @@ def actualizar_venta():
         conn.rollback()
         return jsonify({'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
 
 
@@ -196,10 +212,11 @@ def cancelar_venta():
 
     try:
         # 1. BLINDAJE: Verificar si la venta existe y su estado actual
-        venta = cursor.execute(
-            'SELECT estado FROM ventas WHERE id = ? AND user_id = ?',
+        cursor.execute(
+            'SELECT estado FROM ventas WHERE id = %s AND user_id = %s',
             (venta_id, session['user_id'])
-        ).fetchone()
+        )
+        venta = cursor.fetchone()
 
         if not venta:
             return jsonify({'success': False, 'error': 'Venta no encontrada'}), 404
@@ -209,12 +226,14 @@ def cancelar_venta():
             return jsonify({'success': False, 'error': 'La venta ya estaba cancelada'}), 400
 
         # 2. REGLA DE NEGOCIO: ¿Tiene el inventario activo?
-        config = cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=?', (session['user_id'],)).fetchone()
-        usar_inventario = config['inventario_activo'] if config else 0
+        cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=%s', (session['user_id'],))
+        config = cursor.fetchone()
+        usar_inventario = config['inventario_activo'] if config else False # Postgres devuelve booleanos
 
         # 3. DEVOLUCIÓN DE INVENTARIO (Solo si lo tiene activo)
         if usar_inventario:
-            detalles = cursor.execute('SELECT cantidad, composicion FROM venta_detalles WHERE venta_id = ?', (venta_id,)).fetchall()
+            cursor.execute('SELECT cantidad, composicion FROM venta_detalles WHERE venta_id = %s', (venta_id,))
+            detalles = cursor.fetchall()
             
             materiales_a_devolver = {}
             
@@ -242,17 +261,17 @@ def cancelar_venta():
             for mat_id, total_devolucion in materiales_a_devolver.items():
                 cursor.execute('''
                     UPDATE materiales 
-                    SET stock_actual = stock_actual + ? 
-                    WHERE id = ?
+                    SET stock_actual = stock_actual + %s 
+                    WHERE id = %s
                 ''', (total_devolucion, mat_id))
                 
                 # Dejamos la huella de auditoría
                 cursor.execute('''
                     INSERT INTO movimientos_inventario 
                     (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
-                    VALUES (?, ?, 'entrada', ?, ?, 
-                        (SELECT stock_actual FROM materiales WHERE id=?),
-                        ?
+                    VALUES (%s, %s, 'entrada', %s, %s, 
+                        (SELECT stock_actual FROM materiales WHERE id=%s),
+                        %s
                     )
                 ''', (
                     session['user_id'],
@@ -263,9 +282,9 @@ def cancelar_venta():
                     ahora_sql()
                 ))
 
-        # 4. Finalmente, cambiamos el estatus de la venta
+        # 4. Finalmente, cambiamos el estatus de la venta (Corregido a comillas simples)
         cursor.execute(
-            'UPDATE ventas SET estado = "cancelada" WHERE id = ? AND user_id = ?',
+            "UPDATE ventas SET estado = 'cancelada' WHERE id = %s AND user_id = %s",
             (venta_id, session['user_id'])
         )
         
@@ -282,4 +301,5 @@ def cancelar_venta():
         current_app.logger.error(f"Error al cancelar venta {venta_id}: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()

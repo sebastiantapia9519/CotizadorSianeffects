@@ -140,6 +140,7 @@ def delete_from_cloudflare(url_publica):
             
         except Exception as e:
             logging.error(f"R2_DELETE_ERROR: Fallo crítico al borrar el archivo '{file_key}' de R2 - {e}")
+            current_app.logger.error(f"R2_DELETE_ERROR: Fallo crítico al borrar el archivo '{file_key}' de R2 - {e}")
             return False
             
     return False

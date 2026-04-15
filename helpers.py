@@ -49,7 +49,10 @@ def subscription_required(f):
 
         # 2. Si es un usuario mortal (Rol 0), entonces sí revisamos la BD
         conn = get_db_connection()
-        user = conn.execute('SELECT subscription_end, role FROM usuarios WHERE id = ?', (session['user_id'],)).fetchone()
+        cursor = conn.cursor()
+        cursor.execute('SELECT subscription_end, role FROM usuarios WHERE id = %s', (session['user_id'],))
+        user = cursor.fetchone()
+        cursor.close()
         conn.close()
 
         if not user:
@@ -83,6 +86,7 @@ def subscription_required(f):
         except Exception as e:
             logging.error(f"AUTH_DATE_ERROR: Fallo al verificar fecha de subscripción para user {session.get('user_id')} - {e}")
             # Considerar si quieres bloquear el acceso si hay un error en la fecha
+            current_app.logger.error(f"AUTH_DATE_ERROR: Fallo al verificar fecha de subscripción para user {session.get('user_id')} - {e}")
             pass
 
         return f(*args, **kwargs)
@@ -97,17 +101,20 @@ def obtener_alertas(user_id):
     """
     alertas = []
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     try:
         # 1. REVISAR STOCK (Para todos los que tengan inventario activo)
-        config = conn.execute("SELECT inventario_activo FROM configuracion WHERE user_id=?", (user_id,)).fetchone()
+        cursor.execute("SELECT inventario_activo FROM configuracion WHERE user_id=%s", (user_id,))
+        config = cursor.fetchone()
         
         if config and config['inventario_activo']:
-            bajos = conn.execute("""
+            cursor.execute("""
                 SELECT nombre, stock_actual, stock_minimo 
                 FROM materiales 
-                WHERE user_id=? AND stock_actual <= stock_minimo
-            """, (user_id,)).fetchall()
+                WHERE user_id=%s AND stock_actual <= stock_minimo
+            """, (user_id,))
+            bajos = cursor.fetchall()
             
             for mat in bajos:
                 color = 'danger' if mat['stock_actual'] <= 0 else 'warning'
@@ -119,7 +126,8 @@ def obtener_alertas(user_id):
                 })
 
         # 2. REVISAR SUSCRIPCIÓN (SOLO PARA MORTALES - ROL 0)
-        user = conn.execute("SELECT subscription_end, role FROM usuarios WHERE id=?", (user_id,)).fetchone()
+        cursor.execute("SELECT subscription_end, role FROM usuarios WHERE id=%s", (user_id,))
+        user = cursor.fetchone()
         
         # El filtro user['role'] == 0 asegura que a TI no te salgan avisos de pago
         if user and user['role'] == 0 and user['subscription_end']:
@@ -146,7 +154,9 @@ def obtener_alertas(user_id):
 
     except Exception as e:
         logging.error(f"ALERT_FETCH_ERROR: Fallo general obteniendo alertas para user {user_id} - {e}")
+        current_app.logger.error(f"ALERT_FETCH_ERROR: Fallo general obteniendo alertas para user {user_id} - {e}")
     finally:
+        cursor.close()
         conn.close()
         
     return alertas
@@ -177,22 +187,23 @@ def guardar_pase_bd(inv_id, form_data, pase_id=None):
     nombres_json = json.dumps([n for n in nombres_lista if n.strip()]) if nombres_lista else None
 
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
         if pase_id:
             # MODO EDICIÓN
-            conn.execute("""
+            cursor.execute("""
                 UPDATE pases_invitados 
-                SET nombre_familia=?, pases_totales=?, telefono=?, mesa=?, nombres_acompanantes_json=?
-                WHERE id=? AND invitacion_id=?
+                SET nombre_familia=%s, pases_totales=%s, telefono=%s, mesa=%s, nombres_acompanantes_json=%s
+                WHERE id=%s AND invitacion_id=%s
             """, (nombre_familia, pases, telefono, mesa, nombres_json, pase_id, inv_id))
             mensaje = f"Datos de {nombre_familia} actualizados."
         else:
             # MODO CREACIÓN
             codigo_unico = str(uuid.uuid4())[:8].upper()
-            conn.execute("""
+            cursor.execute("""
                 INSERT INTO pases_invitados 
                 (invitacion_id, nombre_familia, pases_totales, codigo_qr_unique, telefono, mesa, nombres_acompanantes_json) 
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (inv_id, nombre_familia, pases, codigo_unico, telefono, mesa, nombres_json))
             mensaje = f"Pase para {nombre_familia} generado con éxito."
             
@@ -202,6 +213,7 @@ def guardar_pase_bd(inv_id, form_data, pase_id=None):
         conn.rollback()
         return False, str(e)
     finally:
+        cursor.close()
         conn.close()
 
 def obtener_estado_mesas(inv_id):
@@ -210,8 +222,10 @@ def obtener_estado_mesas(inv_id):
     Retorna una lista de diccionarios con: nombre, capacidad, ocupados y disponibles.
     """
     conn = get_db_connection()
+    cursor = conn.cursor()
     try:
-        inv = conn.execute("SELECT mesas_json FROM invitaciones WHERE id = ?", (inv_id,)).fetchone()
+        cursor.execute("SELECT mesas_json FROM invitaciones WHERE id = %s", (inv_id,))
+        inv = cursor.fetchone()
         
         # Leemos la configuración de mesas (si está vacío, devuelve lista vacía)
         mesas_config = []
@@ -222,12 +236,13 @@ def obtener_estado_mesas(inv_id):
                 pass
         
         # Contamos cuántos pases totales están asignados a cada mesa
-        ocupacion_db = conn.execute("""
+        cursor.execute("""
             SELECT mesa, SUM(pases_totales) as ocupados 
             FROM pases_invitados 
-            WHERE invitacion_id = ? AND mesa != '0' AND mesa IS NOT NULL AND mesa != ''
+            WHERE invitacion_id = %s AND mesa != '0' AND mesa IS NOT NULL AND mesa != ''
             GROUP BY mesa
-        """, (inv_id,)).fetchall()
+        """, (inv_id,))
+        ocupacion_db = cursor.fetchall()
         
         # Convertimos a un diccionario fácil de leer: {'1': 8, 'VIP': 10}
         ocupacion = {str(row['mesa']).strip(): row['ocupados'] for row in ocupacion_db}
@@ -248,6 +263,8 @@ def obtener_estado_mesas(inv_id):
         return resultado
     except Exception as e:
         logging.error(f"TABLE_CALC_ERROR: Fallo calculando estado de mesas para invitación {inv_id} - {e}")
+        current_app.logger.error(f"TABLE_CALC_ERROR: Fallo calculando estado de mesas para invitación {inv_id} - {e}")
         return []
     finally:
+        cursor.close()
         conn.close()

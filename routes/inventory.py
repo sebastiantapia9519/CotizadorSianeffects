@@ -20,6 +20,7 @@ def materiales():
     # --- LÓGICA PARA GUARDAR O EDITAR (MÉTODO POST) ---
     if request.method == 'POST':
         conn = get_db()
+        cursor = conn.cursor()
         try:
             # Recibimos los datos del formulario del modal
             id_actualizar = request.form.get('id_actualizar')
@@ -29,15 +30,17 @@ def materiales():
             
             # Validación de duplicados: revisamos que el nombre no exista ya para este usuario
             if id_actualizar:
-                duplicado = conn.execute(
-                    "SELECT id FROM materiales WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", 
+                cursor.execute(
+                    "SELECT id FROM materiales WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s AND id != %s", 
                     (nombre, user_id, id_actualizar)
-                ).fetchone()
+                )
             else:
-                duplicado = conn.execute(
-                    "SELECT id FROM materiales WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", 
+                cursor.execute(
+                    "SELECT id FROM materiales WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s", 
                     (nombre, user_id)
-                ).fetchone()
+                )
+            
+            duplicado = cursor.fetchone()
 
             if duplicado:
                 return f"""
@@ -70,20 +73,20 @@ def materiales():
             except ValueError:
                 stock_minimo = 5.0
             
-            # Calculamos el precio unitario
-            es_paquete = 1 if tipo == 'paquete' else 0
+            # Calculamos el precio unitario y ajustamos booleano para Postgres
+            es_paquete = True if tipo == 'paquete' else False
             precio_unitario = (precio_compra / cantidad_paquete) if cantidad_paquete > 0 else 0
 
             if id_actualizar:
-                conn.execute("""
+                cursor.execute("""
                     UPDATE materiales 
-                    SET nombre=?, es_paquete=?, precio_compra=?, cantidad_paquete=?, precio_unitario=?, unidad_medida=?, stock_minimo=?
-                    WHERE id=? AND user_id=?
+                    SET nombre=%s, es_paquete=%s, precio_compra=%s, cantidad_paquete=%s, precio_unitario=%s, unidad_medida=%s, stock_minimo=%s
+                    WHERE id=%s AND user_id=%s
                 """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo, id_actualizar, user_id))
             else:
-                conn.execute("""
+                cursor.execute("""
                     INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo))
             
             conn.commit()
@@ -93,22 +96,29 @@ def materiales():
             current_app.logger.error(f"MATERIAL_SAVE_ERROR: Fallo al guardar material para usuario {user_id} - {e}")
             return f"Error al guardar: {e}"
         finally:
+            cursor.close()
             conn.close()
 
     # --- LÓGICA PARA CARGAR LA VISTA (MÉTODO GET) ---
     conn = get_db()
-    rows = conn.execute("SELECT * FROM materiales WHERE user_id = ?", (user_id,)).fetchall()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM materiales WHERE user_id = %s", (user_id,))
+    rows = cursor.fetchall()
     materiales_lista = [dict(row) for row in rows]
     
-    config_row = conn.execute("SELECT * FROM configuracion WHERE user_id = ?", (user_id,)).fetchone()
+    cursor.execute("SELECT * FROM configuracion WHERE user_id = %s", (user_id,))
+    config_row = cursor.fetchone()
+    
     if config_row:
         config_dict = dict(config_row)
     else:
-        user_info = conn.execute("SELECT company_name FROM usuarios WHERE id = ?", (user_id,)).fetchone()
+        cursor.execute("SELECT company_name FROM usuarios WHERE id = %s", (user_id,))
+        user_info = cursor.fetchone()
         config_dict = {
             'nombre_empresa': user_info['company_name'] if user_info['company_name'] else 'Mi Negocio',
-            'inventario_activo': 0
+            'inventario_activo': False
         }
+    cursor.close()
     conn.close()
 
     # 💡 LÓGICA DEL TUTORIAL
@@ -125,8 +135,10 @@ def materiales():
 @login_required
 def eliminar_material(id):
     conn = get_db()
-    conn.execute("DELETE FROM materiales WHERE id=? AND user_id=?", (id, session['user_id']))
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM materiales WHERE id=%s AND user_id=%s", (id, session['user_id']))
     conn.commit()
+    cursor.close()
     conn.close()
     return redirect(url_for('inventory.materiales'))
 
@@ -139,16 +151,20 @@ def equipos():
     user_id = session['user_id']
     if request.method == 'POST':
         conn = get_db()
+        cursor = conn.cursor()
         try:
             id_actualizar = request.form.get('id_actualizar')
             nombre = request.form.get('nombre', '').strip()
             
             if id_actualizar:
-                duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", (nombre, user_id, id_actualizar)).fetchone()
+                cursor.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s AND id != %s", (nombre, user_id, id_actualizar))
             else:
-                duplicado = conn.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", (nombre, user_id)).fetchone()
+                cursor.execute("SELECT id FROM maquinaria WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s", (nombre, user_id))
+            
+            duplicado = cursor.fetchone()
             
             if duplicado:
+                cursor.close()
                 conn.close()
                 return f"""
                 <body style="background-color: #f8f9fa;">
@@ -175,10 +191,10 @@ def equipos():
                 costo_desgaste = 0
 
             if id_actualizar:
-                conn.execute("UPDATE maquinaria SET nombre=?, costo_desgaste=? WHERE id=? AND user_id=?", 
+                cursor.execute("UPDATE maquinaria SET nombre=%s, costo_desgaste=%s WHERE id=%s AND user_id=%s", 
                              (nombre, costo_desgaste, id_actualizar, user_id))
             else:
-                conn.execute("INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (?, ?, ?)", 
+                cursor.execute("INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (%s, %s, %s)", 
                              (user_id, nombre, costo_desgaste))
             
             conn.commit()
@@ -188,11 +204,15 @@ def equipos():
             current_app.logger.error(f"EQUIPMENT_SAVE_ERROR: Fallo al guardar equipo para usuario {user_id} - {e}")
             return f"Error al procesar equipo: {e}"
         finally:
+            cursor.close()
             conn.close()
 
     # --- MÉTODO GET ---
     conn = get_db()
-    rows = conn.execute("SELECT * FROM maquinaria WHERE user_id = ?", (user_id,)).fetchall()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM maquinaria WHERE user_id = %s", (user_id,))
+    rows = cursor.fetchall()
+    cursor.close()
     conn.close()
     equipos_lista = [dict(row) for row in rows]
 
@@ -209,8 +229,10 @@ def equipos():
 @login_required
 def eliminar_equipo(id):
     conn = get_db()
-    conn.execute('DELETE FROM maquinaria WHERE id=? AND user_id=?', (id, session['user_id']))
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM maquinaria WHERE id=%s AND user_id=%s', (id, session['user_id']))
     conn.commit()
+    cursor.close()
     conn.close()
     return redirect(url_for('inventory.equipos', eliminado='true'))
 
@@ -224,17 +246,20 @@ def recetas():
     user_id = session['user_id']
     if request.method == 'POST':
         conn = get_db()
+        cursor = conn.cursor()
         try:
             id_actualizar = request.form.get('id_actualizar')
             nombre = request.form.get('nombre', '').strip()
             
             if id_actualizar and nombre:
-                duplicado = conn.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(?) AND user_id = ? AND id != ?", (nombre, user_id, id_actualizar)).fetchone()
+                cursor.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s AND id != %s", (nombre, user_id, id_actualizar))
+                duplicado = cursor.fetchone()
                 if duplicado:
+                    cursor.close()
                     conn.close()
                     return f"Error: Ya existe una receta llamada '{nombre}'"
 
-                conn.execute("UPDATE productos SET nombre=? WHERE id=? AND user_id=?", (nombre, id_actualizar, user_id))
+                cursor.execute("UPDATE productos SET nombre=%s WHERE id=%s AND user_id=%s", (nombre, id_actualizar, user_id))
                 conn.commit()
             
             return redirect(url_for('inventory.recetas', renombrada='true'))
@@ -242,27 +267,31 @@ def recetas():
             current_app.logger.error(f"RECIPE_SAVE_ERROR: Fallo al guardar receta para usuario {user_id} - {e}")
             return f"Error al actualizar: {e}"
         finally:
+            cursor.close()
             conn.close()
 
     # --- MÉTODO GET ---
     conn = get_db()
+    cursor = conn.cursor()
     try:
         query = """SELECT p.id, p.nombre, COUNT(pd.id) as num_materiales 
                    FROM productos p 
                    LEFT JOIN producto_detalles pd ON p.id=pd.producto_id 
-                   WHERE p.user_id=? 
+                   WHERE p.user_id=%s 
                    GROUP BY p.id"""
-        recetas_db = conn.execute(query, (user_id,)).fetchall()
+        cursor.execute(query, (user_id,))
+        recetas_db = cursor.fetchall()
         
         recetas_lista = []
         for r in recetas_db:
             receta_dict = dict(r)
-            detalles = conn.execute("""
+            cursor.execute("""
                 SELECT m.nombre, pd.cantidad 
                 FROM producto_detalles pd
                 JOIN materiales m ON pd.material_id = m.id
-                WHERE pd.producto_id = ?
-            """, (receta_dict['id'],)).fetchall()
+                WHERE pd.producto_id = %s
+            """, (receta_dict['id'],))
+            detalles = cursor.fetchall()
             
             receta_dict['ingredientes_reales'] = json.dumps([dict(d) for d in detalles])
             recetas_lista.append(receta_dict)
@@ -271,6 +300,7 @@ def recetas():
         current_app.logger.error(f"RECIPE_LOAD_ERROR: Fallo al cargar recetas para usuario {user_id} - {e}")
         recetas_lista = []
     finally:
+        cursor.close()
         conn.close()
 
     # 💡 LÓGICA DEL TUTORIAL
@@ -291,19 +321,26 @@ def guardar_receta():
         return jsonify({'error': 'Datos incompletos'}), 400
 
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        duplicado = conn.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(?) AND user_id = ?", (nombre_receta, session['user_id'])).fetchone()
+        cursor.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s", (nombre_receta, session['user_id']))
+        duplicado = cursor.fetchone()
         if duplicado:
             return jsonify({'error': f'Ya existe una receta llamada "{nombre_receta}".'}), 400
 
         items_json = json.dumps(data.get('materiales', []))
-        cur = conn.execute("INSERT INTO productos (user_id, nombre, items) VALUES (?, ?, ?)", (session['user_id'], nombre_receta, items_json))
-        pid = cur.lastrowid
+        
+        # POSTGRESQL: RETURNING id en lugar de lastrowid
+        cursor.execute("INSERT INTO productos (user_id, nombre, items) VALUES (%s, %s, %s) RETURNING id", 
+                       (session['user_id'], nombre_receta, items_json))
+        pid = cursor.fetchone()['id']
 
         for m in data.get('materiales', []):
-            conn.execute("INSERT INTO producto_detalles (producto_id, material_id, cantidad) VALUES (?, ?, ?)", (pid, m['id'], float(m.get('cantidad', 0))))
+            cursor.execute("INSERT INTO producto_detalles (producto_id, material_id, cantidad) VALUES (%s, %s, %s)", 
+                           (pid, m['id'], float(m.get('cantidad', 0))))
         for e in data.get('maquinaria', []):
-            conn.execute("INSERT INTO producto_maquinaria (producto_id, maquinaria_id) VALUES (?, ?)", (pid, e['id']))
+            cursor.execute("INSERT INTO producto_maquinaria (producto_id, maquinaria_id) VALUES (%s, %s)", 
+                           (pid, e['id']))
 
         conn.commit()
         current_app.logger.info(f"RECIPE_CREATED: Usuario {session.get('user_id')} creó la receta '{nombre_receta}' (ID: {pid})")
@@ -313,21 +350,24 @@ def guardar_receta():
         current_app.logger.error(f"RECIPE_SAVE_ERROR: Usuario {session.get('user_id')} falló al guardar receta - {e}") 
         return jsonify({'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
 
 @inventory_bp.route('/recetas/eliminar/<int:id>')
 @login_required
 def eliminar_receta(id):
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        conn.execute("DELETE FROM producto_detalles WHERE producto_id=?", (id,))
-        conn.execute("DELETE FROM producto_maquinaria WHERE producto_id=?", (id,))
-        conn.execute("DELETE FROM productos WHERE id=? AND user_id=?", (id, session['user_id']))
+        cursor.execute("DELETE FROM producto_detalles WHERE producto_id=%s", (id,))
+        cursor.execute("DELETE FROM producto_maquinaria WHERE producto_id=%s", (id,))
+        cursor.execute("DELETE FROM productos WHERE id=%s AND user_id=%s", (id, session['user_id']))
         conn.commit()
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"RECIPE_DELETE_ERROR: Fallo al eliminar receta para usuario {session.get('user_id')} - {e}")
     finally:
+        cursor.close()
         conn.close()
     return redirect(url_for('inventory.recetas', eliminada='true'))
 
@@ -350,8 +390,10 @@ def registrar_compra():
         return jsonify({'success': False, 'error': 'Datos inválidos o negativos'}), 400
 
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        mat = conn.execute("SELECT * FROM materiales WHERE id=? AND user_id=?", (material_id, session['user_id'])).fetchone()
+        cursor.execute("SELECT * FROM materiales WHERE id=%s AND user_id=%s", (material_id, session['user_id']))
+        mat = cursor.fetchone()
         if not mat:
             return jsonify({'success': False, 'error': 'Material no encontrado'}), 404
 
@@ -362,30 +404,31 @@ def registrar_compra():
         else:
             cantidad_a_sumar = cantidad_compra 
 
-        sql_update = "UPDATE materiales SET stock_actual = stock_actual + ?"
+        # Construcción dinámica con %s
+        sql_update = "UPDATE materiales SET stock_actual = stock_actual + %s"
         params = [cantidad_a_sumar]
 
         if nuevo_precio > 0:
             nuevo_unitario = nuevo_precio / cantidad_a_sumar
             if tipo_ingreso == 'paquete':
-                sql_update += ", precio_compra = ?"
+                sql_update += ", precio_compra = %s"
                 params.append(nuevo_precio)
                 
-            sql_update += ", precio_unitario = ?"
+            sql_update += ", precio_unitario = %s"
             params.append(nuevo_unitario)
 
-        sql_update += " WHERE id = ?"
+        sql_update += " WHERE id = %s"
         params.append(material_id)
 
-        conn.execute(sql_update, params)
+        cursor.execute(sql_update, params)
 
         try:
-            conn.execute("""
+            cursor.execute("""
                 INSERT INTO movimientos_inventario 
                 (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
-                VALUES (?, ?, 'entrada', ?, 'Compra / Ajuste',
-                    (SELECT stock_actual FROM materiales WHERE id=?),
-                    ?
+                VALUES (%s, %s, 'entrada', %s, 'Compra / Ajuste',
+                    (SELECT stock_actual FROM materiales WHERE id=%s),
+                    %s
                 )
             """, (
                 session['user_id'],
@@ -407,6 +450,7 @@ def registrar_compra():
         current_app.logger.error(f"STOCK_ADD_ERROR: Fallo al agregar stock para usuario {session.get('user_id')} - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
 
 # =========================
@@ -427,9 +471,11 @@ def registrar_merma():
         return jsonify({'success': False, 'error': 'Datos inválidos o cantidad negativa'}), 400
 
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        mat = conn.execute("SELECT stock_actual FROM materiales WHERE id=? AND user_id=?", 
-                           (material_id, session['user_id'])).fetchone()
+        cursor.execute("SELECT stock_actual FROM materiales WHERE id=%s AND user_id=%s", 
+                       (material_id, session['user_id']))
+        mat = cursor.fetchone()
         
         if not mat:
             return jsonify({'success': False, 'error': 'Material no encontrado'}), 404
@@ -437,16 +483,16 @@ def registrar_merma():
         if mat['stock_actual'] < cantidad_merma:
             return jsonify({'success': False, 'error': f"Stock insuficiente. Tienes {mat['stock_actual']}"}), 400
 
-        conn.execute("UPDATE materiales SET stock_actual = stock_actual - ? WHERE id = ?", 
-                     (cantidad_merma, material_id))
+        cursor.execute("UPDATE materiales SET stock_actual = stock_actual - %s WHERE id = %s", 
+                       (cantidad_merma, material_id))
 
         try:
-            conn.execute("""
+            cursor.execute("""
                 INSERT INTO movimientos_inventario 
                 (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
-                VALUES (?, ?, 'salida', ?, 'Merma / Ajuste Manual',
-                    (SELECT stock_actual FROM materiales WHERE id=?),
-                    ?
+                VALUES (%s, %s, 'salida', %s, 'Merma / Ajuste Manual',
+                    (SELECT stock_actual FROM materiales WHERE id=%s),
+                    %s
                 )
             """, (
                 session['user_id'],
@@ -467,6 +513,7 @@ def registrar_merma():
         current_app.logger.error(f"MERMA_SAVE_ERROR: Fallo al guardar merma para usuario {session.get('user_id')} - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
 
 # =========================
@@ -479,20 +526,23 @@ def obtener_historial():
     limit = request.args.get('limit', 20, type=int)
     
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        rows = conn.execute("""
+        cursor.execute("""
             SELECT mi.tipo, mi.cantidad, mi.motivo, mi.stock_resultante, mi.fecha, 
                    m.nombre as material_nombre, m.unidad_medida
             FROM movimientos_inventario mi
             JOIN materiales m ON mi.material_id = m.id
-            WHERE mi.user_id = ?
+            WHERE mi.user_id = %s
             ORDER BY mi.fecha DESC
-            LIMIT ? OFFSET ?
-        """, (session['user_id'], limit, offset)).fetchall()
+            LIMIT %s OFFSET %s
+        """, (session['user_id'], limit, offset))
+        rows = cursor.fetchall()
         
         return jsonify([dict(row) for row in rows])
     except Exception as e:
         current_app.logger.error(f"HISTORIAL_LOAD_ERROR: Fallo al cargar historial para usuario {session.get('user_id')} - {e}")
         return jsonify({'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()

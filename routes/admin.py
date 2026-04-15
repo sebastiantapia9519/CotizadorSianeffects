@@ -10,7 +10,6 @@ from datetime import datetime, timedelta, timezone
 from db import get_db_connection as get_db
 from helpers import admin_required
 from utils.datetime_utils import now_utc, utc_to_local 
-# 👇 NUEVO: Importamos tu servicio de limpieza de Cloudflare
 from services.cloudflare_service import delete_from_cloudflare
 
 admin_bp = Blueprint('admin', __name__)
@@ -20,17 +19,18 @@ admin_bp = Blueprint('admin', __name__)
 def dashboard():
     # 1. Datos de la base de datos
     conn = get_db()
-    users = conn.execute('SELECT * FROM usuarios ORDER BY created_at DESC').fetchall()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM usuarios ORDER BY created_at DESC')
+    users = cursor.fetchall()
+    cursor.close()
     conn.close()
     
-    # 2. Configuración de tiempos LOCALES (Tu hora de Monterrey/CDMX)
+    # 2. Configuración de tiempos LOCALES
     ahora_utc = now_utc()
     ahora_local = utc_to_local(ahora_utc) 
     
     # Definimos la ventana de 24 horas en tu tiempo local
     hace_24h_local = ahora_local - timedelta(days=1)
-    
-    # Formateamos para las etiquetas del HTML
     hace_24h_str = hace_24h_local.strftime('%Y-%m-%d %H:%M')
     
     # Umbral de riesgo (350 días atrás)
@@ -55,12 +55,10 @@ def dashboard():
         # Lógica de Suscripción
         if u['subscription_end']:
             try:
-                # BLINDAJE SQLITE/POSTGRES: Si ya es datetime (Postgres), lo usamos. Si es texto (SQLite), lo parseamos.
                 f_end = u['subscription_end']
                 if isinstance(f_end, str):
                     f_utc = datetime.strptime(f_end[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
                 else:
-                    # Asumimos que es objeto datetime nativo (Postgres)
                     f_utc = f_end if f_end.tzinfo else f_end.replace(tzinfo=timezone.utc)
                     
                 f_local = utc_to_local(f_utc)
@@ -69,7 +67,6 @@ def dashboard():
                     stats['activos'] += 1
                 else:
                     stats['vencidos'] += 1
-                    # Riesgo de borrado (12 meses)
                     if u['role'] == 0 and f_local < proximos_a_borrar_local:
                         stats['en_riesgo'] += 1
             except Exception as e:
@@ -89,7 +86,6 @@ def dashboard():
                     
                 log_local = utc_to_local(log_utc)
                 
-                # Comparamos contra la variable correcta: hace_24h_local
                 if log_local > hace_24h_local:
                     stats['online_hoy'] += 1
             except Exception as e:
@@ -99,7 +95,7 @@ def dashboard():
     # 5. Envío a la plantilla
     return render_template('admin.html', 
                            users=users, 
-                           now=ahora_local, # El badge superior ahora dirá tu fecha local
+                           now=ahora_local,
                            stats=stats, 
                            my_role=session.get('role'),
                            hace_24h_str=hace_24h_str,
@@ -108,21 +104,24 @@ def dashboard():
 @admin_bp.route('/renovar/<int:user_id>/<int:meses>')
 @admin_required
 def renovar(user_id, meses):
-    # BLOQUEO DE SEGURIDAD: Si no es el dueño (2), fuera.
     if session.get('role') < 1:
         flash('No tienes permisos para renovar membresías.', 'error')
         return redirect(url_for('admin.dashboard'))
     
     nueva_fecha_fin = now_utc() + timedelta(days=meses*30)
     conn = get_db()
-    # Obtenemos el nombre del usuario afectado
-    target_user = conn.execute('SELECT username FROM usuarios WHERE id = ?', (user_id,)).fetchone()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT username FROM usuarios WHERE id = %s', (user_id,))
+    target_user = cursor.fetchone()
     target_name = target_user['username'] if target_user else f"ID {user_id}"
     
-    conn.execute('UPDATE usuarios SET subscription_end = ? WHERE id = ?', (nueva_fecha_fin, user_id))
-    conn.commit(); conn.close()
+    cursor.execute('UPDATE usuarios SET subscription_end = %s WHERE id = %s', (nueva_fecha_fin, user_id))
     
-    # Log enriquecido
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
     current_app.logger.info(f"SUB_RENEWED: '{session.get('username')}' renovó la suscripción de '{target_name}' por {meses} meses.")
     flash(f'Suscripción renovada por {meses} meses.', 'success')
     return redirect(url_for('admin.dashboard'))
@@ -130,36 +129,34 @@ def renovar(user_id, meses):
 @admin_bp.route('/cambiar_rol/<int:user_id>/<int:nuevo_rol>')
 @admin_required
 def cambiar_rol(user_id, nuevo_rol):
-    # BLOQUEO DE SEGURIDAD
     if session.get('role') < 1:
         flash('No tienes permisos para cambiar roles.', 'error')
         return redirect(url_for('admin.dashboard'))
     
-    # Seguridad extra: Un Admin (1) no puede crear un Dueño (2)
     if session.get('role') == 1 and nuevo_rol > 1:
         flash('No puedes asignar un rango superior al tuyo.', 'warning')
         return redirect(url_for('admin.dashboard'))
     
     conn = get_db()
+    cursor = conn.cursor()
     
-    # Obtenemos el nombre del usuario afectado para el log
-    target_user = conn.execute('SELECT username FROM usuarios WHERE id = ?', (user_id,)).fetchone()
+    cursor.execute('SELECT username FROM usuarios WHERE id = %s', (user_id,))
+    target_user = cursor.fetchone()
     target_name = target_user['username'] if target_user else f"ID {user_id}"
     
-    conn.execute('UPDATE usuarios SET role = ? WHERE id = ?', (nuevo_rol, user_id))
-    conn.commit(); conn.close()
+    cursor.execute('UPDATE usuarios SET role = %s WHERE id = %s', (nuevo_rol, user_id))
     
-    # Log enriquecido con nombres
+    conn.commit()
+    cursor.close()
+    conn.close()
+    
     current_app.logger.info(f"ROLE_CHANGED: '{session.get('username')}' cambió el rol de '{target_name}' a {nuevo_rol}.")
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/reset_password', methods=['POST'])
 @admin_required
 def reset_password():
-    # Definimos el nivel mínimo para esta acción (1 = Admin)
-    # Cualquier rol igual o mayor a 1 podrá resetear passwords
     MIN_ROLE_LEVEL = 1
-    
     current_role = session.get('role', 0)
     current_uid = session.get('user_id')
 
@@ -171,7 +168,6 @@ def reset_password():
     user_id = request.form.get('user_id')
     new_pass = request.form.get('new_password', '').strip()
 
-    # LOG 1: ¿Qué llegó del formulario?
     current_app.logger.info(f"DEBUG: Form data received -> ID: {user_id}, Pass_Len: {len(new_pass)}")
 
     if not user_id or not new_pass:
@@ -179,19 +175,17 @@ def reset_password():
         return redirect(url_for('admin.dashboard'))
 
     conn = get_db()
+    cursor = conn.cursor()
     try:
         hashed_password = generate_password_hash(new_pass, method='pbkdf2:sha256')
-        
-        # LOG 2: ¿Qué hash generamos? (primeros 10 chars)
         current_app.logger.info(f"DEBUG: Generated Hash Prefix: {hashed_password[:10]}")
 
-        cursor = conn.execute('UPDATE usuarios SET password = ? WHERE id = ?', (hashed_password, user_id))
+        cursor.execute('UPDATE usuarios SET password = %s WHERE id = %s', (hashed_password, user_id))
         conn.commit()
         
-        # LOG 3: ¿Se actualizó algo realmente?
         if cursor.rowcount > 0:
-            # Buscamos el nombre para el log
-            target = conn.execute('SELECT username FROM usuarios WHERE id = ?', (user_id,)).fetchone()
+            cursor.execute('SELECT username FROM usuarios WHERE id = %s', (user_id,))
+            target = cursor.fetchone()
             target_name = target['username'] if target else f"ID {user_id}"
             
             current_app.logger.info(f"PASSWORD_RESET: '{session.get('username')}' reseteó la contraseña de '{target_name}'.")
@@ -204,22 +198,23 @@ def reset_password():
         current_app.logger.error(f"DEBUG: DATABASE ERROR -> {str(e)}")
         flash('Error en la base de datos.', 'error')
     finally:
+        cursor.close()
         conn.close()
     
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/impersonate/<int:user_id>')
-@admin_required # Solo admins pueden hacer esto
+@admin_required 
 def impersonate(user_id):
     conn = get_db()
-    user = conn.execute("SELECT * FROM usuarios WHERE id=?", (user_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM usuarios WHERE id=%s", (user_id,))
+    user = cursor.fetchone()
+    cursor.close()
     conn.close()
     
     if user:
-        # Guardamos quién eras antes (por si quieres poner un botón de "Volver a Admin")
         session['original_admin_id'] = session['user_id']
-        
-        # Suplantamos la identidad
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['role'] = user['role']
@@ -228,7 +223,6 @@ def impersonate(user_id):
         flash(f'Modo Fantasma: Ahora estás viendo el sistema como {user["username"]}', 'info')
         return redirect(url_for('main.index'))
     
-    # CORRECCIÓN: Evita el BuildError si el usuario no existe
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/delete_user', methods=['POST'])
@@ -236,74 +230,71 @@ def impersonate(user_id):
 def delete_user():
     user_id = request.form.get('user_id')
     
-    # 1. BLINDAJE DE SEGURIDAD (Evitar auto-borrado o borrado de dueños)
     if not user_id or str(user_id) == str(session['user_id']):
         flash('No puedes borrarte a ti mismo.', 'danger')
         return redirect(url_for('admin.dashboard')) 
         
     conn = get_db()
+    cursor = conn.cursor()
     
-    # Verificamos a quién intentan borrar
-    target_user = conn.execute("SELECT role FROM usuarios WHERE id = ?", (user_id,)).fetchone()
+    cursor.execute("SELECT role FROM usuarios WHERE id = %s", (user_id,))
+    target_user = cursor.fetchone()
+    
     if not target_user:
+        cursor.close()
         conn.close()
         flash('El usuario no existe.', 'danger')
         return redirect(url_for('admin.dashboard'))
         
-    # Un Admin (1) puede borrar usuarios (0), pero no a otros Admins o al Dueño
     if session.get('role') < 2 and target_user['role'] >= session.get('role'):
+        cursor.close()
         conn.close()
         flash('No puedes eliminar a un usuario de tu mismo rango o superior.', 'danger')
         return redirect(url_for('admin.dashboard'))
 
-    # 2. PROCESO DE BORRADO EN CASCADA
-    cursor = conn.cursor()
     try:
         # =========================================================
         #  LIMPIEZA DEL LOGO EN CLOUDFLARE R2 
         # =========================================================
-        # Buscamos si el usuario tenía un logo antes de borrar su registro
-        config_user = cursor.execute("SELECT logo_empresa FROM configuracion WHERE user_id = ?", (user_id,)).fetchone()
+        cursor.execute("SELECT logo_empresa FROM configuracion WHERE user_id = %s", (user_id,))
+        config_user = cursor.fetchone()
         
         if config_user and config_user['logo_empresa']:
             logo_url = config_user['logo_empresa']
-            # Verificamos que sea una URL de Cloudflare antes de intentar borrar
             if "http" in logo_url:
                 try:
                     delete_from_cloudflare(logo_url)
                     current_app.logger.info(f"R2_CLEANUP_SUCCESS: Se eliminó el logo del usuario {user_id} de R2.")
                 except Exception as e:
                     current_app.logger.warning(f"R2_CLEANUP_WARNING: No se pudo borrar el logo del usuario {user_id} - {e}")
-        # =========================================================
 
         # Borrar Configuración
-        cursor.execute("DELETE FROM configuracion WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM configuracion WHERE user_id = %s", (user_id,))
         
         # Borrar Detalles de Ventas y Ventas
-        cursor.execute("DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id = ?)", (user_id,))
-        cursor.execute("DELETE FROM ventas WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id = %s)", (user_id,))
+        cursor.execute("DELETE FROM ventas WHERE user_id = %s", (user_id,))
         
         # Borrar Inventario y Materiales
-        cursor.execute("DELETE FROM movimientos_inventario WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM materiales WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM movimientos_inventario WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM materiales WHERE user_id = %s", (user_id,))
         
         # Borrar Maquinaria y Productos
-        cursor.execute("DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id = ?)", (user_id,))
-        cursor.execute("DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id = ?)", (user_id,))
-        cursor.execute("DELETE FROM maquinaria WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM productos WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id = %s)", (user_id,))
+        cursor.execute("DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id = %s)", (user_id,))
+        cursor.execute("DELETE FROM maquinaria WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM productos WHERE user_id = %s", (user_id,))
         
         # Borrar Logs de Envíos
-        cursor.execute("DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id = ?)", (user_id,))
-        cursor.execute("DELETE FROM shipping_zones WHERE user_id = ?", (user_id,))
-        cursor.execute("DELETE FROM shipping_configs WHERE user_id = ?", (user_id,))
+        cursor.execute("DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id = %s)", (user_id,))
+        cursor.execute("DELETE FROM shipping_zones WHERE user_id = %s", (user_id,))
+        cursor.execute("DELETE FROM shipping_configs WHERE user_id = %s", (user_id,))
 
         # Finalmente borrar al usuario
-        cursor.execute("DELETE FROM usuarios WHERE id = ?", (user_id,))
+        cursor.execute("DELETE FROM usuarios WHERE id = %s", (user_id,))
         
         conn.commit()
         
-        # Como no tenemos el nombre cargado, lo extraemos del query que ya hicimos antes de borrarlo
         current_app.logger.info(f"USER_DELETED: '{session.get('username')}' borró permanentemente la cuenta ID {user_id} y todos sus datos.")
         flash('Usuario y todos sus datos eliminados correctamente.', 'success')
         
@@ -312,6 +303,7 @@ def delete_user():
         current_app.logger.error(f"Error borrando cascada user {user_id}: {e}")
         flash('Error interno al eliminar el usuario. Intenta de nuevo.', 'danger')
     finally:
+        cursor.close()
         conn.close()
 
     return redirect(url_for('admin.dashboard'))
@@ -319,7 +311,6 @@ def delete_user():
 @admin_bp.route('/descargar-log')
 @admin_required
 def descargar_log():
-    # Solo permitimos a Admins (role >= 1)
     if session.get('role') < 1:
         abort(403)
 
@@ -341,7 +332,6 @@ def monitor():
     logs = []
     
     if os.path.exists(log_path):
-        # Esto ignora caracteres basura y lee bien las tildes/colores
         with open(log_path, 'r', encoding='utf-8', errors='replace') as f:
             logs = f.readlines()[-100:]
             logs.reverse() 
@@ -350,24 +340,22 @@ def monitor():
 
 @admin_bp.route('/stop_impersonate')
 def stop_impersonate():
-    # Solo funciona si hay un admin "escondido" en la sesión
     if 'original_admin_id' not in session:
         return redirect(url_for('main.index'))
 
-    # Recuperamos tu ID real
     original_id = session['original_admin_id']
 
     conn = get_db()
-    admin_user = conn.execute('SELECT * FROM usuarios WHERE id = ?', (original_id,)).fetchone()
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM usuarios WHERE id = %s', (original_id,))
+    admin_user = cursor.fetchone()
+    cursor.close()
     conn.close()
 
     if admin_user:
-        # 1. Restauramos tu sesión de Admin/Dueño
         session['user_id'] = admin_user['id']
         session['username'] = admin_user['username']
         session['role'] = admin_user['role']
-
-        # 2. Borramos el rastro del modo fantasma
         session.pop('original_admin_id', None)
 
         current_app.logger.info(f"IMPERSONATE_STOP: Admin UID {original_id} salió del modo fantasma.")
@@ -375,7 +363,6 @@ def stop_impersonate():
         
         return redirect(url_for('admin.dashboard'))
     
-    # Si algo falla gravemente, te saca
     session.clear()
     return redirect(url_for('auth.login'))
 
@@ -386,13 +373,16 @@ def exportar_usuarios():
         abort(403)
 
     conn = get_db()
-    usuarios = conn.execute("""
+    cursor = conn.cursor()
+    cursor.execute("""
         SELECT 
             id, username, email, company_name, 
             role, created_at, subscription_end, last_login 
         FROM usuarios 
         ORDER BY created_at DESC
-    """).fetchall()
+    """)
+    usuarios = cursor.fetchall()
+    cursor.close()
     conn.close()
 
     si = StringIO()

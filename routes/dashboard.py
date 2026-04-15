@@ -9,6 +9,7 @@ dashboard_bp = Blueprint('dashboard', __name__)
 @admin_required
 def index():
     conn = get_db_connection()
+    cursor = conn.cursor()
     
     # 1. DEFINICIÓN PREVENTIVA (Evita NameErrors)
     nombres_meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
@@ -27,10 +28,16 @@ def index():
 
     try:
         # 2. TOTALES (Históricos)
-        total_usuarios = conn.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1").fetchone()['total']
-        activos = conn.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1 AND subscription_end > ?", (ahora_str,)).fetchone()['total']
+        cursor.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1")
+        total_usuarios = cursor.fetchone()['total']
+        
+        cursor.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1 AND subscription_end > %s", (ahora_str,))
+        activos = cursor.fetchone()['total']
+        
         vencidos = total_usuarios - activos
-        proximos_a_vencer = conn.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1 AND subscription_end BETWEEN ? AND ?", (ahora_str, semana_proxima_str)).fetchone()['total']
+        
+        cursor.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1 AND subscription_end BETWEEN %s AND %s", (ahora_str, semana_proxima_str))
+        proximos_a_vencer = cursor.fetchone()['total']
 
         # 3. HEAVY USERS (Filtrado Dinámico)
         query_heavy = '''
@@ -40,56 +47,60 @@ def index():
         '''
         params_heavy = []
         if mes_sel:
-            query_heavy += " AND strftime('%m', v.fecha) = ?"
+            query_heavy += " AND to_char(v.fecha, 'MM') = %s"
             params_heavy.append(mes_sel)
         if anio_sel:
-            query_heavy += " AND strftime('%Y', v.fecha) = ?"
+            query_heavy += " AND to_char(v.fecha, 'YYYY') = %s"
             params_heavy.append(anio_sel)
         
         query_heavy += " WHERE u.role <= 1 GROUP BY u.id ORDER BY total_cotizaciones DESC LIMIT 5"
-        top_leales = conn.execute(query_heavy, params_heavy).fetchall()
+        cursor.execute(query_heavy, params_heavy)
+        top_leales = cursor.fetchall()
 
         # 4. GRÁFICA CRECIMIENTO (Histórico 6 meses)
         for i in range(-5, 1):
             fecha_mes_str = ahora_sql(meses=i)
             y, m = fecha_mes_str[:4], fecha_mes_str[5:7]
             meses_labels.append(f"{nombres_meses[int(m)-1]} {y}")
-            conteo = conn.execute("SELECT COUNT(id) FROM usuarios WHERE role <= 1 AND strftime('%m', created_at) = ? AND strftime('%Y', created_at) = ?", (m, y)).fetchone()[0]
+            
+            cursor.execute("SELECT COUNT(id) FROM usuarios WHERE role <= 1 AND to_char(created_at, 'MM') = %s AND to_char(created_at, 'YYYY') = %s", (m, y))
+            conteo = cursor.fetchone()[0]
             usuarios_data.append(conteo)
 
         # 5. ORIGEN (Filtrado Dinámico)
         query_origen = "SELECT origen_registro, COUNT(id) as conteo FROM usuarios WHERE role <= 1"
         params_origen = []
         if mes_sel:
-            query_origen += " AND strftime('%m', created_at) = ?"
+            query_origen += " AND to_char(created_at, 'MM') = %s"
             params_origen.append(mes_sel)
         if anio_sel:
-            query_origen += " AND strftime('%Y', created_at) = ?"
+            query_origen += " AND to_char(created_at, 'YYYY') = %s"
             params_origen.append(anio_sel)
         
         query_origen += " GROUP BY origen_registro"
-        origen_raw = conn.execute(query_origen, params_origen).fetchall()
-        origen_labels = [r['origen_registro'].capitalize() for r in origen_raw]
-        origen_data = [r['conteo'] for r in origen_raw]
+        cursor.execute(query_origen, params_origen)
+        origen_raw = cursor.fetchall()
+        
+        # Filtro de seguridad por si existen registros con origen en null
+        origen_labels = [r['origen_registro'].capitalize() for r in origen_raw if r['origen_registro']]
+        origen_data = [r['conteo'] for r in origen_raw if r['origen_registro']]
 
         # 6. SELECTORES
         lista_meses = [(f"{i:02d}", nombres_meses[i-1]) for i in range(1, 13)]
         lista_anios = [2025, 2026, 2027, 2028]
 
         # --- 5. SEGMENTACIÓN POR ACTIVIDAD (Thresholds) ---
-        # Definimos tus nuevos umbrales: 0-2, 3-14, 15+
         segmentos = {"Zombies (0-2)": 0, "Exploradores (3-14)": 0, "Power Users (15+)": 0}
         
-        # Consultamos el conteo de cotizaciones por usuario
-        # Usamos el filtro de fecha si está activo para que la segmentación sea actual
         query_segmentos = "SELECT COUNT(v.id) as total FROM usuarios u LEFT JOIN ventas v ON u.id = v.user_id"
         params_seg = []
         if mes_sel and anio_sel:
-            query_segmentos += " AND strftime('%m', v.fecha) = ? AND strftime('%Y', v.fecha) = ?"
+            query_segmentos += " AND to_char(v.fecha, 'MM') = %s AND to_char(v.fecha, 'YYYY') = %s"
             params_seg = [mes_sel, anio_sel]
         
         query_segmentos += " WHERE u.role <= 1 GROUP BY u.id"
-        usuarios_actividad = conn.execute(query_segmentos, params_seg).fetchall()
+        cursor.execute(query_segmentos, params_seg)
+        usuarios_actividad = cursor.fetchall()
 
         for user in usuarios_actividad:
             cots = user['total']
@@ -116,4 +127,5 @@ def index():
         current_app.logger.error(f"DASHBOARD_ERROR: Fallo al cargar métricas para el Admin ID {session.get('user_id')} - {e}")
         return f"Error: {e}", 500
     finally:
+        cursor.close()
         conn.close()

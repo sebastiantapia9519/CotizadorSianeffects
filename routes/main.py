@@ -54,21 +54,34 @@ def index():
 @subscription_required
 def cotizador():
     conn = get_db()
+    cursor = conn.cursor()
     uid = session['user_id']
     try:
-        # ¿Mostramos el tour?
         mostrar_tour = debe_mostrar_tutorial(uid, 'cotizador')
         version_tour = obtener_version_tutorial('cotizador')
 
+        cursor.execute('SELECT * FROM configuracion WHERE user_id=%s', (uid,))
+        config = cursor.fetchone()
+        
+        cursor.execute('SELECT * FROM materiales WHERE user_id=%s', (uid,))
+        materiales = cursor.fetchall()
+        
+        cursor.execute('SELECT * FROM productos WHERE user_id=%s', (uid,))
+        productos = cursor.fetchall()
+        
+        cursor.execute('SELECT * FROM maquinaria WHERE user_id=%s', (uid,))
+        equipos = cursor.fetchall()
+
         data = {
-            'config': conn.execute('SELECT * FROM configuracion WHERE user_id=?', (uid,)).fetchone(),
-            'materiales': conn.execute('SELECT * FROM materiales WHERE user_id=?', (uid,)).fetchall(),
-            'productos': conn.execute('SELECT * FROM productos WHERE user_id=?', (uid,)).fetchall(),
-            'equipos': conn.execute('SELECT * FROM maquinaria WHERE user_id=?', (uid,)).fetchall(),
+            'config': config,
+            'materiales': materiales,
+            'productos': productos,
+            'equipos': equipos,
             'mostrar_tour': mostrar_tour,
             'version_tour': version_tour
         }
     finally:
+        cursor.close()
         conn.close()
     return render_template('cotizador.html', **data)
 
@@ -82,17 +95,22 @@ def tutorial_completado():
     version = data.get('version')
 
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        # Usamos INSERT OR REPLACE para actualizar si ya existe o crear si es nuevo
-        conn.execute("""
-            INSERT OR REPLACE INTO tutoriales_estado (user_id, modulo, version_vista)
-            VALUES (?, ?, ?)
+        # POSTGRESQL: ON CONFLICT DO UPDATE
+        cursor.execute("""
+            INSERT INTO tutoriales_estado (user_id, modulo, version_vista)
+            VALUES (%s, %s, %s)
+            ON CONFLICT (user_id, modulo) 
+            DO UPDATE SET version_vista = EXCLUDED.version_vista
         """, (uid, modulo, version))
         conn.commit()
         return jsonify({"success": True})
     except Exception as e:
+        conn.rollback()
         return jsonify({"error": str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
 
 # --- API PARA CARGAR RECETA EN EL COTIZADOR ---
@@ -100,27 +118,26 @@ def tutorial_completado():
 @login_required
 def obtener_receta_api(id):
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        # 1. Datos básicos
-        prod = conn.execute("SELECT id, nombre FROM productos WHERE id=? AND user_id=?", (id, session['user_id'])).fetchone()
+        cursor.execute("SELECT id, nombre FROM productos WHERE id=%s AND user_id=%s", (id, session['user_id']))
+        prod = cursor.fetchone()
         if not prod:
             return jsonify({'error': 'Receta no encontrada'}), 404
 
-        # 2. Materiales
-        materiales_rows = conn.execute("""
+        cursor.execute("""
             SELECT material_id as id, cantidad
             FROM producto_detalles
-            WHERE producto_id = ?
-        """, (id,)).fetchall()
-        materiales_lista = [dict(row) for row in materiales_rows]
+            WHERE producto_id = %s
+        """, (id,))
+        materiales_lista = [dict(row) for row in cursor.fetchall()]
 
-        # 3. Maquinaria
-        maquinaria_rows = conn.execute("""
+        cursor.execute("""
             SELECT maquinaria_id as id
             FROM producto_maquinaria
-            WHERE producto_id = ?
-        """, (id,)).fetchall()
-        maquinaria_lista = [dict(row) for row in maquinaria_rows]
+            WHERE producto_id = %s
+        """, (id,))
+        maquinaria_lista = [dict(row) for row in cursor.fetchall()]
 
         return jsonify({
             'id': prod['id'],
@@ -132,6 +149,7 @@ def obtener_receta_api(id):
         current_app.logger.error(f"API_ERROR: Cargando receta ID {id} - {e}")
         return jsonify({'error': 'Error al cargar los detalles'}), 500
     finally:
+        cursor.close()
         conn.close()
 
 # --- GUARDAR VENTA ---
@@ -143,8 +161,9 @@ def guardar_venta():
     cursor = conn.cursor()
     
     try:
-        config = cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=?', (session['user_id'],)).fetchone()
-        usar_inventario = config['inventario_activo'] if config else 0
+        cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=%s', (session['user_id'],))
+        config = cursor.fetchone()
+        usar_inventario = config['inventario_activo'] if config else False
 
         venta_id = data.get('id')
         if venta_id in ("", None):
@@ -152,8 +171,6 @@ def guardar_venta():
         else:
             venta_id = int(venta_id)
 
-
-        # --- 1. RECIBIMOS DATOS (Confiamos en la intención, no en los totales) ---
         cliente = data.get('cliente', 'Cliente General')
         items = data.get('items', [])
         costo_envio = float(data.get('envio', 0))
@@ -161,41 +178,31 @@ def guardar_venta():
         descuento_monto = float(data.get('descuento_monto', 0))
         tax_percent = float(data.get('tax_percent', 0))
         estado = data.get('estado', 'pagado')
-        monto_pagado_request = float(data.get('pago_inicial', 0)) # Lo que el usuario dice que pagó
+        monto_pagado_request = float(data.get('pago_inicial', 0)) 
 
-        # --- 2. INICIO DEL BLINDAJE MATEMÁTICO ---
         subtotal_calculado = 0.0
         costo_total_calculado = 0.0
 
-        # Recalculamos línea por línea basándonos estrictamente en cantidad * precio
         for item in items:
-            # Forzamos a que sean números para evitar inyecciones raras o errores de tipo
             cantidad = float(item.get('cantidad', 0))
             precio_u = float(item.get('precio_unitario', 0))
             costo_u = float(item.get('costo_unitario', 0))
             
-            # Validación de seguridad: no pueden vender cantidades negativas ni precios raros
             if cantidad <= 0 or precio_u < 0:
                 return jsonify({'success': False, 'error': 'Cantidades o precios inválidos'}), 400
                 
-            # Ignoramos el subtotal del item que manda el frontend y lo calculamos nosotros
             item_subtotal_real = cantidad * precio_u 
-            item['subtotal'] = item_subtotal_real # Actualizamos el diccionario con la verdad absoluta
+            item['subtotal'] = item_subtotal_real 
             
             subtotal_calculado += item_subtotal_real
             costo_total_calculado += (cantidad * costo_u)
 
-        # --- 3. APLICAMOS REGLAS DE NEGOCIO ---
-        # Tope de seguridad: no puedes descontar más de lo que cuesta
         if descuento_monto > subtotal_calculado:
             descuento_monto = subtotal_calculado 
 
         subtotal_con_descuento = subtotal_calculado - descuento_monto
-
-        # Sumamos el envío ANTES de calcular impuestos
         base_imponible = subtotal_con_descuento + costo_envio
 
-        # Calculamos impuestos reales nosotros mismos
         tax_amount_calculado = 0.0
         tax_engine = "none"
 
@@ -203,37 +210,33 @@ def guardar_venta():
             tax_amount_calculado = base_imponible * (tax_percent / 100)
             tax_engine = f"IVA {int(tax_percent)}%" if tax_percent.is_integer() else f"IVA {tax_percent}%"
 
-        # --- 4. EL TOTAL SAGRADO ---
         total_calculado = base_imponible + tax_amount_calculado
-
-        # --- 5. CUADRAMOS LOS PAGOS ---
-        # Si dice que pagó más del total, lo topamos al total real
         monto_pagado_real = min(monto_pagado_request, total_calculado) 
         saldo_pendiente_real = total_calculado - monto_pagado_real
 
-        # Si el saldo pendiente es muy cercano a 0 (por decimales), lo matamos
         if saldo_pendiente_real < 0.05: 
             saldo_pendiente_real = 0.0
             estado = 'pagado'
 
         fecha_actual = ahora_sql()
-        fecha_vencimiento = ahora_sql(dias=2) #Si la venta no se concreta en 2 dias se elimina
+        fecha_vencimiento = ahora_sql(dias=2) 
 
         if venta_id:
             cursor.execute('''
                 UPDATE ventas 
-                SET cliente=?, subtotal=?, envio=?, descuento_porcentaje=?, descuento_monto=?,
-                    impuestos=?, tax_engine=?,
-                    total=?, costo_total=?, estado=?, monto_pagado=?, saldo_pendiente=?
-                WHERE id=? AND user_id=?
+                SET cliente=%s, subtotal=%s, envio=%s, descuento_porcentaje=%s, descuento_monto=%s,
+                    impuestos=%s, tax_engine=%s,
+                    total=%s, costo_total=%s, estado=%s, monto_pagado=%s, saldo_pendiente=%s
+                WHERE id=%s AND user_id=%s
             ''', (
                 cliente, subtotal_calculado, costo_envio, descuento_pct, descuento_monto,
                 tax_amount_calculado, tax_engine,
                 total_calculado, costo_total_calculado, estado, monto_pagado_real, saldo_pendiente_real,
                 venta_id, session['user_id']
             ))
-            cursor.execute('DELETE FROM venta_detalles WHERE venta_id=?', (venta_id,))
+            cursor.execute('DELETE FROM venta_detalles WHERE venta_id=%s', (venta_id,))
         else:
+            # POSTGRESQL: RETURNING id 
             cursor.execute('''
                 INSERT INTO ventas (
                     user_id, fecha, cliente, subtotal, envio, 
@@ -242,7 +245,8 @@ def guardar_venta():
                     total, costo_total, estado, 
                     monto_pagado, saldo_pendiente, fecha_vencimiento
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
             ''', (
                 session['user_id'], fecha_actual, cliente, subtotal_calculado, costo_envio, 
                 descuento_pct, descuento_monto, 
@@ -251,24 +255,18 @@ def guardar_venta():
                 monto_pagado_real, saldo_pendiente_real, fecha_vencimiento
             ))
             
-            # ---  NOTA DE MIGRACIÓN A POSTGRESQL  ---
-            # SQLite usa .lastrowid para obtener el ID recién creado. Postgres NO lo soporta así.
-            # Cuando migres, tu query de INSERT deberá terminar con: "... VALUES (...) RETURNING id"
-            # Y esta línea de abajo cambiará a: venta_id = cursor.fetchone()[0]
-            venta_id = cursor.lastrowid
+            # Extraemos el ID generado
+            venta_id = cursor.fetchone()['id']
         
-        # 1. Creamos variable en memoria para acumular las cantidades a descontar.
-        # Las llaves serán los ID de los materiales, y los valores la cantidad total a restar.
         materiales_a_descontar = {}
 
         for item in items:
-            # Insertamos el detalle de la venta (una fila por producto)
             cursor.execute('''
                 INSERT INTO venta_detalles (
                     venta_id, concepto, cantidad, precio_unitario, 
                     costo_unitario, subtotal, composicion
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', (
                 venta_id,
                 item['concepto'],
@@ -279,7 +277,6 @@ def guardar_venta():
                 item.get('composicion', '[]')
             ))
 
-            # 2. Si usamos inventario y es una venta nueva (no edición)
             if usar_inventario and not data.get('id'): 
                 try:
                     composicion = json.loads(item.get('composicion', '[]'))
@@ -288,11 +285,9 @@ def guardar_venta():
                     for comp in composicion:
                         if comp.get('tipo') == 'material':
                             material_id = comp.get('id')
-                            # Calculamos cuánto material requiere este producto en específico
                             cantidad_requerida = float(comp.get('cantidad', 0)) * cantidad_producto
                             
                             if cantidad_requerida > 0:
-                                # En lugar de ir a la BD, sumamos en nuestro diccionario global
                                 if material_id in materiales_a_descontar:
                                     materiales_a_descontar[material_id] += cantidad_requerida
                                 else:
@@ -300,25 +295,21 @@ def guardar_venta():
                 except Exception as e:
                     current_app.logger.warning(f"INVENTORY_CALC_WARNING: Error calculando receta en memoria para venta - {e}")
 
-        # 3. IMPACTO A LA BASE DE DATOS (FUERA DEL CICLO FOR DE PRODUCTOS)
-        # Ahora que ya sabemos el total exacto de cada material, hacemos los Updates.
         if usar_inventario and not data.get('id') and materiales_a_descontar:
             try:
                 for mat_id, total_descuento in materiales_a_descontar.items():
-                    # Restamos el stock actual de una sola vez por material
                     cursor.execute('''
                         UPDATE materiales 
-                        SET stock_actual = stock_actual - ? 
-                        WHERE id = ?
+                        SET stock_actual = stock_actual - %s 
+                        WHERE id = %s
                     ''', (total_descuento, mat_id))
                     
-                    # Registramos el movimiento en el historial
                     cursor.execute('''
                         INSERT INTO movimientos_inventario 
                         (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
-                        VALUES (?, ?, 'salida', ?, ?, 
-                            (SELECT stock_actual FROM materiales WHERE id=?),
-                            ?
+                        VALUES (%s, %s, 'salida', %s, %s, 
+                            (SELECT stock_actual FROM materiales WHERE id=%s),
+                            %s
                         )
                     ''', (
                         session['user_id'],
@@ -331,7 +322,6 @@ def guardar_venta():
             except Exception as e:
                 current_app.logger.error(f"INVENTORY_DB_ERROR: Error descontando stock para venta {venta_id} - {e}")
                 
-
         conn.commit()
         current_app.logger.info(f"SALE_SAVED: Usuario {session['user_id']} guardó la venta/cotización #{venta_id} con estado '{estado}'.")
         return jsonify({'success': True, 'ticket_id': venta_id})
@@ -341,6 +331,7 @@ def guardar_venta():
         current_app.logger.error(f"SALE_ERROR: Error guardando venta para usuario {session['user_id']} - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
 
 # --- ACTUALIZAR VENTA (ABONOS) ---
@@ -356,7 +347,8 @@ def actualizar_venta():
     cursor = conn.cursor()
     
     try:
-        venta = cursor.execute("SELECT total, monto_pagado, saldo_pendiente FROM ventas WHERE id = ? AND user_id = ?", (venta_id, session['user_id'])).fetchone()
+        cursor.execute("SELECT total, monto_pagado, saldo_pendiente FROM ventas WHERE id = %s AND user_id = %s", (venta_id, session['user_id']))
+        venta = cursor.fetchone()
         
         if not venta:
             return jsonify({'success': False, 'message': 'Venta no encontrada'}), 404
@@ -375,8 +367,8 @@ def actualizar_venta():
         
         cursor.execute('''
             UPDATE ventas 
-            SET monto_pagado = ?, saldo_pendiente = ?, estado = ?, fecha_vencimiento = NULL 
-            WHERE id = ?
+            SET monto_pagado = %s, saldo_pendiente = %s, estado = %s, fecha_vencimiento = NULL 
+            WHERE id = %s
         ''', (nuevo_pagado, nuevo_saldo, nuevo_estado, venta_id))
         
         conn.commit()
@@ -386,6 +378,7 @@ def actualizar_venta():
         conn.rollback()
         return jsonify({'success': False, 'message': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
 
 
@@ -395,56 +388,52 @@ def actualizar_venta():
 @login_required
 def historial():
     conn = get_db()
+    cursor = conn.cursor()
     uid = session['user_id']
 
     mostrar_tour = debe_mostrar_tutorial(session['user_id'], 'historial')
     version_tour = obtener_version_tutorial('historial')
     
-    # 1. Variables de Paginación y Búsqueda
     q = request.args.get('q', '').strip()
-    page = request.args.get('page', 1, type=int) # Página actual (por defecto la 1)
-    per_page = 20  # Cantidad de registros por página
-    offset = (page - 1) * per_page # Desde dónde empezar a cortar
+    page = request.args.get('page', 1, type=int) 
+    per_page = 20 
+    offset = (page - 1) * per_page 
 
-    # 2. Primero contamos el TOTAL de resultados (Query COUNT)
-    # Esto es necesario para calcular el número total de páginas
-    # Para Postgres cambiarás LIKE por ILIKE
-    # sql_count += " AND (CAST(id AS TEXT) ILIKE ? OR cliente ILIKE ?)"
-    sql_count = "SELECT COUNT(*) FROM ventas WHERE user_id=?"
+    # POSTGRESQL: Usamos ILIKE para ignorar mayúsculas/minúsculas
+    sql_count = "SELECT COUNT(*) FROM ventas WHERE user_id=%s"
     params_count = [uid]
 
     if q:
-        # Usamos CAST(id AS TEXT) para que la búsqueda por folio sea flexible (ej: buscas "1" y encuentra "1", "10", "12")
-        sql_count += " AND (CAST(id AS TEXT) LIKE ? OR cliente LIKE ?)"
+        sql_count += " AND (CAST(id AS TEXT) ILIKE %s OR cliente ILIKE %s)"
         params_count.extend([f'%{q}%', f'%{q}%'])
 
-    total_registros = conn.execute(sql_count, params_count).fetchone()[0]
+    cursor.execute(sql_count, params_count)
+    total_registros = cursor.fetchone()[0]
     
-    # Calculamos total de páginas (importamos math aquí por si acaso no está arriba)
     total_pages = math.ceil(total_registros / per_page)
 
-    # 3. Ahora traemos los datos de la página actual (Query DATA)
     sql = '''
         SELECT id, cliente, fecha, total, estado, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine
         FROM ventas 
-        WHERE user_id=? 
+        WHERE user_id=%s 
     '''
     params = [uid]
     
     if q:
-        sql += " AND (CAST(id AS TEXT) LIKE ? OR cliente LIKE ?)"
+        sql += " AND (CAST(id AS TEXT) ILIKE %s OR cliente ILIKE %s)"
         params.extend([f'%{q}%', f'%{q}%'])
         
-    # Aquí está la magia: LIMIT y OFFSET recortan los resultados
-    sql += " ORDER BY id DESC LIMIT ? OFFSET ?"
+    sql += " ORDER BY id DESC LIMIT %s OFFSET %s"
     params.extend([per_page, offset])
     
-    ventas_db = conn.execute(sql, params).fetchall()
+    cursor.execute(sql, params)
+    ventas_db = cursor.fetchall()
+    
+    cursor.close()
     conn.close()
     
     ventas_display = [procesar_fila_fechas(v) for v in ventas_db]
     
-    # 4. Pasamos las variables de paginación al HTML
     return render_template('historial.html', 
                            ventas=ventas_display, 
                            page=page, 
@@ -457,20 +446,28 @@ def historial():
 @main_bp.route('/ticket/<int:id>')
 def ver_ticket(id):
     conn = get_db()
-    venta_db = conn.execute('SELECT * FROM ventas WHERE id = ?', (id,)).fetchone()
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM ventas WHERE id = %s', (id,))
+    venta_db = cursor.fetchone()
     
     if venta_db is None:
+        cursor.close()
         conn.close()
         return "Ticket no encontrado", 404
 
     venta = procesar_fila_fechas(venta_db)
 
-    detalles = conn.execute('SELECT * FROM venta_detalles WHERE venta_id = ?', (id,)).fetchall()
-    config = conn.execute('SELECT * FROM configuracion WHERE user_id = ?', (venta_db['user_id'],)).fetchone()
+    cursor.execute('SELECT * FROM venta_detalles WHERE venta_id = %s', (id,))
+    detalles = cursor.fetchall()
+    
+    cursor.execute('SELECT * FROM configuracion WHERE user_id = %s', (venta_db['user_id'],))
+    config = cursor.fetchone()
 
     if config is None:
         config = {'nombre_empresa': 'Mi Negocio', 'slogan': 'Gracias por su compra', 'website': ''}
 
+    cursor.close()
     conn.close()
     return render_template('ticket.html', venta=venta, detalles=detalles, config=config)
 
@@ -492,14 +489,15 @@ def plan_vencido():
 @login_required
 def get_cotizacion(id):
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        # 1. Traer datos generales de la venta
-        venta = conn.execute("SELECT * FROM ventas WHERE id=? AND user_id=?", (id, session['user_id'])).fetchone()
+        cursor.execute("SELECT * FROM ventas WHERE id=%s AND user_id=%s", (id, session['user_id']))
+        venta = cursor.fetchone()
         if not venta:
             return jsonify({'error': 'Cotización no encontrada'}), 404
 
-        # 2. Traer los productos detallados del carrito
-        items_db = conn.execute("SELECT * FROM venta_detalles WHERE venta_id=?", (id,)).fetchall()
+        cursor.execute("SELECT * FROM venta_detalles WHERE venta_id=%s", (id,))
+        items_db = cursor.fetchall()
         
         items = []
         for it in items_db:
@@ -509,7 +507,7 @@ def get_cotizacion(id):
                 'precio_unitario': it['precio_unitario'],
                 'costo_unitario': it['costo_unitario'],
                 'subtotal': it['subtotal'],
-                'composicion': it['composicion'] # Esto ya viene como string JSON de la BD
+                'composicion': it['composicion'] 
             })
 
         return jsonify({
@@ -524,6 +522,7 @@ def get_cotizacion(id):
         current_app.logger.error(f"QUOTE_LOAD_ERROR: Error al cargar cotización {id} para editor - {e}")
         return jsonify({'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()
 
 # --- RUTA DE AYUDA Y DOCUMENTACIÓN ---
@@ -538,6 +537,7 @@ def descargar_excel():
     conn = get_db()
     uid = session['user_id']
     
+    # POSTGRESQL PANDAS: Pandas soporta parámetros con %s directamente
     query = '''
         SELECT 
             v.id as Folio, 
@@ -562,7 +562,7 @@ def descargar_excel():
             v.saldo_pendiente as Resta_Por_Pagar
         FROM ventas v 
         JOIN venta_detalles d ON v.id = d.venta_id 
-        WHERE v.user_id = ? 
+        WHERE v.user_id = %s 
         ORDER BY v.fecha DESC
     '''
     
@@ -571,12 +571,8 @@ def descargar_excel():
         conn.close()
         
         if not df.empty:
-
-            # 1. Normalizamos la columna sin importar si viene como String (SQLite) o Datetime (Postgres)
             df['Fecha_Registro'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce')
             
-            # 2. Iteramos con .apply() para usar tu función centralizada
-            # x.to_pydatetime() transforma el objeto de Pandas a un datetime estándar de Python
             df['Fecha_Registro'] = df['Fecha_Registro'].apply(
                 lambda x: utc_to_local(x.to_pydatetime()).strftime('%d/%m/%Y %I:%M %p') if pd.notnull(x) else 'Pendiente'
             )
@@ -584,7 +580,6 @@ def descargar_excel():
             if 'Fecha_Vencimiento' in df.columns:
                 df['Fecha_Vencimiento'] = pd.to_datetime(df['Fecha_Vencimiento'], errors='coerce')
                 df['Fecha_Vencimiento'] = df['Fecha_Vencimiento'].apply(
-                    # Para el vencimiento usamos el mismo flujo, pero formateando solo el día
                     lambda x: utc_to_local(x.to_pydatetime()).strftime('%d/%m/%Y') if pd.notnull(x) else ''
                 )
 

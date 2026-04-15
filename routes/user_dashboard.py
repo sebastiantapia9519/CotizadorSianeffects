@@ -13,6 +13,7 @@ user_dash_bp = Blueprint('user_dash', __name__)
 def mi_panel():
     user_id = session['user_id']
     conn = get_db()
+    cursor = conn.cursor()
     
     try:
         # --- 1. CONFIGURACIÓN DE FILTROS ---
@@ -35,27 +36,29 @@ def mi_panel():
         ]
         lista_anios = [str(y) for y in range(2025, int(anio_actual) + 2)]
 
-        # --- 2. TARJETAS DE PODER Y DATOS PARA LA DONA ---
-        kpis_row = conn.execute("""
+        # --- 2. TARJETAS DE PODER Y DATOS PARA LA DONA (POSTGRESQL: COALESCE Y TO_CHAR) ---
+        cursor.execute("""
             SELECT 
-                IFNULL(SUM(total), 0) as ingresos_brutos,
-                IFNULL(SUM(total - costo_total), 0) as ganancia_neta,
-                IFNULL(SUM(costo_total), 0) as costos_produccion,
-                IFNULL(SUM(saldo_pendiente), 0) as dinero_calle,
+                COALESCE(SUM(total), 0) as ingresos_brutos,
+                COALESCE(SUM(total - costo_total), 0) as ganancia_neta,
+                COALESCE(SUM(costo_total), 0) as costos_produccion,
+                COALESCE(SUM(saldo_pendiente), 0) as dinero_calle,
                 COUNT(id) as total_ventas
             FROM ventas 
-            WHERE user_id = ? AND substr(fecha, 1, 7) = ? AND estado IN ('pagado', 'anticipo')
-        """, (user_id, periodo_str)).fetchone()
+            WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') = %s AND estado IN ('pagado', 'anticipo')
+        """, (user_id, periodo_str))
+        kpis_row = cursor.fetchone()
         
         kpis = dict(kpis_row) if kpis_row else {'ingresos_brutos': 0, 'ganancia_neta': 0, 'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0}
 
         # --- 3. GRÁFICA 1: DIARIA ---
-        grafica_diaria_db = conn.execute("""
-            SELECT substr(fecha, 1, 10) as dia, SUM(total) as ingresos, SUM(total - costo_total) as ganancia
+        cursor.execute("""
+            SELECT to_char(fecha, 'YYYY-MM-DD') as dia, SUM(total) as ingresos, SUM(total - costo_total) as ganancia
             FROM ventas
-            WHERE user_id = ? AND substr(fecha, 1, 7) = ? AND estado IN ('pagado', 'anticipo')
+            WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') = %s AND estado IN ('pagado', 'anticipo')
             GROUP BY dia ORDER BY dia ASC
-        """, (user_id, periodo_str)).fetchall()
+        """, (user_id, periodo_str))
+        grafica_diaria_db = cursor.fetchall()
 
         fechas_diarias, ing_diarios, gan_diarias = [], [], []
         for fila in grafica_diaria_db:
@@ -66,12 +69,13 @@ def mi_panel():
         # --- 4. GRÁFICA 2: HISTÓRICA ---
         hace_6_meses = (datetime.strptime(hoy_str, '%Y-%m-%d') - relativedelta(months=5)).strftime('%Y-%m')
         
-        grafica_hist_db = conn.execute("""
-            SELECT substr(fecha, 1, 7) as mes, SUM(total) as ingresos, SUM(total - costo_total) as ganancia
+        cursor.execute("""
+            SELECT to_char(fecha, 'YYYY-MM') as mes, SUM(total) as ingresos, SUM(total - costo_total) as ganancia
             FROM ventas
-            WHERE user_id = ? AND substr(fecha, 1, 7) >= ? AND estado IN ('pagado', 'anticipo')
+            WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') >= %s AND estado IN ('pagado', 'anticipo')
             GROUP BY mes ORDER BY mes ASC
-        """, (user_id, hace_6_meses)).fetchall()
+        """, (user_id, hace_6_meses))
+        grafica_hist_db = cursor.fetchall()
 
         meses_hist, ing_hist, gan_hist = [], [], []
         for fila in grafica_hist_db:
@@ -80,27 +84,28 @@ def mi_panel():
             gan_hist.append(round(fila['ganancia'], 2))
 
         # --- 5. TOP 5 PRODUCTOS ---
-        top_productos = conn.execute("""
+        cursor.execute("""
             SELECT vd.concepto, SUM(vd.cantidad) as cantidad_vendida, SUM(vd.subtotal) as total_generado
             FROM venta_detalles vd JOIN ventas v ON vd.venta_id = v.id
-            WHERE v.user_id = ? AND substr(v.fecha, 1, 7) = ? AND v.estado IN ('pagado', 'anticipo')
+            WHERE v.user_id = %s AND to_char(v.fecha, 'YYYY-MM') = %s AND v.estado IN ('pagado', 'anticipo')
             GROUP BY vd.concepto ORDER BY cantidad_vendida DESC LIMIT 5
-        """, (user_id, periodo_str)).fetchall()
+        """, (user_id, periodo_str))
+        top_productos = cursor.fetchall()
 
-        # --- 6. ALERTAS DE STOCK BAJO (CON FIX DE TIPOS) ---
-        # Primero revisamos si el usuario tiene el módulo de inventario encendido
-        config_row = conn.execute("SELECT inventario_activo FROM configuracion WHERE user_id = ?", (user_id,)).fetchone()
-        inventario_activo = config_row['inventario_activo'] if config_row else 0
+        # --- 6. ALERTAS DE STOCK BAJO (LIMPIO DE CAST INNECESARIOS) ---
+        cursor.execute("SELECT inventario_activo FROM configuracion WHERE user_id = %s", (user_id,))
+        config_row = cursor.fetchone()
+        inventario_activo = config_row['inventario_activo'] if config_row else False
 
         if inventario_activo:
-            # Obligamos a SQLite a comparar todo como números reales (CAST AS REAL)
-            stock_bajo = conn.execute("""
-                SELECT nombre, stock_actual, IFNULL(stock_minimo, 5) as stock_minimo, IFNULL(unidad_medida, 'pza') as unidad_medida
+            cursor.execute("""
+                SELECT nombre, stock_actual, COALESCE(stock_minimo, 5) as stock_minimo, COALESCE(unidad_medida, 'pza') as unidad_medida
                 FROM materiales
-                WHERE user_id = ? AND CAST(stock_actual AS REAL) <= CAST(IFNULL(stock_minimo, 5) AS REAL)
-                ORDER BY CAST(stock_actual AS REAL) ASC
+                WHERE user_id = %s AND stock_actual <= COALESCE(stock_minimo, 5)
+                ORDER BY stock_actual ASC
                 LIMIT 5
-            """, (user_id,)).fetchall()
+            """, (user_id,))
+            stock_bajo = cursor.fetchall()
         else:
             stock_bajo = []
 
@@ -108,8 +113,9 @@ def mi_panel():
         current_app.logger.error(f"DASHBOARD_ERROR: Fallo al cargar panel para user {user_id} - {e}")
         kpis = {'ingresos_brutos': 0, 'ganancia_neta': 0, 'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0}
         fechas_diarias, ing_diarios, gan_diarias, meses_hist, ing_hist, gan_hist, top_productos, stock_bajo = [], [], [], [], [], [], [], []
-        inventario_activo = 0
+        inventario_activo = False
     finally:
+        cursor.close()
         conn.close()
 
     chart_data = {
@@ -138,28 +144,28 @@ def api_calendario_historial():
     anio = request.args.get('anio', type=int)
     mes = request.args.get('mes', type=int)
     
-    # Si por alguna razón no mandan año o mes, abortamos limpiamente
     if not anio or not mes:
         return jsonify({})
 
-    # Formateamos el mes a dos dígitos (ej. 4 -> "04")
     mes_str = f"{mes:02d}"
     periodo_str = f"{anio}-{mes_str}"
     
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        # Traemos todas las ventas de ese mes exacto para este usuario
-        ventas = conn.execute("""
+        cursor.execute("""
             SELECT id, cliente, total, estado, fecha 
             FROM ventas 
-            WHERE user_id = ? AND substr(fecha, 1, 7) = ?
-        """, (user_id, periodo_str)).fetchall()
+            WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') = %s
+        """, (user_id, periodo_str))
+        ventas = cursor.fetchall()
         
         calendario = {}
         
-        # Agrupamos las ventas por día ("YYYY-MM-DD")
         for v in ventas:
-            fecha_exacta = str(v['fecha'])[:10]
+            # En Postgres, la fecha extraída será un objeto datetime.
+            # Lo convertimos a string con formato YYYY-MM-DD
+            fecha_exacta = v['fecha'].strftime('%Y-%m-%d')
             
             if fecha_exacta not in calendario:
                 calendario[fecha_exacta] = []
@@ -177,4 +183,5 @@ def api_calendario_historial():
         current_app.logger.error(f"CALENDAR_ERROR: Fallo al cargar calendario para user {user_id} - {e}")
         return jsonify({})
     finally:
+        cursor.close()
         conn.close()

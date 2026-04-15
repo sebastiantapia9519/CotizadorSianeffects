@@ -85,19 +85,23 @@ def admin_categorias():
     Muestra la lista de categorias existentes y permite crear nuevas.
     """
     conn = get_db()
+    cursor = conn.cursor()
     
     # Procesa la creacion de una nueva categoria
     if request.method == 'POST':
         nombre = request.form['nombre']
         orden = request.form.get('orden', 0)
         
-        conn.execute('INSERT INTO categorias (nombre, orden) VALUES (?, ?)', (nombre, orden))
+        cursor.execute('INSERT INTO categorias (nombre, orden) VALUES (%s, %s)', (nombre, orden))
         conn.commit()
         flash('Categoria creada con exito.', 'success')
         return redirect(url_for('catalogo.admin_categorias'))
 
     # Obtiene todas las categorias ordenadas por el campo 'orden'
-    categorias = conn.execute('SELECT * FROM categorias ORDER BY orden ASC, id DESC').fetchall()
+    cursor.execute('SELECT * FROM categorias ORDER BY orden ASC, id DESC')
+    categorias = cursor.fetchall()
+    
+    cursor.close()
     conn.close()
     
     return render_template('catalogo/admin_categorias.html', categorias=categorias)
@@ -113,11 +117,13 @@ def admin_productos(cat_id):
     Permite crear nuevos productos o editar los existentes.
     """
     conn = get_db()
+    cursor = conn.cursor()
 
     # Validamos que la categoria exista
-    categoria = conn.execute(
-        'SELECT * FROM categorias WHERE id = ?', (cat_id,)
-    ).fetchone()
+    cursor.execute(
+        'SELECT * FROM categorias WHERE id = %s', (cat_id,)
+    )
+    categoria = cursor.fetchone()
 
     if request.method == 'POST':
         producto_id = request.form.get('producto_id')
@@ -125,7 +131,8 @@ def admin_productos(cat_id):
         titulo = request.form['titulo']
         descripcion = request.form['descripcion']
         precio = request.form.get('precio', 0)
-        stock_status = 1 if request.form.get('en_stock') else 0
+        # Postgres BOOLEAN
+        stock_status = True if request.form.get('en_stock') else False
 
         media_url = request.form.get('media_url', '').strip()
         media_type = request.form.get('media_type')
@@ -143,10 +150,10 @@ def admin_productos(cat_id):
 
         # Flujo de actualizacion (Editar producto existente)
         if producto_id:
-            conn.execute('''
+            cursor.execute('''
                 UPDATE catalogo_productos
-                SET titulo = ?, descripcion = ?, precio = ?, media_url = ?, media_type = ?, stock = ?
-                WHERE id = ?
+                SET titulo = %s, descripcion = %s, precio = %s, media_url = %s, media_type = %s, stock = %s
+                WHERE id = %s
             ''', (titulo, descripcion, precio, media_url, media_type, stock_status, producto_id))
             conn.commit()
             flash('Producto actualizado correctamente.', 'success')
@@ -162,18 +169,19 @@ def admin_productos(cat_id):
                 sku_generado = f"{prefix}-{random_digits}"
 
                 # Verificamos que el SKU no exista ya en la base de datos
-                existe = conn.execute(
-                    'SELECT id FROM catalogo_productos WHERE sku = ?',
+                cursor.execute(
+                    'SELECT id FROM catalogo_productos WHERE sku = %s',
                     (sku_generado,)
-                ).fetchone()
+                )
+                existe = cursor.fetchone()
 
                 if not existe:
                     break
 
-            conn.execute('''
+            cursor.execute('''
                 INSERT INTO catalogo_productos
                 (categoria_id, sku, titulo, descripcion, media_url, media_type, precio, stock)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', (cat_id, sku_generado, titulo, descripcion, media_url, media_type, precio, stock_status))
             conn.commit()
             flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
@@ -181,11 +189,13 @@ def admin_productos(cat_id):
         return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
     
     # Obtencion de los productos de la categoria actual
-    productos_db = conn.execute(
-        'SELECT * FROM catalogo_productos WHERE categoria_id = ? ORDER BY id DESC',
+    cursor.execute(
+        'SELECT * FROM catalogo_productos WHERE categoria_id = %s ORDER BY id DESC',
         (cat_id,)
-    ).fetchall()
+    )
+    productos_db = cursor.fetchall()
     
+    cursor.close()
     conn.close()
 
     # Convertimos las filas a diccionarios para asegurar compatibilidad con JSON en el frontend
@@ -210,20 +220,22 @@ def toggle_status():
     data = request.get_json()
     tipo = data.get('tipo')
     id_obj = data.get('id')
-    nuevo_estado = data.get('activo')
+    nuevo_estado = True if data.get('activo') else False # Postgres BOOLEAN
     
     conn = get_db()
+    cursor = conn.cursor()
     tabla = 'categorias' if tipo == 'categoria' else 'catalogo_productos'
     
     try:
-        query = f'UPDATE {tabla} SET activo = ? WHERE id = ?'
-        conn.execute(query, (nuevo_estado, id_obj))
+        query = f'UPDATE {tabla} SET activo = %s WHERE id = %s'
+        cursor.execute(query, (nuevo_estado, id_obj))
         conn.commit()
         return jsonify({'success': True})
     except Exception as e:
         current_app.logger.error(f"CATALOG_TOGGLE_ERROR: Fallo al cambiar estado de {tipo} ID {id_obj} - {e}")
         return jsonify({'success': False, 'error': str(e)})
     finally:
+        cursor.close()
         conn.close()
 
 # =========================================================
@@ -236,13 +248,14 @@ def editar_categoria():
     Actualiza la informacion basica de una categoria.
     """
     conn = get_db()
+    cursor = conn.cursor()
     cat_id = request.form['cat_id']
     nombre = request.form['nombre']
     orden = request.form.get('orden', 0)
     
     try:
-        conn.execute(
-            'UPDATE categorias SET nombre = ?, orden = ? WHERE id = ?',
+        cursor.execute(
+            'UPDATE categorias SET nombre = %s, orden = %s WHERE id = %s',
             (nombre, orden, cat_id)
         )
         conn.commit()
@@ -250,6 +263,7 @@ def editar_categoria():
     except Exception as e:
         flash(f'Error al editar: {e}', 'error')
     finally:
+        cursor.close()
         conn.close()
         
     return redirect(url_for('catalogo.admin_categorias'))
@@ -265,14 +279,16 @@ def delete_item(tipo, id_obj):
     elimina los archivos fisicos asociados en Cloudflare R2 para ahorrar espacio.
     """
     conn = get_db()
+    cursor = conn.cursor()
     
     try:
         if tipo == 'categoria':
             # Buscamos todos los productos de esta categoria que tengan archivo en R2
-            productos = conn.execute(
-                'SELECT media_url FROM catalogo_productos WHERE categoria_id = ? AND media_url IS NOT NULL AND media_url != ""', 
+            cursor.execute(
+                'SELECT media_url FROM catalogo_productos WHERE categoria_id = %s AND media_url IS NOT NULL AND media_url != ""', 
                 (id_obj,)
-            ).fetchall()
+            )
+            productos = cursor.fetchall()
             
             # Borramos iterativamente los archivos de la nube
             for prod in productos:
@@ -284,8 +300,8 @@ def delete_item(tipo, id_obj):
                     current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo huérfano '{nombre_archivo}' de R2 - {e}")
 
             # Borramos los registros en cascada
-            conn.execute('DELETE FROM catalogo_productos WHERE categoria_id = ?', (id_obj,))
-            conn.execute('DELETE FROM categorias WHERE id = ?', (id_obj,))
+            cursor.execute('DELETE FROM catalogo_productos WHERE categoria_id = %s', (id_obj,))
+            cursor.execute('DELETE FROM categorias WHERE id = %s', (id_obj,))
             conn.commit()
             
             flash('Categoria y todos sus productos eliminados.', 'warning')
@@ -293,10 +309,11 @@ def delete_item(tipo, id_obj):
             
         else: 
             # Logica para eliminar un solo producto
-            prod = conn.execute(
-                'SELECT categoria_id, media_url FROM catalogo_productos WHERE id = ?', 
+            cursor.execute(
+                'SELECT categoria_id, media_url FROM catalogo_productos WHERE id = %s', 
                 (id_obj,)
-            ).fetchone()
+            )
+            prod = cursor.fetchone()
 
             if prod:
                 cat_id = prod['categoria_id']
@@ -311,7 +328,7 @@ def delete_item(tipo, id_obj):
                     except Exception as e:
                         current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo '{nombre_archivo}' de R2 - {e}")
 
-                conn.execute('DELETE FROM catalogo_productos WHERE id = ?', (id_obj,))
+                cursor.execute('DELETE FROM catalogo_productos WHERE id = %s', (id_obj,))
                 conn.commit()
                 flash('Producto y archivo eliminados correctamente.', 'success')
                 return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
@@ -324,6 +341,7 @@ def delete_item(tipo, id_obj):
         flash(f'Error al eliminar: {e}', 'error')
         return redirect(url_for('catalogo.admin_categorias'))
     finally:
+        cursor.close()
         conn.close()
 
 # =========================================================
@@ -333,23 +351,27 @@ def delete_item(tipo, id_obj):
 def ver_catalogo():
     """
     Renderiza el catalogo publico. Solo muestra categorias y productos
-    cuyo flag 'activo' este en 1.
+    cuyo flag 'activo' este en True.
     """
     conn = get_db()
+    cursor = conn.cursor()
     
-    categorias = conn.execute(
-        'SELECT * FROM categorias WHERE activo = 1 ORDER BY orden ASC'
-    ).fetchall()
+    # Postgres BOOLEAN (True)
+    cursor.execute(
+        'SELECT * FROM categorias WHERE activo = True ORDER BY orden ASC'
+    )
+    categorias = cursor.fetchall()
     
     catalogo_data = []
     
     # Anidamos los productos dentro de su respectiva categoria
     for cat in categorias:
-        productos = conn.execute('''
+        cursor.execute('''
             SELECT * FROM catalogo_productos
-            WHERE categoria_id = ? AND activo = 1
+            WHERE categoria_id = %s AND activo = True
             ORDER BY orden ASC, id DESC
-        ''', (cat['id'],)).fetchall()
+        ''', (cat['id'],))
+        productos = cursor.fetchall()
         
         if productos:
             catalogo_data.append({
@@ -357,8 +379,12 @@ def ver_catalogo():
                 'productos': [dict(prod) for prod in productos]
             })
             
+    cursor.close()
     conn.close()
     
+    # IMPORTANTE: Revisa el nombre del archivo en tu render_template.
+    # El archivo subido que compartiste indicaba problemas con "galeria_sianeffects.html". 
+    # Asegúrate de que el nombre del template HTML aquí coincida con lo que tienes en tu carpeta templates.
     return render_template(
         'catalogo/galeria_sianeffects.html',
         catalogo=catalogo_data
@@ -375,14 +401,17 @@ def update_stock():
     """
     data = request.get_json()
     prod_id = data.get('id')
-    nuevo_stock = data.get('stock') 
+    # Postgres BOOLEAN
+    nuevo_stock = True if data.get('stock') else False 
     
     conn = get_db()
+    cursor = conn.cursor()
     try:
-        conn.execute('UPDATE catalogo_productos SET stock = ? WHERE id = ?', (nuevo_stock, prod_id))
+        cursor.execute('UPDATE catalogo_productos SET stock = %s WHERE id = %s', (nuevo_stock, prod_id))
         conn.commit()
         return jsonify({'success': True})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
+        cursor.close()
         conn.close()

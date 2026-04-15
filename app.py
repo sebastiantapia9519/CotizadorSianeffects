@@ -132,6 +132,7 @@ def tarea_limpieza():
                             for foto_url in fotos_galeria: delete_from_cloudflare(foto_url)
                         except Exception as e:
                             logging.error(f"Error borrando galería R2 inv {inv_id}: {e}")
+                            current_app.logger.error(f"Error borrando galería R2 inv {inv_id}: {e}")
                             
                     cursor.execute("SELECT url FROM fotos_invitados WHERE invitacion_id = %s", (inv_id,))
                     fotos_camara = cursor.fetchall()
@@ -148,6 +149,7 @@ def tarea_limpieza():
 
         except Exception as e:
             logging.error(f"Error en tarea_limpieza general: {str(e)}")
+            current_app.logger.error(f"Error en tarea_limpieza general: {str(e)}")
         finally:
             conn.close()
 
@@ -173,6 +175,7 @@ def tarea_canceladas():
             cursor.close()
         except Exception as e:
             logging.error(f"Error en tarea_canceladas: {str(e)}")
+            current_app.logger.error(f"Error en tarea_canceladas: {str(e)}")
         finally:
             conn.close()
 
