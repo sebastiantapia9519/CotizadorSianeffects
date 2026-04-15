@@ -2,7 +2,7 @@ import random
 import string
 import os
 import uuid
-from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
 from db import get_db_connection as get_db
 from helpers import login_required
 import boto3
@@ -283,11 +283,11 @@ def delete_item(tipo, id_obj):
     
     try:
         if tipo == 'categoria':
-            # Buscamos todos los productos de esta categoria que tengan archivo en R2
-            cursor.execute(
-                'SELECT media_url FROM catalogo_productos WHERE categoria_id = %s AND media_url IS NOT NULL AND media_url != ''', 
-                (id_obj,)
-            )
+            # Usamos comillas triples para que las comillas simples de adentro no rompan el SQL
+            cursor.execute("""
+                SELECT media_url FROM catalogo_productos 
+                WHERE categoria_id = %s AND media_url IS NOT NULL AND media_url != ''
+            """, (id_obj,))
             productos = cursor.fetchall()
             
             # Borramos iterativamente los archivos de la nube
