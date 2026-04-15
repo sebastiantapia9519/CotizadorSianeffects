@@ -285,7 +285,7 @@ def delete_item(tipo, id_obj):
         if tipo == 'categoria':
             # Buscamos todos los productos de esta categoria que tengan archivo en R2
             cursor.execute(
-                'SELECT media_url FROM catalogo_productos WHERE categoria_id = %s AND media_url IS NOT NULL AND media_url != ""', 
+                'SELECT media_url FROM catalogo_productos WHERE categoria_id = %s AND media_url IS NOT NULL AND media_url != ''', 
                 (id_obj,)
             )
             productos = cursor.fetchall()
