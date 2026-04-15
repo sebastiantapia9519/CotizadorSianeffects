@@ -107,7 +107,7 @@ def index():
             activos=activos, 
             vencidos=vencidos, 
             proximos_a_vencer=proximos_a_vencer,
-            ahora_actual=ahora_sql(),  # <--- AGREGA ESTA LÍNEA AQUÍ
+            ahora_actual=ahora_sql(),
             top_leales=top_leales, 
             meses_labels=meses_labels, 
             usuarios_data=usuarios_data,
