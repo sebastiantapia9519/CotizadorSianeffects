@@ -325,6 +325,14 @@
         box-shadow: 0 1px 0 #334155 !important;
         color: #94a3b8 !important;
     }
+    [data-bs-theme="dark"] .table-responsive, 
+    .table-responsive {
+        overflow: visible !important; /* Permite que el menú flote fuera de la tabla */
+    }
+
+    .dropdown-menu-custom {
+        z-index: 9999 !important; /* Asegura que esté por encima de todo */
+    }
 </style>
 {% endblock %}
 
@@ -376,7 +384,7 @@
                     <td class="ps-4">
                         <div class="fw-bold text-dark folio-text">#{{ v['id'] }}</div>
                         <div class="text-muted text-xs mt-1">
-                            {{ v['fecha'].strftime('%d/%m/%Y') if v['fecha'] else '--/--/----' }}
+                            {{ v['fecha'].strftime('%d/%m/%Y') if v['fecha'] is not string else v['fecha'][:10] }}
                         </div>
                     </td>
 
@@ -402,7 +410,7 @@
                         </span>
                         {% if v['fecha_vencimiento'] %}
                         <div class="text-danger text-xs font-medium mt-1">
-                            Expira: {{ v['fecha_vencimiento'].strftime('%d/%m/%Y') if v['fecha_vencimiento'] else '' }}
+                            Expira: {{ v['fecha_vencimiento'].strftime('%d/%m/%Y') if v['fecha_vencimiento'] is not string else v['fecha_vencimiento'][:10] }}
                         </div>
                         {% endif %}
                         {% elif v['estado'] == 'cancelada' %}
