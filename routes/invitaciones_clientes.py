@@ -6,7 +6,7 @@ from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, current_app
 from db import get_db_connection
 from helpers import guardar_pase_bd, obtener_estado_mesas
-from utils.datetime_utils import hoy_sqlite, hoy_local, ahora_sql
+from utils.datetime_utils import hoy_sqlite, hoy_local, ahora_sql, now_utc
 
 # ==============================================================================
 # INICIALIZACION DEL BLUEPRINT
