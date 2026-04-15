@@ -103,11 +103,20 @@ def index():
 
         return render_template(
             'dashboard/index.html',
-            total_usuarios=total_usuarios, activos=activos, vencidos=vencidos, proximos_a_vencer=proximos_a_vencer,
-            top_leales=top_leales, meses_labels=meses_labels, usuarios_data=usuarios_data,
-            origen_labels=origen_labels, origen_data=origen_data,
-            seg_labels=list(segmentos.keys()), seg_data=list(segmentos.values()),
-            mes_sel=mes_sel, anio_sel=anio_sel, 
+            total_usuarios=total_usuarios, 
+            activos=activos, 
+            vencidos=vencidos, 
+            proximos_a_vencer=proximos_a_vencer,
+            ahora_actual=ahora_sql(),  # <--- AGREGA ESTA LÍNEA AQUÍ
+            top_leales=top_leales, 
+            meses_labels=meses_labels, 
+            usuarios_data=usuarios_data,
+            origen_labels=origen_labels, 
+            origen_data=origen_data,
+            seg_labels=list(segmentos.keys()), 
+            seg_data=list(segmentos.values()),
+            mes_sel=mes_sel, 
+            anio_sel=anio_sel, 
             lista_meses=[(f"{i:02d}", nombres_meses[i-1]) for i in range(1, 13)],
             lista_anios=[2025, 2026, 2027, 2028]
         )
