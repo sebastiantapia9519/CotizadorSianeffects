@@ -50,3 +50,10 @@ def fecha_sql(days=0, as_string=True):
 
 def fecha_mas_dias(dias, timezone_str='America/Mexico_City'):
     return (utc_to_local(now_utc(), timezone_str) + timedelta(days=dias)).strftime('%Y-%m-%d')
+
+def hoy_sqlite():
+    """
+    Función de compatibilidad para evitar errores de importación.
+    Devuelve la fecha actual en formato YYYY-MM-DD.
+    """
+    return now_utc().strftime('%Y-%m-%d')
