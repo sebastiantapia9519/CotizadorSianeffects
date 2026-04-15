@@ -301,6 +301,10 @@ def now_local_format(value=None, tz_name='America/Monterrey'):
     except Exception:
         return ''
 
+@app.route('/health')
+def health():
+    return "OK", 200
+
 # =========================
 # MAIN
 # =========================
