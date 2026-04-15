@@ -1486,35 +1486,23 @@
             });
     }
 
-    function solicitarCotizacion(tipo) {
-        const loader = document.getElementById('loaderEnvio');
-        loader.classList.remove('d-none');
-        let payload = { tipo: tipo };
+   function solicitarCotizacion(tipo) {
+    const loader = document.getElementById('loaderEnvio');
+    loader.classList.remove('d-none');
+    
+    // Obtenemos los valores de los inputs
+    const lat = document.getElementById('latDestino').value;
+    const lng = document.getElementById('lngDestino').value;
+    const link = document.getElementById('inputMapsLink').value;
 
-        if (tipo === 'local') {
-            const lat = document.getElementById('latDestino').value;
-            const lng = document.getElementById('lngDestino').value;
-            const link = document.getElementById('inputMapsLink').value; // <-- Agregamos el link
+    let payload = { tipo: tipo };
 
-            // Si no hay coordenadas, pero HAY link, dejamos pasar para que el servidor lo resuelva
-            if (!lat || !lng) {
-                if (!link) {
-                    loader.classList.add('d-none');
-                    Swal.fire({
-                        icon: 'warning',
-                        title: 'Falta ubicación',
-                        text: 'Ingresa un link de Google Maps para calcular la distancia.',
-                        confirmButtonColor: '#ff4757'
-                    });
-                    return;
-                }
-                // Si hay link pero no lat/lng, enviamos el link como "direccion" para que Python haga la magia
-                payload.direccion = link; 
-            } else {
-                payload.lat = lat; 
-                payload.lng = lng;
-            }
-        } else {
+    if (tipo === 'local') {
+        // Enviamos todo lo que tengamos: lat, lng y el link (direccion)
+        payload.lat = lat;
+        payload.lng = lng;
+        payload.direccion = link; // El backend decidirá cuál usar
+    } else {
             payload.peso = document.getElementById('envioPeso').value;
             payload.largo = document.getElementById('envioLargo').value || 10;
             payload.ancho = document.getElementById('envioAncho').value || 10;
@@ -1523,48 +1511,31 @@
         }
 
         fetch('/api/cotizar-envio', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        }).then(r => r.json()).then(data => {
-            loader.classList.add('d-none');
-
-            if (data.error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Aviso de Cotización',
-                    text: data.error,
-                    confirmButtonColor: '#ff4757'
-                });
-                return;
-            }
-
-            // Cerrar modal y aplicar
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+    })
+    .then(r => r.json())
+    .then(data => {
+        loader.classList.add('d-none');
+        if (data.error) {
+            Swal.fire({ icon: 'error', title: 'Aviso de Cotización', text: data.error });
+        } else {
+            // Éxito: cerrar modal y aplicar costo (tu lógica actual)
             const modalEl = document.getElementById('modalEnvios');
-            const modal = bootstrap.Modal.getInstance(modalEl);
-            modal.hide();
-
+            bootstrap.Modal.getInstance(modalEl).hide();
+            
             costoEnvio = parseFloat(data.costo_sugerido);
-            infoEnvio = data;
-            const resumen = document.getElementById('resumenEnvio');
-            resumen.classList.remove('d-none');
-
-            let desc = data.tipo === 'local' ? `Local (${data.distancia_km} km)` : `Nacional (${data.zona})`;
-            document.getElementById('descEnvio').innerText = desc;
+            document.getElementById('resumenEnvio').classList.remove('d-none');
             document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
-            document.getElementById('btnTextoEnvio').innerText = "Cambiar";
             calcularTotal();
-
-        }).catch(e => {
-            loader.classList.add('d-none');
-            Swal.fire({
-                icon: 'error',
-                title: 'Error de conexión',
-                text: 'Hubo un problema al intentar calcular el envío. Revisa tu conexión a internet.',
-                confirmButtonColor: '#ff4757'
-            });
-        });
-    }
+        }
+    })
+    .catch(e => {
+        loader.classList.add('d-none');
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de red.' });
+    });
+}
 
     document.addEventListener('DOMContentLoaded', () => agregarFila());
 
