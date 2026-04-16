@@ -367,10 +367,10 @@
                             <h5>Identidad del Negocio</h5>
                             <button type="button" id="tour-btn-preview" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold border-light" onclick="actualizarVistaPrevia()">
                                 <i class="fas fa-eye me-1"></i> Preview Ticket
-                            </button>
+                            </button> 
                         </div>
                         
-                        <form method="POST" action="{{ url_for('configuracion.actualizar_negocio') }}" enctype="multipart/form-data">
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_negocio') }}" enctype="multipart/form-data" class="form-silencioso">
                             <input type="hidden" name="current_logo" id="currentLogo" value="{{ config['logo_empresa'] }}">
                             <input type="hidden" name="icono_empresa" id="inputIconoReal" value="{{ config['icono_empresa'] }}">
                             
@@ -530,7 +530,7 @@
                         <div class="saas-card-header">
                             <h5>Información Personal</h5>
                         </div>
-                        <form method="POST" action="{{ url_for('configuracion.actualizar_perfil') }}">
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_perfil') }}" class="form-silencioso">
                             <input type="hidden" name="action" value="update_profile">
                             
                             <div class="saas-card-body">
@@ -583,7 +583,7 @@
                         <div class="saas-card-header">
                             <h5>Seguridad y Acceso</h5>
                         </div>
-                        <form method="POST" action="{{ url_for('configuracion.actualizar_password') }}" onsubmit="return validarPassword()">
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_password') }}" class="form-silencioso" onsubmit="return validarPassword()">
                             
                             <div class="saas-card-body">
                                 <div class="alert alert-light border border-warning border-start border-start-4 d-flex align-items-center p-3 mb-4" role="alert">
@@ -618,7 +618,7 @@
                         <div class="saas-card-header">
                             <h5>Origen y Tarifas Locales</h5>
                         </div>
-                        <form method="POST" action="{{ url_for('configuracion.actualizar_logistica_base') }}">
+                        <form method="POST" action="{{ url_for('configuracion.actualizar_logistica_base') }}" class="form-silencioso">
                             <div class="saas-card-body">
                                 
                                 <h6 class="fw-bold text-dark mb-3 fs-6">📍 Punto de Despacho</h6>
@@ -741,7 +741,7 @@
                                     </table>
                                 </div>
                                 <div class="saas-card-footer bg-white p-3 border-top border-light">
-                                    <form method="POST" action="{{ url_for('configuracion.crear_tarifa') }}" class="row g-2 align-items-center">
+                                    <form method="POST" action="{{ url_for('configuracion.crear_tarifa') }}" class="row g-2 align-items-center form-silencioso" data-recargar="true">
                                         <input type="hidden" name="zone_id" value="{{ zone['id'] }}">
                                         <div class="col-4">
                                             <input type="number" step="0.1" name="max_weight" class="form-control form-control-sm saas-input" placeholder="Kg Max" required>
@@ -854,7 +854,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <form method="POST" action="{{ url_for('configuracion.crear_zona') }}">
+                <form method="POST" action="{{ url_for('configuracion.crear_zona') }}" class="form-silencioso" data-recargar="true">
                     <div class="mb-4">
                         <label class="saas-label">Nombre Identificador</label>
                         <input type="text" name="zone_name" class="form-control saas-input text-dark" placeholder="Ej. Pacífico, Norte, Todo México..." required>
@@ -1130,5 +1130,71 @@
             }
         });
     }
+
+    // Agrega esto al final de tus scripts
+document.addEventListener('DOMContentLoaded', function() {
+    // Buscamos todos los formularios que tengan la clase 'form-silencioso'
+    const formsSilenciosos = document.querySelectorAll('.form-silencioso');
+    
+    formsSilenciosos.forEach(form => {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault(); // Detiene la recarga de la página
+
+            // Ubicamos el botón de submit para ponerle estado de "Cargando"
+            const btn = form.querySelector('button[type="submit"]');
+            const btnOriginalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+            btn.disabled = true;
+
+            // Recolectamos todos los datos (incluyendo imágenes si las hay)
+            const formData = new FormData(form);
+
+            try {
+                // Enviamos los datos a la misma ruta de Python que ya tienes
+                const response = await fetch(form.action, {
+                    method: form.method,
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Mostramos la alerta bonita
+                    Swal.fire({
+                        icon: 'success',
+                        title: '¡Guardado!',
+                        text: 'Los cambios se aplicaron correctamente.',
+                        timer: 1500,
+                        showConfirmButton: false,
+                        toast: true,
+                        position: 'top-end'
+                    });
+
+                    // IMPORTANTE: Si es un formulario que añade cosas a una lista (como zonas o tarifas),
+                    // necesitamos recargar la página para que veas el nuevo elemento.
+                    // Si solo es actualizar configuración, nos quedamos donde estamos.
+                    if (form.hasAttribute('data-recargar')) {
+                        setTimeout(() => window.location.reload(), 1500);
+                    }
+                    
+                    // Si es un modal, lo cerramos
+                    const modalEl = form.closest('.modal');
+                    if(modalEl) {
+                        bootstrap.Modal.getInstance(modalEl).hide();
+                        form.reset();
+                    }
+
+                } else {
+                    Swal.fire('Error', 'Hubo un problema al guardar', 'error');
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                Swal.fire('Error', 'Fallo de conexión', 'error');
+            } finally {
+                // Restauramos el botón
+                btn.innerHTML = btnOriginalText;
+                btn.disabled = false;
+            }
+        });
+    });
+});
 </script>
 {% endblock %}
