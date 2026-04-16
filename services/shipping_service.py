@@ -189,6 +189,20 @@ def obtener_coordenadas_universales(url_input):
 
             if location:
                 return location.latitude, location.longitude
+        
+        # extraer dirección desde q=
+        if 'q' in params:
+            direccion = unquote(params['q'][0])
+
+            # Evitar falsos positivos (coords ya vienen en q)
+            if not re.match(r'^-?\d+\.\d+,-?\d+\.\d+$', direccion):
+                geolocator = Nominatim(user_agent="shipping_app")
+                time.sleep(1)
+
+                location = geolocator.geocode(direccion)
+
+                if location:
+                    return location.latitude, location.longitude
 
     except Exception as e:
         logging.error(f"Error geocodificando dirección: {e}")
