@@ -176,9 +176,20 @@ def guardar_venta():
         costo_envio = float(data.get('envio', 0))
         descuento_pct = float(data.get('descuento_porcentaje', 0))
         descuento_monto = float(data.get('descuento_monto', 0))
-        tax_percent = float(data.get('tax_percent', 0))
         estado = data.get('estado', 'pagado')
         monto_pagado_request = float(data.get('pago_inicial', 0)) 
+
+        # --- FIX: RECUPERAR ABONOS HISTÓRICOS ---
+        pagado_historico = 0.0
+        if venta_id:
+            cursor.execute("SELECT monto_pagado FROM ventas WHERE id=%s", (venta_id,))
+            row = cursor.fetchone()
+            if row:
+                pagado_historico = float(row['monto_pagado'])
+        
+        # Sumamos lo que ya tenía + si le metieron algo nuevo en este momento
+        monto_pagado_total = pagado_historico + monto_pagado_request
+        # ----------------------------------------
 
         subtotal_calculado = 0.0
         costo_total_calculado = 0.0
@@ -210,13 +221,17 @@ def guardar_venta():
             tax_amount_calculado = base_imponible * (tax_percent / 100)
             tax_engine = f"IVA {int(tax_percent)}%" if tax_percent.is_integer() else f"IVA {tax_percent}%"
 
+        # --- BLINDAJE DE ESTADO ---
         total_calculado = base_imponible + tax_amount_calculado
-        monto_pagado_real = min(monto_pagado_request, total_calculado) 
+        monto_pagado_real = min(monto_pagado_total, total_calculado) # Usamos el histórico
         saldo_pendiente_real = total_calculado - monto_pagado_real
 
         if saldo_pendiente_real < 0.05: 
             saldo_pendiente_real = 0.0
             estado = 'pagado'
+        elif monto_pagado_real > 0:
+            # BLINDAJE: Si hay dinero de por medio, NUNCA puede ser una cotización, fuerza a Anticipo.
+            estado = 'anticipo'
 
         fecha_actual = ahora_sql()
         fecha_vencimiento = ahora_sql(dias=2) 
