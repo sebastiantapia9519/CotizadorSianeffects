@@ -274,6 +274,9 @@ def delete_user():
         # Borrar Detalles de Ventas y Ventas
         cursor.execute("DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id = %s)", (user_id,))
         cursor.execute("DELETE FROM ventas WHERE user_id = %s", (user_id,))
+
+        # Borrar de tutoriales
+        cursor.execute("DELETE FROM tutoriales_estado WHERE user_id = %s", (user_id,))
         
         # Borrar Inventario y Materiales
         cursor.execute("DELETE FROM movimientos_inventario WHERE user_id = %s", (user_id,))
