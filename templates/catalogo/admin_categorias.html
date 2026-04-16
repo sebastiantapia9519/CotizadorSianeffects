@@ -269,7 +269,7 @@
                 <h5 class="modal-title fw-bold">Nueva Categoría</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST">
+            <form method="POST" onsubmit="mostrarCargando('Creando categoría...')">
                 <div class="modal-body pt-3 px-4">
                     <div class="mb-3">
                         <label class="form-label small fw-bold text-muted">Nombre</label>
@@ -298,7 +298,7 @@
                 <h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit me-2"></i>Editar Categoría</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
-            <form action="{{ url_for('catalogo.editar_categoria') }}" method="POST">
+            <form action="{{ url_for('catalogo.editar_categoria') }}" method="POST" onsubmit="mostrarCargando('Actualizando catálogo...')">
                 <input type="hidden" name="cat_id" id="edit_id">
                 <div class="modal-body pt-3 px-4">
                     <div class="mb-3">
@@ -386,5 +386,17 @@
         }
     });
 }
+
+function mostrarCargando(mensaje) {
+        Swal.fire({
+            title: mensaje,
+            text: 'Por favor espera un momento...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
 </script>
 {% endblock %}

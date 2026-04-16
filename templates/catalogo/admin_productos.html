@@ -48,6 +48,20 @@
         color: white;
     }
 
+    /* ===================================================
+       NUEVO: AJUSTES MÓVILES (Encabezado flexible)
+       =================================================== */
+    @media (max-width: 768px) {
+        .header-mobile-flex {
+            flex-direction: column;
+            align-items: flex-start !important;
+            gap: 15px;
+        }
+        .header-mobile-flex .btn-upload {
+            width: 100%;
+        }
+    }
+
 
     /* ===================================================
        2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
@@ -135,18 +149,20 @@
     }
 </style>
 
-<div class="d-flex align-items-center mb-4">
-    <a href="{{ url_for('catalogo.admin_categorias') }}" class="btn btn-light rounded-circle shadow-sm me-3">
-        <i class="fas fa-arrow-left"></i>
-    </a>
-    <div>
-        <h2 class="fw-bold m-0 text-dark">{{ categoria['nombre'] }}</h2>
-        <span class="badge bg-secondary rounded-pill">Gestionando Productos</span>
+<div class="d-flex align-items-center justify-content-between mb-4 header-mobile-flex">
+    <div class="d-flex align-items-center gap-3">
+        <a href="{{ url_for('catalogo.admin_categorias') }}" class="btn btn-light rounded-circle shadow-sm flex-shrink-0" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center;">
+            <i class="fas fa-arrow-left"></i>
+        </a>
+        <div>
+            <h2 class="fw-bold m-0 text-dark fs-4">{{ categoria['nombre'] }}</h2>
+            <span class="badge bg-secondary rounded-pill fw-normal">Gestionando Productos</span>
+        </div>
     </div>
-    <div class="ms-auto">
-        <button class="btn btn-success rounded-pill shadow fw-bold px-4" data-bs-toggle="modal"
+    <div class="btn-upload">
+        <button class="btn btn-primary w-100 rounded-pill shadow-sm fw-medium px-4" data-bs-toggle="modal"
             data-bs-target="#modalNuevoProd" onclick="resetearFormulario()">
-            <i class="fas fa-cloud-upload-alt me-2"></i> Subir Producto
+            <i class="fas fa-plus me-1"></i> Subir Producto
         </button>
     </div>
 </div>
@@ -193,17 +209,17 @@
                     </div>
 
                     <div class="text-end">
-                        <div class="form-check form-switch small mb-1">
-                            <input class="form-check-input shadow-none" type="checkbox" role="switch"
+                        <div class="form-check form-switch small mb-1 d-flex justify-content-end gap-2 align-items-center">
+                            <label class="small text-muted mb-0" style="cursor: pointer;" for="switch-vis-{{ prod.id }}">Visible</label>
+                            <input class="form-check-input shadow-none m-0" type="checkbox" role="switch" id="switch-vis-{{ prod.id }}"
                                 onchange="toggleEstado('producto', {{ prod['id'] }}, this)" {% if prod['activo']
                                 %}checked{% endif %}>
-                            <label class="small text-muted">Visible</label>
                         </div>
-                        <div class="form-check form-switch small">
-                            <input class="form-check-input shadow-none" type="checkbox" role="switch"
+                        <div class="form-check form-switch small d-flex justify-content-end gap-2 align-items-center">
+                            <label class="small text-muted mb-0" style="cursor: pointer;" for="switch-stk-{{ prod.id }}">Stock</label>
+                            <input class="form-check-input shadow-none m-0" type="checkbox" role="switch" id="switch-stk-{{ prod.id }}"
                                 onchange="toggleStock({{ prod['id'] }}, this)" {% if prod['stock']> 0 %}checked{% endif
                             %}>
-                            <label class="small text-muted">En Stock</label>
                         </div>
                     </div>
                 </div>
@@ -216,20 +232,32 @@
                 {% endif %}
             </div>
 
-            <div class="card-footer bg-white border-0 pt-0 text-end pb-3">
-                <button class="btn btn-sm btn-outline-primary rounded-pill me-2"
+            <div class="card-footer bg-white border-0 pt-0 d-flex justify-content-end gap-2 pb-3">
+                <button class="btn btn-sm btn-outline-primary rounded-pill px-3"
                     onclick='cargarDatosEdicion({{ prod | tojson }})'>
                     <i class="fas fa-edit me-1"></i> Editar
                 </button>
-                <a href="{{ url_for('catalogo.delete_item', tipo='producto', id_obj=prod['id']) }}"
-                    class="btn btn-sm btn-outline-danger rounded-pill"
-                    onclick="return confirm('¿Eliminar este producto?');">
-                    <i class="fas fa-trash-alt me-1"></i> Eliminar
-                </a>
+                <button type="button"
+                    class="btn btn-sm btn-outline-danger rounded-pill px-3"
+                    onclick="confirmarEliminarProd('{{ url_for('catalogo.delete_item', tipo='producto', id_obj=prod['id']) }}', '{{ prod['titulo'] | replace("'", "\\'") }}')">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </div>
         </div>
     </div>
     {% else %}
+    <div class="col-12">
+        <div class="card border-0 shadow-sm rounded-4 text-center py-5">
+            <div class="card-body py-5">
+                <i class="fas fa-box-open fa-3x text-muted opacity-25 mb-3"></i>
+                <h5 class="fw-bold text-dark mb-1">Tu categoría está vacía</h5>
+                <p class="text-muted small mb-4">Aún no hay diseños o productos guardados en esta sección.</p>
+                <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalNuevoProd" onclick="resetearFormulario()">
+                    <i class="fas fa-cloud-upload-alt me-1"></i> Subir el primero
+                </button>
+            </div>
+        </div>
+    </div>
     {% endfor %}
 </div>
 
@@ -238,9 +266,9 @@
         <div class="modal-content rounded-4 border-0">
             <div class="modal-header border-0">
                 <h5 class="modal-title fw-bold text-dark">Subir a {{ categoria['nombre'] }}</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
-            <form method="POST">
+            <form method="POST" onsubmit="mostrarCargando('Guardando producto...')">
                 <input type="hidden" name="producto_id" id="producto_id">
                 <div class="modal-body">
 
@@ -290,11 +318,11 @@
                     </div>
                 </div>
                 <div class="form-check form-switch mb-3 ms-4">
-                    <input class="form-check-input" type="checkbox" name="en_stock" id="en_stock" checked>
-                    <label class="form-check-label fw-bold text-dark" for="en_stock">Producto en Stock</label>
+                    <input class="form-check-input shadow-none" type="checkbox" name="en_stock" id="en_stock" checked>
+                    <label class="form-check-label fw-bold text-dark ms-2" for="en_stock">Producto en Stock</label>
                 </div>
                 <div class="modal-footer border-0">
-                    <button type="submit" class="btn btn-success w-100 rounded-pill fw-bold py-2" id="btnGuardar"
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2" id="btnGuardar"
                         disabled>
                         Guardar Producto
                     </button>
@@ -308,6 +336,42 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- NUEVO: FUNCIONES DE SWEETALERT CARGANDO ---
+    function mostrarCargando(mensaje) {
+        Swal.fire({
+            title: mensaje,
+            text: 'Por favor espera un momento...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+
+    function confirmarEliminarProd(urlEliminar, nombre) {
+        Swal.fire({
+            title: `¿Borrar "${nombre}"?`,
+            text: "Se eliminará permanentemente de tu catálogo.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#f8f9fa',
+            confirmButtonText: 'Sí, borrar',
+            cancelButtonText: '<span style="color:#212529">Cancelar</span>',
+            reverseButtons: true,
+            customClass: {
+                confirmButton: 'rounded-pill px-4',
+                cancelButton: 'rounded-pill px-4 border'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                mostrarCargando('Borrando...');
+                window.location.href = urlEliminar;
+            }
+        });
+    }
+
     // --- LÓGICA DE SUBIDA R2 CON PROGRESO ---
     function handleR2Upload(input) {
         const file = input.files[0];
@@ -320,7 +384,6 @@
         const btnGuardar = document.getElementById('btnGuardar');
         const mediaBox = document.getElementById('previewMedia');
 
-        // Reset UI para carga
         prompt.classList.add('d-none');
         status.classList.remove('d-none');
         btnGuardar.disabled = true;
@@ -332,7 +395,6 @@
 
         const xhr = new XMLHttpRequest();
 
-        // Seguimiento de progreso real
         xhr.upload.addEventListener("progress", (e) => {
             if (e.lengthComputable) {
                 const percent = Math.round((e.loaded / e.total) * 100);
@@ -348,13 +410,10 @@
                     if (res.success) {
                         document.getElementById('media_url').value = res.url;
 
-                        // Determinar tipo
                         let type = 'imagen';
                         if (file.type.includes('video')) type = 'video';
                         if (file.type.includes('audio')) type = 'audio';
                         document.getElementById('media_type').value = type;
-
-                        // Render Preview
 
                         console.log("URL del servidor:", res.url);
                         if (type === 'video') {
@@ -403,7 +462,6 @@
             body: JSON.stringify({ id: id, stock: hayStock })
         }).then(res => {
             if (res.ok) {
-                // Actualizar el badge visualmente
                 if (hayStock) {
                     badge.classList.add('d-none');
                 } else {
