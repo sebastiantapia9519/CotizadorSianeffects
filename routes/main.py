@@ -176,10 +176,13 @@ def guardar_venta():
         costo_envio = float(data.get('envio', 0))
         descuento_pct = float(data.get('descuento_porcentaje', 0))
         descuento_monto = float(data.get('descuento_monto', 0))
+        
+        tax_percent = float(data.get('tax_percent', 0)) # <-- ESTA ES LA LÍNEA QUE SE HABÍA BORRADO
+        
         estado = data.get('estado', 'pagado')
         monto_pagado_request = float(data.get('pago_inicial', 0)) 
 
-        # --- FIX: RECUPERAR ABONOS HISTÓRICOS ---
+        # --- RECUPERAR ABONOS HISTÓRICOS ---
         pagado_historico = 0.0
         if venta_id:
             cursor.execute("SELECT monto_pagado FROM ventas WHERE id=%s", (venta_id,))
