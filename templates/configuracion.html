@@ -528,7 +528,6 @@
                             <h5>Información Personal</h5>
                         </div>
                         <form method="POST" action="{{ url_for('configuracion.actualizar_perfil') }}" class="form-silencioso">
-                            <input type="hidden" name="action" value="update_profile">
                             
                             <div class="saas-card-body">
                                 <div class="row g-4">
@@ -1159,8 +1158,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
             try {
                 // 3. ENVÍO CON HEADERS MÁGICOS PARA PYTHON
-                const response = await fetch(form.action, {
-                    method: form.method,
+                // Usamos getAttribute para evitar que inputs con name="action" rompan la URL
+                const actionUrl = form.getAttribute('action'); 
+                
+                const response = await fetch(actionUrl, {
+                    method: form.getAttribute('method') || 'POST',
                     body: formData,
                     headers: {
                         'Accept': 'application/json',
