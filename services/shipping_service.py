@@ -3,6 +3,9 @@ from models.shipping_model import ShippingModel
 import requests
 import re
 import logging
+from urllib.parse import urlparse, parse_qs, unquote
+from geopy.geocoders import Nominatim
+import time
 
 class ShippingService:
     
@@ -136,58 +139,65 @@ class ShippingService:
 
 
 def obtener_coordenadas_universales(url_input):
-    """
-    SÚPER RESOLUTOR DE LINKS (VERSIÓN DEFINITIVA)
-    Sigue redirecciones y, si Google esconde las coordenadas en la URL, 
-    las extrae directamente del código fuente (HTML) de la página.
-    """
     if not url_input:
         return None, None
 
     url_final = url_input
     html_content = ""
-    
-    # 1. Expandir CUALQUIER link de Google (goo.gl, maps.app, googleusercontent)
+
+    # 1. Expandir links cortos o raros
     if any(dominio in url_input.lower() for dominio in ["goo.gl", "maps.app", "googleusercontent.com"]):
         try:
-            # Nos disfrazamos de iPhone para que Google nos dé la página móvil correcta
             headers = {
-                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X)',
                 'Accept-Language': 'es-MX,es;q=0.9'
             }
-            # allow_redirects=True sigue el enlace fantasma hasta su destino real
             res = requests.get(url_input, headers=headers, allow_redirects=True, timeout=8)
             url_final = res.url
-            html_content = res.text  # Guardamos todo el código de la página por si acaso
+            html_content = res.text
         except Exception as e:
             logging.error(f"Error expandiendo URL '{url_input}': {e}")
             return None, None
 
-    # 2. PLAN A: Buscar las coordenadas en la URL final
+    # 2. PLAN A: regex directo
     patrones_url = [
-        r'@(-?\d+\.\d+),(-?\d+\.\d+)',      # Formato web: @25.68,-100.31
-        r'q=(-?\d+\.\d+),(-?\d+\.\d+)',     # Formato query: q=25.68,-100.31
-        r'll=(-?\d+\.\d+),(-?\d+\.\d+)',    # Formato lat/lng: ll=25.68,-100.31
-        r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)'   # Formato 3D oculto
+        r'@(-?\d+\.\d+),(-?\d+\.\d+)',
+        r'q=(-?\d+\.\d+),(-?\d+\.\d+)',
+        r'll=(-?\d+\.\d+),(-?\d+\.\d+)',
+        r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)'
     ]
-    
+
     for patron in patrones_url:
         match = re.search(patron, url_final)
         if match:
             return float(match.group(1)), float(match.group(2))
 
-    # 3. PLAN B (EL HACK): Buscar dentro del código HTML de la página
-    # A veces los links del iPhone cargan la página pero no ponen la arroba en la URL.
+    # 3. extraer dirección (daddr)
+    try:
+        parsed = urlparse(url_final)
+        params = parse_qs(parsed.query)
+
+        if 'daddr' in params:
+            direccion = unquote(params['daddr'][0])
+
+            # Geocoding con geopy (OpenStreetMap)
+            geolocator = Nominatim(user_agent="shipping_app")
+
+            time.sleep(1)  # ⚠️ IMPORTANTE: evitar rate limit
+
+            location = geolocator.geocode(direccion)
+
+            if location:
+                return location.latitude, location.longitude
+
+    except Exception as e:
+        logging.error(f"Error geocodificando dirección: {e}")
+
+    # 4. PLAN B (último intento HTML)
     if html_content:
-        # Buscamos en las meta-etiquetas de la imagen miniatura de Google
         match_meta = re.search(r'center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)', html_content)
         if match_meta:
             return float(match_meta.group(1)), float(match_meta.group(2))
-            
-        # Buscamos en la variable interna de inicialización de la App de Google Maps
-        match_init = re.search(r'\[\[\[(-?\d+\.\d+),(-?\d+\.\d+)\]', html_content)
-        if match_init:
-            return float(match_init.group(1)), float(match_init.group(2))
 
-    logging.warning(f"No se pudieron extraer coordenadas ni de la URL ni del HTML: {url_final}")
+    logging.warning(f"No se pudieron extraer coordenadas: {url_final}")
     return None, None

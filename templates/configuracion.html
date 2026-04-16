@@ -1060,27 +1060,11 @@
         return true;
     }
 
-    function extraerCoordenadasConfig(input, silencioso = false) {
+function extraerCoordenadasConfig(input, silencioso = false) {
     const url = input.value.trim();
     if (!url) return;
 
-    // --- BLINDAJE IPHONE/ANDROID ---
-    if (url.match(/googleusercontent\.com\/maps\.google\.com\/\d+/)) {
-        if (!silencioso) {
-            Swal.fire({
-                icon: 'info',
-                title: 'Enlace incompleto',
-                text: 'En el celular, usa el botón "Copiar Enlace" (el ícono de la cadenita) desde el menú de Google Maps.',
-                confirmButtonColor: '#ff4757',
-                borderRadius: '15px'
-            });
-        }
-        input.value = '';
-        input.classList.add('is-invalid');
-        return;
-    }
-    // -------------------------------
-
+    // 1. Intentamos extraer coordenadas si vienen claras de una vez
     const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
     const match = url.match(regex);
     const matchBusqueda = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
@@ -1093,13 +1077,20 @@
         input.classList.add('is-valid');
         document.getElementById('geo-status').style.display = 'block';
     } else {
-        // SI NO HAY COORDENADAS, PERO ES UN LINK DE GOOGLE, NO MANDAMOS ERROR
+        // 2. Si no vienen claras, comprobamos si al menos es un link de Google
         const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());
+        
         if (esGoogle) {
             input.classList.remove('is-invalid');
-            // No hacemos nada más, dejamos que el servidor lo resuelva al Guardar
+            // El link es de Google. Lo dejamos pasar en silencio 
+            // para que nuestro Python (Plan B) hackee el HTML en el servidor.
         } else if (!silencioso) {
-            Swal.fire({ icon: 'warning', title: 'Link no reconocido', text: 'Asegúrate de que sea un enlace de Google Maps.' });
+            // 3. Solo si no es Google en absoluto, mandamos la alerta
+            Swal.fire({ 
+                icon: 'warning', 
+                title: 'Link no reconocido', 
+                text: 'Asegúrate de que sea un enlace de Google Maps.' 
+            });
             input.classList.add('is-invalid');
         }
     }
