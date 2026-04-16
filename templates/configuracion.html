@@ -1129,6 +1129,7 @@
     }
 
     // --- INTERCEPTOR DE FORMULARIOS SILENCIOSOS (CORREGIDO Y BLINDADO) ---
+// --- INTERCEPTOR DE FORMULARIOS SILENCIOSOS (CORREGIDO Y BLINDADO) ---
 document.addEventListener('DOMContentLoaded', function() {
     const formsSilenciosos = document.querySelectorAll('.form-silencioso');
     
@@ -1157,9 +1158,14 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(form);
 
             try {
+                // 3. ENVÍO CON HEADERS MÁGICOS PARA PYTHON
                 const response = await fetch(form.action, {
                     method: form.method,
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
                 });
 
                 if (response.ok) {
@@ -1176,7 +1182,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                     
-                    // 3. BLINDAJE DE MODAL (Evita el "Cannot read property of null")
+                    // 4. BLINDAJE DE MODAL
                     const modalEl = form.closest('.modal');
                     if(modalEl) {
                         const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
@@ -1185,19 +1191,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                 } else {
-                    // NUEVO: Intentamos leer el error real que manda Python
+                    // 5. MANEJO DE ERRORES REALES DEL SERVIDOR
                     let mensajeError = "Error interno del servidor.";
                     try {
                         const dataError = await response.json();
                         if (dataError.error) mensajeError = dataError.error;
                         else if (dataError.message) mensajeError = dataError.message;
                     } catch(e) {
-                        // Si Python no devolvió un JSON (ej. tronó con pantalla de error HTML)
                         mensajeError = `El servidor falló con código de estado: ${response.status}`;
                     }
                     Swal.fire('Error de Servidor', mensajeError, 'error');
                 }
-                finally {
+            } catch (error) {
+                console.error("Error:", error);
+                Swal.fire('Error', 'Fallo de conexión. Verifica tu internet.', 'error');
+            } finally {
+                // 6. RESTAURACIÓN DEL BOTÓN
                 if (btn) {
                     btn.innerHTML = btnOriginalText;
                     btn.disabled = false;

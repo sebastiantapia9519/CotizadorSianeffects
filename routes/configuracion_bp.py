@@ -163,7 +163,6 @@ def actualizar_perfil():
     new_phone = request.form.get('telefono')
     new_country = request.form.get('country_code', 'MX')
     
-    # Detectamos si es una llamada silenciosa (fetch)
     es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
 
     try:
@@ -191,7 +190,6 @@ def actualizar_perfil():
         cursor.close()
         conn.close()
 
-    # Solo llega aquí si NO es ajax (fallback seguro)
     return redirect(url_for('configuracion.configuracion') + '#list-perfil')
 
 # ==============================================================================
@@ -204,16 +202,25 @@ def actualizar_password():
     cursor = conn.cursor()
     uid = session['user_id']
     new_password = request.form.get('password')
+    
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
 
     if new_password and len(new_password) >= 6:
         hashed_pw = generate_password_hash(new_password)
         cursor.execute('UPDATE usuarios SET password=%s WHERE id=%s', (hashed_pw, uid))
         conn.commit()
         current_app.logger.info(f"SECURITY_UPDATE: Usuario {uid} cambió su contraseña.")
-        flash('Contraseña actualizada. Por favor inicia sesión de nuevo.', 'success')
+        
+        if es_ajax:
+            return jsonify({"success": True, "message": "Contraseña actualizada. Por favor inicia sesión de nuevo."})
+        else:
+            flash('Contraseña actualizada. Por favor inicia sesión de nuevo.', 'success')
     else:
         current_app.logger.warning(f"SECURITY_WARNING: Usuario {uid} intentó guardar una contraseña muy corta.")
-        flash('La contraseña es muy corta. Mínimo 6 caracteres.', 'danger')
+        if es_ajax:
+            return jsonify({"error": "La contraseña es muy corta. Mínimo 6 caracteres."}), 400
+        else:
+            flash('La contraseña es muy corta. Mínimo 6 caracteres.', 'danger')
 
     cursor.close()
     conn.close()
@@ -228,6 +235,8 @@ def actualizar_negocio():
     conn = get_db()
     cursor = conn.cursor()
     uid = session['user_id']
+    
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
     
     try:
         try:
@@ -284,6 +293,8 @@ def actualizar_negocio():
                         current_app.logger.info(f"R2_LOGO_UPLOAD_SUCCESS: Usuario {uid} subió su logo: {unique_filename}")
                     except Exception as e:
                         current_app.logger.error(f"R2_LOGO_UPLOAD_ERROR: Usuario {uid} - {e}")
+                        if es_ajax:
+                            return jsonify({"error": "Error al subir el logo a la nube."}), 500
                         flash("Error al subir el logo a la nube.", "danger")
 
         # --- ACTUALIZACIÓN EN BASE DE DATOS ---
@@ -308,11 +319,16 @@ def actualizar_negocio():
             ''', (uid, margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, modo_oscuro))
 
         conn.commit()
+        
+        if es_ajax:
+            return jsonify({"success": True, "message": "Datos del negocio guardados correctamente."})
         flash('Datos del negocio guardados correctamente.', 'success')
 
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"BUSINESS_UPDATE_ERROR: Usuario {uid} - {e}")
+        if es_ajax:
+            return jsonify({"error": "Error al guardar la configuración del negocio."}), 500
         flash('Error al guardar la configuración.', 'danger')
     finally:
         cursor.close()
@@ -329,6 +345,7 @@ def actualizar_logistica_base():
     conn = get_db()
     cursor = conn.cursor()
     uid = session['user_id']
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
     
     # 1. Recibimos los datos del formulario primero
     origin_address = request.form.get('origin_address', '').strip()
@@ -341,6 +358,8 @@ def actualizar_logistica_base():
         local_km = float(request.form.get('local_km_rate') or 0)
         safety_margin = int(request.form.get('safety_margin') or 10)
     except ValueError:
+        if es_ajax:
+            return jsonify({"error": "Los costos y márgenes de envío deben ser numéricos."}), 400
         flash('Los costos y márgenes de envío deben ser numéricos.', 'danger')
         return redirect(url_for('configuracion.configuracion') + '#list-envios')
 
@@ -382,10 +401,14 @@ def actualizar_logistica_base():
             """, (uid, origin_address, origin_lat, origin_lng, local_base, local_km, safety_margin))
 
         conn.commit()
+        if es_ajax:
+            return jsonify({"success": True, "message": "Configuración de envíos actualizada con éxito."})
         flash('Configuración de envíos actualizada con éxito.', 'success')
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"SHIPPING_CONFIG_ERROR: {e}")
+        if es_ajax:
+            return jsonify({"error": f"Error al guardar envíos: {str(e)}"}), 500
         flash(f'Error al guardar envíos: {e}', 'danger')
     finally:
         cursor.close()
@@ -402,6 +425,8 @@ def crear_zona():
     conn = get_db()
     cursor = conn.cursor()
     uid = session['user_id']
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+    
     try:
         nombre = request.form.get('zone_name')
         estados_str = request.form.get('zone_states', '').upper()
@@ -416,10 +441,15 @@ def crear_zona():
                      (uid, nombre, estados_json))
         conn.commit()
         current_app.logger.info(f"SHIPPING_ZONE_CREATE: Usuario {uid} creó zona '{nombre}'.")
+        
+        if es_ajax:
+            return jsonify({"success": True, "message": "Zona de envío creada con éxito."})
         flash('Zona de envío creada con éxito.', 'success')
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"SHIPPING_ZONE_ERROR: Usuario {uid} - {e}")
+        if es_ajax:
+            return jsonify({"error": "Error al crear la zona logística."}), 500
         flash('Error al crear zona.', 'danger')
     finally:
         cursor.close()
@@ -433,8 +463,10 @@ def eliminar_zona():
     cursor = conn.cursor()
     uid = session['user_id']
     raw_zone_id = request.form.get('zone_id')
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
     
     if not raw_zone_id or not str(raw_zone_id).isdigit():
+        if es_ajax: return jsonify({"error": "ID de zona inválido."}), 400
         flash("ID de zona inválido.", "danger")
         return redirect(url_for('configuracion.configuracion') + '#list-envios')
         
@@ -444,10 +476,13 @@ def eliminar_zona():
         cursor.execute("DELETE FROM shipping_zones WHERE id=%s AND user_id=%s", (zone_id, uid))
         conn.commit()
         current_app.logger.info(f"SHIPPING_ZONE_DELETE: Usuario {uid} borró zona ID {zone_id}.")
+        
+        if es_ajax: return jsonify({"success": True, "message": "Zona y sus tarifas eliminadas."})
         flash('Zona y sus tarifas eliminadas.', 'warning')
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"SHIPPING_ZONE_DELETE_ERROR: Usuario {uid} - {e}")
+        if es_ajax: return jsonify({"error": "Error al eliminar zona."}), 500
         flash('Error al eliminar zona.', 'danger')
     finally:
         cursor.close()
@@ -461,8 +496,10 @@ def crear_tarifa():
     cursor = conn.cursor()
     uid = session['user_id']
     raw_zone_id = request.form.get('zone_id')
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
     
     if not raw_zone_id or raw_zone_id == 'None':
+        if es_ajax: return jsonify({"error": "El ID de la zona no se cargó correctamente."}), 400
         flash("El ID de la zona no se cargó correctamente.", "danger")
         return redirect(url_for('configuracion.configuracion') + '#list-envios')
 
@@ -475,12 +512,16 @@ def crear_tarifa():
                      (zone_id, peso, precio))
         conn.commit()
         current_app.logger.info(f"SHIPPING_RATE_CREATE: Usuario {uid} agregó tarifa de ${precio} a zona {zone_id}.")
+        
+        if es_ajax: return jsonify({"success": True, "message": "Tarifa agregada correctamente."})
         flash('Tarifa agregada correctamente.', 'success')
     except ValueError:
+        if es_ajax: return jsonify({"error": "El peso y el precio deben ser numéricos."}), 400
         flash("El peso y el precio deben ser numéricos.", "danger")
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"SHIPPING_RATE_ERROR: Usuario {uid} - {e}")
+        if es_ajax: return jsonify({"error": "No se pudo agregar la tarifa."}), 500
         flash('No se pudo agregar la tarifa.', 'danger')
     finally:
         cursor.close()
@@ -494,8 +535,10 @@ def eliminar_tarifa():
     cursor = conn.cursor()
     uid = session['user_id']
     raw_rate_id = request.form.get('rate_id')
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
     
     if not raw_rate_id or not str(raw_rate_id).isdigit():
+        if es_ajax: return jsonify({"error": "ID de tarifa inválido."}), 400
         flash("ID de tarifa inválido.", "danger")
         return redirect(url_for('configuracion.configuracion') + '#list-envios')
         
@@ -504,10 +547,13 @@ def eliminar_tarifa():
         cursor.execute("DELETE FROM shipping_rates WHERE id=%s", (rate_id,))
         conn.commit()
         current_app.logger.info(f"SHIPPING_RATE_DELETE: Usuario {uid} eliminó tarifa ID {rate_id}.")
+        
+        if es_ajax: return jsonify({"success": True, "message": "Tarifa eliminada correctamente."})
         flash('Tarifa eliminada.', 'warning')
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"SHIPPING_RATE_DELETE_ERROR: Usuario {uid} - {e}")
+        if es_ajax: return jsonify({"error": "Error al eliminar tarifa."}), 500
         flash('Error al eliminar tarifa.', 'danger')
     finally:
         cursor.close()
