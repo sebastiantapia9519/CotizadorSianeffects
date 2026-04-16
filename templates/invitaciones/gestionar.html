@@ -4,10 +4,121 @@
 
 {% block content %}
 <style>
-    /* --- ESTILOS MÓVILES PARA LA TABLA DE PLANNERS Y BOTONES --- */
-    @media (max-width: 768px) {
+    /* ===================================================
+       1. ESTILO LIMPIO Y ELEGANTE (AESTHETIC "PRO")
+       =================================================== */
+    body {
+        background-color: #f8f9fa;
+    }
 
-        /* 1. Botones Superiores 100% Ancho en Móvil */
+    /* Tarjeta principal blanca */
+    .card-clean {
+        background: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
+    }
+
+    /* Pestañas de Filtro Elegantes */
+    .nav-pills .nav-link {
+        color: #6c757d;
+        background-color: #ffffff;
+        border: 1px solid #dee2e6;
+        transition: all 0.2s ease;
+    }
+    .nav-pills .nav-link:hover {
+        background-color: #f8f9fa;
+        color: #212529;
+    }
+    .nav-pills .nav-link.active {
+        background-color: #0d6efd !important;
+        border-color: #0d6efd !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 10px rgba(13, 110, 253, 0.2);
+    }
+
+    /* Tabla Escritorio */
+    .planner-table th {
+        background-color: #fcfcfd;
+        color: #6c757d;
+        font-weight: 700;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #e9ecef;
+        padding: 1rem 1.5rem;
+    }
+
+    .planner-table td {
+        padding: 1.25rem 1.5rem;
+        vertical-align: middle;
+        border-bottom: 1px solid #f1f3f5;
+        color: #212529;
+    }
+
+    .planner-table tbody tr:last-child td { border-bottom: none; }
+    .planner-table tbody tr:hover td { background-color: #f8f9fa; }
+
+    /* Botones dinámicos pulidos */
+    .btn-dynamic {
+        transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+    .btn-dynamic:active { transform: scale(0.97) !important; }
+    
+    .btn-dynamic-light {
+        background-color: #ffffff;
+        border: 1px solid #dee2e6;
+        color: #495057;
+    }
+    .btn-dynamic-light:hover {
+        border-color: #ced4da;
+        background-color: #f8f9fa;
+        color: #212529;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.04) !important;
+    }
+
+    .btn-dynamic-dark {
+        background: #212529;
+        border: 1px solid #212529;
+        color: #ffffff;
+    }
+    .btn-dynamic-dark:hover {
+        background: #000000;
+        color: #ffffff;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important;
+    }
+
+    /* Dropdown Premium */
+    .dropdown-menu {
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+        padding: 0.5rem;
+    }
+    .dropdown-item {
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+        color: #495057;
+        transition: all 0.2s;
+    }
+    .dropdown-item:hover {
+        background-color: #f8f9fa;
+        color: #0d6efd;
+    }
+    .dropdown-item.text-danger:hover {
+        background-color: #fff5f5;
+        color: #dc3545 !important;
+    }
+
+    /* ===================================================
+       2. MÓVIL OPTIMIZADO (App-like Cards)
+       =================================================== */
+    @media (max-width: 768px) {
         .admin-header-actions {
             display: flex;
             flex-direction: column;
@@ -15,65 +126,40 @@
             width: 100%;
             margin-top: 15px;
         }
-
         .admin-header-actions .btn {
             width: 100%;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             padding: 12px 20px;
-            /* Botones más altos y fáciles de tocar */
         }
 
-        /* 2. Pestañas de Filtro (Pills) Scrollables */
         #filtros-autor {
             flex-wrap: nowrap;
             overflow-x: auto;
             padding-bottom: 5px;
-            /* Ocultar barra de scroll en móviles */
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
         }
+        #filtros-autor::-webkit-scrollbar { display: none; }
+        #filtros-autor .nav-item { white-space: nowrap; }
 
-        #filtros-autor::-webkit-scrollbar {
-            display: none;
-        }
+        .planner-table thead { display: none; }
+        .table-responsive { overflow: visible !important; }
 
-        #filtros-autor .nav-item {
-            white-space: nowrap;
-        }
-
-        /* 3. Quitamos el encabezado de PC */
-        .planner-table thead {
-            display: none;
-        }
-
-        /* 4. Destrabamos el contenedor para que los menús puedan salir */
-        .table-responsive {
-            overflow: visible !important;
-        }
-
-        /* 5. Diseño de la Tarjeta */
         .planner-table tr {
             display: flex;
             flex-direction: column;
             background: #ffffff;
             border-radius: 16px;
-            margin-bottom: 1.5rem;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
-            border: 1px solid rgba(0, 0, 0, 0.05);
+            margin-bottom: 1rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+            border: 1px solid #e9ecef;
             padding: 15px;
             position: relative;
             z-index: 1;
-            /* Nivel base */
         }
 
-        /* ✨ LA MAGIA: Si la tarjeta tiene un menú abierto, la pasamos al frente ✨ */
-        .planner-table tr:has(.show) {
-            z-index: 1050;
-        }
+        /* Magia Z-Index para dropdowns en móvil */
+        .planner-table tr:has(.show) { z-index: 1050; }
 
-        /* 6. Estructura interna de los renglones */
         .planner-table td {
             border: none !important;
             padding: 8px 0 !important;
@@ -91,9 +177,7 @@
             margin-bottom: 10px;
         }
 
-        .planner-table td.col-slug {
-            display: none;
-        }
+        .planner-table td.col-slug { display: none; }
 
         .planner-table td::before {
             content: attr(data-label);
@@ -101,7 +185,7 @@
             color: #adb5bd;
             font-size: 0.75rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 0.5px;
         }
 
         .planner-table td:last-child {
@@ -110,81 +194,24 @@
             margin-top: 5px;
             justify-content: center;
         }
-
-        /* 7. Estilo premium para el menú flotante en móvil */
+        
         .planner-table td:last-child .dropdown-menu {
             width: 100%;
             text-align: center;
-            border-radius: 12px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-            margin-top: 5px !important;
+            margin-top: 10px !important;
         }
     }
-
-    /* --- BOTONES PREMIUM DINÁMICOS (Micro-interacciones) --- */
-        .btn-dynamic {
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            position: relative;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 700;
-            letter-spacing: 0.3px;
-        }
-        
-        /* Efecto táctil (Hundimiento) al hacer clic */
-        .btn-dynamic:active {
-            transform: scale(0.95) translateY(0) !important;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1) !important;
-        }
-        
-        /* El ícono cobra vida al pasar el mouse */
-        .btn-dynamic i {
-            transition: transform 0.3s ease;
-        }
-        .btn-dynamic:hover i {
-            transform: scale(1.15) rotate(-5deg); 
-        }
-
-        /* Variante: Botones Secundarios Claros */
-        .btn-dynamic-light {
-            background-color: #ffffff;
-            border: 2px solid #f1f3f5; /* Borde gris ultra suave por defecto */
-            color: #495057;
-        }
-
-        .btn-dynamic-light:hover {
-            border-color: #cfe2ff; /* Al pasar el mouse, el borde se ilumina sutilmente */
-            background-color: #fcfcfd;
-            color: #111;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.06) !important;
-            transform: translateY(-3px); /* Se levanta suavemente */
-        }
-
-        /* Variante: Botón Principal Oscuro */
-        .btn-dynamic-dark {
-            background: linear-gradient(145deg, #2b3035 0%, #1a1d20 100%);
-            border: 2px solid transparent;
-            color: #ffffff;
-        }
-
-        .btn-dynamic-dark:hover {
-            background: linear-gradient(145deg, #212529 0%, #000000 100%);
-            box-shadow: 0 10px 25px rgba(33, 37, 41, 0.3) !important;
-            transform: translateY(-3px);
-            color: #ffffff;
-        }
 </style>
 
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4">
     <div>
-        <h4 class="fw-bold m-0 text-dark"><i class="fas fa-envelope-open-text text-primary me-2"></i>Mis Invitaciones
-        </h4>
-        <small class="text-muted">Administra los micro-sitios de Bodas y XV Años</small>
+        <h3 class="fw-bold m-0 text-dark d-flex align-items-center gap-2">
+            <i class="fas fa-envelope-open-text text-primary"></i> Eventos e Invitaciones
+        </h3>
+        <p class="text-muted mb-0 small">Administra los micro-sitios de tus clientes y colaboradores.</p>
     </div>
 
-<div class="admin-header-actions d-md-flex gap-2 mt-3 mt-md-0">
-        
+    <div class="admin-header-actions d-md-flex gap-2 mt-3 mt-md-0">
         {% if session.get('role', 0) >= 1 %}
         <a href="{{ url_for('invitaciones_admin.gestionar_socios') }}"
             class="btn btn-dynamic btn-dynamic-light rounded-pill px-4 shadow-sm">
@@ -194,271 +221,269 @@
 
         <a href="{{ url_for('invitaciones_publicas.scanner_global') }}"
             class="btn btn-dynamic btn-dynamic-light rounded-pill px-4 shadow-sm">
-            <i class="fas fa-qrcode text-secondary me-2"></i> Escáner Maestro
+            <i class="fas fa-qrcode text-secondary me-2"></i> Escáner
         </a>
         
         <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}" 
            class="btn btn-dynamic btn-dynamic-dark rounded-pill px-4 shadow-sm">
-            <i class="fas fa-plus-circle text-warning me-2"></i> Crear Nueva
+            <i class="fas fa-plus me-2 text-warning"></i> Nueva Invitación
         </a>
-        
     </div>
 </div>
 
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-3 gap-3">
-
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
     <ul class="nav nav-pills gap-2 mb-0" id="filtros-autor">
         <li class="nav-item">
-            <button class="nav-link active rounded-pill px-4 fw-bold border" data-filter="all">Todas</button>
+            <button class="nav-link active rounded-pill px-4 fw-medium" data-filter="all">Todas</button>
         </li>
         <li class="nav-item">
-            <button class="nav-link rounded-pill px-4 fw-bold border text-muted" data-filter="staff">
-                <i class="fas fa-shield-alt me-1"></i> Mis Clientes
+            <button class="nav-link rounded-pill px-4 fw-medium" data-filter="staff">
+                <i class="fas fa-crown me-1 opacity-75"></i> Mis Clientes
             </button>
         </li>
         <li class="nav-item">
-            <button class="nav-link rounded-pill px-4 fw-bold border text-muted" data-filter="planners">
-                <i class="fas fa-handshake me-1"></i> De Socios
+            <button class="nav-link rounded-pill px-4 fw-medium" data-filter="planners">
+                <i class="fas fa-handshake me-1 opacity-75"></i> De Socios
             </button>
         </li>
     </ul>
 
     <select id="filtro-planner-select"
-        class="form-select border-info text-info fw-bold w-100 w-md-auto bg-info bg-opacity-10 shadow-sm"
-        style="display: none; max-width: 300px;">
-        <option value="all">👑 Todos los Planners</option>
+        class="form-select border-primary text-primary fw-medium w-100 w-md-auto bg-primary bg-opacity-10 shadow-sm rounded-pill px-4"
+        style="display: none; max-width: 250px;">
+        <option value="all">Todos los Planners</option>
     </select>
-
 </div>
 
-<div class="card border-0 shadow-sm rounded-4">
-    <div class="card-body p-0">
-        <div class="table-responsive" style="overflow: visible; min-height: 200px;">
-            <table class="table table-hover align-middle mb-0 planner-table">
-                <thead class="bg-light text-muted small text-uppercase">
-                    <tr>
-                        <th class="ps-4 py-3">Evento / Festejados</th>
-                        <th class="col-slug">URL (Slug)</th>
-                        <th>Fecha Evento</th>
-                        <th>Vigencia</th>
-                        <th class="text-center">Estado</th>
-                        <th class="text-end pe-4">Acciones</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for inv in invitaciones %}
-                    <tr class="fila-invitacion" data-author="{{ 'planners' if inv.planner_id else 'staff' }}"
-                        data-planner-name="{{ inv.planner_nombre }}">
-                        <td class="ps-md-4 py-3" data-label="Evento">
-                            <div class="d-flex justify-content-between align-items-start w-100 mb-1">
-                                <div class="fw-bold text-dark d-flex align-items-center gap-2">
-                                    {% if inv.get('tipo_evento') == 'xv' %} 
-                                        <span class="badge bg-warning text-dark"><i class="fas fa-crown"></i> XV</span>
-                                    {% elif inv.get('tipo_evento') == 'std' %}
-                                        <span class="badge bg-primary text-white"><i class="far fa-calendar-alt"></i> Save the Date</span>
-                                    {% elif inv.get('tipo_evento') == 'otro' %}
-                                        <span class="badge bg-success text-white"><i class="fas fa-glass-cheers"></i> Fiesta</span>
-                                    {% else %} 
-                                        <span class="badge bg-light border text-secondary"><i class="fas fa-ring"></i> Boda</span>
-                                    {% endif %}
-                                    
-                                    <span style="font-size: 1.1rem;">{{ inv['datos_cliente'].get('novios', 'Sin Nombre') }}</span>
-                                </div>
-
-                                {% if inv.get('codigo_acceso_cliente') %}
-                                <button onclick="copiarAnimado('{{ inv['codigo_acceso_cliente'] }}', this)"
-                                    class="btn btn-sm btn-light border rounded-circle text-primary shadow-sm d-md-none transition-all ms-2"
-                                    title="Copiar Código">
-                                    <i class="fas fa-key"></i>
-                                </button>
+<div class="card-clean">
+    <div class="table-responsive" style="overflow: visible; min-height: 200px;">
+        <table class="table mb-0 planner-table">
+            <thead>
+                <tr>
+                    <th class="ps-4">EVENTO / FESTEJADOS</th>
+                    <th class="col-slug">ENLACES</th>
+                    <th>FECHA</th>
+                    <th>VIGENCIA</th>
+                    <th class="text-center">ESTADO</th>
+                    <th class="text-end pe-4">ACCIONES</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for inv in invitaciones %}
+                <tr class="fila-invitacion" data-author="{{ 'planners' if inv.planner_id else 'staff' }}"
+                    data-planner-name="{{ inv.planner_nombre }}">
+                    
+                    <td class="ps-md-4" data-label="Evento">
+                        <div class="d-flex justify-content-between align-items-start w-100 mb-1">
+                            <div class="fw-bold text-dark d-flex align-items-center gap-2">
+                                {% if inv.get('tipo_evento') == 'xv' %} 
+                                    <span class="badge bg-warning text-dark rounded-pill px-2"><i class="fas fa-crown"></i> XV</span>
+                                {% elif inv.get('tipo_evento') == 'std' %}
+                                    <span class="badge bg-primary text-white rounded-pill px-2"><i class="far fa-calendar-alt"></i> Save the Date</span>
+                                {% elif inv.get('tipo_evento') == 'otro' %}
+                                    <span class="badge bg-success text-white rounded-pill px-2"><i class="fas fa-glass-cheers"></i> Fiesta</span>
+                                {% else %} 
+                                    <span class="badge bg-light border text-secondary rounded-pill px-2"><i class="fas fa-ring"></i> Boda</span>
                                 {% endif %}
+                                
+                                <span style="font-size: 1.05rem;">{{ inv['datos_cliente'].get('novios', 'Sin Nombre') }}</span>
                             </div>
 
-                            <div class="mb-2">
-                                {% if inv.planner_id %}
-                                <span class="badge bg-info bg-opacity-10 text-info border border-info-subtle">
-                                    <i class="fas fa-handshake"></i> Planner: {{ inv.planner_nombre }}
-                                </span>
-                                {% else %}
-                                <span class="badge bg-dark bg-opacity-10 text-dark border border-dark-subtle">
-                                    <i class="fas fa-shield-alt"></i> Staff SianEffects
-                                </span>
-                                {% endif %}
-                            </div>
-
-                            <div class="mt-1 d-flex flex-wrap align-items-center gap-2">
-                                <small class="text-muted bg-light px-2 py-1 rounded">Estilo: <span
-                                        class="text-capitalize fw-bold">{{ inv['estilo_fuente'] }}</span></small>
-
-                                {% if inv.get('tiene_modulo_invitados') or inv.get('camara_premium') %}
-                                <span
-                                    class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle py-1 transition-all d-none d-md-inline-flex align-items-center"
-                                    style="cursor: pointer;"
-                                    onclick="copiarAnimado('{{ inv.get('codigo_acceso_cliente') }}', this)"
-                                    title="Click para copiar código">
-                                    <i class="fas fa-key me-1"></i> <span>{{ inv.get('codigo_acceso_cliente', 'Sin
-                                        código') }}</span>
-                                </span>
-                                {% endif %}
-                            </div>
-                        </td>
-
-                        <td class="col-slug">
-                            {% set url_base = 'xv' if inv.get('tipo_evento') == 'xv' else ('fiesta' if inv.get('tipo_evento') == 'otro' else 'invitacion') %}
-                            
-                            <div class="d-flex align-items-center mb-1">
-                                <span class="badge bg-light text-dark border border-secondary font-monospace">
-                                    /{{ url_base }}/{{ inv['slug'] }}
-                                </span>
-                                <button onclick="copiarLink('{{ request.host_url }}{{ url_base }}/{{ inv['slug'] }}')"
-                                    class="btn btn-sm btn-link text-primary p-0 ms-2" title="Copiar Enlace Principal">
-                                    <i class="far fa-copy"></i>
-                                </button>
-                            </div>
-                            
-                            {% if inv['datos_cliente'].get('activar_std') %}
-                            <div class="d-flex align-items-center mt-1">
-                                <span class="badge bg-info text-white border border-info font-monospace">
-                                    /std/{{ inv['slug'] }}
-                                </span>
-                                <button onclick="copiarLink('{{ request.host_url }}std/{{ inv['slug'] }}')"
-                                    class="btn btn-sm btn-link text-info p-0 ms-2" title="Copiar Enlace Save the Date">
-                                    <i class="far fa-copy"></i>
-                                </button>
-                            </div>
+                            {% if inv.get('codigo_acceso_cliente') %}
+                            <button onclick="copiarAnimado('{{ inv['codigo_acceso_cliente'] }}', this)"
+                                class="btn btn-sm btn-light border rounded-circle text-primary shadow-sm d-md-none transition-all ms-2"
+                                title="Copiar Código">
+                                <i class="fas fa-key"></i>
+                            </button>
                             {% endif %}
-                        </td>
+                        </div>
 
-                        <td data-label="Fecha Evento">
-                            <div class="fw-bold text-dark text-end text-md-start">
-                                {% if inv['fecha_evento'] %}
-                                    {{ inv['fecha_evento'].strftime('%d/%m/%Y') }} 
-                                    <br class="d-md-none">
-                                    <small class="text-muted">
-                                        {{ inv['fecha_evento'].strftime('%H:%M') }}
-                                    </small>
-                                {% else %}
-                                <span class="text-muted">-</span>
-                                {% endif %}
-                            </div>
-                        </td>
-
-                        <td data-label="Vigencia">
-                            <small class="fw-bold text-muted">{{ inv['vigencia'] }}</small>
-                        </td>
-
-                        <td class="text-md-center" data-label="Estado">
-                            {% set fecha_vigencia = inv.get('vigencia') or '2000-01-01' %}
-                            {% if fecha_vigencia >= hoy %}
-                            <span class="badge bg-success">Activa</span>
-                            {% if inv['camara_premium'] %}
-                            <i class="fas fa-star text-warning ms-1" title="Función Premium Activa"></i>
-                            {% endif %}
+                        <div class="mb-2">
+                            {% if inv.planner_id %}
+                            <span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle fw-medium">
+                                <i class="fas fa-handshake me-1"></i> {{ inv.planner_nombre }}
+                            </span>
                             {% else %}
-                            <span class="badge bg-danger rounded-pill">
-                                <i class="fas fa-times-circle me-1"></i>Vencida
+                            <span class="badge bg-dark bg-opacity-10 text-dark border border-dark-subtle fw-medium">
+                                <i class="fas fa-shield-alt me-1"></i> SianEffects
                             </span>
                             {% endif %}
-                        </td>
+                        </div>
 
-                        <td class="text-md-end pe-md-4" data-label="Opciones">
-                            <div class="dropdown w-100 text-center text-md-end">
-                                <button class="btn btn-light border rounded-pill px-4 btn-sm w-100 w-md-auto"
-                                    type="button" data-bs-toggle="dropdown">
-                                    Gestionar <i class="fas fa-chevron-down ms-1"></i>
-                                </button>
+                        <div class="mt-1 d-flex flex-wrap align-items-center gap-2">
+                            <small class="text-muted border px-2 py-1 rounded-3 bg-light">Estilo: <span
+                                    class="text-capitalize fw-bold">{{ inv['estilo_fuente'] }}</span></small>
 
-                                <ul class="dropdown-menu dropdown-menu-end shadow border-0">
-                                    <li>
-                                        {% set url_base = 'xv' if inv.get('tipo_evento') == 'xv' else ('fiesta' if inv.get('tipo_evento') == 'otro' else 'invitacion') %}
-                                        <a class="dropdown-item"
-                                            href="/{{ url_base }}/{{ inv['slug'] }}"
-                                            target="_blank">
-                                            <i class="fas fa-external-link-alt me-2 text-primary"></i> Ver Invitación
-                                        </a>
-                                    </li>
+                            {% if inv.get('tiene_modulo_invitados') or inv.get('camara_premium') %}
+                            <span class="badge bg-light text-primary border py-1 d-none d-md-inline-flex align-items-center"
+                                style="cursor: pointer; transition: all 0.2s;"
+                                onclick="copiarAnimado('{{ inv.get('codigo_acceso_cliente') }}', this)"
+                                title="Click para copiar código"
+                                onmouseover="this.classList.add('bg-primary', 'text-white'); this.classList.remove('bg-light', 'text-primary')"
+                                onmouseout="this.classList.remove('bg-primary', 'text-white'); this.classList.add('bg-light', 'text-primary')">
+                                <i class="fas fa-key me-1"></i> <span>{{ inv.get('codigo_acceso_cliente', 'Sin código') }}</span>
+                            </span>
+                            {% endif %}
+                        </div>
+                    </td>
 
-                                    {% if inv['datos_cliente'].get('activar_std') %}
-                                    <li>
-                                        <a class="dropdown-item"
-                                            href="/std/{{ inv['slug'] }}"
-                                            target="_blank">
-                                            <i class="far fa-calendar-check me-2 text-info"></i> Ver Save the Date
-                                        </a>
-                                    </li>
-                                    {% endif %}
+                    <td class="col-slug">
+                        {% set url_base = 'xv' if inv.get('tipo_evento') == 'xv' else ('fiesta' if inv.get('tipo_evento') == 'otro' else 'invitacion') %}
+                        
+                        <div class="d-flex align-items-center mb-1">
+                            <span class="badge bg-light text-dark border font-monospace py-1 px-2">
+                                /{{ url_base }}/{{ inv['slug'] }}
+                            </span>
+                            <button onclick="copiarLink('{{ request.host_url }}{{ url_base }}/{{ inv['slug'] }}')"
+                                class="btn btn-sm btn-link text-primary p-0 ms-2" title="Copiar Enlace">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </div>
+                        
+                        {% if inv['datos_cliente'].get('activar_std') %}
+                        <div class="d-flex align-items-center mt-1">
+                            <span class="badge bg-info bg-opacity-10 text-info border border-info font-monospace py-1 px-2">
+                                /std/{{ inv['slug'] }}
+                            </span>
+                            <button onclick="copiarLink('{{ request.host_url }}std/{{ inv['slug'] }}')"
+                                class="btn btn-sm btn-link text-info p-0 ms-2" title="Copiar Save the Date">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </div>
+                        {% endif %}
+                    </td>
 
-                                    {% if inv.get('tiene_modulo_invitados') %}
-                                    <li>
-                                        <a class="dropdown-item"
-                                            href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}">
-                                            <i class="fas fa-users me-2 text-info"></i> Gestionar Invitados
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <a class="dropdown-item"
-                                            href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv['slug']) }}">
-                                            <i class="fas fa-qrcode me-2 text-dark"></i> Escáner Recepción
-                                        </a>
-                                    </li>
-                                    {% endif %}
+                    <td data-label="Fecha Evento">
+                        <div class="fw-semibold text-dark text-end text-md-start">
+                            {% if inv['fecha_evento'] %}
+                                {{ inv['fecha_evento'].strftime('%d/%m/%Y') }} 
+                                <br class="d-md-none">
+                                <small class="text-muted fw-normal">
+                                    {{ inv['fecha_evento'].strftime('%H:%M') }} hrs
+                                </small>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
+                        </div>
+                    </td>
 
-                                    {% if inv.get('camara_premium') %}
-                                    <li>
-                                        <a class="dropdown-item"
-                                            href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv['id']) }}">
-                                            <i class="fas fa-camera-retro me-2 text-success"></i> Ver Fotos Rollo
-                                        </a>
-                                    </li>
-                                    {% endif %}
+                    <td data-label="Vigencia">
+                        <small class="fw-semibold text-muted">{{ inv['vigencia'] }}</small>
+                    </td>
 
-                                    <li>
-                                        <hr class="dropdown-divider">
-                                    </li>
+                    <td class="text-md-center" data-label="Estado">
+                        {% set fecha_vigencia = inv.get('vigencia') or '2000-01-01' %}
+                        {% if fecha_vigencia >= hoy %}
+                        <span class="badge bg-success rounded-pill px-3 py-1 fw-medium">Activa</span>
+                        {% if inv['camara_premium'] %}
+                        <i class="fas fa-star text-warning ms-1" title="Función Premium Activa"></i>
+                        {% endif %}
+                        {% else %}
+                        <span class="badge bg-danger rounded-pill px-3 py-1 fw-medium">
+                            <i class="fas fa-times-circle me-1"></i>Vencida
+                        </span>
+                        {% endif %}
+                    </td>
 
-                                    <li>
-                                        <a class="dropdown-item"
-                                            href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}">
-                                            <i class="fas fa-edit me-2 text-warning"></i>
-                                            {% if inv.get('tipo_evento') == 'xv' %}
-                                                <span class="badge bg-warning text-dark"><i class="fas fa-crown"></i> XV</span>
-                                            {% elif inv.get('tipo_evento') == 'std' %}
-                                                <span class="badge bg-primary text-white"><i class="far fa-calendar-alt"></i> Save the Date</span>
-                                            {% elif inv.get('tipo_evento') == 'otro' %}
-                                                <span class="badge bg-success text-white"><i class="fas fa-glass-cheers"></i> Fiesta</span>
-                                            {% else %}
-                                                <span class="badge bg-light border text-secondary"><i class="fas fa-ring"></i> Boda</span>
-                                            {% endif %}
-                                        </a>
-                                    </li>
-                                    <li>
-                                        <form action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}" 
-                                              method="POST" 
-                                              onsubmit="return confirmarEliminacionForm(event, this, '{{ inv['datos_cliente'].get('novios', 'este evento') }}')">
-                                            <button type="submit" class="dropdown-item text-danger">
-                                                <i class="fas fa-trash-alt me-2"></i> Eliminar
-                                            </button>
-                                        </form>
-                                    </li>
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
-                    {% else %}
-                    <tr>
-                        <td colspan="6" class="text-center py-5">
-                            <div class="text-muted mb-3"><i class="fas fa-folder-open fa-3x"></i></div>
-                            <h5 class="fw-bold text-dark">Aún no hay invitaciones</h5>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                    <td class="text-md-end pe-md-4" data-label="Opciones">
+                        <div class="dropdown w-100 text-center text-md-end">
+                            <button class="btn btn-light border rounded-pill px-4 btn-sm w-100 w-md-auto fw-medium text-dark"
+                                type="button" data-bs-toggle="dropdown">
+                                Gestionar <i class="fas fa-chevron-down ms-1 small"></i>
+                            </button>
+
+                            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0">
+                                <li>
+                                    {% set url_base = 'xv' if inv.get('tipo_evento') == 'xv' else ('fiesta' if inv.get('tipo_evento') == 'otro' else 'invitacion') %}
+                                    <a class="dropdown-item py-2" href="/{{ url_base }}/{{ inv['slug'] }}" target="_blank">
+                                        <i class="fas fa-external-link-alt me-2 text-primary opacity-75"></i> Ver Invitación
+                                    </a>
+                                </li>
+
+                                {% if inv['datos_cliente'].get('activar_std') %}
+                                <li>
+                                    <a class="dropdown-item py-2" href="/std/{{ inv['slug'] }}" target="_blank">
+                                        <i class="far fa-calendar-check me-2 text-info opacity-75"></i> Ver Save the Date
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                {% if inv.get('tiene_modulo_invitados') %}
+                                <li>
+                                    <a class="dropdown-item py-2" href="{{ url_for('invitaciones_admin.gestionar_pases', id=inv['id']) }}">
+                                        <i class="fas fa-users me-2 text-primary opacity-75"></i> Control de Acceso
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item py-2" href="{{ url_for('invitaciones_publicas.recepcion_boda', slug=inv['slug']) }}">
+                                        <i class="fas fa-qrcode me-2 text-dark opacity-75"></i> Escáner Recepción
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                {% if inv.get('camara_premium') %}
+                                <li>
+                                    <a class="dropdown-item py-2" href="{{ url_for('invitaciones_admin.ver_fotos_invitados', id=inv['id']) }}">
+                                        <i class="fas fa-camera-retro me-2 text-success opacity-75"></i> Ver Fotos Rollo
+                                    </a>
+                                </li>
+                                {% endif %}
+
+                                <li><hr class="dropdown-divider my-1"></li>
+
+                                <li>
+                                    <a class="dropdown-item py-2" href="{{ url_for('invitaciones_admin.editar_invitacion', id=inv['id']) }}">
+                                        <i class="fas fa-edit me-2 text-warning opacity-75"></i> Editar
+                                    </a>
+                                </li>
+                                <li>
+                                    <form action="{{ url_for('invitaciones_admin.eliminar_invitacion', id=inv['id']) }}" 
+                                          method="POST" 
+                                          onsubmit="return confirmarEliminacionForm(event, this, '{{ inv['datos_cliente'].get('novios', 'este evento') | replace("'", "\\'") }}')">
+                                        <button type="submit" class="dropdown-item text-danger py-2">
+                                            <i class="fas fa-trash-alt me-2 opacity-75"></i> Eliminar
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-5">
+                        <div class="py-4">
+                            <i class="fas fa-envelope-open-text fa-3x text-muted opacity-25 mb-3"></i>
+                            <h5 class="fw-bold text-dark mb-1">Aún no hay invitaciones</h5>
+                            <p class="text-muted small mb-4">Comienza creando tu primer evento o micro-sitio.</p>
+                            <a href="{{ url_for('invitaciones_admin.crear_invitacion') }}" class="btn btn-primary rounded-pill px-4">
+                                <i class="fas fa-plus me-1"></i> Nueva Invitación
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- LÓGICA DE CARGA (NUEVA) ---
+    function mostrarCargando(mensaje) {
+        Swal.fire({
+            title: mensaje,
+            text: 'Por favor espera un momento...',
+            allowOutsideClick: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+    }
+
+    // --- COPIADO Y ALERTAS ---
     function copiarAnimado(texto, elemento, soloIcono = false) {
         if (!texto || texto === 'None') return;
 
@@ -475,31 +500,30 @@
             elemento.classList.add('text-success');
 
             if (!soloIcono) {
-                elemento.classList.add('bg-success');
+                elemento.classList.add('bg-success', 'text-white');
+                elemento.classList.remove('bg-light');
             }
 
-            icon.className = 'fas fa-check text-success';
+            icon.className = 'fas fa-check';
             if (spanText) {
                 spanText.innerText = ' ¡Copiado!';
-                icon.classList.remove('text-success');
             }
 
             setTimeout(() => {
-                elemento.classList.remove('text-success', 'bg-success');
+                elemento.classList.remove('text-success', 'bg-success', 'text-white');
                 elemento.classList.add('text-primary');
-                if (!soloIcono && spanText) elemento.classList.add('bg-primary');
+                if (!soloIcono && spanText) elemento.classList.add('bg-light');
 
                 icon.className = originalIconClass;
                 if (spanText) spanText.innerText = originalText;
             }, 2000);
 
         }).catch(err => {
-            console.error('Error al copiar: ', err);
             Swal.fire({
                 icon: 'error',
                 title: 'Error de Copia',
                 text: 'No se pudo copiar el enlace automáticamente. Por favor, intenta manualmente.',
-                confirmButtonColor: '#ff4757'
+                confirmButtonColor: '#212529'
             });
         });
     }
@@ -534,7 +558,7 @@
         plannerNames.forEach(name => {
             const option = document.createElement('option');
             option.value = name;
-            option.textContent = "👤 " + name;
+            option.textContent = name; // Quitamos el emoji para que se vea más limpio
             selectPlanner.appendChild(option);
         });
 
@@ -584,32 +608,33 @@
         selectPlanner.addEventListener('change', aplicarFiltros);
     });
 
+    // --- LÓGICA DE SWEETALERT CON PANTALLA DE CARGA ---
+    function confirmarEliminacionForm(event, formulario, nombreEvento) {
+        event.preventDefault(); 
+        event.stopPropagation(); 
 
+        Swal.fire({
+            title: '¿Eliminar invitación?',
+            html: `Estás a punto de borrar la invitación de <strong>${nombreEvento}</strong>.<br><br><span class="text-danger small"><i class="fas fa-exclamation-triangle"></i> ¡Advertencia! Se borrarán permanentemente todos los pases y fotos asociadas a este evento.</span>`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#f8f9fa',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: '<span style="color:#212529">Cancelar</span>',
+            reverseButtons: true,
+            customClass: {
+                confirmButton: 'rounded-pill px-4',
+                cancelButton: 'rounded-pill px-4 border'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                mostrarCargando('Borrando datos y archivos...');
+                formulario.submit(); // Dispara el POST y el loader cubre la pantalla
+            }
+        });
 
-// --- LÓGICA DE SWEETALERT PARA ELIMINAR INVITACIÓN ---
-function confirmarEliminacionForm(event, formulario, nombreEvento) {
-    event.preventDefault(); // Frenamos el POST en seco
-    event.stopPropagation(); // Evitamos que el dropdown haga cosas raras
-
-    Swal.fire({
-        title: '¿Eliminar invitación?',
-        html: `Estás a punto de borrar la invitación de <strong>${nombreEvento}</strong>.<br><br><span class="text-danger small"><i class="fas fa-exclamation-triangle"></i> ¡Advertencia! Se borrarán permanentemente todos los pases y fotos de R2 (Cámara fotográfica) asociados a este evento.</span>`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6c757d',
-        confirmButtonText: 'Sí, eliminar',
-        cancelButtonText: 'Cancelar',
-        customClass: {
-            popup: 'rounded-4'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            formulario.submit(); // Si el usuario confirma, soltamos el POST a Flask
-        }
-    });
-
-    return false;
-}
+        return false;
+    }
 </script>
 {% endblock %}

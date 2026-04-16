@@ -36,39 +36,52 @@ s3_client = boto3.client(
 )
 
 # =========================================================
-# SUBIDA DE ARCHIVOS A CLOUDFLARE R2 (UNIFICADO Y BLINDADO)
+# SUBIDA DE ARCHIVOS A CLOUDFLARE R2 (ORGANIZADO EN CARPETAS)
 # =========================================================
 @catalogo_bp.route('/upload-r2', methods=['POST'])
-@login_required # Proteccion: Solo usuarios autenticados pueden subir archivos
+@login_required 
 def upload_r2():
     """
-    Recibe un archivo desde el cliente, le asigna un nombre unico para 
-    evitar sobreescrituras accidentales y lo sube al bucket de R2.
+    Recibe un archivo, arma una ruta de carpetas dinámica basada en 
+    la categoría y el tipo de archivo, y lo sube a R2.
     """
     file = request.files.get('file')
     if not file:
         return jsonify({"success": False, "error": "No se recibio ningun archivo"}), 400
 
-    # Sanitizamos el nombre base para quitar caracteres especiales o espacios
+    # 1. Obtenemos el ID de la categoría (enviado desde el FormData de JS)
+    categoria_id = request.form.get('categoria_id', 'general')
+
+    # 2. Determinamos la carpeta según el tipo de archivo
+    mime_type = file.content_type or ''
+    if 'video' in mime_type:
+        tipo_carpeta = 'videos'
+    elif 'audio' in mime_type:
+        tipo_carpeta = 'audios'
+    else:
+        tipo_carpeta = 'imagenes'
+
+    # Sanitizamos el nombre base
     base_filename = secure_filename(file.filename) 
-    
-    # Generamos un identificador unico (UUID) y lo concatenamos al nombre
-    # Esto asegura que dos archivos con el mismo nombre no se sobreescriban
     unique_filename = f"{uuid.uuid4().hex}_{base_filename}"
     
+    # 3. ARMAMOS LA RUTA COMPLETA (Cloudflare crea las carpetas mágicamente)
+    # Ejemplo: categoria_4/imagenes/1234abcd_foto.jpg
+    ruta_r2 = f"categoria_{categoria_id}/{tipo_carpeta}/{unique_filename}"
+    
     try:
-        # Subimos el archivo a R2 especificando su ContentType para que los navegadores lo lean bien
+        # Subimos usando la ruta completa (Key)
         s3_client.upload_fileobj(
             file,
             BUCKET_NAME,
-            unique_filename,
-            ExtraArgs={'ContentType': file.content_type}
+            ruta_r2,
+            ExtraArgs={'ContentType': mime_type}
         )
         
-        # Construimos la URL publica final que se guardara en la base de datos
-        url_final = f"{PUBLIC_URL}/{unique_filename}"
+        # Construimos la URL publica final
+        url_final = f"{PUBLIC_URL}/{ruta_r2}"
         
-        current_app.logger.info(f"R2_UPLOAD_SUCCESS: Usuario {session.get('user_id')} subió el archivo '{unique_filename}'")
+        current_app.logger.info(f"R2_UPLOAD_SUCCESS: Usuario {session.get('user_id')} subió '{ruta_r2}'")
         return jsonify({"success": True, "url": url_final})
     except Exception as e:
         current_app.logger.error(f"R2_UPLOAD_ERROR: Usuario {session.get('user_id')} falló al subir archivo - {e}")
@@ -81,13 +94,9 @@ def upload_r2():
 @catalogo_bp.route('/admin/catalogo', methods=['GET', 'POST'])
 @login_required
 def admin_categorias():
-    """
-    Muestra la lista de categorias existentes y permite crear nuevas.
-    """
     conn = get_db()
     cursor = conn.cursor()
     
-    # Procesa la creacion de una nueva categoria
     if request.method == 'POST':
         nombre = request.form['nombre']
         orden = request.form.get('orden', 0)
@@ -97,7 +106,6 @@ def admin_categorias():
         flash('Categoria creada con exito.', 'success')
         return redirect(url_for('catalogo.admin_categorias'))
 
-    # Obtiene todas las categorias ordenadas por el campo 'orden'
     cursor.execute('SELECT * FROM categorias ORDER BY orden ASC, id DESC')
     categorias = cursor.fetchall()
     
@@ -112,33 +120,21 @@ def admin_categorias():
 @catalogo_bp.route('/admin/catalogo/<int:cat_id>', methods=['GET', 'POST'])
 @login_required
 def admin_productos(cat_id):
-    """
-    Muestra los productos de una categoria especifica.
-    Permite crear nuevos productos o editar los existentes.
-    """
     conn = get_db()
     cursor = conn.cursor()
 
-    # Validamos que la categoria exista
-    cursor.execute(
-        'SELECT * FROM categorias WHERE id = %s', (cat_id,)
-    )
+    cursor.execute('SELECT * FROM categorias WHERE id = %s', (cat_id,))
     categoria = cursor.fetchone()
 
     if request.method == 'POST':
         producto_id = request.form.get('producto_id')
-
         titulo = request.form['titulo']
         descripcion = request.form['descripcion']
         precio = request.form.get('precio', 0)
-        # Postgres BOOLEAN
         stock_status = True if request.form.get('en_stock') else False
-
         media_url = request.form.get('media_url', '').strip()
         media_type = request.form.get('media_type')
 
-        # Inteligencia de formatos: Forzamos el tipo de archivo basado en su extension
-        # Esto previene errores de capa 8 si el usuario selecciona el tipo incorrecto
         if media_url:
             ext = media_url.split('.')[-1].lower() 
             if ext in ['mp3', 'wav', 'ogg', 'm4a']:
@@ -148,7 +144,6 @@ def admin_productos(cat_id):
             elif ext in ['mp4', 'mov', 'avi', 'webm', 'mkv']:
                 media_type = 'video'
 
-        # Flujo de actualizacion (Editar producto existente)
         if producto_id:
             cursor.execute('''
                 UPDATE catalogo_productos
@@ -157,10 +152,7 @@ def admin_productos(cat_id):
             ''', (titulo, descripcion, precio, media_url, media_type, stock_status, producto_id))
             conn.commit()
             flash('Producto actualizado correctamente.', 'success')
-
-        # Flujo de creacion (Nuevo producto)
         else:
-            # Generacion de un SKU unico basado en el nombre de la categoria
             nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
             prefix = nombre_limpio[:3].upper() if len(nombre_limpio) >= 2 else "PROD"
 
@@ -168,13 +160,8 @@ def admin_productos(cat_id):
                 random_digits = ''.join(random.choices(string.digits, k=5))
                 sku_generado = f"{prefix}-{random_digits}"
 
-                # Verificamos que el SKU no exista ya en la base de datos
-                cursor.execute(
-                    'SELECT id FROM catalogo_productos WHERE sku = %s',
-                    (sku_generado,)
-                )
+                cursor.execute('SELECT id FROM catalogo_productos WHERE sku = %s', (sku_generado,))
                 existe = cursor.fetchone()
-
                 if not existe:
                     break
 
@@ -188,7 +175,6 @@ def admin_productos(cat_id):
 
         return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
     
-    # Obtencion de los productos de la categoria actual
     cursor.execute(
         'SELECT * FROM catalogo_productos WHERE categoria_id = %s ORDER BY id DESC',
         (cat_id,)
@@ -198,14 +184,9 @@ def admin_productos(cat_id):
     cursor.close()
     conn.close()
 
-    # Convertimos las filas a diccionarios para asegurar compatibilidad con JSON en el frontend
     productos = [dict(row) for row in productos_db] 
 
-    return render_template(
-        'catalogo/admin_productos.html',
-        categoria=categoria, 
-        productos=productos  
-    )
+    return render_template('catalogo/admin_productos.html', categoria=categoria, productos=productos)
 
 # =========================================================
 # 3. INTERRUPTOR RAPIDO (ON/OFF DE VISIBILIDAD)
@@ -213,14 +194,10 @@ def admin_productos(cat_id):
 @catalogo_bp.route('/api/catalogo/toggle', methods=['POST'])
 @login_required
 def toggle_status():
-    """
-    Activa o desactiva la visibilidad publica de una categoria o producto.
-    Usado por llamadas AJAX desde el panel de administracion.
-    """
     data = request.get_json()
     tipo = data.get('tipo')
     id_obj = data.get('id')
-    nuevo_estado = True if data.get('activo') else False # Postgres BOOLEAN
+    nuevo_estado = True if data.get('activo') else False
     
     conn = get_db()
     cursor = conn.cursor()
@@ -244,9 +221,6 @@ def toggle_status():
 @catalogo_bp.route('/admin/catalogo/editar_categoria', methods=['POST'])
 @login_required
 def editar_categoria():
-    """
-    Actualiza la informacion basica de una categoria.
-    """
     conn = get_db()
     cursor = conn.cursor()
     cat_id = request.form['cat_id']
@@ -269,37 +243,31 @@ def editar_categoria():
     return redirect(url_for('catalogo.admin_categorias'))
 
 # =========================================================
-# 5. ELIMINAR ITEMS (CON LIMPIEZA TOTAL DE R2)
+# 5. ELIMINAR ITEMS (CON LIMPIEZA TOTAL DE R2 Y CARPETAS)
 # =========================================================
 @catalogo_bp.route('/admin/catalogo/delete/<tipo>/<int:id_obj>')
 @login_required
 def delete_item(tipo, id_obj):
-    """
-    Elimina categorias o productos de la base de datos y, crucialmente,
-    elimina los archivos fisicos asociados en Cloudflare R2 para ahorrar espacio.
-    """
     conn = get_db()
     cursor = conn.cursor()
     
     try:
         if tipo == 'categoria':
-            # Usamos comillas triples para que las comillas simples de adentro no rompan el SQL
             cursor.execute("""
                 SELECT media_url FROM catalogo_productos 
                 WHERE categoria_id = %s AND media_url IS NOT NULL AND media_url != ''
             """, (id_obj,))
             productos = cursor.fetchall()
             
-            # Borramos iterativamente los archivos de la nube
             for prod in productos:
                 url_archivo = prod['media_url']
                 try:
-                    nombre_archivo = url_archivo.split('/')[-1]
-                    s3_client.delete_object(Bucket=BUCKET_NAME, Key=nombre_archivo)
+                    # NUEVA LÓGICA: Extraemos la ruta completa del archivo restando el dominio base
+                    key_archivo = url_archivo.replace(PUBLIC_URL, "").lstrip("/")
+                    s3_client.delete_object(Bucket=BUCKET_NAME, Key=key_archivo)
                 except Exception as e:
-                    current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo huérfano '{nombre_archivo}' de R2 - {e}")
+                    current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo huérfano de R2 - {e}")
 
-            # Borramos los registros en cascada
             cursor.execute('DELETE FROM catalogo_productos WHERE categoria_id = %s', (id_obj,))
             cursor.execute('DELETE FROM categorias WHERE id = %s', (id_obj,))
             conn.commit()
@@ -308,7 +276,6 @@ def delete_item(tipo, id_obj):
             return redirect(url_for('catalogo.admin_categorias'))
             
         else: 
-            # Logica para eliminar un solo producto
             cursor.execute(
                 'SELECT categoria_id, media_url FROM catalogo_productos WHERE id = %s', 
                 (id_obj,)
@@ -319,14 +286,14 @@ def delete_item(tipo, id_obj):
                 cat_id = prod['categoria_id']
                 url_archivo = prod['media_url']
                 
-                # Si el producto tiene archivo, lo borramos de R2
                 if url_archivo:
                     try:
-                        nombre_archivo = url_archivo.split('/')[-1]
-                        s3_client.delete_object(Bucket=BUCKET_NAME, Key=nombre_archivo)
-                        current_app.logger.info(f"R2_DELETE_SUCCESS: Archivo '{nombre_archivo}' eliminado correctamente de la nube.")
+                        # NUEVA LÓGICA: Extraemos la ruta completa (carpeta + archivo)
+                        key_archivo = url_archivo.replace(PUBLIC_URL, "").lstrip("/")
+                        s3_client.delete_object(Bucket=BUCKET_NAME, Key=key_archivo)
+                        current_app.logger.info(f"R2_DELETE_SUCCESS: Archivo eliminado correctamente.")
                     except Exception as e:
-                        current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo '{nombre_archivo}' de R2 - {e}")
+                        current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo de R2 - {e}")
 
                 cursor.execute('DELETE FROM catalogo_productos WHERE id = %s', (id_obj,))
                 conn.commit()
@@ -349,22 +316,14 @@ def delete_item(tipo, id_obj):
 # =========================================================
 @catalogo_bp.route('/catalogo')
 def ver_catalogo():
-    """
-    Renderiza el catalogo publico. Solo muestra categorias y productos
-    cuyo flag 'activo' este en True.
-    """
     conn = get_db()
     cursor = conn.cursor()
     
-    # Postgres BOOLEAN (True)
-    cursor.execute(
-        'SELECT * FROM categorias WHERE activo = True ORDER BY orden ASC'
-    )
+    cursor.execute('SELECT * FROM categorias WHERE activo = True ORDER BY orden ASC')
     categorias = cursor.fetchall()
     
     catalogo_data = []
     
-    # Anidamos los productos dentro de su respectiva categoria
     for cat in categorias:
         cursor.execute('''
             SELECT * FROM catalogo_productos
@@ -382,9 +341,6 @@ def ver_catalogo():
     cursor.close()
     conn.close()
     
-    # IMPORTANTE: Revisa el nombre del archivo en tu render_template.
-    # El archivo subido que compartiste indicaba problemas con "galeria_sianeffects.html". 
-    # Asegúrate de que el nombre del template HTML aquí coincida con lo que tienes en tu carpeta templates.
     return render_template(
         'catalogo/galeria_sianeffects.html',
         catalogo=catalogo_data
@@ -396,12 +352,8 @@ def ver_catalogo():
 @catalogo_bp.route('/api/catalogo/update-stock', methods=['POST'])
 @login_required
 def update_stock():
-    """
-    Actualiza el indicador de inventario (En Stock / Agotado) de un producto.
-    """
     data = request.get_json()
     prod_id = data.get('id')
-    # Postgres BOOLEAN
     nuevo_stock = True if data.get('stock') else False 
     
     conn = get_db()
