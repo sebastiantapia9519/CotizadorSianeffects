@@ -1388,6 +1388,22 @@
     const url = input.value.trim();
     if (!url) return;
 
+    // --- BLINDAJE: DETECTAR EL LINK FANTASMA DE IPHONE/ANDROID ---
+    // Detecta cualquier link que termine en /0, /1, /5, etc.
+    if (url.match(/googleusercontent\.com\/maps\.google\.com\/\d+/)) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Enlace incompleto',
+            text: 'En el celular, usa el botón "Copiar Enlace" (el ícono de la cadenita) desde el menú de Google Maps, no el de compartir del teléfono.',
+            confirmButtonColor: '#ff4757',
+            borderRadius: '15px'
+        });
+        input.value = '';
+        input.classList.add('is-invalid');
+        return;
+    }
+    // -------------------------------------------------------------
+
     // 1. Intentamos extraer coordenadas formato largo
     const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
     const match = url.match(regex);
