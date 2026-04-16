@@ -1562,38 +1562,74 @@
     });
 
 
-    function cargarRecetaDesdeCarrito(index) {
+function cargarRecetaDesdeCarrito(index) {
         const item = carrito[index];
-        if (!item || !item.composicion || typeof item.composicion === 'string') {
-            Swal.fire({
-                icon: 'info',
-                title: 'Sin receta',
-                text: 'Este producto no tiene una receta asignada.',
-                confirmButtonColor: '#ff4757'
-            });
+        if (!item || !item.composicion) return;
+
+        // 1. Convertimos la composición a arreglo (porque cuando viene de la base de datos es texto)
+        let compArray = [];
+        try {
+            compArray = typeof item.composicion === 'string' ? JSON.parse(item.composicion) : item.composicion;
+        } catch(e) {
+            compArray = [];
+        }
+
+        // 2. ¿ES UNA VENTA RÁPIDA? -> La mandamos al panel Express
+        if (compArray.length > 0 && compArray[0].tipo === 'manual') {
+            document.getElementById('express-tab').click(); // Cambiamos de pestaña
+            document.getElementById('expressConcepto').value = item.concepto;
+            document.getElementById('expressPrecio').value = item.precio_unitario;
+            document.getElementById('expressCantidad').value = item.cantidad;
+            document.getElementById('expressCosto').value = item.costo_unitario;
+            
+            // Lo quitamos del carrito silenciosamente
+            carrito.splice(index, 1);
+            renderizarCarrito();
             return;
         }
 
-        // Limpia receta actual
+        // 3. ¿ES UNA RECETA NORMAL? -> La mandamos al panel de Armar Receta
+        if (compArray.length === 0) {
+             Swal.fire({icon: 'info', title: 'Sin receta', text: 'No hay receta guardada para editar.'});
+             return;
+        }
+
+        document.getElementById('receta-tab').click(); // Nos aseguramos de estar en la pestaña correcta
+
+        // Limpiamos el panel izquierdo para evitar que se mezclen cosas
         limpiarMateriales();
         document.getElementById('costosExtra').value = 0;
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
+        // Cargamos los valores generales
         document.getElementById('nombreProductoActual').value = item.concepto;
         document.getElementById('cantidadParaCarrito').value = item.cantidad;
 
-        item.composicion.forEach(c => {
-            if (c.tipo === 'material') {
-                agregarFila(c.id, c.cantidad);
-            }
-
+        // Llenamos la fila de materiales y activamos las máquinas
+        compArray.forEach(c => {
+            if (c.tipo === 'material') agregarFila(c.id, c.cantidad);
             if (c.tipo === 'maquinaria') {
                 const chk = document.querySelector(`.check-maquinaria-input[data-id="${c.id}"]`);
                 if (chk) chk.checked = true;
             }
         });
 
-        setTimeout(calcularTotal, 150);
+        // 4. Lo quitamos del carrito silenciosamente (Hacemos el "Pop")
+        carrito.splice(index, 1);
+        renderizarCarrito();
+
+        // 5. Truco Pro: Calculamos el total y recuperamos la Mano de Obra (Extras)
+        setTimeout(() => {
+            calcularTotal();
+            let costoCalculadoSinExtra = costoProduccionCalculado;
+            let diferenciaExtra = item.costo_unitario - costoCalculadoSinExtra;
+            
+            // Si el costo original era mayor al de los puros materiales, la diferencia es la mano de obra
+            if (diferenciaExtra > 0.05) { 
+                document.getElementById('costosExtra').value = diferenciaExtra.toFixed(2);
+                calcularTotal(); // Recalculamos con el extra ya puesto
+            }
+        }, 200); // Le damos 200ms al navegador para renderizar los selects antes de calcular
     }
 
 
