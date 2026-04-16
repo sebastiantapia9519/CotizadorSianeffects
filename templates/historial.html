@@ -368,28 +368,28 @@
 
 <div class="card card-custom" id="tour-tabla-historial">
     <div class="table-responsive">
-<table class="table align-middle" style="table-layout: fixed; min-width: 100%;">
+<table class="table align-middle">
             <thead>
                 <tr>
-                    <th class="ps-3 ps-md-4" style="width: 25%; min-width: 80px;">Folio / Fecha</th>
-                    <th style="width: 30%; min-width: 100px;">Cliente</th>
-                    <th class="d-none d-md-table-cell" style="width: 15%;">Estado</th>
-                    <th style="width: 20%; min-width: 90px;">Monto</th>
-                    <th class="text-end pe-3 pe-md-4" style="width: 10%;">Acciones</th>
+                    <th class="ps-3 ps-md-4 text-nowrap">Folio/Fecha</th>
+                    <th>Cliente</th>
+                    <th class="d-none d-md-table-cell">Estado</th>
+                    <th class="text-end text-nowrap">Monto</th>
+                    <th class="text-center text-nowrap" style="width: 60px;">Acción</th>
                 </tr>
             </thead>
             <tbody>
                 {% for v in ventas %}
                 <tr class="{{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}">
-                    <td class="ps-3 ps-md-4 text-truncate">
-                        <div class="fw-bold text-dark folio-text">#{{ v['id'] }}</div>
-                        <div class="text-muted text-xs mt-1">
+                    <td class="ps-3 ps-md-4">
+                        <div class="fw-bold text-dark text-nowrap">#{{ v['id'] }}</div>
+                        <div class="text-muted text-xs mt-1 text-nowrap">
                             {{ v['fecha'].strftime('%d/%m/%Y') if v['fecha'] is not string else v['fecha'][:10] }}
                         </div>
                     </td>
 
-                    <td class="text-truncate">
-                        <div class="fw-bold text-dark cliente-text text-truncate" style="max-width: 120px;" title="{{ v['cliente'] }}">{{ v['cliente'] }}</div>
+                    <td>
+                        <div class="fw-bold text-dark" style="word-break: break-word;">{{ v['cliente'] }}</div>
                         
                         <div class="d-block d-md-none mt-1">
                             {% if v['estado'] == 'pagado' %}
@@ -402,7 +402,6 @@
                                 <span class="badge bg-danger text-white" style="font-size: 0.6rem;">ANULADA</span>
                             {% endif %}
                         </div>
-                        
                     </td>
 
                     <td class="d-none d-md-table-cell">
@@ -442,7 +441,7 @@
                         {% endif %}
                     </td>
 
-                    <td class="text-end pe-3 pe-md-4" {% if loop.index == 1 %}id="tour-acciones"{% endif %}>
+                    <td class="text-center" {% if loop.index == 1 %}id="tour-acciones"{% endif %}>
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm rounded-circle border" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
                                 <i class="fas fa-ellipsis-v"></i>
@@ -554,14 +553,14 @@
                 <h6 class="fw-bold text-dark mb-3">Detalle de Productos</h6>
                 <div class="rounded-4 border mb-4" style="max-height: 320px; overflow-y: auto; overflow-x: auto;">
                     <table class="table table-borderless mb-0 align-middle" style="min-width: 600px;">
-                        <thead class="sticky-top bg-white">
+                        <thead class="sticky-top bg-white border-bottom">
                             <tr>
-                                <th class="ps-4 py-3" style="min-width: 220px;">Concepto</th>
-                                <th class="text-center py-3">Cant.</th>
-                                <th class="text-end py-3">P. Unit</th>
-                                <th class="text-end py-3 text-dark">Importe</th>
-                                <th class="text-end py-3 text-muted">Costo</th>
-                                <th class="text-end pe-4 py-3 text-success">Ganancia</th>
+                                <th class="ps-4 py-3 text-nowrap" style="min-width: 180px;">Concepto</th>
+                                <th class="text-center py-3 text-nowrap">Cant.</th>
+                                <th class="text-end py-3 text-nowrap">P. Unit</th>
+                                <th class="text-end py-3 text-dark text-nowrap">Importe</th>
+                                <th class="text-end py-3 text-muted text-nowrap">Costo</th>
+                                <th class="text-end pe-4 py-3 text-success text-nowrap">Ganancia</th>
                             </tr>
                         </thead>
                         <tbody id="modalTablaCuerpo" class="text-sm"></tbody>
