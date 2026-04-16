@@ -121,7 +121,7 @@ def materiales():
     cursor.close()
     conn.close()
 
-    # 💡 LÓGICA DEL TUTORIAL
+    # LÓGICA DEL TUTORIAL
     mostrar_tour = debe_mostrar_tutorial(user_id, 'materiales')
     version_tour = obtener_version_tutorial('materiales')
 
@@ -408,14 +408,20 @@ def registrar_compra():
         sql_update = "UPDATE materiales SET stock_actual = stock_actual + %s"
         params = [cantidad_a_sumar]
 
+        # --- CÓDIGO CORREGIDO ---
         if nuevo_precio > 0:
-            nuevo_unitario = nuevo_precio / cantidad_a_sumar
             if tipo_ingreso == 'paquete':
-                sql_update += ", precio_compra = %s"
-                params.append(nuevo_precio)
+                # Si el ingreso es por paquete, dividimos el precio entre lo que trae UN paquete (no el total de la compra)
+                cantidad_por_paquete = mat['cantidad_paquete'] if mat['cantidad_paquete'] > 0 else 1
+                nuevo_unitario = nuevo_precio / cantidad_por_paquete
                 
-            sql_update += ", precio_unitario = %s"
-            params.append(nuevo_unitario)
+                sql_update += ", precio_compra = %s, precio_unitario = %s"
+                params.extend([nuevo_precio, nuevo_unitario])
+            else:
+                # Si el ingreso es por pieza suelta, el precio que pones ES el costo unitario
+                nuevo_unitario = nuevo_precio
+                sql_update += ", precio_unitario = %s"
+                params.append(nuevo_unitario)
 
         sql_update += " WHERE id = %s"
         params.append(material_id)
