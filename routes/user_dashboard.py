@@ -36,24 +36,28 @@ def mi_panel():
         ]
         lista_anios = [str(y) for y in range(2025, int(anio_actual) + 2)]
 
-        # --- 2. TARJETAS DE PODER Y DATOS PARA LA DONA (POSTGRESQL: COALESCE Y TO_CHAR) ---
+        # --- 2. TARJETAS DE PODER (CORREGIDO CON AGREGACIÓN CONDICIONAL) ---
+        # Quitamos el WHERE estado IN... global, y metemos un CASE en cada suma
+        # para que cada KPI decida qué sumar exactamente sin excluir a los demás.
         cursor.execute("""
             SELECT 
-                COALESCE(SUM(total), 0) as ingresos_brutos,
-                COALESCE(SUM(total - costo_total), 0) as ganancia_neta,
-                COALESCE(SUM(costo_total), 0) as costos_produccion,
-                COALESCE(SUM(saldo_pendiente), 0) as dinero_calle,
-                COUNT(id) as total_ventas
+                COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN total ELSE 0 END), 0) as ingresos_brutos,
+                COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN (total - COALESCE(costo_total, 0)) ELSE 0 END), 0) as ganancia_neta,
+                COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN COALESCE(costo_total, 0) ELSE 0 END), 0) as costos_produccion,
+                COALESCE(SUM(CASE WHEN estado IN ('pendiente', 'anticipo') THEN COALESCE(saldo_pendiente, 0) ELSE 0 END), 0) as dinero_calle,
+                COUNT(CASE WHEN estado IN ('pagado', 'anticipo') THEN 1 END) as total_ventas
             FROM ventas 
-            WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') = %s AND estado IN ('pagado', 'anticipo')
+            WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') = %s AND estado != 'cancelado'
         """, (user_id, periodo_str))
         kpis_row = cursor.fetchone()
         
         kpis = dict(kpis_row) if kpis_row else {'ingresos_brutos': 0, 'ganancia_neta': 0, 'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0}
 
-        # --- 3. GRÁFICA 1: DIARIA ---
+        # --- 3. GRÁFICA 1: DIARIA (PROTECCIÓN DE NULOS EN COSTOS) ---
         cursor.execute("""
-            SELECT to_char(fecha, 'YYYY-MM-DD') as dia, SUM(total) as ingresos, SUM(total - costo_total) as ganancia
+            SELECT to_char(fecha, 'YYYY-MM-DD') as dia, 
+                   SUM(total) as ingresos, 
+                   SUM(total - COALESCE(costo_total, 0)) as ganancia
             FROM ventas
             WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') = %s AND estado IN ('pagado', 'anticipo')
             GROUP BY dia ORDER BY dia ASC
@@ -64,17 +68,24 @@ def mi_panel():
         for fila in grafica_diaria_db:
             fechas_diarias.append(f"Día {fila['dia'][-2:]}") 
             ing_diarios.append(round(fila['ingresos'], 2))
-            gan_diarias.append(round(fila['ganancia'], 2))
+            ing_diarios.append(round(fila['ganancia'], 2))
 
-        # --- 4. GRÁFICA 2: HISTÓRICA ---
-        hace_6_meses = (datetime.strptime(hoy_str, '%Y-%m-%d') - relativedelta(months=5)).strftime('%Y-%m')
+        # --- 4. GRÁFICA 2: HISTÓRICA (CORREGIDO VIAJE EN EL TIEMPO) ---
+        # Ahora los 6 meses se calculan desde el mes que el usuario seleccionó, no desde el día de hoy.
+        fecha_seleccionada = datetime.strptime(f"{anio_sel}-{mes_sel.zfill(2)}-01", '%Y-%m-%d')
+        hace_6_meses = (fecha_seleccionada - relativedelta(months=5)).strftime('%Y-%m')
         
         cursor.execute("""
-            SELECT to_char(fecha, 'YYYY-MM') as mes, SUM(total) as ingresos, SUM(total - costo_total) as ganancia
+            SELECT to_char(fecha, 'YYYY-MM') as mes, 
+                   SUM(total) as ingresos, 
+                   SUM(total - COALESCE(costo_total, 0)) as ganancia
             FROM ventas
-            WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') >= %s AND estado IN ('pagado', 'anticipo')
+            WHERE user_id = %s 
+              AND to_char(fecha, 'YYYY-MM') >= %s 
+              AND to_char(fecha, 'YYYY-MM') <= %s 
+              AND estado IN ('pagado', 'anticipo')
             GROUP BY mes ORDER BY mes ASC
-        """, (user_id, hace_6_meses))
+        """, (user_id, hace_6_meses, periodo_str))
         grafica_hist_db = cursor.fetchall()
 
         meses_hist, ing_hist, gan_hist = [], [], []
@@ -92,7 +103,7 @@ def mi_panel():
         """, (user_id, periodo_str))
         top_productos = cursor.fetchall()
 
-        # --- 6. ALERTAS DE STOCK BAJO (LIMPIO DE CAST INNECESARIOS) ---
+        # --- 6. ALERTAS DE STOCK BAJO ---
         cursor.execute("SELECT inventario_activo FROM configuracion WHERE user_id = %s", (user_id,))
         config_row = cursor.fetchone()
         inventario_activo = config_row['inventario_activo'] if config_row else False
