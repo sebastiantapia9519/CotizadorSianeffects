@@ -1,70 +1,45 @@
 {% extends "layout.html" %}
 
-{% block title %}Panel Creativo de Categorías | SianEffects{% endblock %}
+{% block title %}Gestionar Categorías | SianEffects{% endblock %}
 
 {% block content %}
 <style>
     /* ===================================================
-       1. ESTILO "CRAFTER STUDIO" (CREATIVO Y COLORIDO)
+       1. ESTILO LIMPIO Y ELEGANTE (COMO EN TU FOTO)
        =================================================== */
-    :root {
-        /* Paleta Crafter Vibrante */
-        --crafter-primary: #ff6b6b; /* Un rojo coral alegre */
-        --crafter-secondary: #4ecdc4; /* Un turquesa creativo */
-        --crafter-accent: #ffe66d; /* Amarillo brillante para detalles */
-        --crafter-purple: #a55eea; /* Púrpura para productos */
-        
-        /* Ajustes de UI */
-        --ui-border: #f1f2f6;
-        --ui-bg-hover: #fff5f5; /* Tinte muy suave del rosa coral */
-        --ui-text-main: #2f3542;
-        --ui-text-muted: #747d8c;
-        --ui-radius: 20px; /* Bordes mucho más redondeados */
-        --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-
-    /* Fondo general de la sección (ligero tinte pastel) */
     body {
-        background-color: #fcfcfd;
+        background-color: #f8f9fa; /* Fondo gris súper claro para que la tarjeta blanca resalte */
     }
 
-    /* Encabezado Alegre */
     .admin-header-flex {
-        margin-bottom: 2.5rem;
-        background: #fff;
-        padding: 20px;
-        border-radius: var(--ui-radius);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.03);
-    }
-    
-    /* Contenedor principal estilo "Estudio" */
-    .modern-card {
-        background: #ffffff;
-        border: none;
-        border-radius: var(--ui-radius);
-        box-shadow: 0 15px 35px rgba(255, 107, 107, 0.05); /* Sombra con tinte rosa coral */
-        overflow: hidden;
-        border: 2px solid #fff; /* Efecto borde neumórfico sutil */
+        margin-bottom: 2rem;
     }
 
-    /* Tabla con personalidad */
+    /* Tarjeta principal blanca */
+    .card-clean {
+        background: #ffffff;
+        border: 1px solid #e9ecef;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
+        overflow: hidden;
+    }
+
+    /* Estilo de la tabla */
     .cat-table th {
-        background-color: #fbfbfc;
-        color: var(--crafter-primary); /* Encabezados coloridos */
+        background-color: #fcfcfd;
+        color: #6c757d;
         font-weight: 700;
-        font-size: 0.8rem;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-        border-bottom: 2px solid var(--ui-border);
-        padding: 1.2rem 1.5rem;
+        font-size: 0.75rem;
+        letter-spacing: 0.5px;
+        border-bottom: 1px solid #e9ecef;
+        padding: 1rem 1.5rem;
     }
 
     .cat-table td {
-        padding: 1.5rem;
+        padding: 1.25rem 1.5rem;
         vertical-align: middle;
-        border-bottom: 1px solid var(--ui-border);
-        color: var(--ui-text-main);
-        transition: var(--transition);
+        border-bottom: 1px solid #f1f3f5;
+        color: #212529;
     }
 
     .cat-table tbody tr:last-child td {
@@ -72,112 +47,59 @@
     }
 
     .cat-table tbody tr:hover td {
-        background-color: var(--ui-bg-hover);
+        background-color: #f8f9fa;
     }
 
-    /* Botones Alegres y Redondeados */
-    .btn-crafter-primary {
-        background: linear-gradient(135deg, var(--crafter-primary), #ff8787);
-        color: white;
-        border: none;
-        border-radius: 50rem;
-        font-weight: 600;
-        transition: var(--transition);
-        box-shadow: 0 4px 15px rgba(255, 107, 107, 0.3);
+    /* Switch Azul Sianeffects */
+    .form-check-input {
+        width: 2.5em !important;
+        height: 1.25em !important;
+        cursor: pointer;
     }
-    .btn-crafter-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(255, 107, 107, 0.4);
-        color: white;
+    .form-check-input:checked {
+        background-color: #0d6efd;
+        border-color: #0d6efd;
     }
 
-    .btn-crafter-secondary {
-        background: white;
-        color: var(--ui-text-main);
-        border: 2px solid var(--ui-border);
-        border-radius: 50rem;
-        font-weight: 600;
-        transition: var(--transition);
-    }
-    .btn-crafter-secondary:hover {
-        border-color: var(--crafter-secondary);
-        color: var(--crafter-secondary);
-        background: #f0fdfc;
-    }
-
-    /* Botones de acción coloridos */
-    .btn-action {
-        width: 38px;
-        height: 38px;
+    /* Botones de acción circulares bien definidos */
+    .btn-circle-action {
+        width: 36px;
+        height: 36px;
         display: inline-flex;
         align-items: center;
         justify-content: center;
         border-radius: 50%;
+        border: 1px solid #e9ecef;
         background: #f8f9fa;
-        border: none;
-        transition: var(--transition);
+        transition: all 0.2s;
     }
-    .btn-action.products { color: var(--crafter-purple); background: #f3ebff; }
-    .btn-action.products:hover { background: var(--crafter-purple); color: white; transform: rotate(15deg); }
+    .btn-circle-action.edit { color: #0d6efd; } /* Azul claro/fuerte visible */
+    .btn-circle-action.edit:hover { background: #e7f1ff; border-color: #0d6efd; }
     
-    .btn-action.edit { color: var(--crafter-secondary); background: #e0f9f7; }
-    .btn-action.edit:hover { background: var(--crafter-secondary); color: white; transform: scale(1.1); }
-    
-    .btn-action.delete { color: var(--crafter-primary); background: #ffebeb; }
-    .btn-action.delete:hover { background: var(--crafter-primary); color: white; transform: scale(1.1); }
+    .btn-circle-action.delete { color: #dc3545; } /* Rojo visible */
+    .btn-circle-action.delete:hover { background: #fde8e9; border-color: #dc3545; }
 
-    /* Switch Colorido estilo Crafter */
-    .form-check-input {
-        width: 2.8em !important;
-        height: 1.4em !important;
-        margin-top: 0;
-        cursor: pointer;
-        border-color: #dcdde1;
-    }
-    .form-check-input:checked {
-        background-color: var(--crafter-secondary); /* Turquesa al activar */
-        border-color: var(--crafter-secondary);
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
-    }
-
-    /* Icono de carpeta Crafter */
-    .cat-icon-box {
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        background: linear-gradient(135deg, #ffefef, #fff);
-        color: var(--crafter-primary);
-        margin-right: 15px;
-        font-size: 1.2rem;
-        border: 1px solid #ffebeb;
-    }
-
-    /* --- DISEÑO RESPONSIVO PARA MÓVIL (TARJETAS DIVERTIDAS) --- */
+    /* --- DISEÑO RESPONSIVO PARA MÓVIL (TARJETAS APILADAS) --- */
     @media (max-width: 768px) {
         .admin-header-flex {
             flex-direction: column;
-            align-items: center;
             text-align: center;
-            gap: 1.5rem;
-            padding: 30px;
+            gap: 15px;
         }
         .btn-group-mobile {
-            width: 100%;
             display: flex;
             flex-direction: column;
-            gap: 0.75rem;
+            width: 100%;
+            gap: 10px;
         }
         .btn-group-mobile .btn {
             width: 100%;
-            padding: 0.75rem;
         }
 
+        /* Transformar tabla a tarjetas */
         .cat-table thead { display: none; }
         
-        .modern-card {
+        .card-clean {
             background: transparent;
             border: none;
             box-shadow: none;
@@ -187,168 +109,111 @@
             display: flex;
             flex-direction: column;
             background: #fff;
-            margin-bottom: 1.5rem;
-            border-radius: var(--ui-radius);
-            padding: 1.5rem;
-            box-shadow: 0 8px 25px rgba(0,0,0,0.03);
-            border: 2px solid #fff;
-            transition: var(--transition);
-        }
-        .cat-table tr:hover {
-            border-color: var(--ui-bg-hover);
-            transform: translateY(-3px);
+            margin-bottom: 1rem;
+            border-radius: 12px;
+            padding: 1.25rem;
+            border: 1px solid #e9ecef;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
         }
 
         .cat-table td {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 0.75rem 0 !important;
+            padding: 10px 0 !important;
             border: none !important;
-            background: transparent !important;
         }
 
-        /* Nombre de categoría resaltado en móvil */
+        /* El nombre de la categoría va hasta arriba */
         .cat-table td:nth-child(2) {
-            order: -2;
-            justify-content: center;
-            border-bottom: 2px dashed #ffebeb !important;
-            padding-bottom: 1.25rem !important;
-            margin-bottom: 0.75rem;
-            width: 100%;
+            order: -1;
+            flex-direction: column;
+            align-items: flex-start;
+            border-bottom: 1px solid #f8f9fa !important;
+            padding-bottom: 15px !important;
+            margin-bottom: 5px;
         }
-        .cat-table td:nth-child(2) .cat-icon-box { margin-right: 10px; }
 
-        /* Orden */
+        /* Etiquetas inyectadas para móvil */
         .cat-table td:nth-child(1)::before {
-            content: "Prioridad de diseño";
-            font-size: 0.8rem;
-            color: var(--ui-text-muted);
-            font-weight: 600;
+            content: "ORDEN";
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #adb5bd;
         }
-
-        /* Estado */
         .cat-table td:nth-child(3)::before {
-            content: "Mostrar en tienda";
-            font-size: 0.8rem;
-            color: var(--ui-text-muted);
-            font-weight: 600;
+            content: "ESTADO";
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #adb5bd;
         }
 
-        /* Botones al final centrados */
+        /* Botones de acción al final */
         .cat-table td:last-child {
             justify-content: center;
-            gap: 15px;
-            border-top: 2px solid #f8f9fa !important;
-            padding-top: 1.25rem !important;
-            margin-top: 0.75rem;
+            gap: 10px;
+            border-top: 1px solid #f8f9fa !important;
+            padding-top: 15px !important;
+            margin-top: 5px;
         }
     }
 
     /* ===================================================
-       2. MODO OSCURO (DARK CRAFTER PREMIUM)
+       2. MODO OSCURO (COMPATIBLE)
        =================================================== */
-    [data-bs-theme="dark"] {
-        background-color: #1a1a1c;
-        --ui-border: #2d2d30;
-        --ui-bg-hover: #2d2323; /* Tinte oscuro coral */
-        --ui-text-main: #f1f2f6;
-        --ui-text-muted: #a4b0be;
+    [data-bs-theme="dark"] .card-clean {
+        background-color: #1e293b;
+        border-color: #334155;
     }
-
-    [data-bs-theme="dark"] .admin-header-flex {
-        background: #252529;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    }
-
-    [data-bs-theme="dark"] .modern-card {
-        background: #252529;
-        border-color: #252529;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.2);
-    }
+    [data-bs-theme="dark"] .cat-table th { background-color: #0f172a; border-color: #334155; }
+    [data-bs-theme="dark"] .cat-table td { border-color: #334155; color: #f8fafc; }
+    [data-bs-theme="dark"] .cat-table tbody tr:hover td { background-color: rgba(255,255,255,0.02); }
+    [data-bs-theme="dark"] .btn-circle-action { background: #0f172a; border-color: #334155; }
     
-    [data-bs-theme="dark"] .cat-table th {
-        background: #202023;
-        color: var(--crafter-primary);
-        border-color: var(--ui-border);
-    }
-    
-    [data-bs-theme="dark"] .cat-icon-box {
-        background: linear-gradient(135deg, #3a2a2a, #252529);
-        color: var(--crafter-primary);
-        border-color: #4a3535;
-    }
-    
-    [data-bs-theme="dark"] .btn-action { background: #2d2d30; }
-    [data-bs-theme="dark"] .btn-action.products { color: #b77cff; background: #2f253a; }
-    [data-bs-theme="dark"] .btn-action.edit { color: #64ffeb; background: #223533; }
-    [data-bs-theme="dark"] .btn-action.delete { color: #ff8787; background: #3a2a2a; }
-    
-    [data-bs-theme="dark"] .btn-action:hover { color: white !important; }
-
-    [data-bs-theme="dark"] .btn-crafter-secondary {
-        background: #2d2d30;
-        color: #f1f2f6;
-        border-color: #3a3a3e;
-    }
-    [data-bs-theme="dark"] .btn-crafter-secondary:hover {
-        border-color: var(--crafter-secondary);
-        color: var(--crafter-secondary);
-        background: #1e2d2c;
-    }
-
     @media (max-width: 768px) {
-        [data-bs-theme="dark"] .cat-table tr {
-            background: #252529;
-            border-color: #2d2d30;
-        }
-        [data-bs-theme="dark"] .cat-table td:nth-child(2) { border-color: #3a3a3e !important; }
-        [data-bs-theme="dark"] .cat-table td:last-child { border-color: #3a3a3e !important; }
+        [data-bs-theme="dark"] .cat-table tr { background-color: #1e293b; border-color: #334155; }
+        [data-bs-theme="dark"] .cat-table td:nth-child(2),
+        [data-bs-theme="dark"] .cat-table td:last-child { border-color: #334155 !important; }
     }
 </style>
 
-<div class="d-flex admin-header-flex align-items-center justify-content-between shadow-sm">
-    <div>
-        <h2 class="fw-bolder mb-1 text-dark" style="letter-spacing: -0.03em;">Mis Colecciones</h2>
-        <p class="text-muted mb-0">Dale orden a tu magia. Crea secciones coloridas para tus productos.</p>
+<div class="row admin-header-flex align-items-center">
+    <div class="col-md-7">
+        <h2 class="fw-bold text-dark d-flex align-items-center gap-2">
+            <i class="fas fa-layer-group text-primary"></i> Categorías del Catálogo
+        </h2>
+        <p class="text-muted mb-0">Crea secciones para organizar tus productos (ej. Navidad, Playeras, Audios).</p>
     </div>
-    <div class="btn-group-mobile">
-        <a href="{{ url_for('catalogo.ver_catalogo') }}" class="btn btn-crafter-secondary px-4">
-            <i class="fas fa-magic me-2"></i>Ver Galería
+    <div class="col-md-5 text-md-end btn-group-mobile">
+        <a href="{{ url_for('catalogo.ver_catalogo') }}" class="btn btn-outline-dark rounded-pill">
+            <i class="fas fa-eye me-1"></i> Ver Galería Pública
         </a>
-        <button class="btn btn-crafter-primary px-4" data-bs-toggle="modal" data-bs-target="#modalNuevaCat">
-            <i class="fas fa-paint-brush me-2"></i>Nueva Sección
+        <button class="btn btn-primary rounded-pill" data-bs-toggle="modal" data-bs-target="#modalNuevaCat">
+            <i class="fas fa-plus-circle me-1"></i> Nueva Categoría
         </button>
     </div>
 </div>
 
-<div class="modern-card">
+<div class="card-clean">
     <div class="table-responsive">
-        <table class="table mb-0 cat-table border-0">
+        <table class="table mb-0 cat-table">
             <thead>
                 <tr>
-                    <th style="width: 100px;" class="text-center">Prioridad</th>
-                    <th>Nombre Creativo</th>
-                    <th class="text-center">¿Pública?</th>
-                    <th class="text-end pe-4">Herramientas</th>
+                    <th class="ps-4">ORDEN</th>
+                    <th>NOMBRE</th>
+                    <th class="text-center">ESTADO</th>
+                    <th class="text-end pe-4">ACCIONES</th>
                 </tr>
             </thead>
             <tbody>
                 {% for cat in categorias %}
                 <tr>
-                    <td class="text-center text-muted fw-bold" style="font-size: 1.1rem; color: #ced4da !important;">
-                        {{ cat['orden'] }}
+                    <td class="ps-md-4 text-muted fw-semibold">
+                        #{{ cat['orden'] }}
                     </td>
                     <td>
-                        <div class="d-flex align-items-center">
-                            <div class="cat-icon-box">
-                                <i class="fas fa-cut"></i>
-                            </div>
-                            <div>
-                                <div class="fw-bolder mb-0 text-dark" style="font-size: 1.1rem;">{{ cat['nombre'] }}</div>
-                                <div class="text-muted small">Mágica ID: {{ cat['id'] }}</div>
-                            </div>
-                        </div>
+                        <div class="fw-bold fs-6">{{ cat['nombre'] }}</div>
+                        <div class="text-muted small">ID: {{ cat['id'] }}</div>
                     </td>
                     <td class="text-center">
                         <div class="form-check form-switch d-flex justify-content-center m-0 p-0">
@@ -356,21 +221,21 @@
                                 onchange="toggleEstado('categoria', {{ cat['id'] }}, this)" {% if cat['activo'] %}checked{% endif %}>
                         </div>
                     </td>
-                    <td class="text-end pe-4">
+                    <td class="text-end pe-md-4">
                         <div class="d-flex justify-content-center justify-content-md-end align-items-center gap-2">
                             <a href="{{ url_for('catalogo.admin_productos', cat_id=cat['id']) }}"
-                                class="btn-action products" title="Ver Diseños">
-                                <i class="fas fa-eye"></i>
+                                class="btn btn-sm btn-outline-primary rounded-pill px-3 fw-medium d-flex align-items-center gap-1" title="Ver Productos">
+                                <i class="fas fa-box-open"></i> Productos
                             </a>
 
-                            <button class="btn-action edit"
+                            <button class="btn-circle-action edit"
                                 onclick="prepararEdicion('{{ cat.id }}', '{{ cat.nombre }}', '{{ cat.orden }}')"
-                                title="Ajustar">
-                                <i class="fas fa-sparkles"></i>
+                                title="Editar">
+                                <i class="fas fa-pencil-alt"></i>
                             </button>
 
                             <button type="button" 
-                                class="btn-action delete"
+                                class="btn-circle-action delete"
                                 onclick="confirmarEliminarCat({{ cat['id'] }}, '{{ cat['nombre'] }}')"
                                 title="Borrar">
                                 <i class="fas fa-trash-alt"></i>
@@ -381,14 +246,12 @@
                 {% else %}
                 <tr>
                     <td colspan="4" class="text-center py-5">
-                        <div class="text-muted d-flex flex-column align-items-center py-4">
-                            <div class="cat-icon-box mb-4" style="width: 80px; height: 80px; font-size: 2.5rem; background: #fff1f1;">
-                                <i class="fas fa-folder-open"></i>
-                            </div>
-                            <h4 class="fw-bolder text-dark mb-2">¡Tu estudio está vacío!</h4>
-                            <p class="mb-4">Empieza creando tu primera colección para mostrar tus hermosos diseños.</p>
-                            <button class="btn btn-crafter-primary px-4 py-2" data-bs-toggle="modal" data-bs-target="#modalNuevaCat">
-                                <i class="fas fa-plus me-2"></i>Crear mi primera colección
+                        <div class="py-4">
+                            <i class="fas fa-folder-open fa-3x text-muted opacity-25 mb-3"></i>
+                            <h5 class="fw-bold text-dark mb-1">Aún no hay categorías</h5>
+                            <p class="text-muted small mb-4">Empieza organizando tu catálogo creando tu primera sección.</p>
+                            <button class="btn btn-primary rounded-pill px-4" data-bs-toggle="modal" data-bs-target="#modalNuevaCat">
+                                <i class="fas fa-plus me-1"></i> Nueva Categoría
                             </button>
                         </div>
                     </td>
@@ -401,27 +264,27 @@
 
 <div class="modal fade" id="modalNuevaCat" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 25px;">
+        <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
-                <h4 class="modal-title fw-bolder text-dark"><i class="fas fa-tag text-primary me-2"></i>Nueva Colección</h4>
+                <h5 class="modal-title fw-bold">Nueva Categoría</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST">
                 <div class="modal-body pt-3 px-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">¿Cómo se llamará la colección?</label>
-                        <input type="text" name="nombre" class="form-control form-control-lg rounded-pill fs-6 px-3 border-2"
-                            placeholder="Ej. Agendas Shaker 2026" required style="border-color: #eee;">
+                        <label class="form-label small fw-bold text-muted">Nombre</label>
+                        <input type="text" name="nombre" class="form-control rounded-3"
+                            placeholder="Ej. San Valentín 2026" required>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small fw-bold text-muted">Prioridad (1 sale primero)</label>
-                        <input type="number" name="orden" class="form-control form-control-lg rounded-pill fs-6 px-3 border-2" value="1"
-                            style="border-color: #eee;">
+                        <label class="form-label small fw-bold text-muted">Orden</label>
+                        <input type="number" name="orden" class="form-control rounded-3" value="1">
+                        <div class="form-text small">El número 1 aparecerá primero en la tienda.</div>
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-2 pb-4 px-4">
-                    <button type="button" class="btn btn-crafter-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-crafter-primary px-4">¡Crear Magia!</button>
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Guardar</button>
                 </div>
             </form>
         </div>
@@ -430,30 +293,26 @@
 
 <div class="modal fade" id="modalEditarCat" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg" style="border-radius: 25px;">
+        <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
-                <h4 class="modal-title fw-bolder text-secondary"><i class="fas fa-edit me-2"></i>Ajustar Colección</h4>
+                <h5 class="modal-title fw-bold text-primary"><i class="fas fa-edit me-2"></i>Editar Categoría</h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('catalogo.editar_categoria') }}" method="POST">
                 <input type="hidden" name="cat_id" id="edit_id">
                 <div class="modal-body pt-3 px-4">
                     <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Nombre de la Colección</label>
-                        <input type="text" name="nombre" id="edit_nombre" class="form-control form-control-lg rounded-pill fs-6 px-3 border-2" 
-                            required style="border-color: #eee; border-color: var(--crafter-secondary);">
+                        <label class="form-label small fw-bold text-muted">Nombre</label>
+                        <input type="text" name="nombre" id="edit_nombre" class="form-control rounded-3" required>
                     </div>
                     <div class="mb-2">
-                        <label class="form-label small fw-bold text-muted">Prioridad</label>
-                        <input type="number" name="orden" id="edit_orden" class="form-control form-control-lg rounded-pill fs-6 px-3 border-2"
-                            style="border-color: #eee;">
+                        <label class="form-label small fw-bold text-muted">Orden</label>
+                        <input type="number" name="orden" id="edit_orden" class="form-control rounded-3">
                     </div>
                 </div>
                 <div class="modal-footer border-top-0 pt-2 pb-4 px-4">
-                    <button type="button" class="btn btn-crafter-secondary px-4" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-crafter-secondary px-4" style="background: var(--crafter-secondary); color: white; border: none;">
-                        Guardar Cambios
-                    </button>
+                    <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">Actualizar</button>
                 </div>
             </form>
         </div>
@@ -483,9 +342,8 @@
                 if (!data.success) {
                     Swal.fire({
                         icon: 'error',
-                        title: '¡Ups!',
-                        text: data.error,
-                        confirmButtonColor: '#ff6b6b'
+                        title: 'Ups',
+                        text: data.error
                     });
                     checkbox.checked = !checkbox.checked;
                 }
@@ -493,9 +351,8 @@
             .catch(err => {
                 Swal.fire({
                     icon: 'error',
-                    title: 'Error de Conexión',
-                    text: 'No pudimos guardar el cambio de magia.',
-                    confirmButtonColor: '#ff6b6b'
+                    title: 'Error de red',
+                    text: 'No se guardó el cambio.'
                 });
                 checkbox.checked = !checkbox.checked;
             });
@@ -504,24 +361,22 @@
     function confirmarEliminarCat(id, nombre) {
     Swal.fire({
         title: `¿Borrar "${nombre}"?`,
-        text: "¡Cuidado crafter! Se eliminarán todos los diseños dentro de esta colección. Esta acción no tiene 'Deshacer'.",
+        text: "Se eliminarán todos los productos de esta categoría. No se puede deshacer.",
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#ff6b6b',
-        cancelButtonColor: '#f1f2f6',
-        confirmButtonText: 'Sí, borrar todo',
-        cancelButtonText: '<span style="color:#2f3542">No, cancelar</span>',
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#f8f9fa',
+        confirmButtonText: 'Sí, borrar',
+        cancelButtonText: '<span style="color:#212529">Cancelar</span>',
         reverseButtons: true,
         customClass: {
-            popup: 'rounded-5 border-0 shadow',
-            confirmButton: 'rounded-pill px-4 fw-bold border-0',
-            cancelButton: 'rounded-pill px-4 fw-bold border-0'
+            confirmButton: 'rounded-pill px-4',
+            cancelButton: 'rounded-pill px-4 border'
         }
     }).then((result) => {
         if (result.isConfirmed) {
             Swal.fire({
-                title: 'Limpiando el estudio...',
-                text: 'Borrando archivos y base de datos.',
+                title: 'Borrando...',
                 allowOutsideClick: false,
                 didOpen: () => {
                     Swal.showLoading();
