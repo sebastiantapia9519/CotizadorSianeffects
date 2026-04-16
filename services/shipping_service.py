@@ -141,20 +141,32 @@ def obtener_coordenadas_universales(url_input):
     Toma CUALQUIER link de Google Maps (corto, largo, o de app), 
     sigue las redirecciones HTTP y extrae latitud y longitud.
     """
+    if not url_input:
+        return None, None
+
+    # --- NUEVO BLINDAJE: DETECTAR LINKS FANTASMA DE MÓVILES ---
+    # Si el link es del tipo "googleusercontent.com/maps.google.com/X"
+    # Sabemos que es un link corrupto del sistema de compartir de iOS/Android
+    if re.search(r'googleusercontent\.com/maps\.google\.com/\d+', url_input):
+        logging.warning(f"Link fantasma detectado y bloqueado: {url_input}")
+        # En lugar de fallar, devolvemos None, None. 
+        # La ruta que llama a esta función deberá manejar este caso.
+        return None, None
+    # -----------------------------------------------------------
+
     url_final = url_input
     
     # 1. Si el link es un acortador o un enlace móvil, lo resolvemos primero
     if "goo.gl" in url_input or "maps.app" in url_input:
         try:
             # Ponemos un User-Agent para no parecer un bot malicioso y que Google no nos bloquee
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) SianeffectsBot/1.0'}
+            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
             
             # allow_redirects=True es lo que hace la magia de "seguir" el link hasta el destino
             res = requests.get(url_input, headers=headers, allow_redirects=True, timeout=8)
             url_final = res.url
         except Exception as e:
             logging.error(f"Error expandiendo URL '{url_input}': {e}")
-            current_app.logger.error(f"Error expandiendo URL '{url_input}': {e}")
             # Si falla la redirección, abortamos devolviendo None
             return None, None
 
