@@ -137,54 +137,57 @@ class ShippingService:
 
 def obtener_coordenadas_universales(url_input):
     """
-    SÚPER RESOLUTOR DE LINKS
-    Toma CUALQUIER link de Google Maps (corto, largo, o de app), 
-    sigue las redirecciones HTTP y extrae latitud y longitud.
+    SÚPER RESOLUTOR DE LINKS (VERSIÓN DEFINITIVA)
+    Sigue redirecciones y, si Google esconde las coordenadas en la URL, 
+    las extrae directamente del código fuente (HTML) de la página.
     """
     if not url_input:
         return None, None
 
-    # --- NUEVO BLINDAJE: DETECTAR LINKS FANTASMA DE MÓVILES ---
-    # Si el link es del tipo "googleusercontent.com/maps.google.com/X"
-    # Sabemos que es un link corrupto del sistema de compartir de iOS/Android
-    if re.search(r'googleusercontent\.com/maps\.google\.com/\d+', url_input):
-        logging.warning(f"Link fantasma detectado y bloqueado: {url_input}")
-        # En lugar de fallar, devolvemos None, None. 
-        # La ruta que llama a esta función deberá manejar este caso.
-        return None, None
-    # -----------------------------------------------------------
-
     url_final = url_input
+    html_content = ""
     
-    # 1. Si el link es un acortador o un enlace móvil, lo resolvemos primero
-    if "goo.gl" in url_input or "maps.app" in url_input:
+    # 1. Expandir CUALQUIER link de Google (goo.gl, maps.app, googleusercontent)
+    if any(dominio in url_input.lower() for dominio in ["goo.gl", "maps.app", "googleusercontent.com"]):
         try:
-            # Ponemos un User-Agent para no parecer un bot malicioso y que Google no nos bloquee
-            headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'}
-            
-            # allow_redirects=True es lo que hace la magia de "seguir" el link hasta el destino
+            # Nos disfrazamos de iPhone para que Google nos dé la página móvil correcta
+            headers = {
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
+                'Accept-Language': 'es-MX,es;q=0.9'
+            }
+            # allow_redirects=True sigue el enlace fantasma hasta su destino real
             res = requests.get(url_input, headers=headers, allow_redirects=True, timeout=8)
             url_final = res.url
+            html_content = res.text  # Guardamos todo el código de la página por si acaso
         except Exception as e:
             logging.error(f"Error expandiendo URL '{url_input}': {e}")
-            # Si falla la redirección, abortamos devolviendo None
             return None, None
 
-    # 2. MOTOR DE EXTRACCIÓN (Expresiones Regulares)
-    # Lista de los formatos conocidos en los que Google Maps esconde las coordenadas en la URL
-    patrones = [
-        r'@(-?\d+\.\d+),(-?\d+\.\d+)',      # Formato estándar web: @25.6866,-100.3161
-        r'q=(-?\d+\.\d+),(-?\d+\.\d+)',     # Formato de búsqueda: ?q=25.6866,-100.3161
-        r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)'   # Formato interno de capas 3D de Google
+    # 2. PLAN A: Buscar las coordenadas en la URL final
+    patrones_url = [
+        r'@(-?\d+\.\d+),(-?\d+\.\d+)',      # Formato web: @25.68,-100.31
+        r'q=(-?\d+\.\d+),(-?\d+\.\d+)',     # Formato query: q=25.68,-100.31
+        r'll=(-?\d+\.\d+),(-?\d+\.\d+)',    # Formato lat/lng: ll=25.68,-100.31
+        r'!3d(-?\d+\.\d+)!4d(-?\d+\.\d+)'   # Formato 3D oculto
     ]
     
-    # Probamos cada patrón uno por uno contra el link final
-    for patron in patrones:
+    for patron in patrones_url:
         match = re.search(patron, url_final)
         if match:
-            # Si hace match, el grupo 1 es Latitud y el grupo 2 es Longitud
             return float(match.group(1)), float(match.group(2))
+
+    # 3. PLAN B (EL HACK): Buscar dentro del código HTML de la página
+    # A veces los links del iPhone cargan la página pero no ponen la arroba en la URL.
+    if html_content:
+        # Buscamos en las meta-etiquetas de la imagen miniatura de Google
+        match_meta = re.search(r'center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)', html_content)
+        if match_meta:
+            return float(match_meta.group(1)), float(match_meta.group(2))
             
-    # Si la URL final no hizo match con ninguno, no pudimos extraer las coordenadas
-    logging.warning(f"No se pudieron extraer coordenadas de la URL final: {url_final}")
+        # Buscamos en la variable interna de inicialización de la App de Google Maps
+        match_init = re.search(r'\[\[\[(-?\d+\.\d+),(-?\d+\.\d+)\]', html_content)
+        if match_init:
+            return float(match_init.group(1)), float(match_init.group(2))
+
+    logging.warning(f"No se pudieron extraer coordenadas ni de la URL ni del HTML: {url_final}")
     return None, None

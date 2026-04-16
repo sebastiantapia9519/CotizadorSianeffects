@@ -1388,41 +1388,28 @@
     const url = input.value.trim();
     if (!url) return;
 
-    // --- BLINDAJE: DETECTAR EL LINK FANTASMA DE IPHONE/ANDROID ---
-    // Detecta cualquier link que termine en /0, /1, /5, etc.
-    if (url.match(/googleusercontent\.com\/maps\.google\.com\/\d+/)) {
-        Swal.fire({
-            icon: 'info',
-            title: 'Enlace incompleto',
-            text: 'En el celular, usa el botón "Copiar Enlace" (el ícono de la cadenita) desde el menú de Google Maps, no el de compartir del teléfono.',
-            confirmButtonColor: '#ff4757',
-            borderRadius: '15px'
-        });
-        input.value = '';
-        input.classList.add('is-invalid');
-        return;
-    }
-    // -------------------------------------------------------------
-
-    // 1. Intentamos extraer coordenadas formato largo
+    // 1. Intentamos extraer coordenadas si vienen claras de una vez
     const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
     const match = url.match(regex);
     const matchBusqueda = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
     const matchFinal = match || matchBusqueda;
 
     if (matchFinal) {
+        // En configuración recuerda que los IDs se llaman 'latConfig' y 'lngConfig'
         document.getElementById('latDestino').value = matchFinal[1];
         document.getElementById('lngDestino').value = matchFinal[2];
         input.classList.remove('is-invalid');
         input.classList.add('is-valid');
+        
+        // Si estás en configuracion.html, aquí va: document.getElementById('geo-status').style.display = 'block';
     } else {
-        // 2. Si es un link de Google pero no tiene coordenadas (corto o googleusercontent)
+        // 2. Si no vienen claras, comprobamos si al menos es un link de Google
         const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());
         if (esGoogle) {
             input.classList.remove('is-invalid');
-            // No hacemos nada, dejamos que el servidor (Python) lo resuelva al cotizar
+            // El link es raro, pero es de Google. Lo dejamos pasar en silencio 
+            // para que nuestro Python (Plan B) haga la magia en el servidor.
         } else {
-            // 3. Solo si no es Google en absoluto, mandamos alerta
             Swal.fire({
                 icon: 'warning',
                 title: 'Link no reconocido',
