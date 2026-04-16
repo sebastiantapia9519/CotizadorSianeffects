@@ -537,29 +537,29 @@ def descargar_excel():
     conn = get_db()
     uid = session['user_id']
     
-    # POSTGRESQL PANDAS: Pandas soporta parámetros con %s directamente
+# POSTGRESQL PANDAS: Obligamos a Postgres a respetar las mayúsculas usando comillas dobles
     query = '''
         SELECT 
-            v.id as Folio, 
-            v.fecha as Fecha_Registro,
-            v.fecha_vencimiento as Fecha_Vencimiento,
-            v.cliente as Cliente, 
-            v.estado as Estado_Actual,
-            v.document_type as Tipo_Doc,
-            d.concepto as Producto, 
-            d.cantidad as Cantidad, 
-            d.precio_unitario as Precio_Unit_Venta, 
-            d.costo_unitario as Costo_Unit_Prod, 
-            (d.precio_unitario - d.costo_unitario) as Ganancia_Unitaria,
-            d.subtotal as Subtotal_Linea,
-            d.composicion as Receta_Materiales,
-            v.subtotal as Subtotal_Venta,
-            v.descuento_monto as Descuento_Aplicado,
-            v.impuestos as Impuestos_Monto,
-            v.tax_engine as Impuestos_Info,
-            v.total as Total_Ticket,
-            v.monto_pagado as Pagado, 
-            v.saldo_pendiente as Resta_Por_Pagar
+            v.id as "Folio", 
+            v.fecha as "Fecha_Registro",
+            v.fecha_vencimiento as "Fecha_Vencimiento",
+            v.cliente as "Cliente", 
+            v.estado as "Estado_Actual",
+            v.document_type as "Tipo_Doc",
+            d.concepto as "Producto", 
+            d.cantidad as "Cantidad", 
+            d.precio_unitario as "Precio_Unit_Venta", 
+            d.costo_unitario as "Costo_Unit_Prod", 
+            (d.precio_unitario - d.costo_unitario) as "Ganancia_Unitaria",
+            d.subtotal as "Subtotal_Linea",
+            d.composicion as "Receta_Materiales",
+            v.subtotal as "Subtotal_Venta",
+            v.descuento_monto as "Descuento_Aplicado",
+            v.impuestos as "Impuestos_Monto",
+            v.tax_engine as "Impuestos_Info",
+            v.total as "Total_Ticket",
+            v.monto_pagado as "Pagado", 
+            v.saldo_pendiente as "Resta_Por_Pagar"
         FROM ventas v 
         JOIN venta_detalles d ON v.id = d.venta_id 
         WHERE v.user_id = %s 
