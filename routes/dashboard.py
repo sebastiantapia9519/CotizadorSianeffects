@@ -3,7 +3,7 @@ from db import get_db_connection
 from helpers import admin_required
 from utils.datetime_utils import ahora_sql, now_utc
 from datetime import datetime, timedelta
-from psycopg2.extras import RealDictCursor 
+from psycopg2.extras import RealDictCursor
 
 
 

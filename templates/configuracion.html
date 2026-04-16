@@ -1185,12 +1185,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
 
                 } else {
-                    Swal.fire('Error', 'Hubo un problema al guardar', 'error');
+                    // NUEVO: Intentamos leer el error real que manda Python
+                    let mensajeError = "Error interno del servidor.";
+                    try {
+                        const dataError = await response.json();
+                        if (dataError.error) mensajeError = dataError.error;
+                        else if (dataError.message) mensajeError = dataError.message;
+                    } catch(e) {
+                        // Si Python no devolvió un JSON (ej. tronó con pantalla de error HTML)
+                        mensajeError = `El servidor falló con código de estado: ${response.status}`;
+                    }
+                    Swal.fire('Error de Servidor', mensajeError, 'error');
                 }
-            } catch (error) {
-                console.error("Error al guardar:", error);
-                Swal.fire('Error', 'Fallo de conexión', 'error');
-            } finally {
+                finally {
                 if (btn) {
                     btn.innerHTML = btnOriginalText;
                     btn.disabled = false;

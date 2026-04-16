@@ -5,7 +5,7 @@ import boto3
 from botocore.config import Config
 from datetime import timezone
 from dateutil import parser
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, jsonify
 from werkzeug.security import generate_password_hash
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
@@ -163,22 +163,35 @@ def actualizar_perfil():
     new_phone = request.form.get('telefono')
     new_country = request.form.get('country_code', 'MX')
     
+    # Detectamos si es una llamada silenciosa (fetch)
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+
     try:
         cursor.execute('''
             UPDATE usuarios SET username=%s, email=%s, telefono=%s, country_code=%s WHERE id=%s
         ''', (new_username, new_email, new_phone, new_country, uid))
         session['username'] = new_username
         conn.commit()
-        current_app.logger.info(f"PROFILE_UPDATE: Usuario {uid} actualizó su información de contacto.")
-        flash('Perfil actualizado correctamente.', 'success')
+        current_app.logger.info(f"PROFILE_UPDATE: Usuario {uid} actualizó su información.")
+        
+        if es_ajax:
+            return jsonify({"success": True, "message": "Perfil actualizado correctamente."})
+        else:
+            flash('Perfil actualizado correctamente.', 'success')
+            
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"PROFILE_UPDATE_ERROR: Usuario {uid} intentó usar email/user duplicado - {e}")
-        flash('Error: El nombre de usuario o correo ya está en uso.', 'danger')
+        current_app.logger.error(f"PROFILE_UPDATE_ERROR: Usuario {uid} - {e}")
+        
+        if es_ajax:
+            return jsonify({"error": "El nombre de usuario o correo ya está en uso."}), 400
+        else:
+            flash('Error: El nombre de usuario o correo ya está en uso.', 'danger')
     finally:
         cursor.close()
         conn.close()
 
+    # Solo llega aquí si NO es ajax (fallback seguro)
     return redirect(url_for('configuracion.configuracion') + '#list-perfil')
 
 # ==============================================================================

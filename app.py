@@ -32,7 +32,7 @@ app.config['DEBUG'] = os.getenv('FLASK_DEBUG') == '1'
 
 # Configuración del log
 base_dir = os.path.abspath(os.path.dirname(__file__))
-log_path = os.path.join(base_dir, 'limpieza.log')
+log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'limpieza.log')
 
 logging.basicConfig(
     filename=log_path,
@@ -42,8 +42,6 @@ logging.basicConfig(
 )
 logging.info("SianEffects System Monitor: Iniciando registro de eventos...")
 
-# Configuración del Log
-log_path = os.path.join(app.root_path, 'limpieza.log')
 
 # Formato: [Fecha] [Nivel] Mensaje
 formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%d/%m/%Y %H:%M:%S')
