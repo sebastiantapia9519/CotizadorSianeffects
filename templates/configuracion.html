@@ -1157,25 +1157,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
                 if (response.ok) {
-                    // Mostramos la alerta bonita
+                    // ALERTA GIGANTE Y CLARA
                     Swal.fire({
                         icon: 'success',
-                        title: '¡Guardado!',
-                        text: 'Los cambios se aplicaron correctamente.',
-                        timer: 1500,
-                        showConfirmButton: false,
-                        toast: true,
-                        position: 'top-end'
+                        title: '¡Guardado Exitosamente!',
+                        text: 'Tus cambios han sido aplicados en el sistema.',
+                        confirmButtonColor: '#212529', // Botón oscuro para combinar con tu diseño
+                        confirmButtonText: '<i class="fas fa-check"></i> Entendido',
+                        allowOutsideClick: false // Obliga a que lo vean y le den clic
+                    }).then((result) => {
+                        // IMPORTANTE: La recarga ahora ocurre DESPUÉS de que el usuario le da "Entendido"
+                        if (form.hasAttribute('data-recargar') && result.isConfirmed) {
+                            window.location.reload();
+                        }
                     });
-
-                    // IMPORTANTE: Si es un formulario que añade cosas a una lista (como zonas o tarifas),
-                    // necesitamos recargar la página para que veas el nuevo elemento.
-                    // Si solo es actualizar configuración, nos quedamos donde estamos.
-                    if (form.hasAttribute('data-recargar')) {
-                        setTimeout(() => window.location.reload(), 1500);
-                    }
                     
-                    // Si es un modal, lo cerramos
+                    // Si es un modal de Bootstrap (como el de Nueva Zona), lo cerramos
                     const modalEl = form.closest('.modal');
                     if(modalEl) {
                         bootstrap.Modal.getInstance(modalEl).hide();
