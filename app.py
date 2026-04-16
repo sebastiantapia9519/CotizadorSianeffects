@@ -30,10 +30,22 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev_key_fallback_insegura')
 # Si en .env FLASK_DEBUG es 1, será True. Si no, False.
 app.config['DEBUG'] = os.getenv('FLASK_DEBUG') == '1'
 
-# Configuración del log
+# =========================
+# CONFIGURACIÓN DEL LOG CON ZONA HORARIA
+# =========================
 base_dir = os.path.abspath(os.path.dirname(__file__))
-log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'limpieza.log')
+log_path = os.path.join(base_dir, 'limpieza.log')
 
+# 1. TRUCO GLOBAL: Forzar a que TODOS los logs de Python usen la hora de Monterrey
+def tiempo_monterrey(*args):
+    tz = pytz.timezone('America/Monterrey')
+    from datetime import datetime # Nos aseguramos de que esté disponible
+    return datetime.now(tz).timetuple()
+
+# Inyectamos nuestra función al formateador maestro de Python
+logging.Formatter.converter = tiempo_monterrey
+
+# 2. Configuración Base
 logging.basicConfig(
     filename=log_path,
     level=logging.INFO,
@@ -42,17 +54,16 @@ logging.basicConfig(
 )
 logging.info("SianEffects System Monitor: Iniciando registro de eventos...")
 
-
-# Formato: [Fecha] [Nivel] Mensaje
+# 3. Formato: [Fecha] [Nivel] Mensaje
 formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%d/%m/%Y %H:%M:%S')
 
-# Manejador: Archivo de max 1MB, mantiene hasta 3 copias viejas
+# 4. Manejador: Archivo de max 1MB, mantiene hasta 3 copias viejas
 file_handler = RotatingFileHandler(log_path, maxBytes=1024 * 1024, backupCount=3)
 file_handler.setFormatter(formatter)
 file_handler.setLevel(logging.INFO)
 
 app.logger.addHandler(file_handler)
-app.logger.info("Sistema de monitoreo iniciado correctamente")
+app.logger.info("Sistema de monitoreo iniciado correctamente (Hora Local Monterrey)")
 
 # =========================
 # SESIÓN
