@@ -362,26 +362,23 @@
 
                 <div class="tab-pane fade show active" id="list-negocio" role="tabpanel">
                     
-                    <div class="saas-card" id="tour-card-identidad">
-                        <div class="saas-card-header">
-                            <h5>Identidad del Negocio</h5>
-                            <button type="button" id="tour-btn-preview" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold border-light" onclick="actualizarVistaPrevia()">
-                                <i class="fas fa-eye me-1"></i> Preview Ticket
-                            </button> 
-                        </div>
-                        
-                        <form method="POST" action="{{ url_for('configuracion.actualizar_negocio') }}" enctype="multipart/form-data" class="form-silencioso">
-                            <input type="hidden" name="current_logo" id="currentLogo" value="{{ config['logo_empresa'] }}">
-                            <input type="hidden" name="icono_empresa" id="inputIconoReal" value="{{ config['icono_empresa'] }}">
-                            
-                            <input type="hidden" name="tipo_identidad" id="tipoIdentidad" value="{% if config['logo_empresa'] %}logo{% else %}emoji{% endif %}">
+                    <form method="POST" action="{{ url_for('configuracion.actualizar_negocio') }}" enctype="multipart/form-data" class="form-silencioso">
+                        <input type="hidden" name="current_logo" id="currentLogo" value="{{ config['logo_empresa'] }}">
+                        <input type="hidden" name="icono_empresa" id="inputIconoReal" value="{{ config['icono_empresa'] }}">
+                        <input type="hidden" name="tipo_identidad" id="tipoIdentidad" value="{% if config['logo_empresa'] %}logo{% else %}emoji{% endif %}">
 
+                        <div class="saas-card" id="tour-card-identidad">
+                            <div class="saas-card-header">
+                                <h5>Identidad del Negocio</h5>
+                                <button type="button" id="tour-btn-preview" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold border-light" onclick="actualizarVistaPrevia()">
+                                    <i class="fas fa-eye me-1"></i> Preview Ticket
+                                </button> 
+                            </div>
+                            
                             <div class="saas-card-body">
                                 <div class="row g-4">
-                                    
                                     <div class="col-md-12">
                                         <label class="saas-label">Marca Visual</label>
-                                        
                                         <ul class="nav nav-pills mb-3 bg-light p-1 rounded-pill d-inline-flex border-light" id="pills-tab-logo" role="tablist">
                                             <li class="nav-item" role="presentation">
                                                 <button class="nav-link rounded-pill fw-bold px-4 {% if not config['logo_empresa'] %}active{% endif %}" 
@@ -449,80 +446,80 @@
                                     </div>
                                 </div>
                             </div>
-                    </div>
-
-                    <div class="saas-card" id="tour-card-sistema">
-                        <div class="saas-card-header">
-                            <h5>Ajustes del Sistema</h5>
                         </div>
-                        <div class="saas-card-body">
-                            
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <div>
-                                    <h6 class="fw-bold text-dark mb-1">Control de Inventario</h6>
-                                    <p class="text-muted small m-0" style="max-width: 450px;">Al vender, el sistema descontará las unidades de tus materiales. Requiere cargar stock previamente.</p>
-                                </div>
-                                <div class="form-check form-switch m-0">
-                                    <input class="form-check-input border-light" type="checkbox" id="checkInventario" name="inventario_activo" {% if config['inventario_activo'] %}checked{% endif %}>
-                                </div>
+
+                        <div class="saas-card" id="tour-card-sistema">
+                            <div class="saas-card-header">
+                                <h5>Ajustes del Sistema</h5>
                             </div>
-
-                            <hr class="border-light my-4">
-
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <div>
-                                    <h6 class="fw-bold text-dark mb-1">Ticket Térmico (Blanco y Negro)</h6>
-                                    <p class="text-muted small m-0" style="max-width: 450px;">Fuerza la visualización del recibo sin colores para mejor lectura en impresoras térmicas.</p>
-                                </div>
-                                <div class="form-check form-switch m-0">
-                                    <input class="form-check-input border-light" type="checkbox" id="checkTicketBW" name="ticket_bw" {% if config['ticket_bw'] %}checked{% endif %} onchange="actualizarVistaPrevia()">
-                                </div>
-                            </div>
-
-                            <hr class="border-light my-4">
-
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <div>
-                                    <h6 class="fw-bold text-dark mb-1">Mostrar Guías de Ayuda</h6>
-                                    <p class="text-muted small m-0" style="max-width: 450px;">Muestra u oculta los botones de "¿Cómo funciona?" en todas las secciones.</p>
-                                </div>
-                                <div class="form-check form-switch m-0">
-                                    <input class="form-check-input border-light" type="checkbox" name="mostrar_ayuda" {% if config['mostrar_ayuda'] %}checked{% endif %}>
-                                </div>
-                            </div>
-
-                            <hr class="border-light my-4">
-
-                            <div class="d-flex justify-content-between align-items-center mb-4">
-                                <div>
-                                    <h6 class="fw-bold text-dark mb-1">Modo Oscuro</h6>
-                                    <p class="text-muted small m-0">Cambia la interfaz a colores oscuros para descansar la vista.</p>
-                                </div>
-                                <div class="form-check form-switch m-0">
-                                    <input class="form-check-input border-light" type="checkbox" name="modo_oscuro" {% if config['modo_oscuro'] %}checked{% endif %}>
-                                </div>
-                            </div>
-
-                            <hr class="border-light my-4">
-
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <label class="saas-label text-success"><i class="fas fa-chart-line me-1"></i> Margen de Ganancia Base</label>
-                                    <div class="input-group shadow-sm border border-light" style="border-radius: 8px; overflow: hidden;">
-                                        <input type="number" name="margen" class="form-control border-0 bg-success bg-opacity-10 text-success fw-bold fs-5"
-                                            value="{{ config['margen_ganancia'] }}" required min="0" step="1">
-                                        <span class="input-group-text border-0 bg-success text-white fw-bold">%</span>
+                            <div class="saas-card-body">
+                                
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">Control de Inventario</h6>
+                                        <p class="text-muted small m-0" style="max-width: 450px;">Al vender, el sistema descontará las unidades de tus materiales. Requiere cargar stock previamente.</p>
                                     </div>
-                                    <div class="form-text small mt-1 text-muted">Multiplicador automático sugerido en el cotizador.</div>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input border-light" type="checkbox" id="checkInventario" name="inventario_activo" {% if config['inventario_activo'] %}checked{% endif %}>
+                                    </div>
                                 </div>
-                            </div>
 
+                                <hr class="border-light my-4">
+
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">Ticket Térmico (Blanco y Negro)</h6>
+                                        <p class="text-muted small m-0" style="max-width: 450px;">Fuerza la visualización del recibo sin colores para mejor lectura en impresoras térmicas.</p>
+                                    </div>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input border-light" type="checkbox" id="checkTicketBW" name="ticket_bw" {% if config['ticket_bw'] %}checked{% endif %} onchange="actualizarVistaPrevia()">
+                                    </div>
+                                </div>
+
+                                <hr class="border-light my-4">
+
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">Mostrar Guías de Ayuda</h6>
+                                        <p class="text-muted small m-0" style="max-width: 450px;">Muestra u oculta los botones de "¿Cómo funciona?" en todas las secciones.</p>
+                                    </div>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input border-light" type="checkbox" name="mostrar_ayuda" {% if config['mostrar_ayuda'] %}checked{% endif %}>
+                                    </div>
+                                </div>
+
+                                <hr class="border-light my-4">
+
+                                <div class="d-flex justify-content-between align-items-center mb-4">
+                                    <div>
+                                        <h6 class="fw-bold text-dark mb-1">Modo Oscuro</h6>
+                                        <p class="text-muted small m-0">Cambia la interfaz a colores oscuros para descansar la vista.</p>
+                                    </div>
+                                    <div class="form-check form-switch m-0">
+                                        <input class="form-check-input border-light" type="checkbox" name="modo_oscuro" {% if config['modo_oscuro'] %}checked{% endif %}>
+                                    </div>
+                                </div>
+
+                                <hr class="border-light my-4">
+
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="saas-label text-success"><i class="fas fa-chart-line me-1"></i> Margen de Ganancia Base</label>
+                                        <div class="input-group shadow-sm border border-light" style="border-radius: 8px; overflow: hidden;">
+                                            <input type="number" name="margen" class="form-control border-0 bg-success bg-opacity-10 text-success fw-bold fs-5"
+                                                value="{{ config['margen_ganancia'] }}" required min="0" step="1">
+                                            <span class="input-group-text border-0 bg-success text-white fw-bold">%</span>
+                                        </div>
+                                        <div class="form-text small mt-1 text-muted">Multiplicador automático sugerido en el cotizador.</div>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="saas-card-footer">
+                                <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold">Guardar Negocio</button>
+                            </div>
                         </div>
-                        <div class="saas-card-footer">
-                            <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold">Guardar Negocio</button>
-                        </div>
-                        </form>
-                    </div>
+                    </form> </div>
                 </div>
 
                 <div class="tab-pane fade" id="list-perfil" role="tabpanel">
@@ -1131,51 +1128,59 @@
         });
     }
 
-    // Agrega esto al final de tus scripts
+    // --- INTERCEPTOR DE FORMULARIOS SILENCIOSOS (CORREGIDO Y BLINDADO) ---
 document.addEventListener('DOMContentLoaded', function() {
-    // Buscamos todos los formularios que tengan la clase 'form-silencioso'
     const formsSilenciosos = document.querySelectorAll('.form-silencioso');
     
     formsSilenciosos.forEach(form => {
         form.addEventListener('submit', async function(e) {
-            e.preventDefault(); // Detiene la recarga de la página
+            e.preventDefault(); // Detiene la recarga
 
-            // Ubicamos el botón de submit para ponerle estado de "Cargando"
+            // 1. BLINDAJE PARA CONTRASEÑAS (Reemplaza el onsubmit inline)
+            if (form.id === 'form-password') {
+                var p1 = document.getElementById("pass1").value;
+                var p2 = document.getElementById("pass2").value;
+                if (p1 !== p2) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'Las contraseñas no coinciden.', borderRadius: '15px' });
+                    return; // Detenemos la ejecución si no coinciden
+                }
+            }
+
+            // 2. CAMBIO DE BOTÓN SEGURO
             const btn = form.querySelector('button[type="submit"]');
-            const btnOriginalText = btn.innerHTML;
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-            btn.disabled = true;
+            const btnOriginalText = btn ? btn.innerHTML : 'Guardar';
+            if (btn) {
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
+                btn.disabled = true;
+            }
 
-            // Recolectamos todos los datos (incluyendo imágenes si las hay)
             const formData = new FormData(form);
 
             try {
-                // Enviamos los datos a la misma ruta de Python que ya tienes
                 const response = await fetch(form.action, {
                     method: form.method,
                     body: formData
                 });
 
                 if (response.ok) {
-                    // ALERTA GIGANTE Y CLARA
                     Swal.fire({
                         icon: 'success',
                         title: '¡Guardado Exitosamente!',
                         text: 'Tus cambios han sido aplicados en el sistema.',
-                        confirmButtonColor: '#212529', // Botón oscuro para combinar con tu diseño
+                        confirmButtonColor: '#212529',
                         confirmButtonText: '<i class="fas fa-check"></i> Entendido',
-                        allowOutsideClick: false // Obliga a que lo vean y le den clic
+                        allowOutsideClick: false
                     }).then((result) => {
-                        // IMPORTANTE: La recarga ahora ocurre DESPUÉS de que el usuario le da "Entendido"
                         if (form.hasAttribute('data-recargar') && result.isConfirmed) {
                             window.location.reload();
                         }
                     });
                     
-                    // Si es un modal de Bootstrap (como el de Nueva Zona), lo cerramos
+                    // 3. BLINDAJE DE MODAL (Evita el "Cannot read property of null")
                     const modalEl = form.closest('.modal');
                     if(modalEl) {
-                        bootstrap.Modal.getInstance(modalEl).hide();
+                        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        if(modalInstance) modalInstance.hide();
                         form.reset();
                     }
 
@@ -1183,12 +1188,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     Swal.fire('Error', 'Hubo un problema al guardar', 'error');
                 }
             } catch (error) {
-                console.error("Error:", error);
+                console.error("Error al guardar:", error);
                 Swal.fire('Error', 'Fallo de conexión', 'error');
             } finally {
-                // Restauramos el botón
-                btn.innerHTML = btnOriginalText;
-                btn.disabled = false;
+                if (btn) {
+                    btn.innerHTML = btnOriginalText;
+                    btn.disabled = false;
+                }
             }
         });
     });
