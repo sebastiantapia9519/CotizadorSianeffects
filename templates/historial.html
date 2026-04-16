@@ -368,34 +368,44 @@
 
 <div class="card card-custom" id="tour-tabla-historial">
     <div class="table-responsive">
-        <table class="table align-middle">
+<table class="table align-middle" style="table-layout: fixed; min-width: 100%;">
             <thead>
                 <tr>
-                    <th class="ps-4">Folio / Fecha</th>
-                    <th>Cliente</th>
-                    <th>Estado</th>
-                    <th>Monto Total</th>
-                    <th class="text-end pe-4">Acciones</th>
+                    <th class="ps-3 ps-md-4" style="width: 25%; min-width: 80px;">Folio / Fecha</th>
+                    <th style="width: 30%; min-width: 100px;">Cliente</th>
+                    <th class="d-none d-md-table-cell" style="width: 15%;">Estado</th>
+                    <th style="width: 20%; min-width: 90px;">Monto</th>
+                    <th class="text-end pe-3 pe-md-4" style="width: 10%;">Acciones</th>
                 </tr>
             </thead>
             <tbody>
                 {% for v in ventas %}
                 <tr class="{{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}">
-                    <td class="ps-4">
+                    <td class="ps-3 ps-md-4 text-truncate">
                         <div class="fw-bold text-dark folio-text">#{{ v['id'] }}</div>
                         <div class="text-muted text-xs mt-1">
                             {{ v['fecha'].strftime('%d/%m/%Y') if v['fecha'] is not string else v['fecha'][:10] }}
                         </div>
                     </td>
 
-                    <td>
-                        <div class="fw-bold text-dark cliente-text">{{ v['cliente'] }}</div>
-                        {% if v['estado'] == 'cancelada' %}
-                        <span class="badge status-cancelada mt-1"><i class="fas fa-ban"></i> Cancelada</span>
-                        {% endif %}
+                    <td class="text-truncate">
+                        <div class="fw-bold text-dark cliente-text text-truncate" style="max-width: 120px;" title="{{ v['cliente'] }}">{{ v['cliente'] }}</div>
+                        
+                        <div class="d-block d-md-none mt-1">
+                            {% if v['estado'] == 'pagado' %}
+                                <span class="badge bg-success text-white" style="font-size: 0.6rem;">PAGADO</span>
+                            {% elif v['estado'] == 'anticipo' %}
+                                <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">ANTICIPO</span>
+                            {% elif v['estado'] == 'cotizacion' %}
+                                <span class="badge bg-secondary text-white" style="font-size: 0.6rem;">COTIZACIÓN</span>
+                            {% elif v['estado'] == 'cancelada' %}
+                                <span class="badge bg-danger text-white" style="font-size: 0.6rem;">ANULADA</span>
+                            {% endif %}
+                        </div>
+                        
                     </td>
 
-                    <td>
+                    <td class="d-none d-md-table-cell">
                         {% if v['estado'] == 'pagado' %}
                         <span class="badge badge-status status-pagado">
                             <i class="fas fa-check-circle"></i> PAGADO
@@ -423,16 +433,16 @@
                     <td>
                         <div class="fw-bold text-dark monto-text">${{ "{:,.2f}".format(v['total']) }}</div>
                         {% if v['impuestos'] and v['impuestos'] > 0 %}
-                        <div class="text-muted text-xs mt-1">(Incl. {{ v['tax_engine'] }})</div>
+                        <div class="text-muted text-xs mt-1 d-none d-md-block">(Incl. {{ v['tax_engine'] }})</div>
                         {% endif %}
                         {% if v['saldo_pendiente'] > 0.5 and v['estado'] != 'cancelada' %}
-                        <div class="text-danger text-xs font-medium mt-1 bg-danger bg-opacity-10 d-inline-block px-2 py-1 rounded">
+                        <div class="text-danger text-xs font-medium mt-1 bg-danger bg-opacity-10 d-inline-block px-1 py-1 rounded">
                             Resta: ${{ "{:,.2f}".format(v['saldo_pendiente']) }}
                         </div>
                         {% endif %}
                     </td>
 
-                    <td class="text-end pe-4" {% if loop.index == 1 %}id="tour-acciones"{% endif %}>
+                    <td class="text-end pe-3 pe-md-4" {% if loop.index == 1 %}id="tour-acciones"{% endif %}>
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm rounded-circle border" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
                                 <i class="fas fa-ellipsis-v"></i>
