@@ -1,5 +1,5 @@
 import os
-from flask import Flask, session
+from flask import Flask, session, render_template, request, jsonify
 from flask_apscheduler import APScheduler
 import logging
 from logging.handlers import RotatingFileHandler
@@ -317,6 +317,16 @@ def now_local_format(value=None, tz_name='America/Monterrey'):
 @app.route('/health')
 def health():
     return "OK", 200
+
+
+@app.errorhandler(404)
+def page_not_found(e):
+    # Si la petición es AJAX (API), devolvemos JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return jsonify({'error': 'Ruta no encontrada'}), 404
+    
+    # Para móviles y web normal, devolvemos la imagen de Oddy
+    return render_template('404.html'), 404
 
 # =========================
 # MAIN

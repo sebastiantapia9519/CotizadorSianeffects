@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Página no encontrada - SianEffects</title>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #080808;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 10px;
+            animation: fadeIn 0.8s ease;
+        }
+
+        p {
+            color: #bbb;
+            margin-bottom: 20px;
+            animation: fadeIn 1.2s ease;
+        }
+
+        .imagen-contenedor {
+            position: relative;
+            max-width: 90%;
+            box-shadow: inset 0 0 50px 30px #080808;
+            border-radius: 10px;
+            animation: flotar 6s ease-in-out infinite;
+            margin-bottom: 20px;
+        }
+
+        .oddy-img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+
+        .error-code {
+            font-size: 0.9rem;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .btn-inicio {
+            margin-top: 25px;
+            padding: 12px 30px;
+            background-color: #d32f2f;
+            color: white;
+            text-decoration: none;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            transition: transform 0.2s, background-color 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-inicio:hover {
+            transform: scale(1.05);
+            background-color: #b71c1c;
+            box-shadow: 0 4px 15px rgba(211, 47, 47, 0.4);
+        }
+
+        .link-back {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #888;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .link-back:hover {
+            color: white;
+        }
+
+        @keyframes flotar {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-12px); }
+            100% { transform: translateY(0px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Oddy está buscando tu página... pero no la encuentra 🕵️‍♂️</h1>
+    <p>Oddy tampoco sabe cómo llegamos aquí, pero conoce el camino de regreso al cotizador.</p>
+
+    <div class="imagen-contenedor">
+        <img src="{{ url_for('static', filename='images/oddy-404.png') }}" alt="Error 404 - Oddy" class="oddy-img">
+    </div>
+
+    <div class="error-code">Error 404</div>
+
+    {% if 'user_id' in session %}
+        <a href="{{ url_for('main.cotizador') }}" class="btn-inicio">→ Llévame al cotizador</a>
+    {% else %}
+        <a href="{{ url_for('auth.login') }}" class="btn-inicio">→ Iniciar sesión</a>
+    {% endif %}
+
+    <a href="javascript:history.back()" class="link-back">← Volver atrás</a>
+
+</body>
+</html>
