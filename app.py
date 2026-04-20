@@ -1,5 +1,5 @@
 import os
-from flask import Flask, session, render_template, request, jsonify
+from flask import Flask, session, render_template, request, jsonify, redirect, url_for
 from flask_apscheduler import APScheduler
 import logging
 from logging.handlers import RotatingFileHandler
@@ -72,7 +72,7 @@ app.logger.info("Sistema de monitoreo iniciado correctamente (Hora Local Monterr
 app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(days=31)
 
 # --- NUEVO: Blindaje para navegadores móviles (iOS/Android) ---
-app.config['SESSION_COOKIE_SECURE'] = True      # Solo manda la cookie por HTTPS (PythonAnywhere ya tiene HTTPS)
+app.config['SESSION_COOKIE_SECURE'] = True      # Solo manda la cookie por HTTPS
 app.config['SESSION_COOKIE_HTTPONLY'] = True    # Evita que el JavaScript de la página lea la cookie
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'   # Crucial para celulares: evita que se pierda la sesión al cambiar de app o de red (LTE/WiFi)
 
@@ -318,12 +318,28 @@ def now_local_format(value=None, tz_name='America/Monterrey'):
 def health():
     return "OK", 200
 
-@app.route('/promos/cotizador')
-def landing_cotizador():
-    # Aquí podrías verificar si el usuario ya está logueado
-    # para cambiar el botón de "Registro" por "Ir al Tablero"
+# =========================
+# RUTAS DE ACCESO PRINCIPAL (EL PORTERO)
+# =========================
+
+@app.route('/')
+def index():
+    """
+    Si el usuario ya inició sesión, lo mandamos a su herramienta.
+    Si es Admin, lo mandamos al Dashboard de administración.
+    Si es un visitante nuevo, le vendemos con la Landing Page.
+    """
+    if 'user_id' in session:        
+        # Si es usuario normal, mándalo directo a trabajar al cotizador
+        return redirect(url_for('main.cotizador'))
+    
+    # Si no hay sesión, es un cliente potencial: Landing Page
     return render_template('landing_promos.html')
 
+@app.route('/promos/cotizador')
+def landing_cotizador():
+    """Mantenemos esta ruta por si quieres usarla en anuncios de Facebook/Instagram"""
+    return render_template('landing_promos.html')
 
 @app.errorhandler(404)
 def page_not_found(e):

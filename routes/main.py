@@ -45,9 +45,6 @@ def procesar_fila_fechas(fila_db):
                 pass 
     return item
 
-@main_bp.route('/')
-def index():
-    return redirect(url_for('main.cotizador'))
 
 
 @main_bp.route('/cotizador')
