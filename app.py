@@ -318,6 +318,12 @@ def now_local_format(value=None, tz_name='America/Monterrey'):
 def health():
     return "OK", 200
 
+@app.route('/promos/cotizador')
+def landing_cotizador():
+    # Aquí podrías verificar si el usuario ya está logueado
+    # para cambiar el botón de "Registro" por "Ir al Tablero"
+    return render_template('landing_promos.html')
+
 
 @app.errorhandler(404)
 def page_not_found(e):
