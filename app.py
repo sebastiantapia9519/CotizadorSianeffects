@@ -1,13 +1,27 @@
+# Standard library
 import os
-from flask import Flask, session, render_template, request, jsonify, redirect, url_for
-from flask_apscheduler import APScheduler
-import logging
-from logging.handlers import RotatingFileHandler
 import json
+import logging
 from datetime import timedelta
-from dotenv import load_dotenv
-from services.cloudflare_service import delete_from_cloudflare
+from logging.handlers import RotatingFileHandler
+
+# Third-party
 import pytz
+from dotenv import load_dotenv
+from flask import (
+    Flask,
+    session,
+    render_template,
+    request,
+    jsonify,
+    redirect,
+    url_for,
+    send_from_directory
+)
+from flask_apscheduler import APScheduler
+
+# Local imports
+from services.cloudflare_service import delete_from_cloudflare
 
 # Cargar variables de entorno desde el archivo .env
 load_dotenv()
@@ -318,28 +332,18 @@ def now_local_format(value=None, tz_name='America/Monterrey'):
 def health():
     return "OK", 200
 
+@app.route('/manifest.json')
+def serve_manifest():
+    return send_from_directory('static', 'manifest.json')
+
+@app.route('/apple-touch-icon.png')
+def serve_apple_icon():
+    # Como tu imagen está dentro de static/images/
+    return send_from_directory('static/images', 'apple-touch-icon.png')
+
 # =========================
 # RUTAS DE ACCESO PRINCIPAL (EL PORTERO)
 # =========================
-
-#@app.route('/')
-#def index():
-    """
-    Si el usuario ya inició sesión, lo mandamos a su herramienta.
-    Si es Admin, lo mandamos al Dashboard de administración.
-    Si es un visitante nuevo, le vendemos con la Landing Page.
-    """
-#    if 'user_id' in session:        
-        # Si es usuario normal, mándalo directo a trabajar al cotizador
-#        return redirect(url_for('main.cotizador'))
-    
-  # Si no hay sesión, es un cliente potencial: Landing Page
-#    return render_template('landing_promos.html')
-
-#@app.route('/promos/cotizador')
-#def landing_cotizador():
-#    """Mantenemos esta ruta por si quieres usarla en anuncios de Facebook/Instagram"""
-#    return render_template('landing_promos.html')
 
 @app.errorhandler(404)
 def page_not_found(e):
