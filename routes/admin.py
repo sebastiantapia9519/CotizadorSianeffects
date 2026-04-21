@@ -60,8 +60,8 @@ def dashboard():
                     
                 f_local = utc_to_local(f_utc)
                 
-                # NUEVO: Sobreescribimos con la fecha local formateada para el HTML
-                u['subscription_end'] = f_local.strftime('%d/%m/%Y')
+                # CORRECCIÓN: Mandamos el objeto de fecha directo para que el HTML no truene
+                u['subscription_end'] = f_local
                 
                 if f_local > ahora_local:
                     stats['activos'] += 1
@@ -86,8 +86,8 @@ def dashboard():
                     
                 log_local = utc_to_local(log_utc)
                 
-                # NUEVO: Sobreescribimos el last_login con la hora local formateada para el HTML
-                u['last_login'] = log_local.strftime('%d/%m/%Y %H:%M')
+                # CORRECCIÓN: Mandamos el objeto de fecha directo para que el HTML no truene
+                u['last_login'] = log_local
                 
                 if log_local > hace_24h_local:
                     stats['online_hoy'] += 1
