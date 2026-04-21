@@ -21,7 +21,10 @@ def dashboard():
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM usuarios ORDER BY created_at DESC')
-    users = cursor.fetchall()
+    
+    # Convertimos las filas a diccionarios mutables
+    users = [dict(row) for row in cursor.fetchall()] 
+    
     cursor.close()
     conn.close()
     
@@ -29,22 +32,16 @@ def dashboard():
     ahora_utc = now_utc()
     ahora_local = utc_to_local(ahora_utc) 
     
-    # Definimos la ventana de 24 horas en tu tiempo local
     hace_24h_local = ahora_local - timedelta(days=1)
     hace_24h_str = hace_24h_local.strftime('%Y-%m-%d %H:%M')
     
-    # Umbral de riesgo (350 días atrás)
     proximos_a_borrar_local = ahora_local - timedelta(days=350)
     fecha_limite_riesgo = proximos_a_borrar_local.strftime('%Y-%m-%d')
 
     # 3. Estadísticas
     stats = {
-        'total': len(users),
-        'activos': 0,
-        'vencidos': 0,
-        'admins': 0,
-        'online_hoy': 0,
-        'en_riesgo': 0
+        'total': len(users), 'activos': 0, 'vencidos': 0,
+        'admins': 0, 'online_hoy': 0, 'en_riesgo': 0
     }
 
     # 4. Procesamiento
@@ -62,6 +59,9 @@ def dashboard():
                     f_utc = f_end if f_end.tzinfo else f_end.replace(tzinfo=timezone.utc)
                     
                 f_local = utc_to_local(f_utc)
+                
+                # NUEVO: Sobreescribimos con la fecha local formateada para el HTML
+                u['subscription_end'] = f_local.strftime('%d/%m/%Y')
                 
                 if f_local > ahora_local:
                     stats['activos'] += 1
@@ -85,6 +85,9 @@ def dashboard():
                     log_utc = l_login if l_login.tzinfo else l_login.replace(tzinfo=timezone.utc)
                     
                 log_local = utc_to_local(log_utc)
+                
+                # NUEVO: Sobreescribimos el last_login con la hora local formateada para el HTML
+                u['last_login'] = log_local.strftime('%d/%m/%Y %H:%M')
                 
                 if log_local > hace_24h_local:
                     stats['online_hoy'] += 1
