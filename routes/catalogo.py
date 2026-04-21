@@ -45,6 +45,9 @@ def upload_r2():
     Recibe un archivo, arma una ruta de carpetas dinámica basada en 
     la categoría y el tipo de archivo, y lo sube a R2.
     """
+    u_name = session.get('username', 'Anonimo')
+    u_id = session.get('user_id', 'N/A')
+    
     file = request.files.get('file')
     if not file:
         return jsonify({"success": False, "error": "No se recibio ningun archivo"}), 400
@@ -81,10 +84,10 @@ def upload_r2():
         # Construimos la URL publica final
         url_final = f"{PUBLIC_URL}/{ruta_r2}"
         
-        current_app.logger.info(f"R2_UPLOAD_SUCCESS: Usuario {session.get('user_id')} subió '{ruta_r2}'")
+        current_app.logger.info(f"R2_UPLOAD_SUCCESS: Usuario '{u_name}' (ID: {u_id}) subio '{ruta_r2}'")
         return jsonify({"success": True, "url": url_final})
     except Exception as e:
-        current_app.logger.error(f"R2_UPLOAD_ERROR: Usuario {session.get('user_id')} falló al subir archivo - {e}")
+        current_app.logger.error(f"R2_UPLOAD_ERROR: Usuario '{u_name}' (ID: {u_id}) fallo al subir archivo - {e}")
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -96,14 +99,23 @@ def upload_r2():
 def admin_categorias():
     conn = get_db()
     cursor = conn.cursor()
+    u_name = session.get('username', 'Anonimo')
+    u_id = session.get('user_id', 'N/A')
     
     if request.method == 'POST':
         nombre = request.form['nombre']
         orden = request.form.get('orden', 0)
         
-        cursor.execute('INSERT INTO categorias (nombre, orden) VALUES (%s, %s)', (nombre, orden))
-        conn.commit()
-        flash('Categoria creada con exito.', 'success')
+        try:
+            cursor.execute('INSERT INTO categorias (nombre, orden) VALUES (%s, %s)', (nombre, orden))
+            conn.commit()
+            current_app.logger.info(f"CATALOG_CATEGORY_CREATED: Usuario '{u_name}' (ID: {u_id}) creo la categoria '{nombre}'")
+            flash('Categoria creada con exito.', 'success')
+        except Exception as e:
+            conn.rollback()
+            current_app.logger.error(f"CATALOG_CATEGORY_ERROR: Usuario '{u_name}' (ID: {u_id}) - {e}")
+            flash(f'Error al crear categoria: {str(e)}', 'danger')
+            
         return redirect(url_for('catalogo.admin_categorias'))
 
     cursor.execute('SELECT * FROM categorias ORDER BY orden ASC, id DESC')
@@ -122,6 +134,8 @@ def admin_categorias():
 def admin_productos(cat_id):
     conn = get_db()
     cursor = conn.cursor()
+    u_name = session.get('username', 'Anonimo')
+    u_id = session.get('user_id', 'N/A')
 
     cursor.execute('SELECT * FROM categorias WHERE id = %s', (cat_id,))
     categoria = cursor.fetchone()
@@ -144,34 +158,41 @@ def admin_productos(cat_id):
             elif ext in ['mp4', 'mov', 'avi', 'webm', 'mkv']:
                 media_type = 'video'
 
-        if producto_id:
-            cursor.execute('''
-                UPDATE catalogo_productos
-                SET titulo = %s, descripcion = %s, precio = %s, media_url = %s, media_type = %s, stock = %s
-                WHERE id = %s
-            ''', (titulo, descripcion, precio, media_url, media_type, stock_status, producto_id))
-            conn.commit()
-            flash('Producto actualizado correctamente.', 'success')
-        else:
-            nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
-            prefix = nombre_limpio[:3].upper() if len(nombre_limpio) >= 2 else "PROD"
+        try:
+            if producto_id:
+                cursor.execute('''
+                    UPDATE catalogo_productos
+                    SET titulo = %s, descripcion = %s, precio = %s, media_url = %s, media_type = %s, stock = %s
+                    WHERE id = %s
+                ''', (titulo, descripcion, precio, media_url, media_type, stock_status, producto_id))
+                conn.commit()
+                current_app.logger.info(f"CATALOG_PRODUCT_UPDATED: Usuario '{u_name}' (ID: {u_id}) actualizo el producto '{titulo}' (ID: {producto_id})")
+                flash('Producto actualizado correctamente.', 'success')
+            else:
+                nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
+                prefix = nombre_limpio[:3].upper() if len(nombre_limpio) >= 2 else "PROD"
 
-            while True:
-                random_digits = ''.join(random.choices(string.digits, k=5))
-                sku_generado = f"{prefix}-{random_digits}"
+                while True:
+                    random_digits = ''.join(random.choices(string.digits, k=5))
+                    sku_generado = f"{prefix}-{random_digits}"
 
-                cursor.execute('SELECT id FROM catalogo_productos WHERE sku = %s', (sku_generado,))
-                existe = cursor.fetchone()
-                if not existe:
-                    break
+                    cursor.execute('SELECT id FROM catalogo_productos WHERE sku = %s', (sku_generado,))
+                    existe = cursor.fetchone()
+                    if not existe:
+                        break
 
-            cursor.execute('''
-                INSERT INTO catalogo_productos
-                (categoria_id, sku, titulo, descripcion, media_url, media_type, precio, stock)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (cat_id, sku_generado, titulo, descripcion, media_url, media_type, precio, stock_status))
-            conn.commit()
-            flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
+                cursor.execute('''
+                    INSERT INTO catalogo_productos
+                    (categoria_id, sku, titulo, descripcion, media_url, media_type, precio, stock)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ''', (cat_id, sku_generado, titulo, descripcion, media_url, media_type, precio, stock_status))
+                conn.commit()
+                current_app.logger.info(f"CATALOG_PRODUCT_CREATED: Usuario '{u_name}' (ID: {u_id}) creo el producto '{titulo}' (SKU: {sku_generado})")
+                flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
+        except Exception as e:
+            conn.rollback()
+            current_app.logger.error(f"CATALOG_PRODUCT_ERROR: Usuario '{u_name}' (ID: {u_id}) - {e}")
+            flash(f'Error al guardar producto: {str(e)}', 'danger')
 
         return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
     
@@ -194,6 +215,8 @@ def admin_productos(cat_id):
 @catalogo_bp.route('/api/catalogo/toggle', methods=['POST'])
 @login_required
 def toggle_status():
+    u_name = session.get('username', 'Anonimo')
+    u_id = session.get('user_id', 'N/A')
     data = request.get_json()
     tipo = data.get('tipo')
     id_obj = data.get('id')
@@ -207,9 +230,11 @@ def toggle_status():
         query = f'UPDATE {tabla} SET activo = %s WHERE id = %s'
         cursor.execute(query, (nuevo_estado, id_obj))
         conn.commit()
+        estado_str = "Activo" if nuevo_estado else "Inactivo"
+        current_app.logger.info(f"CATALOG_TOGGLE: Usuario '{u_name}' (ID: {u_id}) cambio visibilidad de {tipo} ID {id_obj} a {estado_str}")
         return jsonify({'success': True})
     except Exception as e:
-        current_app.logger.error(f"CATALOG_TOGGLE_ERROR: Fallo al cambiar estado de {tipo} ID {id_obj} - {e}")
+        current_app.logger.error(f"CATALOG_TOGGLE_ERROR: Usuario '{u_name}' (ID: {u_id}) fallo al cambiar estado de {tipo} ID {id_obj} - {e}")
         return jsonify({'success': False, 'error': str(e)})
     finally:
         cursor.close()
@@ -221,6 +246,8 @@ def toggle_status():
 @catalogo_bp.route('/admin/catalogo/editar_categoria', methods=['POST'])
 @login_required
 def editar_categoria():
+    u_name = session.get('username', 'Anonimo')
+    u_id = session.get('user_id', 'N/A')
     conn = get_db()
     cursor = conn.cursor()
     cat_id = request.form['cat_id']
@@ -233,9 +260,11 @@ def editar_categoria():
             (nombre, orden, cat_id)
         )
         conn.commit()
+        current_app.logger.info(f"CATALOG_CATEGORY_EDITED: Usuario '{u_name}' (ID: {u_id}) edito categoria ID {cat_id}")
         flash('Categoria actualizada correctamente.', 'success')
     except Exception as e:
-        flash(f'Error al editar: {e}', 'error')
+        current_app.logger.error(f"CATALOG_CATEGORY_EDIT_ERROR: Usuario '{u_name}' (ID: {u_id}) - {e}")
+        flash(f'Error al editar: {e}', 'danger')
     finally:
         cursor.close()
         conn.close()
@@ -248,6 +277,8 @@ def editar_categoria():
 @catalogo_bp.route('/admin/catalogo/delete/<tipo>/<int:id_obj>')
 @login_required
 def delete_item(tipo, id_obj):
+    u_name = session.get('username', 'Anonimo')
+    u_id = session.get('user_id', 'N/A')
     conn = get_db()
     cursor = conn.cursor()
     
@@ -266,12 +297,13 @@ def delete_item(tipo, id_obj):
                     key_archivo = url_archivo.replace(PUBLIC_URL, "").lstrip("/")
                     s3_client.delete_object(Bucket=BUCKET_NAME, Key=key_archivo)
                 except Exception as e:
-                    current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo huérfano de R2 - {e}")
+                    current_app.logger.warning(f"R2_DELETE_WARNING: Fallo al borrar archivo huerfano de R2 - {e}")
 
             cursor.execute('DELETE FROM catalogo_productos WHERE categoria_id = %s', (id_obj,))
             cursor.execute('DELETE FROM categorias WHERE id = %s', (id_obj,))
             conn.commit()
             
+            current_app.logger.info(f"CATALOG_CATEGORY_DELETED: Usuario '{u_name}' (ID: {u_id}) elimino categoria ID {id_obj} y sus productos")
             flash('Categoria y todos sus productos eliminados.', 'warning')
             return redirect(url_for('catalogo.admin_categorias'))
             
@@ -297,15 +329,17 @@ def delete_item(tipo, id_obj):
 
                 cursor.execute('DELETE FROM catalogo_productos WHERE id = %s', (id_obj,))
                 conn.commit()
+                current_app.logger.info(f"CATALOG_PRODUCT_DELETED: Usuario '{u_name}' (ID: {u_id}) elimino producto ID {id_obj}")
                 flash('Producto y archivo eliminados correctamente.', 'success')
                 return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
             else:
-                flash('Producto no encontrado', 'error')
+                flash('Producto no encontrado', 'danger')
                 return redirect(url_for('catalogo.admin_categorias'))
                 
     except Exception as e:
         conn.rollback()
-        flash(f'Error al eliminar: {e}', 'error')
+        current_app.logger.error(f"CATALOG_DELETE_ERROR: Usuario '{u_name}' (ID: {u_id}) fallo al eliminar - {e}")
+        flash(f'Error al eliminar: {e}', 'danger')
         return redirect(url_for('catalogo.admin_categorias'))
     finally:
         cursor.close()
@@ -341,6 +375,10 @@ def ver_catalogo():
     cursor.close()
     conn.close()
     
+    # LOG Opcional para vista pública.
+    u_name = session.get('username', 'Visitante')
+    current_app.logger.info(f"CATALOG_VIEW: Usuario '{u_name}' visualizo el catalogo publico")
+    
     return render_template(
         'catalogo/galeria_sianeffects.html',
         catalogo=catalogo_data
@@ -352,6 +390,8 @@ def ver_catalogo():
 @catalogo_bp.route('/api/catalogo/update-stock', methods=['POST'])
 @login_required
 def update_stock():
+    u_name = session.get('username', 'Anonimo')
+    u_id = session.get('user_id', 'N/A')
     data = request.get_json()
     prod_id = data.get('id')
     nuevo_stock = True if data.get('stock') else False 
@@ -361,8 +401,11 @@ def update_stock():
     try:
         cursor.execute('UPDATE catalogo_productos SET stock = %s WHERE id = %s', (nuevo_stock, prod_id))
         conn.commit()
+        stock_str = "En Stock" if nuevo_stock else "Agotado"
+        current_app.logger.info(f"CATALOG_STOCK_UPDATE: Usuario '{u_name}' (ID: {u_id}) marco producto ID {prod_id} como '{stock_str}'")
         return jsonify({'success': True})
     except Exception as e:
+        current_app.logger.error(f"CATALOG_STOCK_ERROR: Usuario '{u_name}' (ID: {u_id}) fallo al actualizar stock de producto ID {prod_id} - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         cursor.close()

@@ -79,6 +79,10 @@ file_handler.setLevel(logging.INFO)
 app.logger.addHandler(file_handler)
 app.logger.info("Sistema de monitoreo iniciado correctamente (Hora Local Monterrey)")
 
+# Esto evita que se registren los "GET /static/..." y "GET /admin/..."
+log = logging.getLogger('werkzeug')
+log.setLevel(logging.ERROR)
+
 # =========================
 # SESIÓN
 # =========================

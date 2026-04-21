@@ -28,11 +28,15 @@ def obtener_material(id):
     if not material:
         return jsonify({'error': 'Material no encontrado'}), 404
 
+    # LOG DE CONSULTA
+    u_name = session.get('username', 'Anonimo')
+    current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' consulto informacion del material #{id} ({material['nombre']})")
+
     return jsonify({
         'id': material['id'],
         'nombre': material['nombre'],
         'precio': material['precio_unitario'],
-        'tipo': material['tipo_entrada'] # Asegúrate de que esta columna exista en tu tabla actual
+        'tipo': material['tipo_entrada'] 
     })
 
 
@@ -73,6 +77,10 @@ def obtener_receta(id):
     cursor.close()
     conn.close()
 
+    # LOG DE CONSULTA DE RECETA
+    u_name = session.get('username', 'Anonimo')
+    current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' consulto receta del producto #{id} ({producto['nombre']})")
+
     return jsonify({
         'id': producto['id'],
         'nombre': producto['nombre'],
@@ -112,6 +120,10 @@ def obtener_detalles_venta(id):
     cursor.close()
     conn.close()
 
+    # LOG DE CONSULTA DE VENTA
+    u_name = session.get('username', 'Anonimo')
+    current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' consulto detalles de Venta #{id} (Cliente: {venta['cliente']})")
+
     items = [{
         'concepto': d['concepto'],
         'cantidad': d['cantidad'],
@@ -141,13 +153,11 @@ def actualizar_venta():
     data = request.get_json()
     venta_id = data.get('id')
     
-    # 1. BLINDAJE: Evitar que truenen el float()
     try:
         abono = float(data.get('abono', 0))
     except (ValueError, TypeError):
         return jsonify({'success': False, 'error': 'El abono debe ser un número válido'}), 400
 
-    # 2. BLINDAJE ANTI-HACK: No pueden abonar ceros ni números negativos
     if abono <= 0:
         return jsonify({'success': False, 'error': 'El abono debe ser mayor a cero'}), 400
 
@@ -166,14 +176,12 @@ def actualizar_venta():
 
         saldo_actual = venta['total'] - venta['monto_pagado']
         
-        # 3. REGLA DE NEGOCIO: No pueden abonar más de lo que deben
         if abono > saldo_actual:
             abono = saldo_actual
 
         nuevo_pagado = venta['monto_pagado'] + abono
         nuevo_saldo = venta['total'] - nuevo_pagado
 
-        # Matamos decimales residuales para evitar estados inconsistentes
         if nuevo_saldo < 0.05:
             nuevo_saldo = 0.0
             estado = 'pagado'
@@ -188,13 +196,19 @@ def actualizar_venta():
 
         conn.commit()
         
-        # LOG DE DINERO: Qué usuario recibió dinero, cuánto y de qué venta
-        current_app.logger.info(f"SALE_PAYMENT: Usuario {session['user_id']} registró abono de ${abono} a la Venta #{venta_id}. Estado: {estado.upper()}")
+        # --- LOG DE DINERO MEJORADO ---
+        u_name = session.get('username', 'Anonimo')
+        u_id = session.get('user_id', 'N/A')
+        current_app.logger.info(
+            f"SALE_PAYMENT: Usuario '{u_name}' (ID: {u_id}) registro abono de ${abono} "
+            f"a la Venta #{venta_id}. Estado resultante: {estado.upper()}"
+        )
         
         return jsonify({'success': True, 'nuevo_estado': estado, 'nuevo_saldo': nuevo_saldo})
 
     except Exception as e:
         conn.rollback()
+        current_app.logger.error(f"SYSTEM_ERROR en actualizar_venta: {str(e)}")
         return jsonify({'error': str(e)}), 500
     finally:
         cursor.close()
@@ -211,7 +225,6 @@ def cancelar_venta():
     cursor = conn.cursor()
 
     try:
-        # 1. BLINDAJE: Verificar si la venta existe y su estado actual
         cursor.execute(
             'SELECT estado FROM ventas WHERE id = %s AND user_id = %s',
             (venta_id, session['user_id'])
@@ -221,23 +234,19 @@ def cancelar_venta():
         if not venta:
             return jsonify({'success': False, 'error': 'Venta no encontrada'}), 404
         
-        # Si ya está cancelada, abortamos para no duplicar la devolución de inventario
         if venta['estado'] == 'cancelada':
             return jsonify({'success': False, 'error': 'La venta ya estaba cancelada'}), 400
 
-        # 2. REGLA DE NEGOCIO: ¿Tiene el inventario activo?
         cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=%s', (session['user_id'],))
         config = cursor.fetchone()
-        usar_inventario = config['inventario_activo'] if config else False # Postgres devuelve booleanos
+        usar_inventario = config['inventario_activo'] if config else False
 
-        # 3. DEVOLUCIÓN DE INVENTARIO (Solo si lo tiene activo)
         if usar_inventario:
             cursor.execute('SELECT cantidad, composicion FROM venta_detalles WHERE venta_id = %s', (venta_id,))
             detalles = cursor.fetchall()
             
             materiales_a_devolver = {}
             
-            # Agrupamos los materiales igual que cuando vendimos
             for detalle in detalles:
                 try:
                     composicion = json.loads(detalle['composicion'] or '[]')
@@ -246,7 +255,6 @@ def cancelar_venta():
                     for comp in composicion:
                         if comp.get('tipo') == 'material':
                             mat_id = comp.get('id')
-                            # Multiplicamos la cantidad del material por la cantidad de productos cancelados
                             cantidad_requerida = float(comp.get('cantidad', 0)) * cantidad_producto
                             
                             if cantidad_requerida > 0:
@@ -255,9 +263,8 @@ def cancelar_venta():
                                 else:
                                     materiales_a_devolver[mat_id] = cantidad_requerida
                 except Exception as e:
-                    current_app.logger.error(f"Error procesando devolución de receta: {e}")
+                    current_app.logger.error(f"Error procesando devolucion de receta en Venta #{venta_id}: {e}")
 
-            # Impactamos la base de datos: Devolvemos el stock de golpe
             for mat_id, total_devolucion in materiales_a_devolver.items():
                 cursor.execute('''
                     UPDATE materiales 
@@ -265,7 +272,6 @@ def cancelar_venta():
                     WHERE id = %s
                 ''', (total_devolucion, mat_id))
                 
-                # Dejamos la huella de auditoría
                 cursor.execute('''
                     INSERT INTO movimientos_inventario 
                     (user_id, material_id, tipo, cantidad, motivo, stock_resultante, fecha)
@@ -274,15 +280,11 @@ def cancelar_venta():
                         %s
                     )
                 ''', (
-                    session['user_id'],
-                    mat_id,
-                    total_devolucion,
-                    f"Cancelación Venta #{venta_id} - Devolución de stock",
-                    mat_id,
-                    ahora_sql()
+                    session['user_id'], mat_id, total_devolucion,
+                    f"Cancelacion Venta #{venta_id} - Devolucion de stock",
+                    mat_id, ahora_sql()
                 ))
 
-        # 4. Finalmente, cambiamos el estatus de la venta (Corregido a comillas simples)
         cursor.execute(
             "UPDATE ventas SET estado = 'cancelada' WHERE id = %s AND user_id = %s",
             (venta_id, session['user_id'])
@@ -290,15 +292,19 @@ def cancelar_venta():
         
         conn.commit()
         
-        # LOG DE CANCELACIÓN: Avisa si se devolvió inventario o no
-        inv_status = "con devolución de stock" if usar_inventario else "sin afectar stock"
-        current_app.logger.info(f"SALE_CANCELLED: Usuario {session['user_id']} canceló la Venta #{venta_id} ({inv_status}).")
+        # --- LOG DE CANCELACIÓN MEJORADO ---
+        u_name = session.get('username', 'Anonimo')
+        u_id = session.get('user_id', 'N/A')
+        inv_status = "con devolucion de stock" if usar_inventario else "sin afectar stock"
+        current_app.logger.info(
+            f"SALE_CANCELLED: Usuario '{u_name}' (ID: {u_id}) cancelo la Venta #{venta_id} ({inv_status})."
+        )
         
         return jsonify({'success': True})
 
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"Error al cancelar venta {venta_id}: {e}")
+        current_app.logger.error(f"SYSTEM_ERROR al cancelar venta {venta_id}: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         cursor.close()

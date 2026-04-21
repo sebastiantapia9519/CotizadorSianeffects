@@ -200,7 +200,9 @@ def registro():
 def logout():
     # Sacamos el nombre antes de limpiar la sesión para saber quién se fue
     usuario = session.get('username', 'Usuario_Desconocido')
-    current_app.logger.info(f"LOGOUT: '{usuario}' cerró su sesión.")
+    
+    # --- LOG ACTUALIZADO SIN ACENTOS ---
+    current_app.logger.info(f"LOGOUT: '{usuario}' cerro su sesion.")
     
     session.clear()
     return redirect(url_for('auth.login'))

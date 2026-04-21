@@ -108,6 +108,9 @@ def renovar(user_id, meses):
         flash('No tienes permisos para renovar membresías.', 'error')
         return redirect(url_for('admin.dashboard'))
     
+    admin_name = session.get('username', 'Admin_Desconocido')
+    admin_id = session.get('user_id', 'N/A')
+    
     nueva_fecha_fin = now_utc() + timedelta(days=meses*30)
     conn = get_db()
     cursor = conn.cursor()
@@ -122,7 +125,8 @@ def renovar(user_id, meses):
     cursor.close()
     conn.close()
     
-    current_app.logger.info(f"SUB_RENEWED: '{session.get('username')}' renovó la suscripción de '{target_name}' por {meses} meses.")
+    # LOG SIN ACENTOS
+    current_app.logger.info(f"SUB_RENEWED: Admin '{admin_name}' (ID: {admin_id}) renovo la suscripcion de '{target_name}' por {meses} meses.")
     flash(f'Suscripción renovada por {meses} meses.', 'success')
     return redirect(url_for('admin.dashboard'))
 
@@ -137,6 +141,9 @@ def cambiar_rol(user_id, nuevo_rol):
         flash('No puedes asignar un rango superior al tuyo.', 'warning')
         return redirect(url_for('admin.dashboard'))
     
+    admin_name = session.get('username', 'Admin_Desconocido')
+    admin_id = session.get('user_id', 'N/A')
+    
     conn = get_db()
     cursor = conn.cursor()
     
@@ -150,7 +157,8 @@ def cambiar_rol(user_id, nuevo_rol):
     cursor.close()
     conn.close()
     
-    current_app.logger.info(f"ROLE_CHANGED: '{session.get('username')}' cambió el rol de '{target_name}' a {nuevo_rol}.")
+    # LOG SIN ACENTOS
+    current_app.logger.info(f"ROLE_CHANGED: Admin '{admin_name}' (ID: {admin_id}) cambio el rol de '{target_name}' a {nuevo_rol}.")
     return redirect(url_for('admin.dashboard'))
 
 @admin_bp.route('/reset_password', methods=['POST'])
@@ -159,6 +167,7 @@ def reset_password():
     MIN_ROLE_LEVEL = 1
     current_role = session.get('role', 0)
     current_uid = session.get('user_id')
+    admin_name = session.get('username', 'Admin_Desconocido')
 
     if current_role < MIN_ROLE_LEVEL:
         current_app.logger.warning(f"AUTH_FAILURE: User {current_uid} attempted password reset without sufficient permissions.")
@@ -188,7 +197,8 @@ def reset_password():
             target = cursor.fetchone()
             target_name = target['username'] if target else f"ID {user_id}"
             
-            current_app.logger.info(f"PASSWORD_RESET: '{session.get('username')}' reseteó la contraseña de '{target_name}'.")
+            # LOG SIN ACENTOS
+            current_app.logger.info(f"PASSWORD_RESET: Admin '{admin_name}' (ID: {current_uid}) reseteo la contrasena de '{target_name}'.")
             flash('Contraseña actualizada correctamente.', 'success')
         else:
             current_app.logger.warning(f"DEBUG: FAIL. No user found with UID {user_id}")
@@ -206,6 +216,9 @@ def reset_password():
 @admin_bp.route('/impersonate/<int:user_id>')
 @admin_required 
 def impersonate(user_id):
+    admin_id = session.get('user_id')
+    admin_name = session.get('username', 'Admin_Desconocido')
+    
     conn = get_db()
     cursor = conn.cursor()
     cursor.execute("SELECT * FROM usuarios WHERE id=%s", (user_id,))
@@ -214,12 +227,13 @@ def impersonate(user_id):
     conn.close()
     
     if user:
-        session['original_admin_id'] = session['user_id']
+        session['original_admin_id'] = admin_id
         session['user_id'] = user['id']
         session['username'] = user['username']
         session['role'] = user['role']
         
-        current_app.logger.info(f"IMPERSONATE_START: Admin UID {session['original_admin_id']} entró a la cuenta del UID {user['id']}.")
+        # LOG SIN ACENTOS
+        current_app.logger.info(f"IMPERSONATE_START: Admin '{admin_name}' (ID: {admin_id}) entro a la cuenta del UID {user['id']}.")
         flash(f'Modo Fantasma: Ahora estás viendo el sistema como {user["username"]}', 'info')
         return redirect(url_for('main.index'))
     
@@ -229,8 +243,10 @@ def impersonate(user_id):
 @admin_required
 def delete_user():
     user_id = request.form.get('user_id')
+    admin_id = session.get('user_id')
+    admin_name = session.get('username', 'Admin_Desconocido')
     
-    if not user_id or str(user_id) == str(session['user_id']):
+    if not user_id or str(user_id) == str(admin_id):
         flash('No puedes borrarte a ti mismo.', 'danger')
         return redirect(url_for('admin.dashboard')) 
         
@@ -264,7 +280,7 @@ def delete_user():
             if "http" in logo_url:
                 try:
                     delete_from_cloudflare(logo_url)
-                    current_app.logger.info(f"R2_CLEANUP_SUCCESS: Se eliminó el logo del usuario {user_id} de R2.")
+                    current_app.logger.info(f"R2_CLEANUP_SUCCESS: Se elimino el logo del usuario {user_id} de R2.")
                 except Exception as e:
                     current_app.logger.warning(f"R2_CLEANUP_WARNING: No se pudo borrar el logo del usuario {user_id} - {e}")
 
@@ -298,7 +314,8 @@ def delete_user():
         
         conn.commit()
         
-        current_app.logger.info(f"USER_DELETED: '{session.get('username')}' borró permanentemente la cuenta ID {user_id} y todos sus datos.")
+        # LOG SIN ACENTOS
+        current_app.logger.info(f"USER_DELETED: Admin '{admin_name}' (ID: {admin_id}) borro permanentemente la cuenta ID {user_id} y todos sus datos.")
         flash('Usuario y todos sus datos eliminados correctamente.', 'success')
         
     except Exception as e:
@@ -361,7 +378,8 @@ def stop_impersonate():
         session['role'] = admin_user['role']
         session.pop('original_admin_id', None)
 
-        current_app.logger.info(f"IMPERSONATE_STOP: Admin UID {original_id} salió del modo fantasma.")
+        # LOG SIN ACENTOS
+        current_app.logger.info(f"IMPERSONATE_STOP: Admin '{admin_user['username']}' (ID: {original_id}) salio del modo fantasma.")
         flash('Modo Fantasma finalizado. Bienvenido de vuelta, Jefe.', 'success')
         
         return redirect(url_for('admin.dashboard'))
@@ -374,6 +392,9 @@ def stop_impersonate():
 def exportar_usuarios():
     if session.get('role') < 1:
         abort(403)
+
+    admin_name = session.get('username', 'Admin_Desconocido')
+    admin_id = session.get('user_id', 'N/A')
 
     conn = get_db()
     cursor = conn.cursor()
@@ -415,6 +436,9 @@ def exportar_usuarios():
             u['subscription_end'] if u['subscription_end'] else 'Sin fecha',
             u['last_login'] if u['last_login'] else 'Nunca'
         ])
+
+    # LOG DE AUDITORÍA DE EXPORTACIÓN
+    current_app.logger.info(f"EXPORT_DATA: Admin '{admin_name}' (ID: {admin_id}) exporto la lista completa de usuarios.")
 
     output = si.getvalue()
     return Response(

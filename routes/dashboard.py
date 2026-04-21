@@ -5,13 +5,14 @@ from utils.datetime_utils import ahora_sql, now_utc
 from datetime import datetime, timedelta
 from psycopg2.extras import RealDictCursor
 
-
-
 dashboard_bp = Blueprint('dashboard', __name__)
 
 @dashboard_bp.route('/dashboard')
 @admin_required
 def index():
+    admin_name = session.get('username', 'Admin_Desconocido')
+    admin_id = session.get('user_id', 'N/A')
+    
     conn = get_db_connection()
     # ACTIVAMOS EL MODO DICCIONARIO: Ahora los resultados son {'columna': valor}
     cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -105,6 +106,9 @@ def index():
             elif 3 <= cots <= 14: segmentos["Exploradores (3-14)"] += 1
             else: segmentos["Power Users (15+)"] += 1
 
+        # LOG DE AUDITORÍA SIN ACENTOS
+        current_app.logger.info(f"DATA_ACCESS: Admin '{admin_name}' (ID: {admin_id}) consulto el dashboard global (Mes: {mes_sel or 'Todo'}, Anio: {anio_sel or 'Todo'})")
+
         return render_template(
             'dashboard/index.html',
             total_usuarios=total_usuarios, activos=activos, vencidos=vencidos, proximos_a_vencer=proximos_a_vencer,
@@ -118,7 +122,7 @@ def index():
         )
 
     except Exception as e:
-        current_app.logger.error(f"DASHBOARD_ERROR: {e}")
+        current_app.logger.error(f"DASHBOARD_ERROR: Admin '{admin_name}' (ID: {admin_id}) fallo al cargar metricas globales - {e}")
         return f"Error en Dashboard: {e}", 500
     finally:
         cursor.close()

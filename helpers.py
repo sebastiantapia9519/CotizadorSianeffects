@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import session, redirect, url_for, flash
+from flask import session, redirect, url_for, flash, current_app
 from db import get_db_connection
 from datetime import datetime, timezone, timedelta
 import json
@@ -84,9 +84,7 @@ def subscription_required(f):
                 flash('Tu suscripción ha vencido. Renueva para continuar.', 'error')
                 return redirect(url_for('main.plan_vencido')) 
         except Exception as e:
-            logging.error(f"AUTH_DATE_ERROR: Fallo al verificar fecha de subscripción para user {session.get('user_id')} - {e}")
-            # Considerar si quieres bloquear el acceso si hay un error en la fecha
-            current_app.logger.error(f"AUTH_DATE_ERROR: Fallo al verificar fecha de subscripción para user {session.get('user_id')} - {e}")
+            current_app.logger.error(f"AUTH_DATE_ERROR: Fallo al verificar fecha de suscripcion para user {session.get('user_id')} - {e}")
             pass
 
         return f(*args, **kwargs)
@@ -149,11 +147,10 @@ def obtener_alertas(user_id):
                         'url': '/configuracion'
                     })
             except Exception as e:
-                logging.warning(f"ALERT_DATE_ERROR: Fallo calculando alerta de fecha para user {user_id} - {e}")
+                current_app.logger.warning(f"ALERT_DATE_ERROR: Fallo calculando alerta de fecha para user {user_id} - {e}")
                 pass
 
     except Exception as e:
-        logging.error(f"ALERT_FETCH_ERROR: Fallo general obteniendo alertas para user {user_id} - {e}")
         current_app.logger.error(f"ALERT_FETCH_ERROR: Fallo general obteniendo alertas para user {user_id} - {e}")
     finally:
         cursor.close()
@@ -262,8 +259,7 @@ def obtener_estado_mesas(inv_id):
             
         return resultado
     except Exception as e:
-        logging.error(f"TABLE_CALC_ERROR: Fallo calculando estado de mesas para invitación {inv_id} - {e}")
-        current_app.logger.error(f"TABLE_CALC_ERROR: Fallo calculando estado de mesas para invitación {inv_id} - {e}")
+        current_app.logger.error(f"TABLE_CALC_ERROR: Fallo calculando estado de mesas para invitacion {inv_id} - {e}")
         return []
     finally:
         cursor.close()

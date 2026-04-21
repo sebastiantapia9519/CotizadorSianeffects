@@ -12,6 +12,8 @@ user_dash_bp = Blueprint('user_dash', __name__)
 @login_required
 def mi_panel():
     user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     conn = get_db()
     cursor = conn.cursor()
     
@@ -68,7 +70,7 @@ def mi_panel():
         for fila in grafica_diaria_db:
             fechas_diarias.append(f"Día {fila['dia'][-2:]}") 
             ing_diarios.append(round(fila['ingresos'], 2))
-            ing_diarios.append(round(fila['ganancia'], 2))
+            gan_diarias.append(round(fila['ganancia'], 2))
 
         # --- 4. GRÁFICA 2: HISTÓRICA (CORREGIDO VIAJE EN EL TIEMPO) ---
         # Ahora los 6 meses se calculan desde el mes que el usuario seleccionó, no desde el día de hoy.
@@ -120,8 +122,10 @@ def mi_panel():
         else:
             stock_bajo = []
 
+        current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' (ID: {user_id}) consulto su dashboard ({periodo_str})")
+
     except Exception as e:
-        current_app.logger.error(f"DASHBOARD_ERROR: Fallo al cargar panel para user {user_id} - {e}")
+        current_app.logger.error(f"DASHBOARD_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al cargar panel - {e}")
         kpis = {'ingresos_brutos': 0, 'ganancia_neta': 0, 'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0}
         fechas_diarias, ing_diarios, gan_diarias, meses_hist, ing_hist, gan_hist, top_productos, stock_bajo = [], [], [], [], [], [], [], []
         inventario_activo = False
@@ -152,6 +156,8 @@ def mi_panel():
 @login_required
 def api_calendario_historial():
     user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     anio = request.args.get('anio', type=int)
     mes = request.args.get('mes', type=int)
     
@@ -188,10 +194,11 @@ def api_calendario_historial():
                 'estado': v['estado']
             })
             
+        current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' (ID: {user_id}) consulto el calendario de ventas ({periodo_str})")
         return jsonify(calendario)
         
     except Exception as e:
-        current_app.logger.error(f"CALENDAR_ERROR: Fallo al cargar calendario para user {user_id} - {e}")
+        current_app.logger.error(f"CALENDAR_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al cargar calendario - {e}")
         return jsonify({})
     finally:
         cursor.close()

@@ -16,6 +16,7 @@ inventory_bp = Blueprint('inventory', __name__)
 @login_required
 def materiales():
     user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
 
     # --- LÓGICA PARA GUARDAR O EDITAR (MÉTODO POST) ---
     if request.method == 'POST':
@@ -83,17 +84,20 @@ def materiales():
                     SET nombre=%s, es_paquete=%s, precio_compra=%s, cantidad_paquete=%s, precio_unitario=%s, unidad_medida=%s, stock_minimo=%s
                     WHERE id=%s AND user_id=%s
                 """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo, id_actualizar, user_id))
+                current_app.logger.info(f"MATERIAL_UPDATED: Usuario '{u_name}' (ID: {user_id}) actualizo el material #{id_actualizar} ('{nombre}')")
             else:
                 cursor.execute("""
                     INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo))
+                current_app.logger.info(f"MATERIAL_CREATED: Usuario '{u_name}' (ID: {user_id}) creo el material '{nombre}'")
             
             conn.commit()
             return redirect(url_for('inventory.materiales'))
             
         except Exception as e:
-            current_app.logger.error(f"MATERIAL_SAVE_ERROR: Fallo al guardar material para usuario {user_id} - {e}")
+            conn.rollback()
+            current_app.logger.error(f"MATERIAL_SAVE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al guardar material - {e}")
             return f"Error al guardar: {e}"
         finally:
             cursor.close()
@@ -121,6 +125,9 @@ def materiales():
     cursor.close()
     conn.close()
 
+    # LOG DE ACCESO
+    current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' (ID: {user_id}) consulto el catalogo de materiales")
+
     # LÓGICA DEL TUTORIAL
     mostrar_tour = debe_mostrar_tutorial(user_id, 'materiales')
     version_tour = obtener_version_tutorial('materiales')
@@ -134,12 +141,22 @@ def materiales():
 @inventory_bp.route('/materiales/eliminar/<int:id>')
 @login_required
 def eliminar_material(id):
+    user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM materiales WHERE id=%s AND user_id=%s", (id, session['user_id']))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        cursor.execute("DELETE FROM materiales WHERE id=%s AND user_id=%s", (id, user_id))
+        conn.commit()
+        current_app.logger.info(f"MATERIAL_DELETED: Usuario '{u_name}' (ID: {user_id}) elimino el material #{id}")
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"MATERIAL_DELETE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al eliminar material #{id} - {e}")
+    finally:
+        cursor.close()
+        conn.close()
+    
     return redirect(url_for('inventory.materiales'))
 
 # =========================
@@ -149,6 +166,8 @@ def eliminar_material(id):
 @login_required
 def equipos():
     user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     if request.method == 'POST':
         conn = get_db()
         cursor = conn.cursor()
@@ -193,15 +212,18 @@ def equipos():
             if id_actualizar:
                 cursor.execute("UPDATE maquinaria SET nombre=%s, costo_desgaste=%s WHERE id=%s AND user_id=%s", 
                              (nombre, costo_desgaste, id_actualizar, user_id))
+                current_app.logger.info(f"EQUIPMENT_UPDATED: Usuario '{u_name}' (ID: {user_id}) actualizo equipo #{id_actualizar} ('{nombre}')")
             else:
                 cursor.execute("INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (%s, %s, %s)", 
                              (user_id, nombre, costo_desgaste))
+                current_app.logger.info(f"EQUIPMENT_CREATED: Usuario '{u_name}' (ID: {user_id}) creo el equipo '{nombre}'")
             
             conn.commit()
             return redirect(url_for('inventory.equipos', guardado='true'))
             
         except Exception as e:
-            current_app.logger.error(f"EQUIPMENT_SAVE_ERROR: Fallo al guardar equipo para usuario {user_id} - {e}")
+            conn.rollback()
+            current_app.logger.error(f"EQUIPMENT_SAVE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al guardar equipo - {e}")
             return f"Error al procesar equipo: {e}"
         finally:
             cursor.close()
@@ -216,6 +238,8 @@ def equipos():
     conn.close()
     equipos_lista = [dict(row) for row in rows]
 
+    current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' (ID: {user_id}) consulto catalogo de equipos")
+
     # 💡 LÓGICA DEL TUTORIAL
     mostrar_tour = debe_mostrar_tutorial(user_id, 'equipos')
     version_tour = obtener_version_tutorial('equipos')
@@ -228,12 +252,22 @@ def equipos():
 @inventory_bp.route('/equipos/eliminar/<int:id>')
 @login_required
 def eliminar_equipo(id):
+    user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('DELETE FROM maquinaria WHERE id=%s AND user_id=%s', (id, session['user_id']))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        cursor.execute('DELETE FROM maquinaria WHERE id=%s AND user_id=%s', (id, user_id))
+        conn.commit()
+        current_app.logger.info(f"EQUIPMENT_DELETED: Usuario '{u_name}' (ID: {user_id}) elimino el equipo #{id}")
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"EQUIPMENT_DELETE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al eliminar equipo #{id} - {e}")
+    finally:
+        cursor.close()
+        conn.close()
+        
     return redirect(url_for('inventory.equipos', eliminado='true'))
 
 
@@ -244,6 +278,8 @@ def eliminar_equipo(id):
 @login_required
 def recetas():
     user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     if request.method == 'POST':
         conn = get_db()
         cursor = conn.cursor()
@@ -261,10 +297,12 @@ def recetas():
 
                 cursor.execute("UPDATE productos SET nombre=%s WHERE id=%s AND user_id=%s", (nombre, id_actualizar, user_id))
                 conn.commit()
+                current_app.logger.info(f"RECIPE_RENAMED: Usuario '{u_name}' (ID: {user_id}) renombro receta #{id_actualizar} a '{nombre}'")
             
             return redirect(url_for('inventory.recetas', renombrada='true'))
         except Exception as e:
-            current_app.logger.error(f"RECIPE_SAVE_ERROR: Fallo al guardar receta para usuario {user_id} - {e}")
+            conn.rollback()
+            current_app.logger.error(f"RECIPE_SAVE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al renombrar receta - {e}")
             return f"Error al actualizar: {e}"
         finally:
             cursor.close()
@@ -297,11 +335,13 @@ def recetas():
             recetas_lista.append(receta_dict)
             
     except Exception as e:
-        current_app.logger.error(f"RECIPE_LOAD_ERROR: Fallo al cargar recetas para usuario {user_id} - {e}")
+        current_app.logger.error(f"RECIPE_LOAD_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al cargar recetas - {e}")
         recetas_lista = []
     finally:
         cursor.close()
         conn.close()
+
+    current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' (ID: {user_id}) consulto catalogo de recetas")
 
     # 💡 LÓGICA DEL TUTORIAL
     mostrar_tour = debe_mostrar_tutorial(user_id, 'recetas')
@@ -315,6 +355,9 @@ def recetas():
 @inventory_bp.route('/guardar_receta', methods=['POST'])
 @login_required
 def guardar_receta():
+    user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     data = request.get_json(silent=True)
     nombre_receta = data.get('nombre', '').strip() if data else ''
     if not data or not nombre_receta:
@@ -323,7 +366,7 @@ def guardar_receta():
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s", (nombre_receta, session['user_id']))
+        cursor.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s", (nombre_receta, user_id))
         duplicado = cursor.fetchone()
         if duplicado:
             return jsonify({'error': f'Ya existe una receta llamada "{nombre_receta}".'}), 400
@@ -332,7 +375,7 @@ def guardar_receta():
         
         # POSTGRESQL: RETURNING id en lugar de lastrowid
         cursor.execute("INSERT INTO productos (user_id, nombre, items) VALUES (%s, %s, %s) RETURNING id", 
-                       (session['user_id'], nombre_receta, items_json))
+                       (user_id, nombre_receta, items_json))
         pid = cursor.fetchone()['id']
 
         for m in data.get('materiales', []):
@@ -343,11 +386,11 @@ def guardar_receta():
                            (pid, e['id']))
 
         conn.commit()
-        current_app.logger.info(f"RECIPE_CREATED: Usuario {session.get('user_id')} creó la receta '{nombre_receta}' (ID: {pid})")
+        current_app.logger.info(f"RECIPE_CREATED: Usuario '{u_name}' (ID: {user_id}) creo la receta '{nombre_receta}' (ID: {pid})")
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"RECIPE_SAVE_ERROR: Usuario {session.get('user_id')} falló al guardar receta - {e}") 
+        current_app.logger.error(f"RECIPE_SAVE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al guardar receta nueva - {e}") 
         return jsonify({'error': str(e)}), 500
     finally:
         cursor.close()
@@ -356,16 +399,20 @@ def guardar_receta():
 @inventory_bp.route('/recetas/eliminar/<int:id>')
 @login_required
 def eliminar_receta(id):
+    user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     conn = get_db()
     cursor = conn.cursor()
     try:
         cursor.execute("DELETE FROM producto_detalles WHERE producto_id=%s", (id,))
         cursor.execute("DELETE FROM producto_maquinaria WHERE producto_id=%s", (id,))
-        cursor.execute("DELETE FROM productos WHERE id=%s AND user_id=%s", (id, session['user_id']))
+        cursor.execute("DELETE FROM productos WHERE id=%s AND user_id=%s", (id, user_id))
         conn.commit()
+        current_app.logger.info(f"RECIPE_DELETED: Usuario '{u_name}' (ID: {user_id}) elimino la receta #{id}")
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"RECIPE_DELETE_ERROR: Fallo al eliminar receta para usuario {session.get('user_id')} - {e}")
+        current_app.logger.error(f"RECIPE_DELETE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al eliminar receta #{id} - {e}")
     finally:
         cursor.close()
         conn.close()
@@ -377,6 +424,9 @@ def eliminar_receta(id):
 @inventory_bp.route('/api/registrar_compra', methods=['POST'])
 @login_required
 def registrar_compra():
+    user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     data = request.get_json()
     material_id = data.get('id')
     
@@ -384,15 +434,15 @@ def registrar_compra():
         cantidad_compra = float(data.get('cantidad', 0))
         nuevo_precio = float(data.get('nuevo_precio', 0))
     except (ValueError, TypeError):
-        return jsonify({'success': False, 'error': 'Cantidad o precio inválidos'}), 400
+        return jsonify({'success': False, 'error': 'Cantidad o precio invalidos'}), 400
     
     if not material_id or cantidad_compra <= 0 or nuevo_precio < 0:
-        return jsonify({'success': False, 'error': 'Datos inválidos o negativos'}), 400
+        return jsonify({'success': False, 'error': 'Datos invalidos o negativos'}), 400
 
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT * FROM materiales WHERE id=%s AND user_id=%s", (material_id, session['user_id']))
+        cursor.execute("SELECT * FROM materiales WHERE id=%s AND user_id=%s", (material_id, user_id))
         mat = cursor.fetchone()
         if not mat:
             return jsonify({'success': False, 'error': 'Material no encontrado'}), 404
@@ -437,23 +487,23 @@ def registrar_compra():
                     %s
                 )
             """, (
-                session['user_id'],
+                user_id,
                 material_id,
                 cantidad_a_sumar,
                 material_id,
                 ahora_sql()
             ))
         except Exception as aud_error:
-            current_app.logger.warning(f"INVENTORY_AUDIT_WARNING: No se pudo registrar historial para material {material_id} - {aud_error}")
+            current_app.logger.warning(f"INVENTORY_AUDIT_WARNING: Usuario '{u_name}' (ID: {user_id}) sin historial para mat #{material_id} - {aud_error}")
             pass 
 
         conn.commit()
-        current_app.logger.info(f"STOCK_ADDED: Usuario {session.get('user_id')} ingresó {cantidad_a_sumar} unidades al material ID {material_id}")
+        current_app.logger.info(f"STOCK_ADDED: Usuario '{u_name}' (ID: {user_id}) ingreso {cantidad_a_sumar} unidades al material #{material_id}")
         return jsonify({'success': True})
 
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"STOCK_ADD_ERROR: Fallo al agregar stock para usuario {session.get('user_id')} - {e}")
+        current_app.logger.error(f"STOCK_ADD_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al agregar stock - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         cursor.close()
@@ -465,22 +515,25 @@ def registrar_compra():
 @inventory_bp.route('/api/registrar_merma', methods=['POST'])
 @login_required
 def registrar_merma():
+    user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     data = request.get_json()
     material_id = data.get('id')
     
     try:
         cantidad_merma = float(data.get('cantidad', 0))
     except (ValueError, TypeError):
-        return jsonify({'success': False, 'error': 'Cantidad inválida'}), 400
+        return jsonify({'success': False, 'error': 'Cantidad invalida'}), 400
     
     if not material_id or cantidad_merma <= 0:
-        return jsonify({'success': False, 'error': 'Datos inválidos o cantidad negativa'}), 400
+        return jsonify({'success': False, 'error': 'Datos invalidos o cantidad negativa'}), 400
 
     conn = get_db()
     cursor = conn.cursor()
     try:
         cursor.execute("SELECT stock_actual FROM materiales WHERE id=%s AND user_id=%s", 
-                       (material_id, session['user_id']))
+                       (material_id, user_id))
         mat = cursor.fetchone()
         
         if not mat:
@@ -501,22 +554,24 @@ def registrar_merma():
                     %s
                 )
             """, (
-                session['user_id'],
+                user_id,
                 material_id,
                 cantidad_merma,
                 material_id,
                 ahora_sql()
             ))
         except Exception as aud_error:
-            current_app.logger.warning(f"MERMA_AUDIT_WARNING: {aud_error}")
+            current_app.logger.warning(f"MERMA_AUDIT_WARNING: Usuario '{u_name}' (ID: {user_id}) sin historial para mat #{material_id} - {aud_error}")
             pass 
 
         conn.commit()
+        
+        current_app.logger.info(f"STOCK_REMOVED: Usuario '{u_name}' (ID: {user_id}) registro merma de {cantidad_merma} unidades en material #{material_id}")
         return jsonify({'success': True, 'nuevo_stock': mat['stock_actual'] - cantidad_merma})
 
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"MERMA_SAVE_ERROR: Fallo al guardar merma para usuario {session.get('user_id')} - {e}")
+        current_app.logger.error(f"MERMA_SAVE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al guardar merma - {e}")
         return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         cursor.close()
@@ -528,6 +583,9 @@ def registrar_merma():
 @inventory_bp.route('/api/inventario/historial', methods=['GET'])
 @login_required
 def obtener_historial():
+    user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    
     offset = request.args.get('offset', 0, type=int)
     limit = request.args.get('limit', 20, type=int)
     
@@ -542,12 +600,14 @@ def obtener_historial():
             WHERE mi.user_id = %s
             ORDER BY mi.fecha DESC
             LIMIT %s OFFSET %s
-        """, (session['user_id'], limit, offset))
+        """, (user_id, limit, offset))
         rows = cursor.fetchall()
         
+        current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' (ID: {user_id}) consulto el historial de inventario (offset: {offset})")
         return jsonify([dict(row) for row in rows])
+        
     except Exception as e:
-        current_app.logger.error(f"HISTORIAL_LOAD_ERROR: Fallo al cargar historial para usuario {session.get('user_id')} - {e}")
+        current_app.logger.error(f"HISTORIAL_LOAD_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al cargar historial de inventario - {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         cursor.close()
