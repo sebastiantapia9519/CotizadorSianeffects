@@ -322,24 +322,24 @@ def health():
 # RUTAS DE ACCESO PRINCIPAL (EL PORTERO)
 # =========================
 
-@app.route('/')
-def index():
+#@app.route('/')
+#def index():
     """
     Si el usuario ya inició sesión, lo mandamos a su herramienta.
     Si es Admin, lo mandamos al Dashboard de administración.
     Si es un visitante nuevo, le vendemos con la Landing Page.
     """
-    if 'user_id' in session:        
+#    if 'user_id' in session:        
         # Si es usuario normal, mándalo directo a trabajar al cotizador
-        return redirect(url_for('main.cotizador'))
+#        return redirect(url_for('main.cotizador'))
     
-    # Si no hay sesión, es un cliente potencial: Landing Page
-    return render_template('landing_promos.html')
+  # Si no hay sesión, es un cliente potencial: Landing Page
+#    return render_template('landing_promos.html')
 
-@app.route('/promos/cotizador')
-def landing_cotizador():
-    """Mantenemos esta ruta por si quieres usarla en anuncios de Facebook/Instagram"""
-    return render_template('landing_promos.html')
+#@app.route('/promos/cotizador')
+#def landing_cotizador():
+#    """Mantenemos esta ruta por si quieres usarla en anuncios de Facebook/Instagram"""
+#    return render_template('landing_promos.html')
 
 @app.errorhandler(404)
 def page_not_found(e):

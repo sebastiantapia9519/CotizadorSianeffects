@@ -13,6 +13,26 @@ from utils.tutorial_utils import debe_mostrar_tutorial, obtener_version_tutorial
 
 main_bp = Blueprint('main', __name__)
 
+# --- RUTAS DE ACCESO PRINCIPAL (EL PORTERO) ---
+
+@main_bp.route('/')
+def index():
+    """
+    Ahora que esta dentro del blueprint 'main', 
+    esta función se identifica como 'main.index'
+    """
+    if 'user_id' in session:        
+        # Redirigimos al cotizador si ya hay sesión activa
+        return redirect(url_for('main.cotizador'))
+    
+    # Si no hay sesión, mostramos la Landing Page
+    return render_template('landing_promos.html')
+
+@main_bp.route('/promos/cotizador')
+def landing_cotizador():
+    """Mantenemos esta ruta para marketing/anuncios"""
+    return render_template('landing_promos.html')
+
 # --- INYECTOR DE NOTIFICACIONES (PARA TODAS LAS PÁGINAS) ---
 @main_bp.app_context_processor
 def inject_notifications():
