@@ -8,14 +8,25 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ======================================================
-# CONEXIÓN (100% PostgreSQL)
+# CONEXIÓN (PostgreSQL - 2 bases - DEV y PROD)
 # ======================================================
 def get_db_connection():
-    database_url = os.getenv("DATABASE_URL")
-    
+    env = os.getenv("FLASK_ENV", "development")
+
+    if env == "production":
+        database_url = os.getenv("DATABASE_URL_PROD")
+    else:
+        database_url = os.getenv("DATABASE_URL_DEV")
+
     if not database_url:
-        raise ValueError("Falta la variable DATABASE_URL en el entorno (.env o Railway).")
-    
+        raise ValueError("Falta la variable de base de datos según el entorno.")
+
+    if env == "development" and "nozomi" in database_url:
+        raise Exception("ERROR: Estás apuntando a PROD en desarrollo")
+
+    if env == "production" and "shinkansen" in database_url:
+        raise Exception("ERROR: Estás apuntando a DEV en producción")
+
     conn = psycopg2.connect(
         database_url,
         cursor_factory=psycopg2.extras.DictCursor
