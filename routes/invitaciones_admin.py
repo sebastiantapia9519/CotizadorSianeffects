@@ -491,7 +491,7 @@ def gestionar_invitaciones():
                 inv_dict['datos_cliente'] = {"novios": "Sin Nombre"}
             invitaciones.append(inv_dict)
             
-        hoy = hoy_local()
+        hoy = str(hoy_local())[:10]
         return render_template('invitaciones/gestionar.html', invitaciones=invitaciones, hoy=hoy)
     except Exception as e:
         flash(f"Error cargando el panel: {str(e)}", "danger")
