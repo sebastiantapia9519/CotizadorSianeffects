@@ -489,6 +489,13 @@ def gestionar_invitaciones():
                 inv_dict['datos_cliente'] = json.loads(inv['datos_cliente_json'])
             except:
                 inv_dict['datos_cliente'] = {"novios": "Sin Nombre"}
+            
+            # --- AQUÍ ESTÁ LA MAGIA (NUEVO) ---
+            # Convertimos la fecha de la base de datos a texto plano YYYY-MM-DD
+            if inv_dict.get('vigencia'):
+                inv_dict['vigencia'] = str(inv_dict['vigencia'])[:10]
+            # ---------------------------------
+                
             invitaciones.append(inv_dict)
             
         hoy = str(hoy_local())[:10]
