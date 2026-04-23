@@ -448,7 +448,7 @@
 
                             <div class="mb-4" id="wrapper-plantilla">
                                 <label class="form-label small fw-bold text-muted mb-1">Plantilla Rápida</label>
-                                <select name="template_id" class="form-select fw-medium border-primary bg-primary bg-opacity-10" onchange="aplicarPlantilla(this.value)">
+                                <select name="template_id" class="form-select fw-medium border-primary bg-primary bg-opacity-10" data-saved="{{ inv['template_id'] if inv else '' }}" onchange="aplicarPlantilla(this.value)">
                                     <option value="clasico" {{ 'selected' if inv and inv['template_id']=='clasico' else '' }}>✨ Clásico (Dorado)</option>
                                     <option value="rustico" {{ 'selected' if inv and inv['template_id']=='rustico' else '' }}>🌿 Rústico (Verde)</option>
                                     <option value="moderno" {{ 'selected' if inv and inv['template_id']=='moderno' else '' }}>🔳 Moderno (Minimal)</option>
@@ -529,14 +529,16 @@
                             <div class="border-top pt-4">
                                 <div class="mb-4">
                                     <label class="form-label small fw-bold text-muted mb-1">Día del Evento</label>
-                                    <input type="datetime-local" name="fecha_evento" class="form-control fw-bold shadow-none" value="{{ inv['fecha_evento'] if inv else '' }}" required>
+                                    <input type="datetime-local" name="fecha_evento" class="form-control fw-bold shadow-none" 
+                                           value="{{ (inv['fecha_evento']|string)[:16]|replace(' ', 'T') if inv and inv['fecha_evento'] else '' }}" required>
                                 </div>
 
                                 {% if session.get('user_type') != 'planner' %}
-                                <div class="mb-4">
-                                    <label class="form-label small fw-bold text-muted mb-1">Vigencia del Link (Admin)</label>
-                                    <input type="date" name="vigencia" class="form-control text-danger fw-bold shadow-none" value="{{ inv['vigencia'] if inv else '' }}" required>
-                                </div>
+                                    <div class="mb-4">
+                                        <label class="form-label small fw-bold text-muted mb-1">Vigencia del Link (Admin)</label>
+                                        <input type="date" name="vigencia" class="form-control text-danger fw-bold shadow-none" 
+                                               value="{{ (inv['vigencia']|string)[:10] if inv and inv['vigencia'] else '' }}" required>
+                                    </div>
                                 {% endif %}
 
                                 <div class="p-3 rounded-4 bg-light border" id="wrapper-complementos">
@@ -932,7 +934,7 @@
                                         </div>
                                         <div class="col-10 col-md-4">
                                             <input type="hidden" name="foto_historia_actual[]" value="">
-                                            <input type="file" name="foto_historia_nueva[]" class="form-control shadow-none" accept="image/*">
+                                            <input type="file" name="foto_historia_nueva[]" class="form-control shadow-none form-control-sm" accept="image/*">
                                         </div>
                                         <div class="col-2 col-md-1 text-end">
                                             <button type="button" class="btn btn-light border text-danger w-100 px-0" onclick="this.closest('.row').remove()"><i class="fas fa-trash"></i></button>
@@ -1476,6 +1478,9 @@
         const txtCuentaRegresiva = document.querySelector('h6.fw-bold.text-warning i.fa-clock')?.parentNode;
         const txtUbicacion = document.querySelector('h6.fw-bold.text-danger i.fa-map-marker-alt')?.parentNode;
         
+        // Recuperamos la plantilla que estaba guardada en la BD
+        const savedTemplate = selectPlantilla ? selectPlantilla.getAttribute('data-saved') : '';
+
         if (tipo === 'xv') {
             if(urlPrefix) urlPrefix.innerText = 'sianeffects.com/xv/';
             if(inputNombres) inputNombres.placeholder = "Nombre Quinceañera (Ej: Valentina)";
@@ -1519,7 +1524,7 @@
                     <option value="bautizo">🕊️ Bautizo / Comunión (Pastel)</option>
                     <option value="gala">🎓 Graduación / Gala (Elegante)</option>
                     <option value="cumple">🥳 Cumpleaños Casual (Cálido)</option>
-                    <option value="personalizado" selected>🎨 100% Personalizado</option>
+                    <option value="personalizado">🎨 100% Personalizado</option>
                 `;
             }
         } else { 
@@ -1543,6 +1548,11 @@
                     <option value="personalizado">🎨 Personalizado</option>
                 `;
             }
+        }
+        
+        // Magia: Forzamos al select a recordar su valor de la BD después de recargar sus opciones
+        if (selectPlantilla && savedTemplate) {
+            selectPlantilla.value = savedTemplate;
         }
     }
 
@@ -1663,14 +1673,53 @@
             if (slugInput && slugInput.value === "demo-temp") slugInput.value = "";
         }
 
+        // --- NUEVA VALIDACIÓN INTELIGENTE ---
         if (!form.checkValidity()) {
-            form.reportValidity();
+            // Buscamos todos los elementos que están fallando
+            let invalidElements = form.querySelectorAll(':invalid');
+            let camposFaltantes = [];
+
+            invalidElements.forEach(el => {
+                // Diccionario amigable para traducir los 'name' de los inputs a texto para el usuario
+                let nombresAmigables = {
+                    'slug': 'URL del Evento',
+                    'foto_portada': 'Foto de Portada',
+                    'nombres_novios': 'Nombres / Festejado',
+                    'fecha_evento': 'Día del Evento',
+                    'vigencia': 'Vigencia del Link (Admin)',
+                    'archivoCancion': 'Archivo de Audio (Música)',
+                    'nombreCancion': 'Nombre de la Canción'
+                };
+
+                let nombreCampo = nombresAmigables[el.name] || nombresAmigables[el.id] || el.name;
+                
+                // Evitamos duplicados
+                if (nombreCampo && !camposFaltantes.includes(nombreCampo)) {
+                    camposFaltantes.push(nombreCampo);
+                }
+            });
+
+            // Armamos una lista HTML para mostrar en la alerta
+            let listaHtml = camposFaltantes.map(campo => `<li style="margin-bottom: 5px;"><b>${campo}</b></li>`).join('');
+
+            Swal.fire({
+                icon: 'warning',
+                title: 'Faltan datos obligatorios',
+                html: `<p>Por favor, completa los siguientes campos antes de continuar:</p>
+                       <ul style="text-align: left; display: inline-block; color: #dc3545;">${listaHtml}</ul>`,
+                confirmButtonColor: '#343a40',
+                confirmButtonText: 'Entendido',
+                customClass: { popup: 'rounded-4' }
+            });
+
+            // Si era demo, limpiamos los campos temporales
             if (isDemo) {
                 if (slugInput && slugInput.value === "demo-temp") slugInput.value = "";
                 if (fechaInput && fechaInput.value === "2099-12-31T12:00") fechaInput.value = "";
             }
             return;
         }
+        // ------------------------------------
 
         if (isDemo) {
             document.getElementById('loadingOverlay').style.display = 'flex';
@@ -1761,7 +1810,7 @@
     });
 
     function actualizarPrevisualizacionFuente(selectElement) {
-        selectElement.classList.remove('fuente-clasico', 'fuente-romantico', 'fuente-moderno', 'fuente-minimal', 'fuente-botanico');
+        selectElement.classList.remove('fuente-clasico', 'fuente-romantico', 'fuente-moderno', 'fuente-minimal', 'fuente-botanico', 'fuente-infantil', 'fuente-divertido', 'fuente-casual');
         selectElement.classList.add('fuente-' + selectElement.value);
     }
 

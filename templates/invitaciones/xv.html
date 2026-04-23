@@ -6,887 +6,1163 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis XV Años - {{ datos['novios'] }}</title>
 
-
-    <link href="https://fonts.googleapis.com/css2?family=Great+Vibes&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css" />
     <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
-<style id="core-styles">
-    /* =========================================
-       1. FUENTES DINÁMICAS (Temas de XV Años)
+    <style id="core-styles">
+        /* =========================================
+       1. FUENTES DINÁMICAS Y CONFIGURACIÓN BASE
        ========================================= */
-       
-    {% if inv['template_id'] == 'rose_gold' %}
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Montserrat:wght@300;400&display=swap');
+
+            {
+            % if inv['estilo_fuente']=='clasico' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
         :root {
             --font-title: 'Playfair Display', serif;
-            --font-body: 'Montserrat', sans-serif;
-            --color-acento: #b76e79; /* Rose Gold */
-            --bg-color: #fdfaf9;
+            --font-body: 'Lato', sans-serif;
         }
-    {% elif inv['template_id'] == 'princesa' %}
-        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@600&family=Lato:wght@300;400&display=swap');
+
+            {
+            % elif inv['estilo_fuente']=='romantico' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Great+Vibes&family=Montserrat:wght@300;400;600&display=swap');
+
+        :root {
+            --font-title: 'Great Vibes', cursive;
+            --font-body: 'Montserrat', sans-serif;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='moderno' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Oswald:wght@300;500&family=Roboto:wght@300;400&display=swap');
+
+        :root {
+            --font-title: 'Oswald', sans-serif;
+            --font-body: 'Roboto', sans-serif;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='minimal' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600&family=Raleway:wght@300;400&display=swap');
+
         :root {
             --font-title: 'Cinzel', serif;
-            --font-body: 'Lato', sans-serif;
-            --color-acento: #D4AF37; /* Dorado */
-            --bg-color: #f0f4f8; /* Azul claro muy sutil */
+            --font-body: 'Raleway', sans-serif;
         }
-    {% elif inv['template_id'] == 'neon' %}
-        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Roboto:wght@300;400&display=swap');
+
+            {
+            % elif inv['estilo_fuente']=='botanico' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Cormorant:ital,wght@0,400;0,600;1,400&family=Proza+Libre:wght@400;500&display=swap');
+
         :root {
-            --font-title: 'Orbitron', sans-serif;
-            --font-body: 'Roboto', sans-serif;
-            --color-acento: #ff007f; /* Rosa Neon */
-            --bg-color: #121212; /* Oscuro */
+            --font-title: 'Cormorant', serif;
+            --font-body: 'Proza Libre', sans-serif;
         }
-    {% else %}
-        /* Personalizado o Default */
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,600;1,400&family=Lato:wght@300;400&display=swap');
+
+            {
+            % elif inv['estilo_fuente']=='infantil' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600&family=Lato:wght@300;400&display=swap');
+
+        :root {
+            --font-title: 'Fredoka', sans-serif;
+            --font-body: 'Lato', sans-serif;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='divertido' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Pacifico&family=Lato:wght@300;400&display=swap');
+
+        :root {
+            --font-title: 'Pacifico', cursive;
+            --font-body: 'Lato', sans-serif;
+        }
+
+            {
+            % elif inv['estilo_fuente']=='casual' %
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Caveat:wght@400;700&family=Lato:wght@300;400&display=swap');
+
+        :root {
+            --font-title: 'Caveat', cursive;
+            --font-body: 'Lato', sans-serif;
+        }
+
+            {
+            % else %
+        }
+
+        /* Fallback si no hay fuente guardada */
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@300;400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&display=swap');
+
         :root {
             --font-title: 'Playfair Display', serif;
             --font-body: 'Lato', sans-serif;
-            --color-acento: {{ inv['color_acentos']|default('#D4AF37') }};
-            --bg-color: {{ inv['color_fondo']|default('#fdfbf7') }};
         }
-    {% endif %}
 
-    :root {
-        /* Mapeamos color-oro a color-acento para mantener compatibilidad con tus componentes base */
-        --color-oro: var(--color-acento); 
-        --text-color: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else '#ffffff') | color_contraste }};
-        --card-bg: {{ (inv['color_fondo'] if inv['template_id']=='personalizado' else '#ffffff') | fondo_tarjeta }};
-    }
+            {
+            % endif %
+        }
 
-    html {
-        box-sizing: border-box;
-    }
+        /* 2. VARIABLES INTELIGENTES DE COLOR */
+        :root {
+                {
+                % if inv['template_id']=='personalizado' %
+            }
 
-    *, *:before, *:after {
-        box-sizing: inherit;
-    }
+            --color-acento: {
+                    {
+                    inv['color_acentos']|default('#D4AF37')
+                }
+            }
 
-    body {
-        margin: 0; 
-        padding: 0;
-        width: 100%;
-        position: relative;
-        overflow-x: hidden; 
-        background-color: var(--bg-color);
-        color: var(--text-color);
-        font-family: var(--font-body);
-    }
-    
-    .hero {
-        min-height: 100svh; 
-    }
+            ;
 
-    .fondo-fijo-app {
-        position: fixed;
-        inset: 0; 
-        z-index: -1;
-        background-color: var(--bg-color);
-        {% if inv['url_fondo'] %}
-        background-image: url('{{ inv['url_fondo'] }}');
-        background-size: cover;
-        background-position: center;
-        {% endif %}
-    }
+            --bg-color: {
+                    {
+                    inv['color_fondo']|default('#fdfbf7')
+                }
+            }
 
-    h1, h2, h3, .font-title {
-        font-family: var(--font-title);
-        font-weight: normal;
-        margin: 0;
-    }
-</style>
+            ;
 
-<style id="welcome-styles">
-    /* =========================================
+                {
+                % else %
+            }
+
+            --color-acento: {
+                    {
+                    inv['template_color_acento']|default(inv['color_acentos'])|default('#D4AF37')
+                }
+            }
+
+            ;
+
+            --bg-color: {
+                    {
+                    inv['template_color_fondo']|default(inv['color_fondo'])|default('#fdfbf7')
+                }
+            }
+
+            ;
+
+                {
+                % endif %
+            }
+
+            --color-oro: var(--color-acento);
+
+            --text-color: {
+                    {
+                    (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']|default(inv['color_fondo'])) | color_contraste
+                }
+            }
+
+            ;
+
+            --card-bg: {
+                    {
+                    (inv['color_fondo'] if inv['template_id']=='personalizado' else inv['template_color_fondo']|default(inv['color_fondo'])) | fondo_tarjeta
+                }
+            }
+
+            ;
+        }
+
+        html {
+            box-sizing: border-box;
+            overflow-x: hidden;
+        }
+
+        *,
+        *:before,
+        *:after {
+            box-sizing: inherit;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            position: relative;
+            overflow-x: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: var(--font-body);
+        }
+
+        .hero {
+            min-height: 100svh;
+        }
+
+        .fondo-fijo-app {
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            background-color: var(--bg-color);
+
+                {
+                % if inv['url_fondo'] %
+            }
+
+            background-image: url('{{ inv[' url_fondo'] }}');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+
+                {
+                % endif %
+            }
+        }
+
+        h1,
+        h2,
+        h3,
+        .font-title {
+            font-family: var(--font-title);
+            font-weight: normal;
+            margin: 0;
+        }
+    </style>
+
+    <style id="welcome-styles">
+        /* =========================================
        2. PANTALLA DE BIENVENIDA Y ACCESOS
        ========================================= */
-    
-    #welcome-screen {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-color: var(--bg-color);
-        z-index: 9999;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        transition: opacity 0.8s ease, visibility 0.8s ease;
-    }
-
-    .btn-entrar,
-    .btn-boda {
-        padding: 12px 30px;
-        font-size: 0.9rem;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        background: transparent;
-        color: var(--text-color);
-        border: 1px solid var(--color-acento);
-        cursor: pointer;
-        transition: all 0.3s;
-        text-decoration: none;
-        display: inline-block;
-        border-radius: 30px;
-    }
-
-    .btn-entrar:hover,
-    .btn-boda:hover {
-        background: var(--color-acento);
-        color: var(--bg-color);
-        border-color: var(--color-acento);
-    }
-
-    .music-btn {
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        width: 50px;
-        height: 50px;
-        background: var(--color-acento);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: var(--bg-color);
-        z-index: 90;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
-        animation: pulse 2s infinite;
-    }
-    
-    @keyframes pulse {
-        0% { transform: scale(1); }
-        50% { transform: scale(1.1); }
-        100% { transform: scale(1); }
-    }
-</style>
-
-<style id="envelope-styles">
-    /* =========================================
-       3. SISTEMA DE SOBRES E INVITACIÓN (Híbrido Desktop/Móvil)
-       ========================================= */
-
-    .pantalla-sobre {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: #eeeae4; 
-        overflow: hidden;
-        z-index: 1000;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        perspective: 1500px; 
-        transition: opacity 1s ease, visibility 1s ease;
-    }
-
-    .triangulo-papel {
-        fill: #eeeae4; 
-    }
-
-    /* --- SOLAPA DESKTOP (Horizontal) --- */
-    .svg-desktop {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%; 
-        height: 50vh; 
-        z-index: 5;
-        filter: drop-shadow(0px 10px 15px rgba(0,0,0,0.15));
-        transform-origin: 0 0; 
-        transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
-        pointer-events: none;
-        backface-visibility: hidden;
-        display: block; 
-    }
-
-    /* --- SOLAPAS MÓVIL (Verticales) --- */
-    .svg-mobile {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%; 
-        height: 100vh; 
-        z-index: 5;
-        filter: drop-shadow(0px 0px 20px rgba(0,0,0,0.18));
-        transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
-        pointer-events: none;
-        backface-visibility: hidden;
-        display: none; 
-    }
-
-    .svg-mobile-izq { transform-origin: left center; }
-    .svg-mobile-der { transform-origin: right center; }
-
-    /* --- MEDIA QUERY: CAMBIO A MODO CELULAR --- */
-    @media (max-width: 768px), (orientation: portrait) {
-        .svg-desktop { display: none; }
-        .svg-mobile { display: block; }
-    }
-
-    /* --- ANIMACIONES DE APERTURA --- */
-    .sobre-abierto .svg-desktop { transform: rotateX(180deg); }
-    .sobre-abierto .svg-mobile-izq { transform: rotateY(-180deg); }
-    .sobre-abierto .svg-mobile-der { transform: rotateY(180deg); }
-
-    .sobre-abierto .sello-wrapper {
-        opacity: 0;
-        transform: translate(-50%, -50%) scale(0.5); 
-        pointer-events: none;
-    }
-    
-    .sobre-abierto .tooltip-sian {
-        opacity: 0;
-        transition: opacity 0.2s;
-    }
-
-    /* --- EL SELLO "MASTER" --- */
-    .sello-wrapper {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        width: 280px; 
-        height: 280px;
-        z-index: 10; 
-        cursor: pointer;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        animation: respiracion-suave 4s infinite ease-in-out;
-        transition: opacity 0.5s ease, transform 0.5s ease;
-    }
-
-    .sello-wrapper:hover {
-        transform: translate(-50%, -50%) scale(1.05);
-    }
-
-    .sello-img-real {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
-        filter: drop-shadow(0 15px 25px rgba(0,0,0,0.35));
-        position: relative;
-        z-index: 1;
-    }
-
-    /* --- LETRAS DEL SELLO --- */
-    .texto-sello {
-        position: absolute;
-        z-index: 101;
-        font-family: var(--font-title);
-        font-size: 2.2rem; 
-        font-weight: bold;
-        letter-spacing: 1px;
-        color: #6d4c1e; 
-        text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5), -1px -1px 1px rgba(0, 0, 0, 0.2);
-        padding-right: 12px;
-        max-width: 160px; 
-        overflow: visible; 
-        white-space: nowrap; 
-        text-align: center;
-        pointer-events: none;
-    }
-
-    @keyframes respiracion-suave {
-        0%   { transform: translate(-50%, -50%) scale(1); }
-        50%  { transform: translate(-50%, -50%) scale(1.03); } 
-        100% { transform: translate(-50%, -50%) scale(1); }
-    }
-    
-    .tooltip-sian {
-        position: absolute;
-        bottom: 100%;
-        left: 50%;
-        margin-bottom: 15px; 
-        background: #b5986d;
-        color: #ffffff;
-        padding: 6px 18px;
-        border-radius: 20px;
-        font-family: var(--font-body);
-        font-size: 0.8rem;
-        font-weight: 500;
-        letter-spacing: 0.5px;
-        white-space: nowrap;
-        pointer-events: none;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-        animation: float-tooltip 2.8s ease-in-out infinite;
-        z-index: 200; 
-    }
-
-    .tooltip-sian::after {
-        content: '';
-        position: absolute;
-        bottom: -4px;
-        left: 50%;
-        transform: translateX(-50%) rotate(45deg);
-        width: 10px;
-        height: 10px;
-        background: #b5986d;
-    }
-    
-    @keyframes float-tooltip {
-        0%, 100% { transform: translateX(-50%) translateY(0); }
-        50% { transform: translateX(-50%) translateY(-5px); }
-    }
-    
-    .iniciales-gigantes {
-        font-family: var(--font-title);
-        font-size: 6rem;
-        color: var(--color-acento);
-        margin: 0;
-        text-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-</style>
-
-<style id="ui-components">
-    /* =========================================
-       4. COMPONENTES UI, ICONOS Y ANIMACIONES
-       ========================================= */
-
-    section {
-        padding: 80px 20px;
-        text-align: center;
-        max-width: 800px;
-        margin: 0 auto;
-    }
-
-    .countdown-box {
-        display: flex;
-        justify-content: center;
-        gap: 15px;
-        margin-top: 20px;
-        flex-wrap: wrap;
-    }
-
-    .time-unit {
-        background: var(--card-bg);
-        backdrop-filter: blur(4px);
-        border-radius: 16px;
-        padding: 16px 18px;
-        min-width: 82px;
-        box-shadow: 0 6px 16px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.45);
-    }
-
-    .time-number {
-        font-size: 2rem;
-        font-family: var(--font-title);
-        color: var(--color-acento);
-    }
-
-    .time-label {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-top: 5px;
-        opacity: 0.7;
-    }
-
-    .premium-container {
-        display: flex;
-        flex-direction: column;
-        gap: 15px;
-        max-width: 500px;
-        margin: 0 auto;
-    }
-
-    .premium-card {
-        background: var(--card-bg);
-        border-radius: 18px;
-        padding: 24px;
-        display: flex;
-        align-items: center;
-        gap: 20px;
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
-        transition: transform 0.25s ease, box-shadow 0.25s ease;
-    }
-
-    .premium-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 14px 35px rgba(0, 0, 0, 0.12), inset 0 0 0 1px var(--color-acento);
-    }
-
-    .premium-icon {
-        width: 50px;
-        height: 50px;
-        background: rgba(150, 150, 150, 0.1);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        color: var(--color-acento);
-    }
-
-    .premium-info {
-        flex: 1;
-        text-align: left;
-    }
-
-    .premium-title {
-        font-family: var(--font-title);
-        font-weight: bold;
-        margin-bottom: 5px;
-        font-size: 1.2rem;
-    }
-
-    .btn-card {
-        background: rgba(150, 150, 150, 0.1);
-        color: var(--text-color);
-        border: none;
-        padding: 6px 15px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        text-decoration: none;
-        display: inline-block;
-        transition: background 0.3s;
-        margin-top: 5px;
-    }
-
-    .btn-card:hover {
-        background: var(--color-acento);
-        color: var(--bg-color);
-    }
-
-    
-    /* --- NUEVO: MASONRY GALLERY --- */
-    .masonry-grid {
-        column-count: 2;
-        column-gap: 15px;
-        margin-top: 20px;
-    }
-    
-    @media (min-width: 768px) {
-        .masonry-grid { column-count: 3; }
-    }
-    
-    .masonry-item {
-        break-inside: avoid;
-        margin-bottom: 15px;
-        border-radius: 12px;
-        overflow: hidden;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    }
-    
-    .masonry-item img {
-        width: 100%;
-        display: block;
-        transition: transform 0.3s ease;
-    }
-    
-    .masonry-item:hover img {
-        transform: scale(1.05);
-    }
-
-    .timeline {
-        position: relative;
-        max-width: 400px;
-        margin: 0 auto;
-        padding: 20px 0;
-    }
-
-    .timeline::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 90px;
-        height: 100%;
-        width: 1px;
-        background: rgba(150, 150, 150, 0.3);
-    }
-
-    .timeline-item {
-        display: flex;
-        align-items: center;
-        margin-bottom: 30px;
-        position: relative;
-    }
-
-    .timeline-time {
-        width: 70px;
-        text-align: right;
-        font-style: italic;
-        font-size: 0.9rem;
-        color: var(--color-acento);
-    }
-
-    .timeline-dot {
-        width: 10px;
-        height: 10px;
-        background: var(--color-acento);
-        border-radius: 50%;
-        margin: 0 15px;
-        z-index: 1;
-        box-shadow: 0 0 10px var(--color-acento);
-    }
-
-    .timeline-content {
-        flex: 1;
-        text-align: left;
-        font-weight: 500;
-        display: flex;
-        align-items: center;
-        gap: 10px;
-    }
-
-    .ticket-container {
-        background: var(--card-bg);
-        border-radius: 18px;
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-        box-shadow: 0 10px 30px rgba(0,0,0,0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
-    }
-
-    .ticket-header {
-        font-family: var(--font-title);
-        font-size: 1.8rem;
-        margin-bottom: 30px;
-        border-bottom: 1px solid var(--color-acento);
-        display: inline-block;
-        padding-bottom: 5px;
-    }
-
-    .ticket-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 20px;
-        text-align: left;
-        margin-top: 20px;
-    }
-
-    @media (max-width: 480px) {
-        .ticket-grid { grid-template-columns: 1fr; text-align: center; }
-        .qr-side { order: -1; } 
-    }
-
-    .ticket-label {
-        font-size: 0.65rem;
-        text-transform: uppercase;
-        letter-spacing: 2px;
-        color: var(--color-acento);
-        margin-bottom: 4px;
-        display: block;
-        font-weight: bold;
-    }
-
-    .ticket-value {
-        font-family: var(--font-body);
-        font-size: 1.1rem;
-        margin-bottom: 15px;
-        display: block;
-    }
-
-    .qr-container-modern {
-        background: white;
-        padding: 10px;
-        display: inline-block;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    }
-
-    .status-badge {
-        font-size: 0.7rem;
-        padding: 4px 12px;
-        border-radius: 20px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .anim-iglesia { display: inline-block; transform-origin: top center; transition: transform 0.6s ease, filter 0.6s ease; }
-    [data-aos].aos-animate .anim-iglesia { animation: campanaEntrada 1.6s cubic-bezier(.4,0,.2,1) both; }
-    @keyframes campanaEntrada { 0% { transform: rotate(0deg); filter: drop-shadow(0 0 0 transparent); } 60% { transform: rotate(-4deg); filter: drop-shadow(0 0 10px var(--color-acento)); } 100% { transform: rotate(0deg); filter: drop-shadow(0 0 0 transparent); } }
-    .premium-card:hover .anim-iglesia { animation: campanaHover 0.8s ease-in-out; }
-    @keyframes campanaHover { 0% { transform: rotate(0); } 25% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } 75% { transform: rotate(-3deg); } 100% { transform: rotate(0); } }
-
-    .anim-copas { display: inline-block; transform-origin: center bottom; }
-    [data-aos].aos-animate .anim-copas { animation: brindisEntrada 1.4s cubic-bezier(.4,0,.2,1) both; }
-    @keyframes brindisEntrada { 0% { transform: scale(0.9) translateY(6px); filter: drop-shadow(0 0 0 transparent); opacity: 0; } 60% { transform: scale(1.05) translateY(0); filter: drop-shadow(0 0 12px var(--color-acento)); opacity: 1; } 100% { transform: scale(1); filter: drop-shadow(0 0 0 transparent); } }
-    .premium-card:hover .anim-copas { animation: brindisHover 0.7s ease-in-out; }
-    @keyframes brindisHover { 0% { transform: rotate(0); } 30% { transform: rotate(-8deg); } 60% { transform: rotate(8deg); } 100% { transform: rotate(0); } }
-
-    .swiper-deseos {
-        width: 100%;
-        max-width: 600px;
-        height: auto;
-        min-height: 250px;
-        margin: 30px auto;
-        border-radius: 18px;
-        overflow: hidden;
-        background: transparent;
-        padding-bottom: 40px; 
-    }
-
-    .swiper-deseos .swiper-slide {
-        background: var(--card-bg);
-        border-radius: 18px;
-        padding: 40px 30px;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
-        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08), inset 0 0 0 1px rgba(255,255,255,0.35);
-        backdrop-filter: blur(6px);
-        -webkit-backdrop-filter: blur(6px);
-    }
-
-    .deseo-mensaje {
-        font-size: 1.15rem;
-        font-style: italic;
-        opacity: 0.9;
-        margin-bottom: 20px;
-        line-height: 1.6;
-        color: var(--text-color);
-    }
-
-    .deseo-nombre {
-        font-family: var(--font-title);
-        color: var(--color-acento);
-        font-size: 1.4rem;
-        font-weight: bold;
-    }
-
-    .deseo-fecha {
-        font-size: 0.75rem;
-        opacity: 0.5;
-        margin-top: 8px;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .autoplay-progress {
-        position: absolute;
-        right: 16px;
-        bottom: 16px;
-        z-index: 10;
-        width: 48px;
-        height: 48px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        color: var(--color-acento);
-        font-family: var(--font-body);
-        font-size: 0.8rem;
-    }
-
-    .autoplay-progress svg {
-        --progress: 0;
-        position: absolute;
-        left: 0;
-        top: 0px;
-        z-index: 10;
-        width: 100%;
-        height: 100%;
-        stroke-width: 4px;
-        stroke: var(--color-acento);
-        fill: none;
-        stroke-dashoffset: calc(125.6px * (1 - var(--progress)));
-        stroke-dasharray: 125.6;
-        transform: rotate(-90deg);
-    }
-
-    /* --- MI HISTORIA - ESTILO EDITORIAL (NUEVO) --- */
-    .historia-container {
-        background-color: var(--card-bg);
-        background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100' height='100' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
-        border-radius: 12px;
-        box-shadow: 0 15px 35px rgba(0,0,0,0.08);
-        padding: 50px 20px 40px 20px;
-        max-width: 850px;
-        margin: 0 auto;
-    }
-
-    .historia-layout {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-
-    .historia-header {
-        flex: 1;
-        text-align: center;
-    }
-
-    .historia-header-title {
-        font-family: var(--font-title);
-        font-size: 3.5rem;
-        color: var(--color-acento);
-        letter-spacing: 4px;
-        margin: 0;
-        line-height: 1;
-        text-transform: uppercase;
-    }
-
-    .historia-header-subtitle {
-        font-family: 'Great Vibes', cursive;
-        font-size: 3.5rem;
-        color: var(--color-acento);
-        margin: -15px 0 0 0;
-        font-weight: normal;
-    }
-
-    .swiper-historia {
-        flex: 1.5;
-        width: 100%;
-        padding-bottom: 40px;
-        position: relative;
-    }
-
-    .card-historia {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        text-align: center;
-        background: transparent;
-    }
-
-    .card-historia img {
-        width: 100%;
-        max-width: 320px;
-        height: auto;
-        aspect-ratio: 4/3;
-        object-fit: cover;
-        border-radius: 12px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15); 
-        margin-bottom: 20px;
-    }
-
-    .historia-content {
-        max-width: 320px;
-        margin: 0 auto;
-    }
-
-    .historia-year {
-        font-family: var(--font-title);
-        font-size: 1.3rem;
-        color: var(--text-color);
-        letter-spacing: 2px;
-        margin-bottom: 5px;
-    }
-
-    .historia-title {
-        font-family: var(--font-body);
-        font-size: 1rem;
-        color: var(--color-acento);
-        text-transform: uppercase;
-        letter-spacing: 2px;
-    }
-
-    .swiper-button-prev, .swiper-button-next {
-        color: var(--color-acento) !important;
-        transform: scale(0.6); 
-    }
-
-    .swiper-pagination-bullet {
-        background: var(--color-acento) !important;
-    }
-
-    @media (max-width: 768px) {
-        .historia-layout {
+        #welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            z-index: 9999;
+            display: flex;
             flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.8s ease, visibility 0.8s ease;
         }
+
+        .btn-entrar,
+        .btn-boda {
+            padding: 12px 30px;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            background: rgba(255, 255, 255, 0.2);
+            color: var(--text-color);
+            border: 1px solid var(--color-acento);
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            font-weight: bold;
+        }
+
+        .btn-entrar:hover,
+        .btn-boda:hover {
+            background: var(--color-acento);
+            color: #fff;
+            border-color: var(--color-acento);
+        }
+
+        .music-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: var(--color-acento);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            z-index: 90;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.1);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+    </style>
+
+    <style id="envelope-styles">
+        /* =========================================
+       3. SISTEMA DE SOBRES E INVITACIÓN
+       ========================================= */
+        .pantalla-sobre {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: #eeeae4;
+            overflow: hidden;
+            z-index: 1000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            perspective: 1500px;
+            transition: opacity 1s ease, visibility 1s ease;
+        }
+
+        .triangulo-papel {
+            fill: #eeeae4;
+        }
+
+        .svg-desktop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 50vh;
+            z-index: 5;
+            filter: drop-shadow(0px 10px 15px rgba(0, 0, 0, 0.15));
+            transform-origin: 0 0;
+            transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            backface-visibility: hidden;
+            display: block;
+        }
+
+        .svg-mobile {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: 5;
+            filter: drop-shadow(0px 0px 20px rgba(0, 0, 0, 0.18));
+            transition: transform 1.6s cubic-bezier(0.4, 0, 0.2, 1);
+            pointer-events: none;
+            backface-visibility: hidden;
+            display: none;
+        }
+
+        .svg-mobile-izq {
+            transform-origin: left center;
+        }
+
+        .svg-mobile-der {
+            transform-origin: right center;
+        }
+
+        @media (max-width: 768px),
+        (orientation: portrait) {
+            .svg-desktop {
+                display: none;
+            }
+
+            .svg-mobile {
+                display: block;
+            }
+        }
+
+        .sobre-abierto .svg-desktop {
+            transform: rotateX(180deg);
+        }
+
+        .sobre-abierto .svg-mobile-izq {
+            transform: rotateY(-180deg);
+        }
+
+        .sobre-abierto .svg-mobile-der {
+            transform: rotateY(180deg);
+        }
+
+        .sobre-abierto .sello-wrapper {
+            opacity: 0;
+            transform: translate(-50%, -50%) scale(0.5);
+            pointer-events: none;
+        }
+
+        .sobre-abierto .tooltip-sian {
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .sello-wrapper {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 280px;
+            height: 280px;
+            z-index: 10;
+            cursor: pointer;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            animation: respiracion-suave 4s infinite ease-in-out;
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .sello-wrapper:hover {
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+
+        .sello-img-real {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 15px 25px rgba(0, 0, 0, 0.35));
+            position: relative;
+            z-index: 1;
+        }
+
+        .texto-sello {
+            position: absolute;
+            z-index: 101;
+            font-family: var(--font-title);
+            font-size: 2.2rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            color: #6d4c1e;
+            text-shadow: 1px 1px 0px rgba(255, 255, 255, 0.5), -1px -1px 1px rgba(0, 0, 0, 0.2);
+            padding-right: 12px;
+            max-width: 160px;
+            overflow: visible;
+            white-space: nowrap;
+            text-align: center;
+            pointer-events: none;
+        }
+
+        @keyframes respiracion-suave {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+
+            50% {
+                transform: translate(-50%, -50%) scale(1.03);
+            }
+
+            100% {
+                transform: translate(-50%, -50%) scale(1);
+            }
+        }
+
+        .tooltip-sian {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            margin-bottom: 15px;
+            background: #b5986d;
+            color: #ffffff;
+            padding: 6px 18px;
+            border-radius: 20px;
+            font-family: var(--font-body);
+            font-size: 0.8rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            white-space: nowrap;
+            pointer-events: none;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            animation: float-tooltip 2.8s ease-in-out infinite;
+            z-index: 200;
+        }
+
+        .tooltip-sian::after {
+            content: '';
+            position: absolute;
+            bottom: -4px;
+            left: 50%;
+            transform: translateX(-50%) rotate(45deg);
+            width: 10px;
+            height: 10px;
+            background: #b5986d;
+        }
+
+        @keyframes float-tooltip {
+
+            0%,
+            100% {
+                transform: translateX(-50%) translateY(0);
+            }
+
+            50% {
+                transform: translateX(-50%) translateY(-5px);
+            }
+        }
+
+        .iniciales-gigantes {
+            font-family: var(--font-title);
+            font-size: 6rem;
+            color: var(--color-acento);
+            margin: 0;
+            text-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+            background: var(--card-bg);
+            padding: 20px 40px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+        }
+    </style>
+
+    <style id="ui-components">
+        /* =========================================
+       4. EFECTO LIQUID GLASS (APPLE STYLE) Y UI
+       ========================================= */
+        section {
+            padding: 60px 15px;
+            text-align: center;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        .glass-panel {
+            background: var(--card-bg);
+            backdrop-filter: blur(25px) saturate(180%);
+            -webkit-backdrop-filter: blur(25px) saturate(180%);
+            border-radius: 28px;
+            padding: 40px 30px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            margin: 0 auto;
+            width: 100%;
+        }
+
+        @media (max-width: 768px) {
+            .glass-panel {
+                padding: 30px 15px;
+                border-radius: 20px;
+            }
+
+            section {
+                padding: 40px 15px;
+            }
+        }
+
+        .countdown-box {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .time-unit {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 18px;
+            padding: 15px;
+            min-width: 75px;
+            box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .time-number {
+            font-size: 2.2rem;
+            font-family: var(--font-title);
+            color: var(--color-acento);
+            line-height: 1;
+        }
+
+        .time-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 8px;
+            font-weight: bold;
+        }
+
+        .premium-container {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        .premium-card {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            padding: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: transform 0.25s ease;
+        }
+
+        .premium-card:hover {
+            transform: translateY(-4px);
+            border-color: var(--color-acento);
+        }
+
+        .premium-icon {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.5);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            color: var(--color-acento);
+        }
+
+        .premium-info {
+            flex: 1;
+            text-align: left;
+        }
+
+        .premium-title {
+            font-family: var(--font-title);
+            font-weight: bold;
+            margin-bottom: 5px;
+            font-size: 1.3rem;
+        }
+
+        .btn-card {
+            background: var(--color-acento);
+            color: #fff;
+            border: none;
+            padding: 6px 15px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            text-decoration: none;
+            display: inline-block;
+            font-weight: bold;
+        }
+
+        /* --- GALERÍA SWIPER CARDS --- */
+        .swiper-galeria {
+            width: 280px;
+            height: 400px;
+            margin: 20px auto 30px auto;
+            padding: 20px 0;
+        }
+
+        .swiper-galeria .swiper-slide {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 20px;
+            background-color: #fff;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+
+        .swiper-galeria img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .timeline {
+            position: relative;
+            max-width: 400px;
+            margin: 0 auto;
+            padding: 20px 0;
+        }
+
+        .timeline::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 90px;
+            height: 100%;
+            width: 2px;
+            background: var(--color-acento);
+            opacity: 0.3;
+        }
+
+        .timeline-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .timeline-time {
+            width: 70px;
+            text-align: right;
+            font-style: italic;
+            font-size: 0.95rem;
+            color: var(--color-acento);
+            font-weight: bold;
+        }
+
+        .timeline-dot {
+            width: 14px;
+            height: 14px;
+            background: var(--color-acento);
+            border-radius: 50%;
+            margin: 0 13px;
+            z-index: 1;
+            box-shadow: 0 0 10px var(--color-acento);
+        }
+
+        .timeline-content {
+            flex: 1;
+            text-align: left;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 1.05rem;
+        }
+
+        .ticket-container {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 24px;
+            padding: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+        }
+
+        .ticket-header {
+            font-family: var(--font-title);
+            font-size: 2rem;
+            margin-bottom: 20px;
+            border-bottom: 2px solid var(--color-acento);
+            display: inline-block;
+            padding-bottom: 5px;
+            color: var(--color-acento);
+        }
+
+        .ticket-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        @media (max-width: 480px) {
+            .ticket-grid {
+                grid-template-columns: 1fr;
+                text-align: center;
+            }
+
+            .qr-side {
+                order: -1;
+            }
+        }
+
+        .ticket-label {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--color-acento);
+            margin-bottom: 4px;
+            display: block;
+            font-weight: bold;
+        }
+
+        .ticket-value {
+            font-family: var(--font-body);
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .qr-container-modern {
+            background: white;
+            padding: 15px;
+            display: inline-block;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+        }
+
+        .status-badge {
+            font-size: 0.75rem;
+            padding: 6px 15px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: bold;
+        }
+
+        .anim-iglesia {
+            display: inline-block;
+            transform-origin: top center;
+        }
+
+        [data-aos].aos-animate .anim-iglesia {
+            animation: campanaEntrada 1.6s cubic-bezier(.4, 0, .2, 1) both;
+        }
+
+        @keyframes campanaEntrada {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            60% {
+                transform: rotate(-4deg);
+                filter: drop-shadow(0 0 10px var(--color-acento));
+            }
+
+            100% {
+                transform: rotate(0deg);
+            }
+        }
+
+        .anim-copas {
+            display: inline-block;
+            transform-origin: center bottom;
+        }
+
+        [data-aos].aos-animate .anim-copas {
+            animation: brindisEntrada 1.4s cubic-bezier(.4, 0, .2, 1) both;
+        }
+
+        @keyframes brindisEntrada {
+            0% {
+                transform: scale(0.9) translateY(6px);
+                opacity: 0;
+            }
+
+            60% {
+                transform: scale(1.05) translateY(0);
+                filter: drop-shadow(0 0 12px var(--color-acento));
+                opacity: 1;
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .swiper-deseos {
+            width: 100%;
+            max-width: 600px;
+            height: auto;
+            min-height: 250px;
+            margin: 20px auto;
+            border-radius: 20px;
+            padding-bottom: 40px;
+        }
+
+        .swiper-deseos .swiper-slide {
+            background: rgba(255, 255, 255, 0.25);
+            border-radius: 20px;
+            padding: 40px 20px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-sizing: border-box;
+        }
+
+        .deseo-mensaje {
+            font-size: 1.2rem;
+            font-style: italic;
+            font-weight: bold;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            color: var(--text-color);
+        }
+
+        .deseo-nombre {
+            font-family: var(--font-title);
+            color: var(--color-acento);
+            font-size: 1.6rem;
+            font-weight: bold;
+        }
+
+        .deseo-fecha {
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-top: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .autoplay-progress {
+            position: absolute;
+            right: 16px;
+            bottom: 16px;
+            z-index: 10;
+            width: 48px;
+            height: 48px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: var(--color-acento);
+            font-size: 0.8rem;
+        }
+
+        .autoplay-progress svg {
+            --progress: 0;
+            position: absolute;
+            left: 0;
+            top: 0px;
+            z-index: 10;
+            width: 100%;
+            height: 100%;
+            stroke-width: 4px;
+            stroke: var(--color-acento);
+            fill: none;
+            stroke-dashoffset: calc(125.6px * (1 - var(--progress)));
+            stroke-dasharray: 125.6;
+            transform: rotate(-90deg);
+        }
+
+        .historia-layout {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
         .historia-header {
-            margin-bottom: 10px;
+            flex: 1;
+            text-align: center;
         }
-        .swiper-button-prev, .swiper-button-next {
-            top: 35%; 
-        }
-    }
 
+        .historia-header-title {
+            font-family: var(--font-title);
+            font-size: 3.5rem;
+            color: var(--color-acento);
+            letter-spacing: 4px;
+            margin: 0;
+            line-height: 1;
+            text-transform: uppercase;
+        }
+
+        .historia-header-subtitle {
+            font-family: 'Great Vibes', cursive;
+            font-size: 3.5rem;
+            color: var(--color-acento);
+            margin: -15px 0 0 0;
+            font-weight: normal;
+        }
+
+        .swiper-historia {
+            flex: 1.5;
+            width: 100%;
+            padding-bottom: 40px;
+            position: relative;
+        }
+
+        .card-historia {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .card-historia img {
+            width: 100%;
+            max-width: 320px;
+            height: auto;
+            aspect-ratio: 4/3;
+            object-fit: cover;
+            border-radius: 16px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+            margin-bottom: 20px;
+            border: 4px solid #fff;
+        }
+
+        .historia-year {
+            font-family: var(--font-title);
+            font-size: 1.5rem;
+            color: var(--color-acento);
+            font-weight: bold;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+
+        .historia-title {
+            font-family: var(--font-body);
+            font-size: 1.1rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 768px) {
+            .historia-layout {
+                flex-direction: column;
+            }
+
+            .historia-header {
+                margin-bottom: 10px;
+            }
+        }
+        
+        .dropdown-item:active {
+            background-color: var(--bs-primary);
+        }
+
+        .btn-calendar-premium {
+            background: var(--card-bg);
+            color: var(--color-oro);
+            /* Usa el color de acento dinámico de tu invitación */
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 12px 28px;
+            border-radius: 15px;
+            /* Bordes suaves como tus contadores */
+            font-family: var(--font-body);
+            font-weight: 600;
+            font-size: 0.9rem;
+            letter-spacing: 0.5px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+
+        .btn-calendar-premium:hover,
+        .btn-calendar-premium:focus {
+            background: var(--card-bg);
+            color: var(--color-oro);
+            transform: translateY(-3px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.1);
+            border-color: var(--color-oro);
+        }
+
+/* ---- AGENDA DROPDOWN CORREGIDO ---- */
+.agenda-wrapper {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-menu-center {
+    position: absolute !important;
+    top: calc(100% + 10px) !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: auto !important;
+    transform: translateX(-50%) !important;
+    min-width: 260px;
+    background: var(--card-bg) !important;
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid rgba(255,255,255,0.4) !important;
+    border-radius: 20px !important;
+    padding: 10px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15) !important;
+    z-index: 9999;
+}
+
+/* En móvil: nunca salirse de la pantalla */
+@media (max-width: 480px) {
     .dropdown-menu-center {
         left: 50% !important;
-        right: auto !important;
         transform: translateX(-50%) !important;
+        min-width: 240px;
+        max-width: 90vw;
     }
-    .dropdown-item:active {
-        background-color: var(--bs-primary);
-    }
+}
 
-    .btn-calendar-premium {
-        background: var(--card-bg);
-        color: var(--color-oro); /* Usa el color de acento dinámico de tu invitación */
-        border: 1px solid rgba(255,255,255,0.3);
-        padding: 12px 28px;
-        border-radius: 15px; /* Bordes suaves como tus contadores */
-        font-family: var(--font-body);
-        font-weight: 600;
-        font-size: 0.9rem;
-        letter-spacing: 0.5px;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-        backdrop-filter: blur(4px);
-        transition: all 0.3s ease;
+@keyframes agendaSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-8px);
     }
-
-    .btn-calendar-premium:hover, .btn-calendar-premium:focus {
-        background: var(--card-bg);
-        color: var(--color-oro);
-        transform: translateY(-3px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.1);
-        border-color: var(--color-oro);
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
     }
+}
 
-    /* Centrado del menú en móvil */
-    .dropdown-menu-center {
-        left: 50% !important;
-        right: auto !important;
-        transform: translateX(-50%) translateY(10px) !important;
-        background: var(--card-bg);
-        backdrop-filter: blur(10px);
-    }
+.dropdown-menu-center .dropdown-item {
+    border-radius: 12px !important;
+    padding: 12px 16px !important;
+    font-family: var(--font-body);
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--text-color) !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 12px !important;
+    transition: background 0.2s, transform 0.15s;
+    background: transparent;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
 
-    .dropdown-item {
-        color: var(--text-color);
-        font-size: 0.85rem;
-        font-weight: 500;
-    }
+.dropdown-menu-center .dropdown-item:hover,
+.dropdown-menu-center .dropdown-item:focus,
+.dropdown-menu-center .dropdown-item:active {
+    background: rgba(255,255,255,0.35) !important;
+    transform: translateX(3px);
+    color: var(--color-acento) !important;
+    outline: none;
+    -webkit-tap-highlight-color: transparent;
+}
 
-    .dropdown-item:hover {
-        background: rgba(150, 150, 150, 0.1);
-        color: var(--color-oro);
-    }
+.dropdown-menu-center .dropdown-item i {
+    width: 22px;
+    text-align: center;
+    font-size: 1.1rem;
+}
 
-    /* Animación de entrada sutil */
-    .animate-dropdown {
-        animation: slideIn 0.3s ease-out;
-    }
+.dropdown-menu-center hr {
+    border-color: rgba(255,255,255,0.3);
+    margin: 6px 0;
+}
 
-    @keyframes slideIn {
-        from { opacity: 0; transform: translateX(-50%) translateY(20px); }
-        to { opacity: 1; transform: translateX(-50%) translateY(10px); }
-    }
+/* ← AGREGA ESTO DEBAJO */
+#agendaDropdown {
+    list-style: none !important;
+    padding-left: 0 !important;
+    margin: 0 !important;
+}
 
-    
-</style>
+#agendaDropdown li {
+    list-style: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+    </style>
 
 </head>
 
 <body>
     {% if inv.es_demo %}
-    <div style="background-color: #e50914; color: #ffffff; text-align: center; padding: 12px 15px; font-weight: 900; position: sticky; top: 0; left: 0; width: 100%; z-index: 999999; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase;">
-        <i class="fas fa-exclamation-triangle me-2 text-warning"></i> Versión de Demostración <span class="mx-2 d-none d-md-inline">|</span> SianEffects <br class="d-md-none">
-        <span style="font-weight: 600; font-size: 0.75rem; text-transform: none; opacity: 0.9;">(No válida para confirmar asistencia en eventos reales)</span>
+    <div
+        style="background-color: #e50914; color: #ffffff; text-align: center; padding: 12px 15px; font-weight: 900; position: sticky; top: 0; left: 0; width: 100%; z-index: 999999; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size: 0.85rem; letter-spacing: 1px; text-transform: uppercase;">
+        <i class="fas fa-exclamation-triangle me-2 text-warning"></i> Versión de Demostración <span
+            class="mx-2 d-none d-md-inline">|</span> SianEffects <br class="d-md-none">
+        <span style="font-weight: 600; font-size: 0.75rem; text-transform: none; opacity: 0.9;">(No válida para
+            confirmar asistencia en eventos reales)</span>
     </div>
     {% endif %}
+
     <div class="fondo-fijo-app"></div>
+
     <div id="welcome-screen">
-        
         {% if inv['estilo_apertura'] == 'sobre' %}
-        <div class="pantalla-sobre">            
+        <div class="pantalla-sobre">
             <svg class="svg-desktop" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <path class="triangulo-papel" d="M0 0 L100 0 L50 100 Z" />
             </svg>
@@ -897,26 +1173,28 @@
                 <path class="triangulo-papel" d="M100 0 L49 50 L100 100 Z" />
             </svg>
             <div class="sello-wrapper" onclick="entrarSitio('sobre')">
-                <div class="tooltip-sian">Click Aquí</div>                
-                <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png" class="sello-img-real" alt="Sello">                
+                <div class="tooltip-sian">Click Aquí</div>
+                <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/invitaciones/apertura/sello.png"
+                    class="sello-img-real" alt="Sello">
                 <span class="texto-sello">{{ datos.get('iniciales') }}</span>
-            </div>            
+            </div>
         </div>
-
         {% elif inv['estilo_apertura'] == 'iniciales' %}
         <div style="position: relative; display: inline-block;">
-            <div class="pulso-apertura" onclick="entrarSitio('iniciales')" style="position: relative; display: inline-block;">
+            <div class="pulso-apertura" onclick="entrarSitio('iniciales')"
+                style="position: relative; display: inline-block; cursor: pointer;">
                 <div class="tooltip-sian">Click Aquí</div>
                 <h1 class="iniciales-gigantes">{{ datos.get('iniciales') }}</h1>
             </div>
         </div>
-
         {% else %}
-            <p class="text-uppercase" style="letter-spacing: 3px; font-size: 0.9rem; color: var(--color-acento);">Mis XV Años</p>
-            <h1 style="font-size: 4rem; margin: 15px 0; text-align: center;">{{ datos['novios'] }}</h1>
-            <button class="btn-boda mt-4" onclick="entrarSitio('simple')">Abrir Invitación</button>
+        <p
+            style="letter-spacing: 3px; font-size: 1.2rem; font-weight: bold; color: var(--color-acento); background: rgba(255,255,255,0.5); padding: 10px 20px; border-radius: 20px; text-transform: uppercase; backdrop-filter: blur(10px);">
+            Mis XV Años</p>
+        <h1 style="font-size: 5rem; margin: 15px 0; text-align: center; text-shadow: 0 5px 15px rgba(0,0,0,0.3);">{{
+            datos['novios'] }}</h1>
+        <button class="btn-boda mt-4" onclick="entrarSitio('simple')">Abrir Invitación</button>
         {% endif %}
-
     </div>
 
     {% if inv['musica_url'] %}
@@ -926,247 +1204,253 @@
     <div class="music-btn" onclick="toggleMusic()"><i class="fas fa-volume-up" id="musicIcon"></i></div>
     {% endif %}
 
-    <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">        
-        
+    <div id="main-content" style="opacity: 0; visibility: hidden; transition: opacity 1s ease;">
+
         {% for item in config %}
-        
+
         {% if item == 'hero' %}
         <section class="hero"
-            style=" max-width: 100%; width: 100%; overflow: hidden; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
-            
-            <div style="
-                position: absolute;
-                inset: 0;
-                background-image: url('{{ inv['foto_portada_url'] if inv['foto_portada_url'] else (fotos[0] if fotos else '') }}');
-                background-size: cover;
-                background-position: center;
-                filter: brightness(0.6);">
+            style="max-width: 100%; width: 100%; overflow: hidden; padding: 0; position: relative; display: flex; align-items: center; justify-content: center;">
+            <div
+                style="position: absolute; inset: 0; background-image: url('{{ inv['foto_portada_url'] if inv['foto_portada_url'] else (fotos[0] if fotos else '') }}'); background-size: cover; background-position: center; filter: brightness(0.6);">
             </div>
-            
             <div style="position: relative; z-index: 1; text-align: center; width: 100%; padding: 20px; color: #ffffff;"
                 data-aos="zoom-in" data-aos-duration="1500">
-                
                 {% if datos.get('mensaje_bienvenida') %}
-                    <p style="font-size: 1.1rem; font-style: italic; opacity: 0.9; max-width: 600px; margin: 0 auto 20px auto; line-height: 1.6; text-shadow: 1px 1px 5px rgba(0,0,0,0.5);">
-                        "{{ datos['mensaje_bienvenida'] }}"
-                    </p>
+                <p
+                    style="font-size: 1.1rem; font-style: italic; max-width: 600px; margin: 0 auto 20px auto; line-height: 1.6; text-shadow: 1px 2px 5px rgba(0,0,0,0.6);">
+                    "{{ datos['mensaje_bienvenida'] }}"
+                </p>
                 {% endif %}
-
-                <h1 style="font-size: clamp(3.5rem, 10vw, 6rem); margin: 10px 0; text-shadow: 2px 2px 10px rgba(0,0,0,0.5);">
+                <h1
+                    style="font-size: clamp(3.5rem, 12vw, 6.5rem); margin: 10px 0; text-shadow: 2px 4px 15px rgba(0,0,0,0.5); line-height: 1.1;">
                     {{ datos['novios'] }}</h1>
-                <p style="font-size: 1.3rem; font-weight: bold; letter-spacing: 2px; text-transform: uppercase; margin-top: 10px; color: var(--color-acento);">Mis XV Años</p>
+                <p
+                    style="font-size: 1.1rem; font-weight: bold; letter-spacing: 6px; text-transform: uppercase; margin-top: 15px; color: #ffffff; text-shadow: 1px 2px 5px rgba(0,0,0,0.6);">
+                    Mis XV Años
+                </p>
             </div>
         </section>
 
         {% elif item == 'countdown' %}
         <section data-aos="fade-up">
-            <h2 id="fecha-elegante"
-                style="font-size: 2rem; color: var(--text-color); margin-bottom: 40px; font-family: var(--font-title);">
-            </h2>
+            <div class="glass-panel">
+                <h2 id="fecha-elegante"
+                    style="font-size: 2.2rem; margin-bottom: 30px; font-family: var(--font-title); color: var(--color-acento); font-weight: bold;">
+                </h2>
 
-            <div class="countdown-box" id="contador">
-                <div class="time-unit">
-                    <div class="time-number" id="dias">00</div>
-                    <div class="time-label">Días</div>
+                <div class="countdown-box" id="contador">
+                    <div class="time-unit">
+                        <div class="time-number" id="dias">00</div>
+                        <div class="time-label">Días</div>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-number" id="horas">00</div>
+                        <div class="time-label">Hr</div>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-number" id="minutos">00</div>
+                        <div class="time-label">Min</div>
+                    </div>
+                    <div class="time-unit">
+                        <div class="time-number" id="segundos">00</div>
+                        <div class="time-label">Seg</div>
+                    </div>
                 </div>
-                <div class="time-unit">
-                    <div class="time-number" id="horas">00</div>
-                    <div class="time-label">Hr</div>
-                </div>
-                <div class="time-unit">
-                    <div class="time-number" id="minutos">00</div>
-                    <div class="time-label">Min</div>
-                </div>
-                <div class="time-unit">
-                    <div class="time-number" id="segundos">00</div>
-                    <div class="time-label">Seg</div>
-                </div>
-            </div>
-            <div class="text-center mt-5" data-aos="fade-up" data-aos-delay="200">
-    <div class="dropdown d-inline-block">
-        <button class="btn btn-calendar-premium dropdown-toggle" 
-                type="button" id="calendarMenu" data-bs-toggle="dropdown" aria-expanded="false">
+
+                <div class="text-center mt-5" data-aos="fade-up" data-aos-delay="200">
+    <div class="agenda-wrapper">
+        <button class="btn-calendar-premium" type="button" id="calendarMenu"
+            onclick="toggleAgendaMenu(event)" aria-expanded="false">
             <i class="far fa-calendar-check me-2"></i>Añadir a mi Agenda
+            <i class="fas fa-chevron-down ms-2" id="agendaChevron"
+               style="font-size:0.75rem; transition: transform 0.25s ease;"></i>
         </button>
-        <ul class="dropdown-menu dropdown-menu-center shadow-lg border-0 rounded-4 p-2 animate-dropdown" aria-labelledby="calendarMenu">
-            <li><a class="dropdown-item rounded-3 py-2" href="javascript:void(0)" onclick="addToCalendar('google')">
-                <i class="fab fa-google text-danger me-2"></i> Google Calendar</a>
+        <ul class="dropdown-menu-center" id="agendaDropdown"
+            style="display:none; list-style:none; margin:0; padding:10px;" role="menu">
+            <li>
+                <button class="dropdown-item" onclick="addToCalendar('google')">
+                    <i class="fab fa-google" style="color:#EA4335;"></i> Google Calendar
+                </button>
             </li>
-            <li><a class="dropdown-item rounded-3 py-2" href="javascript:void(0)" onclick="addToCalendar('outlook')">
-                <i class="fab fa-windows text-primary me-2"></i> Outlook / Office 365</a>
+            <li>
+                <button class="dropdown-item" onclick="addToCalendar('outlook')">
+                    <i class="fab fa-windows" style="color:#0078D4;"></i> Outlook / Office 365
+                </button>
             </li>
-            <li><hr class="dropdown-divider opacity-50"></li>
-            <li><a class="dropdown-item rounded-3 py-2" href="javascript:void(0)" onclick="addToCalendar('ics')">
-                <i class="fas fa-apple-alt text-dark me-2"></i> Apple / iCal (.ics)</a>
+            <li><hr></li>
+            <li>
+                <button class="dropdown-item" onclick="addToCalendar('ics')">
+                    <i class="fab fa-apple" style="color:#555;"></i> Apple Calendar (.ics)
+                </button>
             </li>
         </ul>
     </div>
 </div>
+            </div>
         </section>
 
         {% elif item == 'historia' and historia_lista %}
-        <section data-aos="fade-up" style="max-width: 1000px;">
-            <div class="historia-container">
+        <section data-aos="fade-up">
+            <div class="glass-panel">
                 <div class="historia-layout">
-                    
                     <div class="historia-header">
                         <h2 class="historia-header-title">MI</h2>
                         <h3 class="historia-header-subtitle">Historia</h3>
                     </div>
-
                     <div class="swiper swiper-historia">
                         <div class="swiper-wrapper">
                             {% for recuerdo in historia_lista %}
-                            <div class="swiper-slide"> <div class="card-historia">
-                                    {% if recuerdo.foto %}
-                                    <img src="{{ recuerdo.foto }}" alt="Año {{ recuerdo.anio }}">
-                                    {% endif %}
-                                    <div class="historia-content">
+                            <div class="swiper-slide">
+                                <div class="card-historia">
+                                    {% if recuerdo.foto %}<img src="{{ recuerdo.foto }}"
+                                        alt="Año {{ recuerdo.anio }}">{% endif %}
+                                    <div>
                                         <div class="historia-year">{{ recuerdo.anio }}</div>
                                         <div class="historia-title">{{ recuerdo.texto }}</div>
-                                    </div> </div>
+                                    </div>
+                                </div>
                             </div>
                             {% endfor %}
                         </div>
-                        
-                        <div class="swiper-button-prev swiper-btn-custom"></div>
-                        <div class="swiper-button-next swiper-btn-custom"></div>
-                        
+                        <div class="swiper-button-prev"></div>
+                        <div class="swiper-button-next"></div>
                         <div class="swiper-pagination"></div>
                     </div>
-
                 </div>
             </div>
         </section>
 
         {% elif item == 'mapas' %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 40px;">Ubicaciones</h2>
-            <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
-                {% if datos['maps_misa'] %}
-                <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
-                    <span class="anim-iglesia">
-                        <i class="fas fa-church fa-2x mb-2" style="color: var(--color-acento);"></i>
-                    </span>
-                    <h3 style="margin-bottom: 15px;">Misa de Acción de Gracias</h3>
-                    <a href="{{ datos['maps_misa'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
-                </div>
-                {% endif %}
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); margin-bottom: 40px; font-weight: bold;">
+                    Ubicaciones</h2>
+                <div style="display: flex; flex-wrap: wrap; gap: 20px; justify-content: center;">
+                    {% if datos['maps_misa'] %}
+                    <div class="premium-card"
+                        style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                        <span class="anim-iglesia"><i class="fas fa-church fa-3x mb-3"
+                                style="color: var(--color-acento);"></i></span>
+                        <h3 style="margin-bottom: 15px; font-weight: bold; font-family: var(--font-title);">Misa de
+                            Acción de Gracias</h3>
+                        <a href="{{ datos['maps_misa'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
+                    </div>
+                    {% endif %}
 
-                {% if datos['maps_fiesta'] %}
-                <div class="premium-card" style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
-                    <span class="anim-copas">
-                        <i class="fas fa-glass-cheers fa-2x mb-2" style="color: var(--color-acento);"></i>
-                    </span>
-                    <h3 style="margin-bottom: 15px;">La Recepción</h3>
-                    <a href="{{ datos['maps_fiesta'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
+                    {% if datos['maps_fiesta'] %}
+                    <div class="premium-card"
+                        style="flex: 1; min-width: 250px; flex-direction: column; text-align: center;">
+                        <span class="anim-copas"><i class="fas fa-glass-cheers fa-3x mb-3"
+                                style="color: var(--color-acento);"></i></span>
+                        <h3 style="margin-bottom: 15px; font-weight: bold; font-family: var(--font-title);">La Recepción
+                        </h3>
+                        <a href="{{ datos['maps_fiesta'] }}" target="_blank" class="btn-boda">Ver en Mapa</a>
+                    </div>
+                    {% endif %}
                 </div>
-                {% endif %}
             </div>
         </section>
 
         {% elif item == 'dresscode' and inv['dress_code'] %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 20px;">Código de Vestimenta</h2>
-            <div style="font-size: 3rem; color: var(--color-acento); margin-bottom: 15px;">
-                <i class="fas fa-user-tie me-3"></i><i class="fas fa-female"></i>
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); margin-bottom: 20px; font-weight: bold;">
+                    Código de Vestimenta</h2>
+                <div style="font-size: 3.5rem; color: var(--color-acento); margin-bottom: 15px;"><i
+                        class="fas fa-user-tie me-3"></i><i class="fas fa-female"></i></div>
+                <h3
+                    style="text-transform: uppercase; letter-spacing: 3px; font-family: var(--font-body); font-weight: bold;">
+                    {{ inv['dress_code'] }}</h3>
+                <p style="margin-top: 15px; font-style: italic; font-weight: bold; font-size: 1.1rem;">
+                    {% if inv['dress_code'] == 'Formal' %}Traje oscuro y vestido largo o midi.
+                    {% elif inv['dress_code'] == 'Etiqueta' %}Rigurosa etiqueta. Gala y elegancia absoluta.
+                    {% elif inv['dress_code'] == 'Coctel' %}Traje sin corbata y vestido de cóctel.
+                    {% elif inv['dress_code'] == 'Guayabera' %}Guayabera de lino y vestido fluido. Colores claros.
+                    {% endif %}
+                </p>
             </div>
-            <h3 style="text-transform: uppercase; letter-spacing: 3px; font-family: var(--font-body);">{{
-                inv['dress_code'] }}</h3>
-            <p style="opacity: 0.7; margin-top: 15px; font-style: italic;">
-                {% if inv['dress_code'] == 'Formal' %}Traje oscuro y vestido largo o midi.
-                {% elif inv['dress_code'] == 'Etiqueta' %}Rigurosa etiqueta. Gala y elegancia absoluta.
-                {% elif inv['dress_code'] == 'Coctel' %}Traje sin corbata y vestido de cóctel.
-                {% elif inv['dress_code'] == 'Guayabera' %}Guayabera de lino y vestido fluido. Colores claros.
-                {% endif %}
-            </p>
         </section>
 
         {% elif item == 'regalos' %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Mesa de Regalos <i
-                    class="fas fa-gift ms-2"></i></h2>
-                    
-            <p class="mb-5" style="font-style: italic; opacity: 0.8; font-size: 1.1rem; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-                ¡Que me acompañes en este día es mi mejor regalo! Pero si está en tu disposición realizar un obsequio, te comparto estas opciones.
-            </p>
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); margin-bottom: 20px; font-weight: bold;">Mesa
+                    de Regalos <i class="fas fa-gift ms-2"></i></h2>
+                <p class="mb-5" style="font-style: italic; font-weight: bold; font-size: 1.2rem; line-height: 1.6;">
+                    ¡Que me acompañes en este día es mi mejor regalo! Pero si está en tu disposición realizar un
+                    obsequio, te comparto estas opciones.
+                </p>
 
-            <div class="premium-container">
-                {% if datos['cuenta_bancaria'] %}
-                <div class="premium-card">
-                    <div class="premium-icon"><i class="fas fa-envelope-open-text"></i></div>
-                    <div class="premium-info">
-                        <div class="premium-title">Lluvia de Sobres</div>
-                        <p
-                            style="white-space: pre-line; margin: 0; font-family: monospace; color: var(--color-acento); font-size: 1.1rem;">
-                            {{ datos['cuenta_bancaria'] }}</p>
+                <div class="premium-container">
+                    {% if datos['cuenta_bancaria'] %}
+                    <div class="premium-card">
+                        <div class="premium-icon"><i class="fas fa-envelope-open-text"></i></div>
+                        <div class="premium-info">
+                            <div class="premium-title">Lluvia de Sobres</div>
+                            <p
+                                style="white-space: pre-line; margin: 0; font-family: monospace; color: var(--color-acento); font-size: 1.2rem; font-weight: bold;">
+                                {{ datos['cuenta_bancaria'] }}</p>
+                        </div>
                     </div>
-                </div>
-                {% endif %}
+                    {% endif %}
 
-                {% if inv['mesas_regalos_json'] and inv['mesas_regalos_json'] != 'null' %}
-                {% set tiendas = inv['mesas_regalos_json']|from_json %}
-                {% for tienda in tiendas %}
-                <div class="premium-card">
-                    <div class="premium-icon">
-                        {% if 'liverpool' in tienda.nombre.lower() %}<i class="fas fa-shopping-bag"></i>
-                        {% elif 'amazon' in tienda.nombre.lower() %}<i class="fab fa-amazon"></i>
-                        {% else %}<i class="fas fa-store"></i>{% endif %}
+                    {% if inv['mesas_regalos_json'] and inv['mesas_regalos_json'] != 'null' %}
+                    {% set tiendas = inv['mesas_regalos_json']|from_json %}
+                    {% for tienda in tiendas %}
+                    <div class="premium-card">
+                        <div class="premium-icon">
+                            {% if 'liverpool' in tienda.nombre.lower() %}<i class="fas fa-shopping-bag"></i>
+                            {% elif 'amazon' in tienda.nombre.lower() %}<i class="fab fa-amazon"></i>
+                            {% else %}<i class="fas fa-store"></i>{% endif %}
+                        </div>
+                        <div class="premium-info">
+                            <div class="premium-title">{{ tienda.nombre }}</div>
+                            <a href="{{ tienda.url }}" target="_blank" class="btn-card">Ver mesa de regalos</a>
+                        </div>
                     </div>
-                    <div class="premium-info">
-                        <div class="premium-title">{{ tienda.nombre }}</div>
-                        <a href="{{ tienda.url }}" target="_blank" class="btn-card">Ver mesa de regalos</a>
-                    </div>
+                    {% endfor %}
+                    {% endif %}
                 </div>
-                {% endfor %}
-                {% endif %}
             </div>
         </section>
 
         {% elif item == 'rsvp' %}
-            
-            {% if datos_pase %}
-            <section data-aos="fade-up">
-                <div class="ticket-container">
+        {% if datos_pase %}
+        <section data-aos="fade-up">
+            <div class="glass-panel" style="padding: 0;">
+                <div class="ticket-container" style="box-shadow: none; border: none; border-radius: 28px;">
                     <h2 class="ticket-header">Pase de Acceso</h2>
-            
                     <div style="margin-bottom: 30px;">
                         <span class="ticket-label">Invitado</span>
-                        <span class="ticket-value" style="font-size: 1.5rem; font-weight: bold;">
-                            {{ datos_pase['nombre_familia'] }}
-                        </span>
+                        <span class="ticket-value" style="font-size: 1.8rem; font-weight: bold;">{{
+                            datos_pase['nombre_familia'] }}</span>
                     </div>
-
                     <div class="row align-items-center" style="display: flex; flex-wrap: wrap;">
                         <div class="col-md-5 mb-4 mb-md-0 qr-side" style="text-align: center;">
                             <div class="qr-container-modern">
                                 <img src="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data={{ datos_pase['codigo_qr_unique'] }}"
                                     alt="QR" style="width: 140px; height: 140px; display: block; margin: 0 auto;">
                             </div>
-                            <p class="mt-2 mb-0" style="font-size: 0.7rem; opacity: 0.5; font-family: monospace;">
-                                ID: {{ datos_pase['codigo_qr_unique'] }}
-                            </p>
+                            <p class="mt-2 mb-0" style="font-size: 0.8rem; font-weight: bold; font-family: monospace;">
+                                ID: {{ datos_pase['codigo_qr_unique'] }}</p>
                         </div>
-
                         <div class="col-md-7" style="flex: 1; padding-left: 20px;">
                             <div class="ticket-grid">
-                                <div>
-                                    <span class="ticket-label">Personas</span>
-                                    <span class="ticket-value">{{ datos_pase['pases_totales'] }} Pases</span>
-                                </div>
-                                <div>
-                                    <span class="ticket-label">Mesa</span>
-                                    <span class="ticket-value">{{ datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span>
-                                </div>
+                                <div><span class="ticket-label">Personas</span><span class="ticket-value">{{
+                                        datos_pase['pases_totales'] }} Pases</span></div>
+                                <div><span class="ticket-label">Mesa</span><span class="ticket-value">{{
+                                        datos_pase['mesa'] if datos_pase['mesa'] else 'Por asignar' }}</span></div>
 
                                 {% if datos_pase['nombres_acompanantes_json'] %}
                                 {% set acompanantes = datos_pase['nombres_acompanantes_json'] | from_json %}
-                                <div style="grid-column: span 2; background: rgba(150,150,150,0.05); padding: 15px; border-radius: 10px; border-left: 3px solid var(--color-oro);">
-                                    <span class="ticket-label"><i class="fas fa-user-check me-1"></i> Pases Asignados A:</span>
-                                    <ul style="margin: 5px 0 0 0; padding-left: 20px; font-family: var(--font-body); font-size: 0.95rem; opacity: 0.9;">
-                                        {% for nombre in acompanantes %}
-                                        <li style="margin-bottom: 3px;">{{ nombre }}</li>
-                                        {% endfor %}
+                                <div
+                                    style="grid-column: span 2; background: rgba(255,255,255,0.4); padding: 15px; border-radius: 14px; border-left: 4px solid var(--color-acento);">
+                                    <span class="ticket-label" style="color: #333;"><i
+                                            class="fas fa-user-check me-1"></i> Pases Asignados A:</span>
+                                    <ul
+                                        style="margin: 5px 0 0 0; padding-left: 20px; font-weight: bold; font-size: 1.1rem; color: #333;">
+                                        {% for nombre in acompanantes %}<li>{{ nombre }}</li>{% endfor %}
                                     </ul>
                                 </div>
                                 {% endif %}
@@ -1174,9 +1458,13 @@
                                 <div style="grid-column: span 2;">
                                     <span class="ticket-label">Estado</span>
                                     {% if datos_pase['pases_usados'] >= datos_pase['pases_totales'] %}
-                                    <span class="status-badge" style="background: #ffcccc; color: #cc0000;">No válido para ingresar</span>
+                                    <span class="status-badge"
+                                        style="background: #ffcccc; color: #cc0000; border: 1px solid #cc0000;">No
+                                        válido para ingresar</span>
                                     {% else %}
-                                    <span class="status-badge" style="background: #e1f5fe; color: #01579b;">Válido para ingresar</span>
+                                    <span class="status-badge"
+                                        style="background: #e1f5fe; color: #01579b; border: 1px solid #01579b;">Válido
+                                        para ingresar</span>
                                     {% endif %}
                                 </div>
                             </div>
@@ -1184,242 +1472,276 @@
                     </div>
 
                     {% if inv['tiene_modulo_invitados'] %}
-                    <div style="margin-top: 40px; border-top: 1px dashed var(--color-acento); padding-top: 30px;">
-                        <p class="mb-4" style="opacity: 0.8; font-weight: bold;">¿Confirmas tu asistencia?</p>
-                        <div id="botones-rsvp" style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-                            <button class="btn-boda" style="background: var(--color-acento); color: var(--bg-color);"
-                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Confirmado')">
-                                <i class="fas fa-check me-2"></i> Sí, asistiré
-                            </button>
-                            <button class="btn-entrar" style="border-color: rgba(150,150,150,0.5); color: var(--text-color);"
-                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Declinado')">
-                                <i class="fas fa-times me-2"></i> No podré ir
-                            </button>
+                    <div style="margin-top: 40px; border-top: 2px dashed rgba(255,255,255,0.5); padding-top: 30px;">
+                        <p class="mb-4" style="font-weight: bold; font-size: 1.2rem;">¿Confirmas tu asistencia?</p>
+                        <div id="botones-rsvp"
+                            style="display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
+                            <button class="btn-boda" style="background: var(--color-acento); color: #fff;"
+                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Confirmado')"><i
+                                    class="fas fa-check me-2"></i> Sí, asistiré</button>
+                            <button class="btn-entrar"
+                                style="border-color: rgba(255,255,255,0.8); color: var(--text-color); background: rgba(255,255,255,0.4);"
+                                onclick="confirmarAsistencia({{ datos_pase['id'] }}, 'Declinado')"><i
+                                    class="fas fa-times me-2"></i> No podré ir</button>
                         </div>
                     </div>
                     {% endif %}
-                    
-                    <p class="mt-4 mb-0" style="text-align: center; font-style: italic; font-size: 0.8rem; opacity: 0.6;">
-                        "Presenta este código digital al llegar a la recepción."
-                    </p>
+                    <p class="mt-4 mb-0" style="text-align: center; font-weight: bold; font-size: 0.9rem;">"Presenta
+                        este código digital al llegar a la recepción."</p>
                 </div>
-            </section>
-            
-            {% else %}
-            <section data-aos="fade-up" style="padding-bottom: 100px;">
-                <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 20px;">Asistencia</h2>
-                <p class="mb-4" style="opacity: 0.8;">Me encantaría contar con tu presencia.</p>
+            </div>
+        </section>
+
+        {% else %}
+        <section data-aos="fade-up">
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); margin-bottom: 20px; font-weight: bold;">
+                    Asistencia</h2>
+                <p class="mb-4" style="font-weight: bold; font-size: 1.3rem;">Me encantaría contar con tu presencia.</p>
                 {% if datos['telefono_rsvp'] %}
-                    <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia%20a%20los%20XV%20años..."
-                        target="_blank" class="btn-boda" style="background: #25D366; border-color: #25D366; color: white;">
-                        <i class="fab fa-whatsapp me-2"></i> Confirmar por WhatsApp
-                    </a>
+                <a href="https://wa.me/{{ datos['telefono_rsvp']|replace('+', '')|replace(' ', '') }}?text=¡Hola!%20Confirmo%20mi%20asistencia%20a%20los%20XV%20años..."
+                    target="_blank" class="btn-boda" style="background: #25D366; border-color: #25D366; color: white;">
+                    <i class="fab fa-whatsapp me-2"></i> Confirmar por WhatsApp
+                </a>
                 {% endif %}
-            </section>
-            {% endif %}
-        
+            </div>
+        </section>
+        {% endif %}
+
         {% elif item == 'protocolo' and datos.get('protocolo') %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.2rem; color: var(--color-acento); margin-bottom: 10px;">Mis Padres y Padrinos</h2>
-            
-            <p style="font-style: italic; opacity: 0.7; font-size: 1.1rem; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto;">
-                "Con el amor y apoyo incondicional de quienes me guían en cada paso."
-            </p>
-            
-            <div class="row g-4 justify-content-center" style="display: flex; flex-wrap: wrap; gap: 15px;">
-                {% for integrante in datos['protocolo'] %}
-                <div class="col-md-5 col-sm-12 text-center" style="flex: 1; min-width: 250px;">
-                    <div class="p-3">
-                        <i class="fas fa-heart mb-2" style="color: var(--color-acento);"></i>
-                        <h4 class="mb-1" style="font-weight: 600;">{{ integrante.nombres }}</h4>
-                        <small class="text-uppercase text-muted" style="letter-spacing: 2px;">{{ integrante.rol }}</small>
-                        
-                        <hr style="width: 40%; margin: 15px auto 0 auto; border-top: 1px solid rgba(150,150,150,0.2);">
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); margin-bottom: 15px; font-weight: bold;">Mis
+                    Padres y Padrinos</h2>
+                <p
+                    style="font-style: italic; font-weight: bold; font-size: 1.2rem; margin-bottom: 40px; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    "Con el amor y apoyo incondicional de quienes me guían en cada paso."
+                </p>
+                <div class="row g-4 justify-content-center" style="display: flex; flex-wrap: wrap; gap: 15px;">
+                    {% for integrante in datos['protocolo'] %}
+                    <div class="col-md-5 col-sm-12 text-center" style="flex: 1; min-width: 200px;">
+                        <div class="p-3">
+                            <i class="fas fa-heart fa-2x mb-3" style="color: var(--color-acento);"></i>
+                            <h4 class="mb-2"
+                                style="font-weight: bold; font-size: 1.8rem; font-family: var(--font-title);">{{
+                                integrante.nombres }}</h4>
+                            <small class="text-uppercase"
+                                style="letter-spacing: 3px; font-weight: bold; font-size: 0.9rem; opacity: 0.8;">{{
+                                integrante.rol }}</small>
+                        </div>
                     </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
-        </section> 
+        </section>
 
         {% elif item == 'hospedaje' %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Hospedaje y Transporte</h2>
-            
-            <p class="mb-5" style="font-style: italic; opacity: 0.8; font-size: 1.1rem; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.5;">
-                Pensando en tu comodidad, hemos seleccionado estas opciones de alojamiento y detalles de transporte para que disfrutes con nosotros sin preocupaciones.
-            </p>
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); margin-bottom: 20px; font-weight: bold;">
+                    Hospedaje y Transporte</h2>
+                <p class="mb-5"
+                    style="font-style: italic; font-weight: bold; font-size: 1.2rem; max-width: 650px; margin-left: auto; margin-right: auto; line-height: 1.6;">
+                    Pensando en tu comodidad, hemos seleccionado estas opciones de alojamiento y detalles de transporte
+                    para que disfrutes con nosotros sin preocupaciones.
+                </p>
 
-            <div class="premium-container">
-                
-                {% if datos['info_transporte'] %}
-                <div class="premium-card">
-                    <div class="premium-icon"><i class="fas fa-bus-alt"></i></div>
-                    <div class="premium-info">
-                        <div class="premium-title">Transporte</div>
-                        <p style="white-space: pre-line; margin: 0; font-size: 0.95rem; opacity: 0.9;">
-                            {{ datos['info_transporte'] }}
-                        </p>
+                <div class="premium-container">
+                    {% if datos['info_transporte'] %}
+                    <div class="premium-card">
+                        <div class="premium-icon"><i class="fas fa-bus-alt"></i></div>
+                        <div class="premium-info">
+                            <div class="premium-title">Transporte</div>
+                            <p style="white-space: pre-line; margin: 0; font-size: 1.1rem; font-weight: bold;">{{
+                                datos['info_transporte'] }}</p>
+                        </div>
                     </div>
-                </div>
-                {% endif %}
+                    {% endif %}
 
-                {% if inv['hospedaje_json'] and inv['hospedaje_json'] != 'null' %}
+                    {% if inv['hospedaje_json'] and inv['hospedaje_json'] != 'null' %}
                     {% set hoteles = inv['hospedaje_json']|from_json %}
                     {% for hotel in hoteles %}
                     <div class="premium-card">
                         <div class="premium-icon"><i class="fas fa-bed"></i></div>
                         <div class="premium-info">
                             <div class="premium-title">{{ hotel.nombre }}</div>
-                            <a href="{{ hotel.url }}" target="_blank" class="btn-card"><i class="fas fa-link me-1"></i> Ver opciones</a>
+                            <a href="{{ hotel.url }}" target="_blank" class="btn-card"><i class="fas fa-link me-1"></i>
+                                Ver opciones</a>
                         </div>
                     </div>
                     {% endfor %}
-                {% endif %}
-                
+                    {% endif %}
+                </div>
             </div>
         </section>
 
         {% elif item == 'camara' and inv['camara_premium'] %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 15px;">Captura el Momento</h2>
-            <p class="mb-4" style="opacity: 0.8;">Ayúdame a documentar este día tan especial. Te regalo una cámara
-                desechable virtual con 5 fotos para mi rollo.</p>
-
-            <div class="premium-card"
-                style="flex-direction: column; text-align: center; justify-content: center; padding: 40px;">
-                <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id'], _external=True) }}"
-                    alt="QR Cámara" style="border-radius: 10px; border: 5px solid white; margin-bottom: 15px;">
-
-                <button type="button" class="btn-boda" data-bs-toggle="modal" data-bs-target="#modalAvisoPrivacidad">
-                    <i class="fas fa-camera-retro me-2"></i> Usar Cámara Desechable
-                </button>
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); margin-bottom: 20px; font-weight: bold;">
+                    Captura el Momento</h2>
+                <p class="mb-4" style="font-weight: bold; font-size: 1.3rem;">Ayúdame a documentar este día tan
+                    especial. Te regalo una cámara desechable virtual con 5 fotos para mi rollo.</p>
+                <div class="premium-card"
+                    style="flex-direction: column; text-align: center; justify-content: center; padding: 40px; border-color: rgba(255,255,255,0.5);">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id'], _external=True) }}"
+                        alt="QR Cámara"
+                        style="border-radius: 14px; border: 5px solid white; margin-bottom: 20px; box-shadow: 0 5px 15px rgba(0,0,0,0.2);">
+                    <button type="button" class="btn-boda" style="font-weight: bold;" data-bs-toggle="modal"
+                        data-bs-target="#modalAvisoPrivacidad">
+                        <i class="fas fa-camera-retro me-2"></i> Usar Cámara Desechable
+                    </button>
+                </div>
             </div>
         </section>
 
         {% elif item == 'galeria' and fotos %}
-        <section data-aos="fade-up" style="max-width: 1000px;">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Mi Sesión Fotográfica</h2>
-            
-            <div class="masonry-grid">
-                {% for foto in fotos %}
-                <div class="masonry-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 50 }}">
-                    <img src="{{ foto }}" alt="Foto XV Años">
+        <section data-aos="fade-up">
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); font-weight: bold; margin-bottom: 10px;">Mi
+                    Sesión Fotográfica</h2>
+                <p style="font-weight: bold; font-size: 1.1rem; margin-bottom: 0;">Desliza las fotos <i
+                        class="fas fa-hand-pointer ms-2"></i></p>
+
+                <div class="swiper swiper-galeria">
+                    <div class="swiper-wrapper">
+                        {% for foto in fotos %}
+                        <div class="swiper-slide">
+                            <img src="{{ foto }}" alt="Foto XV Años">
+                        </div>
+                        {% endfor %}
+                    </div>
                 </div>
-                {% endfor %}
             </div>
         </section>
 
         {% elif item == 'deseos' %}
-        <section data-aos="fade-up" style="padding-bottom: 60px;">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 10px;">Libro de Visitas</h2>
-            <p class="mb-4" style="opacity: 0.8;">Déjame un mensaje para recordar este día tan especial.</p>
-            
-            <button class="btn-boda mb-4" onclick="abrirModalDeseos({{ inv['id'] }})" style="margin-top: 10px;">
-                <i class="fas fa-pen-fancy me-2"></i> Escribir Mensaje
-            </button>
+        <section data-aos="fade-up">
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); margin-bottom: 15px; font-weight: bold;">Libro
+                    de Visitas</h2>
+                <p class="mb-4" style="font-weight: bold; font-size: 1.3rem;">Déjame un mensaje para recordar este día
+                    tan especial.</p>
 
-            {% if buenos_deseos %}
-            <div class="swiper swiper-deseos">
-                <div class="swiper-wrapper">
-                    {% for deseo in buenos_deseos %}
-                    <div class="swiper-slide">
-                        <i class="fas fa-quote-left mb-3" style="color: var(--color-acento); font-size: 2rem; opacity: 0.3;"></i>
-                        <div class="deseo-mensaje">"{{ deseo.mensaje }}"</div>
-                        <div class="deseo-nombre">{{ deseo.nombre }}</div>
-                        <div class="deseo-fecha">{{ deseo.fecha.strftime('%d/%m/%Y') }}</div>
+                <button class="btn-boda mb-4" onclick="abrirModalDeseos({{ inv['id'] }})"
+                    style="font-weight: bold; font-size: 1.1rem; padding: 15px 35px; background: rgba(255,255,255,0.4);">
+                    <i class="fas fa-pen-fancy me-2"></i> Escribir Mensaje
+                </button>
+
+                {% if buenos_deseos %}
+                <div class="swiper swiper-deseos">
+                    <div class="swiper-wrapper">
+                        {% for deseo in buenos_deseos %}
+                        <div class="swiper-slide">
+                            <i class="fas fa-quote-left mb-3"
+                                style="color: var(--color-acento); font-size: 2.5rem; opacity: 0.5;"></i>
+                            <div class="deseo-mensaje" style="font-size: 1.4rem;">"{{ deseo.mensaje }}"</div>
+                            <div class="deseo-nombre" style="font-size: 1.8rem;">{{ deseo.nombre }}</div>
+                            <div class="deseo-fecha" style="font-size: 1rem;">{{ deseo.fecha.strftime('%d/%m/%Y') }}
+                            </div>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
+                    <div class="autoplay-progress" slot="container-end">
+                        <svg viewBox="0 0 48 48">
+                            <circle cx="24" cy="24" r="20"></circle>
+                        </svg>
+                        <span></span>
+                    </div>
                 </div>
-                <div class="autoplay-progress" slot="container-end">
-                    <svg viewBox="0 0 48 48">
-                        <circle cx="24" cy="24" r="20"></circle>
-                    </svg>
-                    <span></span>
+                {% else %}
+                <div class="premium-card"
+                    style="margin-top: 30px; text-align: center; display: block; background: rgba(255,255,255,0.3);">
+                    <p style="font-style: italic; font-weight: bold; font-size: 1.2rem; margin: 0;">Aún no hay mensajes.
+                        ¡Sé el primero en firmar mi libro!</p>
                 </div>
+                {% endif %}
             </div>
-            {% else %}
-            <div class="premium-card" style="margin-top: 30px; text-align: center; display: block;">
-                <p style="font-style: italic; opacity: 0.6; margin: 0;">Aún no hay mensajes. ¡Sé el primero en firmar mi libro!</p>
-            </div>
-            {% endif %}
         </section>
 
         {% elif item == 'timeline' and datos.get('itinerario') %}
         <section data-aos="fade-up">
-            <h2 style="font-size: 2.5rem; color: var(--color-acento); margin-bottom: 40px;">Itinerario</h2>
-            <div class="timeline">
-                {% for act in datos['itinerario'] %}
-                <div class="timeline-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 + 100 }}">
-                    <div class="timeline-time">{{ act.hora }}</div>
-                    <div class="timeline-dot"></div>
-                    <div class="timeline-content"><i class="{{ act.icono }} me-2" style="color: var(--color-acento);"></i>
-                        {{ act.actividad }}</div>
+            <div class="glass-panel">
+                <h2 style="font-size: 2.8rem; color: var(--color-acento); margin-bottom: 40px; font-weight: bold;">
+                    Itinerario</h2>
+                <div class="timeline">
+                    {% for act in datos['itinerario'] %}
+                    <div class="timeline-item" data-aos="fade-up" data-aos-delay="{{ loop.index0 * 100 + 100 }}">
+                        <div class="timeline-time" style="font-size: 1.2rem;">{{ act.hora }}</div>
+                        <div class="timeline-dot"></div>
+                        <div class="timeline-content" style="font-size: 1.2rem;"><i class="{{ act.icono }} fa-lg me-3"
+                                style="color: var(--color-acento);"></i>
+                            {{ act.actividad }}</div>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
             </div>
         </section>
 
         {% elif item == 'frase_final' and inv['frase_final'] %}
-        <section data-aos="fade-up" class="text-center" style="padding: 100px 20px;">
-            <div style="color: var(--color-acento); font-size: 1.5rem; margin-bottom: 25px; opacity: 0.6;">
-                <i class="fas fa-star"></i>
-                <span style="margin: 0 10px;">✦</span>
-                <i class="fas fa-star"></i>
-            </div>
-            
-            <div style="max-width: 600px; margin: 0 auto;">
-                <p class="fs-3" style="font-family: var(--font-title); color: var(--color-acento); font-style: italic; line-height: 1.4; margin-bottom: 30px;">
+        <section data-aos="fade-up" class="text-center">
+            <div class="glass-panel" style="max-width: 700px;">
+                <div style="color: var(--color-acento); font-size: 2rem; margin-bottom: 30px;">
+                    <i class="fas fa-star"></i><span style="margin: 0 15px;">✦</span><i class="fas fa-star"></i>
+                </div>
+                <p class="fs-2"
+                    style="font-family: var(--font-title); color: var(--color-acento); font-style: italic; font-weight: bold; line-height: 1.5; margin-bottom: 30px;">
                     "{{ inv['frase_final'] }}"
                 </p>
-                
-                <h3 style="font-size: 2.5rem; margin-bottom: 10px; color: var(--text-color);">
-                    {{ datos['novios'] }}
-                </h3>
-                
-                <p style="text-transform: uppercase; letter-spacing: 4px; font-size: 0.8rem; opacity: 0.6; font-weight: bold;">
+                <h3 style="font-size: 3.5rem; margin-bottom: 15px; font-weight: bold;">{{ datos['novios'] }}</h3>
+                <p
+                    style="text-transform: uppercase; letter-spacing: 5px; font-size: 1rem; font-weight: bold; color: var(--color-acento);">
                     ¡Te espero para celebrar!
                 </p>
             </div>
         </section>
 
         {% endif %}
-
         {% endfor %}
 
-        <footer style="text-align: center; padding: 40px; font-size: 0.8rem; opacity: 0.5;">
+        <footer
+            style="text-align: center; padding: 40px; font-size: 0.9rem; font-weight: bold; background: rgba(0,0,0,0.6); color: white; backdrop-filter: blur(5px);">
             Creado con ❤️ por SianEffects
         </footer>
     </div>
 
     <div class="modal fade" id="modalAvisoPrivacidad" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow-lg" style="border-radius: 20px; background: var(--bg-color); color: var(--text-color);">
+            <div class="modal-content border-0 shadow-lg"
+                style="border-radius: 20px; background: var(--bg-color); color: var(--text-color);">
                 <div class="modal-header border-bottom-0 pb-0">
-                    <h5 class="modal-title fw-bold" style="font-family: var(--font-title); color: var(--color-acento);">
+                    <h5 class="modal-title fw-bold"
+                        style="font-family: var(--font-title); font-size: 1.5rem; color: var(--color-acento);">
                         <i class="fas fa-shield-alt me-2"></i>Aviso de Privacidad
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(var(--text-color) == '#333333' ? 0 : 1);"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"
+                        style="filter: invert(var(--text-color) == '#333333' ? 0 : 1);"></button>
                 </div>
-                <div class="modal-body small" style="font-family: var(--font-body); line-height: 1.6; opacity: 0.9;">
-                    <p>Al utilizar la función de <strong>Cámara de Invitados</strong>, aceptas lo siguiente:</p>
+                <div class="modal-body" style="font-family: var(--font-body); line-height: 1.6; font-size: 1rem;">
+                    <p class="fw-bold">Al utilizar la función de Cámara de Invitados, aceptas lo siguiente:</p>
                     <ul style="padding-left: 20px; margin-bottom: 0;">
-                        <li class="mb-2"><strong>Uso de imagen:</strong> Otorgas permiso a la Quinceañera y a su familia para visualizar, descargar y conservar las fotografías que subas.</li>
-                        <li class="mb-2"><strong>Almacenamiento:</strong> Tus imágenes serán procesadas y almacenadas temporalmente en nuestra infraestructura segura.</li>
-                        <li class="mb-2"><strong>Vigencia:</strong> Todas las fotografías se eliminarán permanentemente de nuestros servidores 45 días después de la fecha del evento.</li>
-                        <li><strong>Responsabilidad:</strong> SianEffects y los organizadores se reservan el derecho de eliminar contenido inapropiado.</li>
+                        <li class="mb-2"><strong>Uso de imagen:</strong> Otorgas permiso a la Quinceañera y a su familia
+                            para visualizar, descargar y conservar las fotografías.</li>
+                        <li class="mb-2"><strong>Almacenamiento:</strong> Tus imágenes serán procesadas en nuestra
+                            infraestructura segura.</li>
+                        <li class="mb-2"><strong>Vigencia:</strong> Las fotografías se eliminarán de nuestros servidores
+                            45 días después del evento.</li>
+                        <li><strong>Responsabilidad:</strong> SianEffects se reserva el derecho de eliminar contenido
+                            inapropiado.</li>
                     </ul>
                 </div>
                 <div class="modal-footer border-top-0 pt-0 d-flex flex-column gap-2">
                     <div class="form-check text-start w-100 mb-2">
-                        <input class="form-check-input" type="checkbox" id="checkAceptoPrivacidad">
-                        <label class="form-check-label fw-bold" for="checkAceptoPrivacidad" style="font-size: 0.85rem; cursor: pointer;">
+                        <input class="form-check-input" type="checkbox" id="checkAceptoPrivacidad"
+                            style="transform: scale(1.2); margin-top: 6px;">
+                        <label class="form-check-label fw-bold ms-2" for="checkAceptoPrivacidad"
+                            style="font-size: 1rem; cursor: pointer;">
                             He leído y acepto los términos.
                         </label>
                     </div>
-                    <a href="{{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id']) }}" 
-                       id="btnContinuarCamara" 
-                       class="btn-boda w-100 text-center" 
-                       style="background: #e9ecef; color: #adb5bd; border-color: transparent; pointer-events: none;">
+                    <a href="{{ url_for('invitaciones_publicas.abrir_camara', invitacion_id=inv['id']) }}"
+                        id="btnContinuarCamara" class="btn-boda w-100 text-center"
+                        style="background: #e9ecef; color: #adb5bd; border-color: transparent; pointer-events: none; font-size: 1.1rem; padding: 15px;">
                         Abrir Cámara <i class="fas fa-arrow-right ms-2"></i>
                     </a>
                 </div>
@@ -1458,57 +1780,38 @@
             content.style.opacity = '1';
 
             setTimeout(() => {
-                if(document.querySelector('.swiper-historia')) {
-                    new Swiper(".swiper-historia", {
-                        observer: true,
-                        observeParents: true,
-                        allowTouchMove: false,
-                        slidesPerView: 1, 
-                        spaceBetween: 30, 
-                        loop: false, 
-                        navigation: {
-                            nextEl: ".swiper-button-next", 
-                            prevEl: ".swiper-button-prev", 
-                        },
-                        pagination: {
-                            el: ".swiper-pagination",
-                            clickable: true,
-                        },
-                        effect: "fade", 
-                        fadeEffect: {
-                            crossFade: true
-                        }
-                    });
-                }
-                
-                const swiperDeseos = document.querySelector('.swiper-deseos');
-                if(swiperDeseos) {
-                    const progressCircle = swiperDeseos.querySelector(".autoplay-progress svg");
-                    const progressContent = swiperDeseos.querySelector(".autoplay-progress span");
-                    
-                    new Swiper(".swiper-deseos", {
-                        spaceBetween: 30,
-                        centeredSlides: true,
+
+                // INICIALIZAR GALERÍA EFECTO CARDS (TINDER SWIPE)
+                if (document.querySelector('.swiper-galeria')) {
+                    new Swiper(".swiper-galeria", {
+                        effect: "cards",
                         grabCursor: true,
-                        autoplay: {
-                            delay: 5000,
-                            disableOnInteraction: false
-                        },
                         loop: true,
-                        on: {
-                            autoplayTimeLeft(s, time, progress) {
-                                progressCircle.style.setProperty("--progress", 1 - progress);
-                                progressContent.textContent = Math.ceil(time / 1000) + "s";
-                            }
-                        }
                     });
                 }
-                
-                AOS.init({ 
-                    duration: 1200, 
-                    once: true,
-                    mirror: false
-                });
+
+                if (document.querySelector('.swiper-historia')) {
+                    new Swiper(".swiper-historia", {
+                        observer: true, observeParents: true, allowTouchMove: false,
+                        slidesPerView: 1, spaceBetween: 30, loop: false,
+                        navigation: { nextEl: ".swiper-button-next", prevEl: ".swiper-button-prev" },
+                        pagination: { el: ".swiper-pagination", clickable: true },
+                        effect: "fade", fadeEffect: { crossFade: true }
+                    });
+                }
+
+                // SWIPER LIBRO DE VISITAS FORZADO AL CENTRO CON SLIDESPERVIEW: 1
+                if (document.querySelector('.swiper-deseos')) {
+                    new Swiper(".swiper-deseos", {
+                        slidesPerView: 1, /* CORRIGE EL DESFASE */
+                        spaceBetween: 20,
+                        grabCursor: true,
+                        loop: true,
+                        autoplay: { delay: 5000, disableOnInteraction: false }
+                    });
+                }
+
+                AOS.init({ duration: 1200, once: true, mirror: false });
             }, 200);
         }
 
@@ -1516,9 +1819,9 @@
             const audio = document.getElementById('bgMusic');
             const icon = document.getElementById('musicIcon');
             if (audio.paused) {
-                audio.play(); icon.classList.remove('fa-volume-mute'); icon.classList.add('fa-volume-up');
+                audio.play(); icon.classList.replace('fa-volume-mute', 'fa-volume-up');
             } else {
-                audio.pause(); icon.classList.remove('fa-volume-up'); icon.classList.add('fa-volume-mute');
+                audio.pause(); icon.classList.replace('fa-volume-up', 'fa-volume-mute');
             }
         }
 
@@ -1526,14 +1829,14 @@
         if (fechaStr && fechaStr !== 'None') {
             const safeFechaStr = fechaStr.replace(' ', 'T');
             const fechaEvento = new Date(safeFechaStr);
-            
+
             if (!isNaN(fechaEvento.getTime())) {
                 const opcionesFecha = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
                 let textoFecha = fechaEvento.toLocaleDateString('es-ES', opcionesFecha);
                 textoFecha = textoFecha.charAt(0).toUpperCase() + textoFecha.slice(1);
-                
+
                 const elFechaTexto = document.getElementById("fecha-elegante");
-                if(elFechaTexto) elFechaTexto.innerText = textoFecha;
+                if (elFechaTexto) elFechaTexto.innerText = textoFecha;
 
                 const fechaEventoMs = fechaEvento.getTime();
                 const x = setInterval(function () {
@@ -1542,7 +1845,7 @@
 
                     if (distance < 0) {
                         clearInterval(x);
-                        document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-acento); margin-top:20px;'>¡ES HOY!</h3>";
+                        document.getElementById("contador").innerHTML = "<h3 style='color: var(--color-acento); margin-top:20px; font-size: 3rem; font-family: var(--font-title);'>¡ES HOY!</h3>";
                         return;
                     }
                     document.getElementById("dias").innerText = Math.floor(distance / (1000 * 60 * 60 * 24));
@@ -1553,142 +1856,104 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('DOMContentLoaded', function () {
             const checkPrivacidad = document.getElementById('checkAceptoPrivacidad');
             const btnContinuar = document.getElementById('btnContinuarCamara');
 
             if (checkPrivacidad && btnContinuar) {
-                checkPrivacidad.addEventListener('change', function() {
+                checkPrivacidad.addEventListener('change', function () {
                     if (this.checked) {
                         btnContinuar.style.pointerEvents = 'auto';
-                        btnContinuar.style.opacity = '1';
                         btnContinuar.style.background = 'var(--color-acento)';
-                        btnContinuar.style.color = 'var(--bg-color)';
-                        btnContinuar.style.borderColor = 'var(--color-acento)';
+                        btnContinuar.style.color = '#fff';
                     } else {
                         btnContinuar.style.pointerEvents = 'none';
-                        btnContinuar.style.opacity = '1';
                         btnContinuar.style.background = '#e9ecef';
                         btnContinuar.style.color = '#adb5bd';
-                        btnContinuar.style.borderColor = 'transparent';
                     }
                 });
             }
         });
 
         function confirmarAsistencia(invitadoId, estado) {
-            fetch(`/api/invitados/${invitadoId}/confirmar`, {  
+            fetch(`/api/invitados/${invitadoId}/confirmar`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ estado: estado })
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('botones-rsvp').innerHTML = `
-                        <p style="color: var(--color-acento); font-weight: bold; font-size: 1.2rem; margin-top: 15px;">
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        document.getElementById('botones-rsvp').innerHTML = `
+                        <p style="color: var(--color-acento); font-weight: bold; font-size: 1.4rem; margin-top: 15px;">
                             <i class="fas fa-check-circle me-1"></i> ¡Asistencia ${estado.toLowerCase()} exitosamente!
                         </p>`;
 
-                    if (estado === 'Confirmado') {
-                        confetti({
-                            particleCount: 150,
-                            spread: 80,
-                            origin: { y: 0.6 },
-                            colors: ['#ff007f', '#D4AF37', '#ffffff'] 
-                        });
-                        
-                        Swal.fire({
-                            title: '¡Qué emoción! ✨',
-                            text: 'Gracias por confirmar. Me hace inmensamente feliz saber que compartirás este día tan especial conmigo.',
-                            icon: 'success',
-                            confirmButtonColor: 'var(--color-acento)',
-                            confirmButtonText: '¡Nos vemos pronto!',
-                            background: 'var(--bg-color)',
-                            color: 'var(--text-color)'
-                        });
+                        if (estado === 'Confirmado') {
+                            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 }, colors: ['#ff007f', '#D4AF37', '#ffffff'] });
+                            Swal.fire({ title: '¡Qué emoción! ✨', text: 'Gracias por confirmar. Me hace inmensamente feliz saber que compartirás este día tan especial conmigo.', icon: 'success', confirmButtonColor: 'var(--color-acento)', confirmButtonText: '¡Nos vemos pronto!', background: 'var(--bg-color)', color: 'var(--text-color)' });
+                        } else {
+                            Swal.fire({ title: '¡Te extrañaré! 🥺', text: 'Entiendo que no puedas acompañarme, gracias por avisarme con tiempo.', icon: 'info', confirmButtonColor: '#333', confirmButtonText: 'Cerrar', background: 'var(--bg-color)', color: 'var(--text-color)' });
+                        }
                     } else {
-                        Swal.fire({
-                            title: '¡Te extrañaré! 🥺',
-                            text: 'Entiendo que no puedas acompañarme, gracias por avisarme con tiempo.',
-                            icon: 'info',
-                            confirmButtonColor: 'rgba(150,150,150,0.5)',
-                            confirmButtonText: 'Cerrar',
-                            background: 'var(--bg-color)',
-                            color: 'var(--text-color)'
-                        });
+                        Swal.fire('Ups...', 'Hubo un problema al guardar tu confirmación.', 'error');
                     }
-                } else {
-                    Swal.fire('Ups...', 'Hubo un problema al guardar tu confirmación.', 'error');
-                }
-            })
-            .catch(error => {
-                Swal.fire('Error de conexión', 'No pudimos conectar con el servidor.', 'error');
-            });
+                }).catch(error => Swal.fire('Error', 'No pudimos conectar con el servidor.', 'error'));
         }
 
         function abrirModalDeseos(invitacionId) {
             Swal.fire({
-                title: '<span style="color: var(--color-acento); font-family: var(--font-title); font-size: 2rem;">Tus Buenos Deseos</span>',
+                title: '<span style="color: var(--color-acento); font-family: var(--font-title); font-size: 2.5rem;">Tus Buenos Deseos</span>',
                 html: `
-                    <div style="text-align: left; margin-bottom: 10px;">
-                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-acento); font-weight: bold;">Tu Nombre o Familia</label>
+                    <div style="text-align: left; margin-bottom: 15px;">
+                        <label style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Tu Nombre o Familia</label>
                         <input id="swal-nombre" class="swal2-input" placeholder="Ej. Familia Pérez" style="max-width: 100%; margin-top: 5px;">
                     </div>
                     <div style="text-align: left;">
-                        <label style="font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; color: var(--color-acento); font-weight: bold;">Mensaje a la Quinceañera</label>
+                        <label style="font-size: 0.9rem; text-transform: uppercase; letter-spacing: 1px; font-weight: bold;">Mensaje a la Quinceañera</label>
                         <textarea id="swal-mensaje" class="swal2-textarea" placeholder="Te deseamos una vida llena de felicidad..." rows="4" style="max-width: 100%; resize: none; margin-top: 5px;"></textarea>
                     </div>
                 `,
                 confirmButtonText: 'Guardar Mensaje <i class="fas fa-paper-plane ms-2"></i>',
-                showCancelButton: true,
-                cancelButtonText: 'Cancelar',
-                confirmButtonColor: 'var(--color-acento)',
-                cancelButtonColor: 'rgba(150,150,150,0.5)',
-                background: 'var(--bg-color)',
-                color: 'var(--text-color)',
+                showCancelButton: true, cancelButtonText: 'Cancelar',
+                confirmButtonColor: 'var(--color-acento)', cancelButtonColor: '#888',
+                background: 'var(--bg-color)', color: 'var(--text-color)',
                 preConfirm: () => {
-                    const nombre = document.getElementById('swal-nombre').value.trim();
-                    const mensaje = document.getElementById('swal-mensaje').value.trim();
-                    if (!nombre || !mensaje) Swal.showValidationMessage('Por favor completa ambos campos. 🙏');
-                    return { nombre: nombre, mensaje: mensaje };
+                    const n = document.getElementById('swal-nombre').value.trim();
+                    const m = document.getElementById('swal-mensaje').value.trim();
+                    if (!n || !m) Swal.showValidationMessage('Por favor completa ambos campos. 🙏');
+                    return { nombre: n, mensaje: m };
                 }
             }).then((result) => {
                 if (result.isConfirmed) {
                     Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                     fetch('/api/buenos-deseos', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ invitacion_id: invitacionId, nombre: result.value.nombre, mensaje: result.value.mensaje })
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if(data.success) {
-                            Swal.fire({ icon: 'success', title: '¡Mensaje Guardado!', confirmButtonColor: 'var(--color-acento)' }).then(() => window.location.reload());
-                        } else {
-                            Swal.fire('Error', data.error, 'error');
-                        }
+                    }).then(r => r.json()).then(data => {
+                        if (data.success) { Swal.fire({ icon: 'success', title: '¡Guardado!', confirmButtonColor: 'var(--color-acento)' }).then(() => window.location.reload()); }
+                        else { Swal.fire('Error', data.error, 'error'); }
                     });
                 }
             });
         }
 
-   function addToCalendar(type) {
+        function addToCalendar(type) {
             // 1. Damos formato a la fecha del evento automáticamente
-            const fechaOriginal = "{{ inv['fecha_evento'] }}"; 
+            const fechaOriginal = "{{ inv['fecha_evento'] }}";
             let startCal = "20260620T190000"; // Respaldo de seguridad
             let endCal = "20260621T020000";
-            
+
             if (fechaOriginal && fechaOriginal !== 'None') {
                 // Limpiamos la fecha para el estándar iCal (YYYYMMDDTHHMMSS)
                 const fechaLimpia = fechaOriginal.replace(/[-:]/g, '').replace(' ', 'T');
                 if (fechaLimpia.length >= 15) {
                     startCal = fechaLimpia.substring(0, 15);
-                    
-                    // Calculamos una hora de fin (sumamos 5 horas a la fiesta de XV)
+
+                    // Calculamos una hora de fin (sumamos 5 horas a la fiesta)
                     const fechaObj = new Date(fechaOriginal.replace(' ', 'T'));
                     fechaObj.setHours(fechaObj.getHours() + 5);
-                    
+
                     // Formateamos la nueva hora de fin
                     const pad = (n) => n < 10 ? '0' + n : n;
                     endCal = `${fechaObj.getFullYear()}${pad(fechaObj.getMonth() + 1)}${pad(fechaObj.getDate())}T${pad(fechaObj.getHours())}${pad(fechaObj.getMinutes())}00`;
@@ -1697,10 +1962,10 @@
 
             // 2. CONFIGURAMOS LOS DATOS DEL EVENTO DINÁMICAMENTE
             const eventData = {
-                title: "XV de {{ datos.get('novios', 'la quinceañera') }}",
-                description: "¡Te espero en mi fiesta de XV años! No olvides confirmar tu asistencia. {{ datos.get('frase', '') }}",
+                title: "Boda de {{ datos.get('novios', 'los novios') }}",
+                description: "¡Te esperamos en nuestra celebración! No olvides confirmar tu asistencia. {{ datos.get('frase', '') }}",
                 location: "{{ datos.get('maps_fiesta', datos.get('maps_misa', 'Ubicación pendiente')) }}",
-                start: startCal, 
+                start: startCal,
                 end: endCal
             };
 
@@ -1710,22 +1975,53 @@
 
             if (type === 'google') {
                 window.open(`https://www.google.com/calendar/render?action=TEMPLATE&text=${title}&details=${desc}&location=${loc}&dates=${eventData.start}/${eventData.end}`, '_blank');
-            } 
+            }
             else if (type === 'outlook') {
                 window.open(`https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&body=${desc}&location=${loc}&startdt=${eventData.start}&enddt=${eventData.end}`, '_blank');
-            } 
+            }
             else if (type === 'ics') {
                 // Genera un archivo .ics para Apple Calendar o dispositivos locales
                 const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${eventData.title}\nDESCRIPTION:${eventData.description}\nLOCATION:${eventData.location}\nDTSTART:${eventData.start}\nDTEND:${eventData.end}\nEND:VEVENT\nEND:VCALENDAR`;
                 const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
                 const link = document.createElement('a');
                 link.href = window.URL.createObjectURL(blob);
-                link.setAttribute('download', 'xv_{{ inv["slug"] }}.ics');
+                link.setAttribute('download', 'boda_{{ inv["slug"] }}.ics');
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
             }
         }
+
+        // ---- AGENDA DROPDOWN PERSONALIZADO ----
+function toggleAgendaMenu(e) {
+    e.stopPropagation();
+    const menu = document.getElementById('agendaDropdown');
+    const chevron = document.getElementById('agendaChevron');
+    const isOpen = menu.style.display === 'block';
+
+    if (isOpen) {
+        menu.style.animation = 'none';
+        menu.style.display = 'none';
+        chevron.style.transform = 'rotate(0deg)';
+    } else {
+        menu.style.display = 'block';
+        menu.style.animation = 'none';
+        menu.offsetHeight; // fuerza reflow para re-disparar animación
+        menu.style.animation = 'agendaSlideIn 0.25s ease-out forwards';
+        chevron.style.transform = 'rotate(180deg)';
+    }
+}
+
+// Cerrar al hacer click fuera
+document.addEventListener('click', function(e) {
+    const menu = document.getElementById('agendaDropdown');
+    const btn = document.getElementById('calendarMenu');
+    if (menu && btn && !btn.contains(e.target) && !menu.contains(e.target)) {
+        menu.style.display = 'none';
+        const chevron = document.getElementById('agendaChevron');
+        if (chevron) chevron.style.transform = 'rotate(0deg)';
+    }
+});
     </script>
 </body>
 
