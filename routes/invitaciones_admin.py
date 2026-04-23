@@ -495,6 +495,7 @@ def gestionar_invitaciones():
         return render_template('invitaciones/gestionar.html', invitaciones=invitaciones, hoy=hoy)
     except Exception as e:
         flash(f"Error cargando el panel: {str(e)}", "danger")
+        current_app.logger.error(f"PANEL_INV_ERROR: Error cargando el panel de invitaciones: {str(e)}")
         return redirect(url_for('admin.dashboard')) 
     finally:
         cursor.close()
@@ -521,12 +522,14 @@ def editar_invitacion(id):
     
     if not inv_seguridad:
         flash("Invitacion no encontrada.", "danger")
+        current_app.logger.error(f"PANEL_INV_ERROR: Invitacion no encontrada: {id}")
         cursor.close()
         conn.close()
         return redirect(url_for('invitaciones_clientes.dashboard_planner') if es_planner else url_for('invitaciones_admin.gestionar_invitaciones'))
         
     if es_planner and str(inv_seguridad['planner_id']) != str(session.get('planner_id')):
         flash("No tienes permiso para editar esta invitacion.", "danger")
+        current_app.logger.error(f"PANEL_INV_ERROR: No tienes permiso para editar esta invitacion: {id}")
         cursor.close()
         conn.close()
         return redirect(url_for('invitaciones_clientes.dashboard_planner'))
@@ -728,6 +731,7 @@ def editar_invitacion(id):
         except Exception as e:
             conn.rollback()
             flash(f"Error al actualizar. Verifique los datos. (Detalle: {str(e)})", "danger")
+            current_app.logger.error(f"PANEL_INV_ERROR: Error al actualizar invitacion: {id} - {str(e)}")
             return redirect(url_for('invitaciones_admin.editar_invitacion', id=id)) 
         finally:
             cursor.close()
