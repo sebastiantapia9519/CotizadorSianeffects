@@ -130,7 +130,7 @@ def recepcion_boda(slug):
     # IMPORTANTE: Pasamos el objeto 'inv' para que scanner.html sepa que es Modo Cliente
     return render_template('invitaciones/scanner.html', inv=inv)
 
-# --- RUTA PARA TI (Administrador Maestro de SianEffects) ---
+# --- RUTA PARA TI (Administrador Maestro de Sianeffects) ---
 @invitaciones_publicas_bp.route('/admin/scanner-global')
 @admin_required 
 def scanner_global(): 

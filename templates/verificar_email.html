@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Verificar Cuenta | Sianeffects</title>    
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root {
+            --sian-pink: #ff6b81;
+            --sian-pink-light: #fff0f3;
+            --bg-cream: #fffdf9;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg-cream);
+            color: #555;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .hover-scale {
+            transition: transform 0.2s;
+        }
+
+        .hover-scale:hover {
+            transform: scale(1.02);
+        }
+
+        .form-control:focus {
+            border-color: var(--sian-pink);
+            box-shadow: 0 0 0 0.25rem rgba(255, 107, 129, 0.1);
+        }
+
+        /* Estilo para el código de 6 dígitos */
+        .code-input {
+            letter-spacing: 12px;
+            font-size: 2rem;
+            font-weight: 800;
+            text-indent: 12px;
+            color: #333;
+        }
+        /* Ajuste específico para que el label no choque con los números grandes */
+.form-floating > .code-input {
+    height: 95px; /* Le damos más altura al contenedor */
+    padding-top: 40px !important; /* Empujamos los números hacia abajo */
+    padding-bottom: 10px !important;
+}
+
+.form-floating > label {
+    padding-top: 15px; /* Ajustamos la posición inicial del label */
+}
+
+/* Esto asegura que cuando el label "suba", se quede más arriba del número */
+.form-floating > .form-control:focus ~ label,
+.form-floating > .form-control:not(:placeholder-shown) ~ label {
+    transform: scale(0.85) translateY(-0.75rem) translateX(0.15rem);
+    color: var(--sian-pink);
+    font-weight: 700;
+}
+    </style>
+</head>
+
+<body>
+
+    <div class="container" style="max-width: 500px;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} shadow-sm rounded-4 border-0 mb-3 d-flex align-items-center alert-dismissible fade show">
+            <i class="fas fa-info-circle me-2"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container d-flex justify-content-center align-items-center">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="max-width: 500px; width: 100%;">
+            <div class="card-body p-5">
+
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold text-dark mb-1">Casi listo...</h2>
+                    <p class="text-muted small">
+                        Enviamos un código a:<br>
+                        <span class="fw-bold text-dark">{{ email }}</span>
+                    </p>
+                </div>
+
+                <form action="{{ url_for('auth.verificar_email') }}" method="POST">
+                    <div class="form-floating mb-4">
+                        <input type="text" name="codigo" class="form-control rounded-3 text-center code-input" 
+                               id="codeInput" placeholder="000000" maxlength="6" required autocomplete="off">
+                        <label for="codeInput">Código de 6 dígitos</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm hover-scale mb-3" 
+                            style="background-color: var(--sian-pink); border: none;">
+                        VERIFICAR CUENTA ✨
+                    </button>
+                </form>
+
+                <div class="text-center mt-3">
+                    <p class="text-muted small mb-1">¿No recibiste el correo?</p>
+                    <button id="btn-reenviar" class="btn btn-link text-primary text-decoration-none small fw-bold p-0" disabled onclick="reenviarCodigo()">
+                        Reenviar código
+                    </button>
+                    <div id="timer-container" class="text-muted small mt-2">
+                        Podrás reenviar en <span id="timer-seconds" class="fw-bold">60</span>s
+                    </div>
+                </div>
+
+                <div class="text-center mt-4 pt-3 border-top">
+                    <a href="{{ url_for('auth.registro') }}" class="text-muted text-decoration-none small">
+                        <i class="fas fa-arrow-left me-1"></i> Volver al registro
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let seconds = 60;
+        const btn = document.getElementById('btn-reenviar');
+        const timerContainer = document.getElementById('timer-container');
+        const timerSeconds = document.getElementById('timer-seconds');
+
+        function startTimer() {
+            btn.disabled = true;
+            timerContainer.style.display = 'block';
+            seconds = 60;
+            
+            const countdown = setInterval(() => {
+                seconds--;
+                timerSeconds.innerText = seconds;
+                if (seconds <= 0) {
+                    clearInterval(countdown);
+                    btn.disabled = false;
+                    timerContainer.style.display = 'none';
+                }
+            }, 1000);
+        }
+
+        async function reenviarCodigo() {
+            try {
+                const response = await fetch("{{ url_for('auth.reenviar_codigo') }}", {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'}
+                });
+                const data = await response.json();
+                
+                if (response.ok) {
+                    alert("¡Código reenviado con éxito!");
+                    startTimer();
+                } else {
+                    alert("Error: " + data.message);
+                }
+            } catch (error) {
+                alert("Error al conectar con el servidor.");
+            }
+        }
+
+        // Iniciar timer al cargar
+        window.onload = startTimer;
+
+        // Solo permitir números en el input
+        document.getElementById('codeInput').addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^0-9]/g, '');
+        });
+    </script>
+</body>
+
+</html>

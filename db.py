@@ -79,6 +79,17 @@ def init_db():
     )
     """)
 
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS password_resets (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+        token TEXT UNIQUE NOT NULL,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
     # =========================
     # 2. CONFIGURACIÓN
     # =========================
@@ -185,6 +196,18 @@ def init_db():
         accion TEXT,
         fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES usuarios(id)
+    )
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS auth_codes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+        email VARCHAR(255) NOT NULL,
+        code VARCHAR(6) NOT NULL,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+        used BOOLEAN DEFAULT FALSE
     )
     """)
 
@@ -433,7 +456,7 @@ def init_db():
         VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
         RETURNING id
         """, (
-            'admin', 'contacto@sianeffects.com', hashed_pw, 'SianEffects HQ', 2,
+            'admin', 'contacto@sianeffects.com', hashed_pw, 'Sianeffects', 2,
             '2099-12-31 23:59:59', now_utc_str, True, 'MX', now_utc_str
         ))
         
@@ -442,7 +465,7 @@ def init_db():
         cursor.execute("""
         INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa)
         VALUES (%s, %s, %s)
-        """, (admin_id, 200, 'SianEffects Admin'))
+        """, (admin_id, 200, 'Sianeffects Admin'))
 
         for nombre, costo in [('Corte Plotter', 5.0), ('Impresión', 1.5), ('Plancha Calor', 12.0)]:
             cursor.execute("""

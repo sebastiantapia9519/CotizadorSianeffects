@@ -4,6 +4,8 @@ import json
 import logging
 from datetime import timedelta
 from logging.handlers import RotatingFileHandler
+from flask_mail import Mail
+from extensions import mail
 
 # Third-party
 import pytz
@@ -66,7 +68,7 @@ logging.basicConfig(
     format='%(asctime)s - %(levelname)s - %(message)s',
     encoding='utf-8'
 )
-logging.info("SianEffects System Monitor: Iniciando registro de eventos...")
+logging.info("Sianeffects System Monitor: Iniciando registro de eventos...")
 
 # 3. Formato: [Fecha] [Nivel] Mensaje
 formatter = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%d/%m/%Y %H:%M:%S')
@@ -82,6 +84,24 @@ app.logger.info("Sistema de monitoreo iniciado correctamente (Hora Local Monterr
 # Esto evita que se registren los "GET /static/..." y "GET /admin/..."
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
+
+
+# Configuración de Mail desde variables de entorno
+app.config.update(
+    MAIL_SERVER=os.environ.get('MAIL_SERVER'),
+    MAIL_PORT=int(os.environ.get('MAIL_PORT', 465)),
+    MAIL_USE_SSL=os.environ.get('MAIL_USE_SSL', 'True') == 'True',
+    MAIL_USERNAME=os.environ.get('MAIL_USERNAME'),
+    MAIL_PASSWORD=os.environ.get('MAIL_PASSWORD'),
+    MAIL_DEFAULT_SENDER=os.environ.get('MAIL_USERNAME')
+)
+
+# Inicializamos la extensión con la app configurada
+mail.init_app(app)
+
+# Tu logger ahora registrará si el mail falla
+app.logger.info("Servicio de correo SMTP configurado correctamente.")
+
 
 # =========================
 # SESIÓN
@@ -357,6 +377,38 @@ def page_not_found(e):
     
     # Para móviles y web normal, devolvemos la imagen de Oddy
     return render_template('404.html'), 404
+
+
+from services.mail_service import enviar_correo_sian
+
+@app.route('/test-mail')
+def test_mail():
+    # Toma el email de la URL, ej: /test-mail?email=tu_correo@gmail.com
+    destinatario = request.args.get('email')
+    
+    if not destinatario:
+        return "Error: Agrega ?email=tu_correo@gmail.com al final de la URL"
+    
+    # Intentamos enviar el código de prueba usando el alias de seguridad
+    exito = enviar_correo_sian(
+        subject="Sianeffects: Código de Prueba",
+        recipient=destinatario,
+        template="auth_code",
+        sender_alias="accounts", # El alias que creamos para validaciones
+        code="999888"            # Código de prueba "hardcodeado"
+    )
+    
+    if exito:
+        app.logger.info(f"Test de correo disparado hacia {destinatario}")
+        return f"¡Correo enviado a {destinatario}! Revisa tu bandeja (y la carpeta de Seguridad y Accesos)."
+    else:
+        return "Hubo un error al intentar procesar el envío. Revisa limpieza.log"
+
+
+
+
+
+
 
 # =========================
 # MAIN

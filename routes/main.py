@@ -586,7 +586,7 @@ def descargar_excel():
         
 
         output.seek(0)
-        return send_file(output, download_name=f"Reporte_SianEffects_{datetime.now().strftime('%Y%m%d')}.xlsx", as_attachment=True)
+        return send_file(output, download_name=f"Reporte_Sianeffects_{datetime.now().strftime('%Y%m%d')}.xlsx", as_attachment=True)
     except Exception as e:
         current_app.logger.error(f"EXPORT_ERROR: Usuario {uid} fallo al exportar Excel - {e}")
         return f"Error al generar el Excel: {str(e)}", 500
