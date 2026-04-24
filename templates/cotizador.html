@@ -334,7 +334,7 @@
                                     <button
                                         class="accordion-button collapsed py-2 px-0 bg-transparent shadow-none small text-muted"
                                         type="button" data-bs-toggle="collapse" data-bs-target="#collapseCosto">
-                                        <i class="fas fa-plus-circle me-2"></i> Registrar Costo (Opcional)
+                                        <i class="fas fa-plus-circle me-2"></i> Registrar Costo / Personalizar Fecha (Opcional)
                                     </button>
                                 </h2>
                                 <div id="collapseCosto" class="accordion-collapse collapse"
@@ -346,6 +346,10 @@
                                             <input type="number" class="form-control border-0"
                                                 id="expressCosto" placeholder="0.00">
                                         </div>
+                                    </div>
+                                    <div class="mb-4">
+                                        <label class="fw-bold small text-muted">Fecha de la Venta (Opcional)</label>
+                                        <input type="date" id="expressFecha" class="form-control form-control-lg border-2">
                                     </div>
                                 </div>
                             </div>
@@ -716,6 +720,7 @@
         const precio = parseFloat(document.getElementById('expressPrecio').value);
         const cantidad = parseFloat(document.getElementById('expressCantidad').value);
         const costo = parseFloat(document.getElementById('expressCosto').value) || 0;
+        const fecha = document.getElementById('expressFecha').value;
 
         if (!concepto) {
             document.getElementById('expressConcepto').focus();
@@ -737,6 +742,7 @@
             precio_unitario: precio,
             costo_unitario: costo,
             cantidad: cantidad,
+            fecha_registro: fecha,
             subtotal: precio * cantidad,
             composicion: JSON.stringify([{ tipo: 'manual', nombre: 'Venta Rápida' }])
         });
@@ -1233,6 +1239,7 @@
                     cantidad: i.cantidad,
                     precio_unitario: i.precio_unitario,
                     costo_unitario: i.costo_unitario,
+                    fecha_item: i.fecha_registro,
                     subtotal: i.subtotal,
                     composicion: typeof i.composicion === 'string' ? i.composicion : JSON.stringify(i.composicion)
                 })),
@@ -1241,6 +1248,7 @@
                 descuento_porcentaje: descPct,
                 descuento_monto: desc_monto,
                 tax_amount: tax_amount,
+                fecha_venta: carrito.length > 0 ? carrito[0].fecha_registro : null,
                 tax_percent: taxPct,
                 total: totalFinalCalculado,
                 costo_total: costo_total,
@@ -1543,13 +1551,21 @@
 
     document.addEventListener('DOMContentLoaded', () => agregarFila());
 
-    // Detectar si venimos del historial para cargar una cotización
-    // Detectar si venimos del historial o de recetas para cargar datos
+    // Detectar si venimos del historial para cargar una cotización o receta
     document.addEventListener('DOMContentLoaded', () => {
         const urlParams = new URLSearchParams(window.location.search);
 
         const idCotizacion = urlParams.get('cargar_cotizacion');
         const idReceta = urlParams.get('cargar_receta');
+
+        // Pone la fecha de hoy por default en el input express
+        const ahora = new Date();
+        const hoy = ahora.getFullYear() + '-' + 
+            String(ahora.getMonth() + 1).padStart(2, '0') + '-' + 
+            String(ahora.getDate()).padStart(2, '0');
+
+        const inputFecha = document.getElementById('expressFecha');
+        if(inputFecha) inputFecha.value = hoy;
 
         if (idCotizacion) {
             // Venimos del Historial de Ventas

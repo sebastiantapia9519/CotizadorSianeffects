@@ -5,73 +5,93 @@
 {% block extra_css %}
 <style>
     /* ===================================================
-       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       1. ESTILOS CLEAN & PRO (VIBRA SHOPIFY/VERCEL)
        =================================================== */
     body {
-        background-color: #f8f9fa;
+        background-color: #fcfcfd;
+        color: #1a1c1e;
+        font-family: 'Inter', -apple-system, sans-serif;
+        overflow-x: hidden;
     }
 
-    /* Tarjetas de Estadísticas */
-    .stat-card {
-        border: none;
-        border-radius: 15px;
-        transition: transform 0.2s;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-3px);
-    }
-
-    .icon-box {
-        width: 45px;
-        height: 45px;
-        border-radius: 12px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-    }
-
-    .smaller {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    /* Tabla y Avatars */
     .avatar-circle {
         width: 40px;
         height: 40px;
-        background-color: #e9ecef;
-        color: #495057;
+        background-color: #f2f4f7;
+        color: #344054;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: 800;
+        font-weight: 700;
         font-size: 0.9rem;
     }
 
     .table-card {
-        border: none;
-        border-radius: 20px;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.05);
+        border: 1px solid #eaecf0;
+        border-radius: 12px;
+        background: #ffffff;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+        overflow: hidden;
     }
 
     .table-responsive {
-        min-height: 300px;
-        overflow-x: auto;
-        overflow-y: visible;
+        overflow: visible !important;
+        min-height: 250px; /* Evita que el menú se corte si hay 1 solo registro */
     }
 
-    /* Botones de Acción */
+    .table thead th {
+        background-color: #f9fafb;
+        color: #475467;
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 12px 24px;
+        border-bottom: 1px solid #eaecf0;
+    }
+
+    .table tbody td {
+        padding: 16px 24px;
+        border-bottom: 1px solid #f2f4f7;
+        vertical-align: middle;
+    }
+
+    .status-badge {
+        padding: 4px 10px;
+        border-radius: 50px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
+    .badge-activo { background-color: #ecfdf3; color: #027a48; border: 1px solid #d1fae5; }
+    .badge-vencido { background-color: #fef3f2; color: #b42318; border: 1px solid #fee2e2; }
+    .badge-alerta { background-color: #fffbeb; color: #d97706; border: 1px solid #fef3c7; } 
+    .badge-suspendido { background-color: #f2f4f7; color: #475467; border: 1px solid #eaecf0; } 
+    .badge-prueba { background-color: #eff8ff; color: #175cd3; border: 1px solid #dbeafe; }
+
+    .badge-rol {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+        border-radius: 6px;
+        background-color: #f8f9fa;
+        color: #475467;
+        border: 1px solid #eaecf0;
+        font-weight: 600;
+    }
+
     .action-btn {
         width: 32px;
         height: 32px;
-        border-radius: 50%;
+        border-radius: 8px;
         background-color: transparent;
         border: 1px solid transparent;
-        color: #adb5bd;
+        color: #98a2b3;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -80,523 +100,428 @@
 
     .action-btn:hover,
     .action-btn[aria-expanded="true"] {
-        background-color: #f1f3f5;
-        color: #343a40;
-        border-color: #dee2e6;
-        transform: scale(1.05);
+        background-color: #f9fafb;
+        color: #344054;
+        border-color: #eaecf0;
     }
 
     .btn-white {
-        background-color: white;
-        color: #495057;
+        background-color: #ffffff;
+        color: #344054;
+        border: 1px solid #d0d5dd;
         transition: all 0.2s;
+        font-weight: 500;
     }
+    .btn-white:hover { background-color: #f9fafb; }
 
-    .btn-white:hover {
-        background-color: #f1f3f5;
-        transform: translateY(-2px);
-    }
-
-    /* Menú Flotante */
     .custom-dropdown-menu {
-        border: none;
-        border-radius: 16px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+        border: 1px solid #eaecf0;
+        border-radius: 12px;
+        box-shadow: 0 10px 20px rgba(16, 24, 40, 0.08);
         padding: 8px;
-        min-width: 230px;
+        min-width: 200px;
         margin-top: 5px;
+        z-index: 1050 !important;
     }
 
     .dropdown-item {
-        border-radius: 10px;
+        border-radius: 6px;
         padding: 8px 12px;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 500;
-        margin-bottom: 2px;
+        color: #344054;
         transition: background 0.1s;
     }
-
-    .dropdown-item:hover {
-        background-color: #f8f9fa;
-        transform: translateX(3px);
-    }
+    .dropdown-item:hover { background-color: #f9fafb; }
 
     .dropdown-header {
-        font-size: 0.7rem;
+        font-size: 0.65rem;
         font-weight: 700;
-        letter-spacing: 1px;
-        color: #ced4da;
+        letter-spacing: 0.05em;
+        color: #98a2b3;
         margin-bottom: 4px;
         padding-left: 12px;
     }
 
-    .dropdown-item i {
-        width: 20px;
-        text-align: center;
-        margin-right: 8px;
+    @media (max-width: 768px) {
+        .d-mobile-none { display: none !important; }
+        .table tbody td, .table thead th { padding: 14px 10px; }
+        .avatar-circle { width: 36px; height: 36px; font-size: 0.85rem; }
     }
 
     /* ===================================================
-       2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
+       2. MODO OSCURO
        =================================================== */
-    [data-bs-theme="dark"] body {
-        background-color: #0f172a !important;
-    }
-
-    /* Tarjetas principales */
-    [data-bs-theme="dark"] .stat-card,
-    [data-bs-theme="dark"] .table-card {
-        background-color: #1e293b !important;
-    }
-    
-    [data-bs-theme="dark"] .table-card {
-        border: 1px solid #334155 !important;
-    }
-
-    /* Elementos genéricos con fondo blanco/claro */
-    [data-bs-theme="dark"] .bg-white {
-        background-color: #1e293b !important;
-    }
-    
-    [data-bs-theme="dark"] .bg-light {
-        background-color: #0f172a !important;
-    }
-
-    /* Textos Universales */
+    [data-bs-theme="dark"] body { background-color: #0f172a !important; color: #f8fafc; }
+    [data-bs-theme="dark"] .table-card { background-color: #1e293b !important; border-color: #334155 !important; box-shadow: none; }
+    [data-bs-theme="dark"] .bg-white { background-color: #1e293b !important; }
     [data-bs-theme="dark"] .text-dark { color: #f8fafc !important; }
-    [data-bs-theme="dark"] .text-muted, 
-    [data-bs-theme="dark"] .text-secondary { color: #94a3b8 !important; }
-
-    /* Bordes generales (Protegiendo el border-start de las tarjetas KPI) */
-    [data-bs-theme="dark"] .border:not(.border-start),
-    [data-bs-theme="dark"] .border-bottom {
-        border-color: #334155 !important;
-    }
-
-    /* Inputs, Selects y Buscador */
-    [data-bs-theme="dark"] .form-control,
-    [data-bs-theme="dark"] .form-select,
-    [data-bs-theme="dark"] .input-group-text {
-        background-color: #0f172a !important;
-        border-color: #334155 !important;
-        color: #f8fafc !important;
-    }
-    
-    [data-bs-theme="dark"] .form-control:focus,
-    [data-bs-theme="dark"] .form-select:focus {
-        border-color: #3b82f6 !important;
-    }
-
-    /* Botones Superiores e Inferiores */
-    [data-bs-theme="dark"] .btn-white {
-        background-color: #1e293b !important;
-        border-color: #334155 !important;
-        color: #f8fafc !important;
-    }
-    [data-bs-theme="dark"] .btn-white:hover {
-        background-color: #334155 !important;
-    }
-
-    [data-bs-theme="dark"] .action-btn {
-        color: #94a3b8 !important;
-    }
-    [data-bs-theme="dark"] .action-btn:hover,
-    [data-bs-theme="dark"] .action-btn[aria-expanded="true"] {
-        background-color: #334155 !important;
-        color: #f8fafc !important;
-        border-color: #475569 !important;
-    }
-
-    /* Avatars y Badges */
-    [data-bs-theme="dark"] .avatar-circle {
-        background-color: #334155 !important;
-        color: #f8fafc !important;
-    }
-    [data-bs-theme="dark"] .badge.bg-light {
-        background-color: #334155 !important;
-        color: #f8fafc !important;
-        border-color: #475569 !important;
-    }
-
-    /* Tabla */
-    [data-bs-theme="dark"] .table { color: #f8fafc !important; }
-    [data-bs-theme="dark"] .table td, 
-    [data-bs-theme="dark"] .table th { border-color: #334155 !important; }
-    
-    @media (hover: hover) {
-        [data-bs-theme="dark"] .table-hover tbody tr:hover td {
-            background-color: rgba(255,255,255,0.05) !important;
-        }
-    }
-
-    /* Menú Desplegable (3 Puntitos) */
-    [data-bs-theme="dark"] .custom-dropdown-menu {
-        background-color: #1e293b !important;
-        border: 1px solid #334155 !important;
-    }
-    [data-bs-theme="dark"] .dropdown-item {
-        color: #f8fafc !important;
-    }
-    [data-bs-theme="dark"] .dropdown-item:hover {
-        background-color: #334155 !important;
-    }
-    [data-bs-theme="dark"] .dropdown-header {
-        color: #94a3b8 !important;
-    }
-    [data-bs-theme="dark"] .dropdown-divider {
-        border-color: #334155 !important;
-    }
-    [data-bs-theme="dark"] .dropdown-item.text-dark {
-        color: #f8fafc !important;
-    }
-
-    /* Modal de Reset */
-    [data-bs-theme="dark"] .modal-content {
-        background-color: #1e293b !important;
-        border-color: #334155 !important;
-    }
-    [data-bs-theme="dark"] .modal-header.bg-warning {
-        background-color: rgba(245, 158, 11, 0.2) !important;
-        border-bottom: 1px solid rgba(245, 158, 11, 0.4) !important;
-    }
-    [data-bs-theme="dark"] .modal-header.bg-warning .modal-title {
-        color: #fbbf24 !important;
-    }
-    [data-bs-theme="dark"] .btn-close {
-        filter: invert(1) grayscale(100%) brightness(200%);
-    }
-    /* Permite que el menú salga de la tabla sin cortarse */
-    .table-responsive {
-        overflow: visible !important;
-    }
-
-    /* Si usas el dropdown de Bootstrap 5, esta clase ayuda a posicionarlo mejor */
-    .dropdown-menu {
-        z-index: 1050 !important;
-    }
+    [data-bs-theme="dark"] .text-muted { color: #94a3b8 !important; }
+    [data-bs-theme="dark"] .border { border-color: #334155 !important; }
+    [data-bs-theme="dark"] .table thead th { background-color: #0f172a !important; color: #94a3b8; border-color: #334155; }
+    [data-bs-theme="dark"] .table tbody td { border-color: #334155; }
+    [data-bs-theme="dark"] .avatar-circle { background-color: #334155 !important; color: #f8fafc !important; }
+    [data-bs-theme="dark"] .btn-white { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
+    [data-bs-theme="dark"] .form-control, [data-bs-theme="dark"] .form-select, [data-bs-theme="dark"] .input-group-text { background-color: #0f172a !important; border-color: #334155 !important; color: #f8fafc !important; }
+    [data-bs-theme="dark"] .custom-dropdown-menu { background-color: #1e293b !important; border-color: #334155 !important; }
+    [data-bs-theme="dark"] .dropdown-item { color: #f8fafc !important; }
+    [data-bs-theme="dark"] .dropdown-item:hover { background-color: #334155 !important; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3">
+<div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3 mt-2">
     <div>
         <h4 class="fw-bold m-0 text-dark">Panel de Control</h4>
         <small class="text-muted">Gestión de Usuarios y Suscripciones</small>
     </div>
-    
-<div class="d-flex flex-wrap gap-2">
-    <a href="{{ url_for('dashboard.index') }}" class="btn btn-white btn-sm border shadow-sm rounded-pill px-3 flex-fill text-center">
-        <i class="fas fa-chart-line text-info me-2"></i>Dashboard
-    </a>
 
-    <a href="{{ url_for('admin.monitor') }}" class="btn btn-white btn-sm border shadow-sm rounded-pill px-3 flex-fill text-center">
-        <i class="fas fa-terminal text-primary me-2"></i>Monitor
-    </a>
-    
-    <a href="{{ url_for('admin.exportar_usuarios') }}" class="btn btn-success btn-sm border-0 shadow-sm rounded-pill px-3 text-white flex-fill text-center">
-        <i class="fas fa-file-excel me-2"></i>Exportar
-    </a>
-
-    <span class="badge bg-white text-dark border px-3 py-2 rounded-pill shadow-sm flex-fill d-flex align-items-center justify-content-center m-0" style="font-size: 0.85rem;">
-        <i class="fas fa-calendar-alt me-2"></i> {{ now.strftime('%d/%m/%Y') }}
-    </span>
+    <div class="d-flex flex-wrap justify-content-start justify-content-md-end gap-2">
+        <a href="{{ url_for('dashboard.index') }}" class="btn btn-white btn-sm rounded-pill shadow-sm px-3 text-center">
+            <i class="fas fa-chart-line text-info me-2"></i>Dashboard
+        </a>
+        <a href="{{ url_for('admin.monitor') }}" class="btn btn-white btn-sm rounded-pill shadow-sm px-3 text-center">
+            <i class="fas fa-terminal text-primary me-2"></i>Monitor
+        </a>
+        <a href="{{ url_for('admin.exportar_usuarios') }}" class="btn btn-success btn-sm border-0 rounded-pill shadow-sm px-3 text-center d-none d-md-block" style="background-color: #059669;">
+            <i class="fas fa-file-excel me-2"></i>Exportar
+        </a>
+        <span class="badge bg-white text-dark border px-3 py-2 rounded-pill shadow-sm d-flex align-items-center justify-content-center m-0 fw-medium" style="font-size: 0.85rem;">
+            <i class="fas fa-users text-primary me-2"></i> {{ stats['total'] }} Usuarios
+            <span class="text-muted fw-light mx-2">|</span>
+            <i class="fas fa-calendar-alt text-dark me-2"></i> {{ now.strftime('%d/%m/%Y') }}
+        </span>
+    </div>
 </div>
-</div>
-<div class="row g-3 mb-4">
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card stat-card shadow-sm bg-white h-100 border-start border-primary border-4">
-            <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
-                <div class="icon-box bg-primary bg-opacity-10 text-primary mb-2"><i class="fas fa-users"></i></div>
-                <h4 class="fw-bold m-0 text-dark">{{ stats['total'] }}</h4>
-                <small class="text-muted smaller fw-bold">Total</small>
-            </div>
-        </div>
-    </div>
 
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card stat-card shadow-sm bg-white h-100 border-start border-success border-4">
-            <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
-                <div class="icon-box bg-success bg-opacity-10 text-success mb-2"><i class="fas fa-check-circle"></i>
-                </div>
-                <h4 class="fw-bold m-0 text-dark">{{ stats['activos'] }}</h4>
-                <small class="text-muted smaller fw-bold">Activos</small>
+<div class="card border-0 shadow-sm mb-4 table-card p-1">
+    <div class="card-body p-2">
+        <div class="row g-2 align-items-center">
+            <div class="col-md-6">
+                <form method="GET" action="{{ url_for('admin.dashboard') }}" class="input-group input-group-sm">
+                    <button type="submit" class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></button>
+                    <input type="text" name="q" value="{{ request.args.get('q', '') }}" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar por usuario o email y presionar Enter...">
+                    {% if request.args.get('q') %}
+                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-link text-danger text-decoration-none px-2"><i class="fas fa-times"></i> Limpiar</a>
+                    {% endif %}
+                </form>
             </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card stat-card shadow-sm bg-white h-100 border-start border-danger border-4">
-            <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
-                <div class="icon-box bg-danger bg-opacity-10 text-danger mb-2"><i class="fas fa-clock"></i></div>
-                <h4 class="fw-bold m-0 text-dark">{{ stats['vencidos'] }}</h4>
-                <small class="text-muted smaller fw-bold">Vencidos</small>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card stat-card shadow-sm bg-white h-100 border-start border-warning border-4">
-            <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
-                <div class="icon-box bg-warning bg-opacity-10 text-dark mb-2"><i class="fas fa-crown"></i></div>
-                <h4 class="fw-bold m-0 text-dark">{{ stats['admins'] }}</h4>
-                <small class="text-muted smaller fw-bold">Staff</small>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card stat-card shadow-sm bg-white h-100 border-start border-info border-4">
-            <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
-                <div class="icon-box bg-info bg-opacity-10 text-info mb-2"><i class="fas fa-bolt"></i></div>
-                <h4 class="fw-bold m-0 text-dark">{{ stats['online_hoy'] }}</h4>
-                <small class="text-muted smaller fw-bold">Vistos Hoy</small>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-6 col-md-4 col-lg-2">
-        <div class="card stat-card shadow-sm bg-white h-100 border-start border-dark border-4">
-            <div class="card-body p-3 d-flex flex-column align-items-center text-center justify-content-center">
-                <div class="icon-box bg-dark bg-opacity-10 text-dark mb-2"><i class="fas fa-biohazard"></i></div>
-                <h4 class="fw-bold m-0 text-dark">{{ stats['en_riesgo'] }}</h4>
-                <small class="text-muted smaller fw-bold">En Riesgo</small>
+            <div class="col-md-6 text-end pe-3 d-none d-md-block">
+                {% if search_query %}
+                    <small class="text-muted fw-bold">{{ total_users }} resultados para "{{ search_query }}"</small>
+                {% else %}
+                    <small class="text-muted fw-bold">{{ total_users }} registros en total</small>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4 table-card">
-    <div class="card-body p-3">
-        <div class="row g-3 align-items-center">
-            <div class="col-md-4">
-                <div class="input-group">
-                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" id="searchInput" class="form-control border-start-0 ps-0" placeholder="Buscar..."
-                        onkeyup="filtrarTabla()">
-                </div>
-            </div>
-            <div class="col-md-3">
-                <select id="roleFilter" class="form-select" onchange="filtrarTabla()">
-                    <option value="all">Todos los Registros</option>
-                    <option value="DUEÑO">👑 Dueños</option>
-                    <option value="Admin">🛡️ Admins</option>
-                    <option value="Usuario">👤 Usuarios</option>
-                    <option value="ONLINE_HOY">⚡ Vistos Hoy</option>
-                    <option value="EN_RIESGO">⚠️ En Riesgo</option>
-                </select>
-            </div>
-            <div class="col-md-3">
-                <select id="sortFilter" class="form-select" onchange="ordenarTabla()">
-                    <option value="default">Orden: Por Defecto</option>
-                    <option value="login_desc">🕒 Última Vez (Reciente)</option>
-                    <option value="login_asc">🕒 Última Vez (Antiguo)</option>
-                    <option value="sub_asc">📅 Vencimiento (Próximo)</option>
-                </select>
-            </div>
-            <div class="col-md-2 text-end">
-                <small class="text-muted fw-bold" id="conteoFilas">Mostrando todo</small>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="card table-card">
-    <div class="card-header bg-white py-3 border-bottom">
-        <h6 class="m-0 fw-bold text-uppercase text-muted small">Base de Datos de Clientes</h6>
-    </div>
-    <div class="card-body p-0">
-        <table class="table table-hover align-middle mb-0" style="table-layout: fixed; min-width: 100%;">
-                <thead class="bg-light small text-muted text-uppercase">
-                    <tr>
-                        <th class="ps-3 ps-md-4 text-nowrap" style="width: 45%; min-width: 150px;">Usuario / Empresa</th>
-                        <th class="d-none d-md-table-cell" style="width: 10%;">Rol</th>
-                        <th class="d-none d-lg-table-cell" style="width: 15%;">Última Vez</th>
-                        <th class="d-none d-md-table-cell" style="width: 10%;">Estado</th>
-                        <th class="text-center pe-3 pe-md-4 text-nowrap" style="width: 15%; min-width: 75px;">Acción</th>
-                    </tr>
-                </thead>
-                <tbody>
+<div class="card table-card border-0 shadow-sm">
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0" style="table-layout: fixed; width: 100%;">
+            <thead>
+                <tr>
+                    <th class="ps-3 ps-md-4">Usuario / Empresa</th>
+                    <th class="d-none d-md-table-cell" style="width: 15%;">Rol</th>
+                    <th class="d-none d-md-table-cell" style="width: 15%;">Última Vez</th>
+                    <th class="d-none d-md-table-cell" style="width: 110px;">Estado</th>
+                    <th class="text-center pe-3 pe-md-4" style="width: 50px;"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if users %}
                     {% for u in users %}
-                    {% set sub_end = u['subscription_end'].strftime('%Y-%m-%d %H:%M:%S') if u['subscription_end'] else '2000-01-01 00:00:00' %}
-                    {% set is_active = sub_end[:19] > now|string %}
+                    {% set sub_end = u['subscription_end'] %}
+                    {% set now_obj = now %} 
+                    
+                    {# Cálculo de días restantes #}
+                    {% set dias_restantes = 0 %}
+                    {% if sub_end %}
+                        {% set delta = sub_end - now_obj %}
+                        {% set dias_restantes = delta.days %}
+                    {% endif %}
+                    
+                    {% set is_active = dias_restantes > 0 %}
+                    {% set plan = u['plan_type']|default('Free') %}
+                    {% set estado_bd = u['estado_suscripcion']|default('Trial') %}
 
-                    <tr data-role="{{ 'DUEÑO' if u['role'] == 2 else 'Admin' if u['role'] == 1 else 'Usuario' }}"
-                        data-online="{{ 'true' if u['last_login'] and u['last_login'].strftime('%Y-%m-%d %H:%M') > hace_24h_str else 'false' }}"
-                        data-riesgo="{{ 'true' if u['role'] == 0 and u['subscription_end'] and u['subscription_end'].strftime('%Y-%m-%d') < limite_riesgo else 'false' }}">
-                        
+                    {# LÓGICA DE ESTADOS PRO #}
+                    {% set badge_class = 'badge-vencido' %}
+                    {% set badge_text = 'Expirado' %}
+
+                    {% if u['role'] >= 1 %}
+                        {% set badge_class = 'badge-activo' %}
+                        {% set badge_text = '∞ Ilimitado' %}
+                    {% elif estado_bd == 'Cancelado' %}
+                        {% set badge_class = 'badge-suspendido' %}
+                        {% set badge_text = 'Cancelado' %}
+                    {% elif estado_bd == 'Suspendido' %}
+                        {% set badge_class = 'badge-suspendido' %}
+                        {% set badge_text = 'Suspendido' %}
+                    {% elif is_active %}
+                        {% if estado_bd == 'Trial' %}
+                            {% set badge_class = 'badge-prueba' %}
+                            {% set badge_text = 'En Prueba' %}
+                            {% if dias_restantes <= 3 %}
+                                {% set badge_class = 'badge-alerta' %}
+                                {% set badge_text = 'Vence en ' ~ dias_restantes ~ 'd' %}
+                            {% endif %}
+                        {% else %}
+                            {% set badge_class = 'badge-activo' %}
+                            {% set badge_text = 'Activo' %}
+                            {% if dias_restantes <= 3 %}
+                                {% set badge_class = 'badge-alerta' %}
+                                {% set badge_text = 'Vence en ' ~ dias_restantes ~ 'd' %}
+                            {% endif %}
+                        {% endif %}
+                    {% endif %}
+
+                    <tr>
                         <td class="ps-3 ps-md-4">
-                            <div class="d-flex align-items-center gap-3">
-                                <div class="avatar-circle flex-shrink-0">
+                            <div class="d-flex align-items-start align-items-md-center gap-3">
+                                <div class="avatar-circle flex-shrink-0 mt-1 mt-md-0">
                                     {{ u['username'][0]|upper }}
                                 </div>
-                                <div class="text-truncate">
-                                    <div class="fw-bold text-dark text-truncate">{{ u['username'] }}</div>
-                                    <div class="d-flex align-items-center gap-2 text-truncate">
-                                        <small class="text-muted text-truncate">{{ u['email'] }}</small>
+                                <div style="min-width: 0; flex: 1;">
+
+                                    <div class="d-flex justify-content-between align-items-start mb-1">
+                                        <div class="fw-bold text-dark text-truncate pe-2" style="font-size: 0.95rem;" 
+                                            title="Registro: {{ u['created_at'].strftime('%d/%m/%Y') if u['created_at'] else 'N/A' }} | Restantes: {{ dias_restantes }} días">
+                                            {{ u['username'] }}
+                                        </div>
+
+                                        <div class="d-md-none flex-shrink-0">
+                                            <span class="status-badge {{ badge_class }} px-2 py-1" style="font-size: 0.6rem;">
+                                                {{ badge_text }}
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <div class="d-flex align-items-center gap-2 text-truncate mb-1">
+                                        <small class="text-muted text-truncate" style="font-size: 0.8rem;">{{ u['email'] }}</small>
                                         {% if u['telefono'] %}
-                                        <a href="https://wa.me/{{ u['telefono']|replace('+', '')|replace(' ', '') }}"
-                                            target="_blank" class="text-success flex-shrink-0" title="Enviar WhatsApp">
+                                        <a href="https://wa.me/{{ u['telefono']|replace('+', '')|replace(' ', '') }}" target="_blank" class="text-success flex-shrink-0">
                                             <i class="fab fa-whatsapp"></i>
                                         </a>
                                         {% endif %}
                                     </div>
-                                    
-                                    <div class="d-block d-md-none mt-2 lh-sm">
-                                        {% if u['role'] == 2 %} <span class="badge bg-warning text-dark border border-warning rounded-pill" style="font-size: 0.6rem;">👑 DUEÑO</span>
-                                        {% elif u['role'] == 1 %} <span class="badge bg-info text-dark rounded-pill" style="font-size: 0.6rem;">🛡️ Admin</span>
-                                        {% else %} <span class="badge bg-light text-secondary border rounded-pill" style="font-size: 0.6rem;">👤 Usuario</span>
-                                        {% endif %}
-                                        
-                                        {% if u['role'] >= 1 %} <span class="badge bg-success bg-opacity-10 text-success ms-1" style="font-size: 0.6rem;">∞ Infinito</span>
-                                        {% elif is_active %} <span class="badge bg-success rounded-pill ms-1" style="font-size: 0.6rem;">Activo</span>
-                                        {% else %} <span class="badge bg-danger rounded-pill ms-1" style="font-size: 0.6rem;">Vencido</span> {% endif %}
-                                        
-                                        {% if u['role'] == 0 %}
-                                        <br>
-                                        <small class="text-muted" style="font-size: 0.7rem;">
-                                            Vence: <strong class="text-dark">{{ u['subscription_end'].strftime('%d/%m/%Y') if u['subscription_end'] else 'Sin fecha' }}</strong>
-                                        </small>
+
+                                    <small class="text-primary d-block text-truncate" style="font-size: 0.75rem;">
+                                        <i class="fas fa-building me-1"></i> {{ u['company_name']|default('Sin Empresa') }}
+                                    </small>
+
+                                    <div class="d-flex d-md-none flex-wrap align-items-center gap-3 mt-2 pt-2" style="border-top: 1px dashed #eaecf0;">
+                                        <span class="badge-rol">{{ plan|upper }}</span>
+                                        <div class="text-muted" style="font-size: 0.7rem;">
+                                            <i class="fas fa-file-invoice text-secondary me-1"></i> {{ u['total_cotizaciones']|default(0) }}
+                                        </div>
+                                        <div class="text-muted" style="font-size: 0.7rem;">
+                                            <i class="fas fa-clock text-secondary me-1"></i> {{ u['tiempo_humano'] }}
+                                        </div>
+                                        {% if not is_active and u['role'] == 0 %}
+                                        <div class="text-danger fw-bold ms-auto" style="font-size: 0.7rem;">Vence: {{ u['subscription_end'].strftime('%d/%m') if u['subscription_end'] else '--' }}</div>
                                         {% endif %}
                                     </div>
-
-                                    <small class="text-primary d-none d-md-block text-truncate mt-1" style="font-size: 0.75rem;">
-                                        <i class="fas fa-building me-1"></i> {{ u['company_name'] }}
-                                    </small>
                                 </div>
                             </div>
                         </td>
 
-                        <td class="d-none d-md-table-cell text-nowrap">
-                            {% if u['role'] == 2 %} <span class="badge bg-warning text-dark border border-warning rounded-pill">👑 DUEÑO</span>
-                            {% elif u['role'] == 1 %} <span class="badge bg-info text-dark rounded-pill">🛡️ Admin</span>
-                            {% else %} <span class="badge bg-light text-secondary border rounded-pill">👤 Usuario</span>
-                            {% endif %}
-                        </td>
-
-                        <td class="d-none d-lg-table-cell text-nowrap">
-                            {% if u['last_login'] %} <small class="fw-bold text-dark">{{ u['last_login'].strftime('%d/%m/%Y %H:%M') }}</small>
-                            {% else %} <span class="badge bg-light text-muted border">Nunca</span> {% endif %}
-                        </td>
-
-                        <td class="d-none d-md-table-cell text-nowrap">
-                            <div class="mb-1">
-                                {% if u['role'] >= 1 %} <span class="badge bg-success bg-opacity-10 text-success">∞ Infinito</span>
-                                {% elif is_active %} <span class="badge bg-success rounded-pill">Activo</span>
-                                {% else %} <span class="badge bg-danger rounded-pill">Vencido</span> {% endif %}
+                        <td class="d-none d-md-table-cell">
+                            <span class="badge-rol">{{ plan|upper }}</span>
+                            <div class="mt-1 small fw-bold {{ 'text-warning' if u['role'] == 2 else 'text-info' if u['role'] == 1 else 'text-muted' }}">
+                                {% if u['role'] == 2 %}👑 Dueño{% elif u['role'] == 1 %}🛡️ Admin{% else %}<i class="fas fa-user text-muted me-1"></i>Usuario{% endif %}
                             </div>
+                        </td>
+
+                        <td class="d-none d-md-table-cell text-nowrap">
+                            <span class="text-dark fw-medium small">{{ u['tiempo_humano'] }}</span>
+                            <div class="small text-muted mt-1" style="font-size: 0.7rem;">{{ u['total_cotizaciones']|default(0) }} cotizaciones</div>
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <span class="status-badge {{ badge_class }}">
+                                {{ badge_text }}
+                            </span>
                             {% if u['role'] == 0 %}
-                            <small class="text-muted d-block" style="font-size: 0.7rem;">
-                                Vence: <strong class="text-dark">{{ u['subscription_end'].strftime('%d/%m/%Y') if u['subscription_end'] else 'Sin fecha' }}</strong>
-                            </small>
+                            <div class="small text-muted mt-1" style="font-size: 0.7rem;">
+                                Vence: <strong class="text-dark">{{ u['subscription_end'].strftime('%d/%m/%Y') if u['subscription_end'] else '--' }}</strong>
+                            </div>
                             {% endif %}
                         </td>
 
                         <td class="text-center pe-3 pe-md-4">
                             <div class="dropdown">
-                                <button class="btn action-btn mx-auto" type="button" data-bs-toggle="dropdown" data-bs-display="static">
+                                <button class="btn action-btn mx-auto" type="button" data-bs-toggle="dropdown" data-bs-boundary="window">
                                     <i class="fas fa-ellipsis-v"></i>
                                 </button>
-                                <ul class="dropdown-menu dropdown-menu-end custom-dropdown-menu animate__animated animate__fadeIn faster">
-                                    <li><h6 class="dropdown-header">MEMBRESÍA</h6></li>
+                                <ul class="dropdown-menu dropdown-menu-end custom-dropdown-menu">
+                                    <li><h6 class="dropdown-header">TIEMPO Y MEMBRESÍA</h6></li>
                                     <li>
-                                        <a class="dropdown-item text-dark" href="{{ url_for('admin.renovar', user_id=u['id'], meses=1) }}">
-                                            <i class="fas fa-calendar-plus text-success bg-success bg-opacity-10 rounded p-1"></i>
-                                            Sumar 1 Mes
-                                        </a>
+                                        <button class="dropdown-item" onclick="abrirModalDias('{{ u['id'] }}', '{{ u['username'] }}')">
+                                            <i class="fas fa-plus-circle text-success opacity-75 me-1"></i> Sumar Días
+                                        </button>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item text-dark" href="{{ url_for('admin.renovar', user_id=u['id'], meses=12) }}">
-                                            <i class="fas fa-calendar-check text-primary bg-primary bg-opacity-10 rounded p-1"></i>
-                                            Sumar 1 Año
+                                        <a class="dropdown-item" href="{{ url_for('admin.renovar', user_id=u['id'], meses=12) }}">
+                                            <i class="fas fa-calendar-check text-primary opacity-75 me-1"></i> Sumar 1 Año
                                         </a>
                                     </li>
-                                    <li><hr class="dropdown-divider my-2"></li>
-                                    <li><h6 class="dropdown-header">SEGURIDAD</h6></li>
+
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li><h6 class="dropdown-header">SOPORTE</h6></li>
                                     <li>
-                                        <button class="dropdown-item text-dark" onclick="abrirReset('{{ u.id|string }}', '{{ u.username }}')">
-                                            <i class="fas fa-key text-warning bg-warning bg-opacity-10 rounded p-1"></i>
-                                            Resetear Clave
+                                        <button class="dropdown-item" onclick="abrirReset('{{ u['id'] }}', '{{ u['username'] }}')">
+                                            <i class="fas fa-key text-warning opacity-75 me-1"></i> Reset Clave
                                         </button>
                                     </li>
 
-                                    {% if session['role'] == 2 and u['id'] != session['user_id'] %}
-                                    <li><hr class="dropdown-divider my-2"></li>
-                                    <li><h6 class="dropdown-header">STAFF</h6></li>
-                                    {% if u['role'] == 0 %}
-                                    <li>
-                                        <a class="dropdown-item text-dark" href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=1) }}">
-                                            <i class="fas fa-user-shield text-info bg-info bg-opacity-10 rounded p-1"></i>
-                                            Hacer Admin
-                                        </a>
-                                    </li>
-                                    {% else %}
-                                    <li>
-                                        <a class="dropdown-item text-danger" href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=0) }}">
-                                            <i class="fas fa-user-times text-danger bg-danger bg-opacity-10 rounded p-1"></i>
-                                            Quitar Admin
-                                        </a>
-                                    </li>
-                                    {% endif %}
-                                    {% endif %}
-
-                                    <li><hr class="dropdown-divider my-2"></li>
-                                    <li><h6 class="dropdown-header">ZONA DE PELIGRO</h6></li>
-
                                     {% if u['role'] <= 1 %} 
                                     <li>
-                                        <a class="dropdown-item text-dark" href="{{ url_for('admin.impersonate', user_id=u['id']) }}">
-                                            <i class="fas fa-user-secret text-dark bg-dark bg-opacity-10 rounded p-1"></i>
-                                            Entrar como usuario
+                                        <a class="dropdown-item" href="{{ url_for('admin.impersonate', user_id=u['id']) }}">
+                                            <i class="fas fa-user-secret text-secondary opacity-75 me-1"></i> Entrar como cliente
                                         </a>
                                     </li>
                                     {% endif %}
 
-                                    {% if u['id'] != session['user_id'] %}
+                                    {% if session['role'] == 2 and u['id'] != session['user_id'] %}
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li><h6 class="dropdown-header">ADMINISTRACIÓN</h6></li>
+                                        {% if u['role'] == 0 %}
+                                        <li><a class="dropdown-item" href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=1) }}"><i class="fas fa-shield-alt text-info opacity-75 me-1"></i> Hacer Admin</a></li>
+                                        {% else %}
+                                        <li><a class="dropdown-item" href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=0) }}"><i class="fas fa-user-times text-danger opacity-75 me-1"></i> Quitar Admin</a></li>
+                                        {% endif %}
+
                                     <li>
-                                        <form action="{{ url_for('admin.delete_user') }}" method="POST"
-                                            onsubmit="return confirm('⚠️ ¿ESTÁS SEGURO?\n\nSe borrará TODO: Ventas, Inventario, Configuración.\nEsta acción NO se puede deshacer.');">
+                                        <form action="{{ url_for('admin.delete_user') }}" method="POST" onsubmit="return confirm('⚠️ ESTO BORRARÁ TODO (Ventas, inventario). ¿Seguro?');">
                                             <input type="hidden" name="user_id" value="{{ u['id'] }}">
                                             <button type="submit" class="dropdown-item text-danger">
-                                                <i class="fas fa-trash-alt text-danger bg-danger bg-opacity-10 rounded p-1"></i>
-                                                Eliminar Cuenta
+                                                <i class="fas fa-trash-alt opacity-75 me-1"></i> Eliminar Cuenta
                                             </button>
                                         </form>
                                     </li>
                                     {% endif %}
+                                    
+                                    <li><h6 class="dropdown-header">INFORMACIÓN</h6></li>
+                                    <li>
+                                        <a class="dropdown-item" href="javascript:void(0)" onclick="abrirModalLog('{{ u['id'] }}', '{{ u['username'] }}')">
+                                            <i class="fas fa-list text-info opacity-75 me-1"></i> Ver Actividad
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </td>
                     </tr>
                     {% endfor %}
-                </tbody>
-            </table>
-        </div>
+                {% else %}
+                    <tr>
+                        <td colspan="5" class="text-center py-5 text-muted">
+                            <i class="fas fa-search fs-2 mb-3 text-secondary opacity-50"></i>
+                            <p class="m-0">No se encontraron usuarios.</p>
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
     </div>
+
+    {% if total_pages > 1 %}
+    <div class="card-footer bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3" style="border-top: 1px solid #eaecf0 !important;">
+        <small class="text-muted fw-medium">
+            Mostrando <span class="text-dark fw-bold">{{ (page - 1) * per_page + 1 }}</span> a 
+            <span class="text-dark fw-bold">{{ [page * per_page, total_users]|min }}</span> de 
+            <span class="text-dark fw-bold">{{ total_users }}</span> usuarios
+        </small>
+
+        <nav aria-label="Navegación de usuarios">
+            <ul class="pagination pagination-sm m-0 gap-1">
+                <li class="page-item {{ 'disabled' if page == 1 else '' }}">
+                    <a class="page-link border-0 {{ 'text-muted' if page == 1 else 'text-dark' }} bg-transparent fw-medium" 
+                        href="{{ url_for('admin.dashboard', page=page-1, q=request.args.get('q', '')) if page > 1 else '#' }}" tabindex="-1">Anterior</a>
+                </li>
+
+                {% for p in range(1, total_pages + 1) %}
+                <li class="page-item {{ 'active' if p == page else '' }}">
+                    <a class="page-link {{ 'rounded-2 border-0 bg-dark text-white fw-bold shadow-sm' if p == page else 'border-0 text-muted bg-transparent fw-medium' }}" 
+                        href="{{ url_for('admin.dashboard', page=p, q=request.args.get('q', '')) }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+
+                <li class="page-item {{ 'disabled' if page == total_pages else '' }}">
+                    <a class="page-link border-0 {{ 'text-muted' if page == total_pages else 'text-dark' }} bg-transparent fw-medium" 
+                        href="{{ url_for('admin.dashboard', page=page+1, q=request.args.get('q', '')) if page < total_pages else '#' }}">Siguiente</a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% else %}
+    <div class="card-footer bg-white border-0 py-3 text-center" style="border-top: 1px solid #eaecf0 !important;">
+        <small class="text-muted fw-medium">
+            Mostrando los <span class="text-dark fw-bold">{{ total_users }}</span> usuarios registrados.
+        </small>
+    </div>
+    {% endif %}
 </div>
 
 <div class="modal fade" id="modalReset" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 rounded-4 shadow">
-            <div class="modal-header bg-warning border-0">
-                <h6 class="modal-title fw-bold text-dark">Cambiar Contraseña</h6>
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold text-dark">Resetear Clave</h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="{{ url_for('admin.reset_password') }}" method="POST">
                 <div class="modal-body">
                     <p class="small text-muted mb-2">Usuario: <strong id="resetUsername" class="text-dark"></strong></p>
                     <input type="hidden" name="user_id" id="resetUserId">
-                    <label class="small fw-bold text-dark">Nueva Contraseña</label>
-                    <input type="text" name="new_password" class="form-control text-center fw-bold mt-1"
-                        placeholder="Mínimo 6 caracteres" 
-                        required 
-                        minlength="6"
-                        oninput="this.value = this.value.replace(/\s+/g, '')">
-                    <small class="text-muted" style="font-size: 0.6rem;">No se permiten espacios.</small>
+                    <input type="text" name="new_password" class="form-control text-center fw-bold rounded-3" placeholder="Nueva contraseña (min 6)" required minlength="6" oninput="this.value = this.value.replace(/\s+/g, '')">
                 </div>
-                <div class="modal-footer border-0 p-2">
-                    <button type="submit" class="btn btn-primary w-100 rounded-pill border-0" style="background-color: #3b82f6;">Guardar Cambio</button>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="submit" class="btn btn-dark w-100 rounded-pill">Guardar</button>
                 </div>
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalDias" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h6 class="modal-title fw-bold text-dark">Añadir Tiempo</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.sumar_tiempo') }}" method="POST">
+                <div class="modal-body">
+                    <p class="small text-muted mb-2">Usuario: <strong id="diasUsername" class="text-dark"></strong></p>
+                    <input type="hidden" name="user_id" id="diasUserId">
+                    <label class="small text-muted mb-1">Días a regalar</label>
+                    <input type="number" name="cantidad_dias" class="form-control text-center fw-bold rounded-3" value="7" min="1" required>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="submit" class="btn btn-primary w-100 rounded-pill">Aplicar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalLog" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-bottom border-light pb-3">
+                <div>
+                    <h6 class="modal-title fw-bold text-dark m-0">Historial de Actividad</h6>
+                    <small class="text-muted">Usuario: <strong id="logUsername" class="text-primary"></strong></small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body bg-light" id="logContentBody">
+                </div>
+            <div class="modal-footer border-0 pt-0">
+                <button type="button" class="btn btn-white w-100 rounded-pill shadow-sm" data-bs-dismiss="modal">Cerrar</button>
+            </div>
         </div>
     </div>
 </div>
@@ -610,89 +535,89 @@
         new bootstrap.Modal(document.getElementById('modalReset')).show();
     }
 
-    // --- FILTROS Y ORDENAMIENTO (JS PURO) ---
-    function filtrarTabla() {
-        const input = document.getElementById('searchInput').value.toLowerCase();
-        const filterValue = document.getElementById('roleFilter').value;
-        const rows = document.querySelectorAll('tbody tr');
-        let visibles = 0;
-
-        rows.forEach(row => {
-            const textoUsuario = row.cells[0].innerText.toLowerCase();
-            const role = row.getAttribute('data-role');
-            const isOnline = row.getAttribute('data-online') === 'true';
-            const isRiesgo = row.getAttribute('data-riesgo') === 'true';
-
-            const matchText = textoUsuario.includes(input);
-            let matchFilter = false;
-
-            // Lógica de filtrado inteligente
-            if (filterValue === 'all') {
-                matchFilter = true;
-            } else if (filterValue === 'ONLINE_HOY') {
-                matchFilter = isOnline;
-            } else if (filterValue === 'EN_RIESGO') {
-                matchFilter = isRiesgo;
-            } else {
-                matchFilter = (role === filterValue);
-            }
-
-            if (matchText && matchFilter) {
-                row.style.display = '';
-                visibles++;
-            } else {
-                row.style.display = 'none';
-            }
-        });
-        document.getElementById('conteoFilas').innerText = `${visibles} resultados`;
+    function abrirModalDias(id, name) {
+        document.getElementById('diasUserId').value = id;
+        document.getElementById('diasUsername').innerText = name;
+        new bootstrap.Modal(document.getElementById('modalDias')).show();
     }
 
-    function ordenarTabla() {
-        const criterio = document.getElementById('sortFilter').value;
-        const tbody = document.querySelector('tbody');
-        const rows = Array.from(tbody.querySelectorAll('tr'));
+    function abrirModalLog(id, name) {
+        document.getElementById('logUsername').innerText = name;
+        const bodyContent = document.getElementById('logContentBody');
+        
+        bodyContent.innerHTML = `
+            <div class="text-center py-4">
+                <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+                <div class="mt-2 small text-muted">Cargando actividad...</div>
+            </div>`;
+        
+        new bootstrap.Modal(document.getElementById('modalLog')).show();
 
-        rows.sort((a, b) => {
-            if (criterio === 'default') {
-                return a.cells[0].innerText.localeCompare(b.cells[0].innerText);
-            }
-
-            let valorA, valorB;
-            if (criterio.includes('login')) {
-                valorA = a.cells[2].innerText.trim();
-                valorB = b.cells[2].innerText.trim();
-                if (valorA === 'Nunca') valorA = '1900-01-01';
-                if (valorB === 'Nunca') valorB = '1900-01-01';
-            } else if (criterio.includes('sub')) {
-                valorA = a.cells[3].innerText.trim();
-                valorB = b.cells[3].innerText.trim();
-                if (valorA === 'Sin fecha') valorA = '2099-12-31';
-                if (valorB === 'Sin fecha') valorB = '2099-12-31';
-            }
-
-            const dateA = new Date(valorA);
-            const dateB = new Date(valorB);
-
-            return criterio.endsWith('desc') ? dateB - dateA : dateA - dateB;
-        });
-
-        rows.forEach(row => tbody.appendChild(row));
-    }
-
-    document.addEventListener('DOMContentLoaded', function() {
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    Swal.fire({
-                        title: "{{ '¡Éxito!' if category == 'success' else 'Atención' }}",
-                        text: "{{ message }}",
-                        icon: "{{ category }}", // 'success', 'error', 'warning', 'info'
-                        confirmButtonColor: '#0d6efd',
-                        timer: 3000,
-                        timerProgressBar: true
+        fetch(`/admin/api/log/${id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.logs.length > 0) {
+                    let html = '<div class="px-2 pt-2">';
+                    data.logs.forEach((log, index) => {
+                        let isRecent = index === 0 ? 'border-primary' : 'border-secondary opacity-75';
+                        html += `
+                        <div class="mb-3 ps-3 border-start ${isRecent}">
+                            <div class="d-flex justify-content-between align-items-start mb-1">
+                                <span class="badge bg-white text-dark border">${log.modulo}</span>
+                                <small class="text-muted" style="font-size: 0.65rem;">${log.hace_tiempo}</small>
+                            </div>
+                            <div class="text-dark fw-medium" style="font-size: 0.85rem;">${log.accion}</div>
+                            <div class="text-muted" style="font-size: 0.7rem;">${log.fecha_texto}</div>
+                        </div>`;
                     });
-                {% endfor %}
-            {% endif %}
+                    html += '</div>';
+                    bodyContent.innerHTML = html;
+                } else {
+                    bodyContent.innerHTML = `
+                    <div class="text-center py-5">
+                        <i class="fas fa-folder-open fs-2 mb-3 text-secondary opacity-50"></i>
+                        <p class="m-0 text-muted small">No hay actividad registrada aún.</p>
+                    </div>`;
+                }
+            })
+            .catch(error => {
+                bodyContent.innerHTML = `<div class="text-center py-4 text-danger small"><i class="fas fa-exclamation-circle me-1"></i> Error al cargar datos.</div>`;
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        // Bloqueo de botones submit para evitar doble click
+        document.querySelectorAll('form').forEach(form => {
+            form.addEventListener('submit', function(e) {
+                // Solo bloqueamos forms que se mandan por POST (como añadir dias o borrar usuario).
+                // No bloqueamos los GET como el buscador, para no congelar la pantalla.
+                if(this.method.toLowerCase() === 'post') {
+                    const btn = this.querySelector('button[type="submit"]');
+                    if(btn) {
+                        if (btn.disabled) {
+                            e.preventDefault();
+                            return;
+                        }
+                        btn.disabled = true;
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando...';
+                    }
+                }
+            });
+        });
+
+        {% with messages = get_flashed_messages(with_categories = true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        Swal.fire({
+            title: "{{ '¡Éxito!' if category == 'success' else 'Atención' }}",
+            text: "{{ message }}",
+            icon: "{{ category }}",
+            confirmButtonColor: '#101828',
+            timer: 3000,
+            timerProgressBar: true
+        });
+        {% endfor %}
+        {% endif %}
         {% endwith %}
     });
 </script>

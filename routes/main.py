@@ -161,6 +161,33 @@ def guardar_venta():
     u_id = session.get('user_id', 'N/A')
     
     try:
+        # --- BLOQUE DE FECHAS SEGURO ---
+        fecha_usuario = data.get('fecha_venta') 
+        # Obtenemos la fecha de hoy local para comparar y no adelantarnos al futuro
+        hoy_local = utc_to_local(now_utc()).strftime('%Y-%m-%d')
+
+        # 1. Definimos fecha_actual
+        if fecha_usuario and fecha_usuario != hoy_local:
+            # Si eligió una fecha manual (pasado), la usamos
+            hora_actual = datetime.now().strftime("%H:%M:%S")
+            fecha_actual = f"{fecha_usuario} {hora_actual}"
+        else:
+            # Si no hay fecha o es hoy, usamos tu función estándar
+            fecha_actual = ahora_sql()
+
+        # 2. Definimos fecha_vencimiento (Siempre basada en fecha_actual)
+        try:
+            # Intentamos calcular 2 días después de la fecha de la venta
+            if isinstance(fecha_actual, str):
+                base_fecha = parser.parse(fecha_actual)
+            else:
+                base_fecha = fecha_actual
+            fecha_vencimiento = base_fecha + timedelta(days=2)
+        except Exception as e:
+            # Si algo falla, el "Plan B" es 2 días desde hoy
+            fecha_vencimiento = ahora_sql(dias=2)
+        # --- FIN DEL BLOQUE ---
+            
         cursor.execute('SELECT inventario_activo FROM configuracion WHERE user_id=%s', (u_id,))
         config = cursor.fetchone()
         usar_inventario = config['inventario_activo'] if config else False
@@ -230,21 +257,21 @@ def guardar_venta():
         elif monto_pagado_real > 0:
             estado = 'anticipo'
 
-        fecha_actual = ahora_sql()
-        fecha_vencimiento = ahora_sql(dias=2) 
+        #fecha_actual = ahora_sql()
+        #fecha_vencimiento = ahora_sql(dias=2) 
 
         if venta_id:
             cursor.execute('''
                 UPDATE ventas 
                 SET cliente=%s, subtotal=%s, envio=%s, descuento_porcentaje=%s, descuento_monto=%s,
                     impuestos=%s, tax_engine=%s,
-                    total=%s, costo_total=%s, estado=%s, monto_pagado=%s, saldo_pendiente=%s
+                    total=%s, costo_total=%s, estado=%s, monto_pagado=%s, saldo_pendiente=%s, fecha=%s
                 WHERE id=%s AND user_id=%s
             ''', (
                 cliente, subtotal_calculado, costo_envio, descuento_pct, descuento_monto,
                 tax_amount_calculado, tax_engine,
                 total_calculado, costo_total_calculado, estado, monto_pagado_real, saldo_pendiente_real,
-                venta_id, u_id
+                fecha_actual, venta_id, u_id
             ))
             cursor.execute('DELETE FROM venta_detalles WHERE venta_id=%s', (venta_id,))
         else:
@@ -314,6 +341,19 @@ def guardar_venta():
             except Exception as e:
                 current_app.logger.error(f"INVENTORY_DB_ERROR: Error descontando stock para venta {venta_id} - {e}")
                 
+
+        try:
+            # Determinamos si es nueva o si está editando una existente
+            es_nueva = not bool(data.get('id'))
+            mensaje_log = f"Creó la Cotización/Venta #{venta_id}" if es_nueva else f"Actualizó la Cotización/Venta #{venta_id}"
+            
+            cursor.execute("""
+                INSERT INTO logs_actividad (user_id, accion, modulo) 
+                VALUES (%s, %s, %s)
+            """, (u_id, mensaje_log, "Cotizador"))
+        except Exception as e:
+            current_app.logger.warning(f"Error al guardar log de actividad en Cotizador: {e}")
+
         conn.commit()
         
         current_app.logger.info(f"SALE_SAVED: Usuario '{u_name}' (ID: {u_id}) guardo la venta/cotizacion #{venta_id} con estado '{estado.upper()}'")
@@ -354,6 +394,14 @@ def actualizar_venta():
             UPDATE ventas SET monto_pagado = %s, saldo_pendiente = %s, estado = %s, fecha_vencimiento = NULL 
             WHERE id = %s
         ''', (nuevo_pagado, max(0, nuevo_saldo), nuevo_estado, venta_id))
+
+        try:
+            cursor.execute("""
+                INSERT INTO logs_actividad (user_id, accion, modulo) 
+                VALUES (%s, %s, %s)
+            """, (u_id, f"Abonó ${abono:,.2f} a Venta #{venta_id}", "Ventas"))
+        except Exception as e:
+            current_app.logger.warning(f"Error al guardar log de actividad en Abono: {e}")
         
         conn.commit()
         
@@ -438,6 +486,17 @@ def ver_ticket(id):
 
     current_app.logger.info(f"TICKET_VIEW: Usuario '{u_name}' visualizo el ticket #{id}")
 
+    # --- REGISTRAR EN BITÁCORA ---
+    try:
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo) 
+            VALUES (%s, %s, %s)
+        """, (venta_db['user_id'], f"Imprimió o visualizó el Ticket #{id}", "Tickets"))
+        conn.commit()
+    except Exception as e:
+        current_app.logger.error(f"Error al registrar log de ticket: {e}")
+    
+
     cursor.close()
     conn.close()
     return render_template('ticket.html', venta=venta, detalles=detalles, config=config)
@@ -470,6 +529,15 @@ def get_cotizacion(id):
         } for it in cursor.fetchall()]
 
         current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' cargo cotizacion #{id} para edicion")
+        
+        try:
+            cursor.execute("""
+                INSERT INTO logs_actividad (user_id, accion, modulo) 
+                VALUES (%s, %s, %s)
+            """, (session['user_id'], f"Cargó la Cotización/Venta #{id} para editar", "Cotizador"))
+            conn.commit()
+        except Exception as e:
+            current_app.logger.warning(f"Error al guardar log de actividad en Cargar Cotizacion: {e}")
 
         return jsonify({
             'success': True, 'id': venta['id'], 'cliente': venta['cliente'], 'descuento': venta['descuento_porcentaje'],
@@ -516,6 +584,7 @@ def descargar_excel():
 
         current_app.logger.info(f"EXPORT_DATA: Usuario '{u_name}' (ID: {uid}) descargo el reporte de ventas en Excel")
         
+
         output.seek(0)
         return send_file(output, download_name=f"Reporte_SianEffects_{datetime.now().strftime('%Y%m%d')}.xlsx", as_attachment=True)
     except Exception as e:

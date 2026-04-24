@@ -175,6 +175,11 @@ def actualizar_perfil():
             UPDATE usuarios SET username=%s, email=%s, telefono=%s, country_code=%s WHERE id=%s
         ''', (new_username, new_email, new_phone, new_country, uid))
         session['username'] = new_username
+        
+        # --- NUEVO: REGISTRO ADMIN ---
+        cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
+                       (uid, "Actualizó su información de perfil", "Configuración"))
+                       
         conn.commit()
         
         current_app.logger.info(f"PROFILE_UPDATE: Usuario '{new_username}' (ID: {uid}) actualizo su informacion personal.")
@@ -215,6 +220,11 @@ def actualizar_password():
     if new_password and len(new_password) >= 6:
         hashed_pw = generate_password_hash(new_password)
         cursor.execute('UPDATE usuarios SET password=%s WHERE id=%s', (hashed_pw, uid))
+        
+        # --- NUEVO: REGISTRO ADMIN ---
+        cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
+                       (uid, "Cambió su contraseña de acceso", "Seguridad"))
+                       
         conn.commit()
         current_app.logger.info(f"SECURITY_UPDATE: Usuario '{u_name}' (ID: {uid}) cambio su contrasena.")
         
@@ -325,6 +335,10 @@ def actualizar_negocio():
                                            inventario_activo, ticket_bw, icono_empresa, logo_empresa, mostrar_ayuda, modo_oscuro)
                 VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             ''', (uid, margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, modo_oscuro))
+
+        # --- NUEVO: REGISTRO ADMIN ---
+        cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
+                       (uid, "Actualizó las preferencias y diseño de su negocio", "Configuración"))
 
         conn.commit()
         
@@ -454,6 +468,11 @@ def crear_zona():
 
         cursor.execute("INSERT INTO shipping_zones (user_id, zone_name, states_included) VALUES (%s, %s, %s)",
                      (uid, nombre, estados_json))
+                     
+        # --- NUEVO: REGISTRO ADMIN ---
+        cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
+                       (uid, f"Creó la zona de envío '{nombre}'", "Logística"))
+                       
         conn.commit()
         
         current_app.logger.info(f"SHIPPING_ZONE_CREATE: Usuario '{u_name}' (ID: {uid}) creo zona '{nombre}'.")

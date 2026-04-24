@@ -194,6 +194,12 @@ def actualizar_venta():
             WHERE id = %s
         ''', (nuevo_pagado, nuevo_saldo, estado, venta_id))
 
+        # --- NUEVO: REGISTRAR EN LA BITÁCORA DEL ADMIN ---
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo) 
+            VALUES (%s, %s, %s)
+        """, (session['user_id'], f"Registró abono de ${abono:,.2f} a Venta #{venta_id}", "Ventas"))
+
         conn.commit()
         
         # --- LOG DE DINERO MEJORADO ---
@@ -289,6 +295,12 @@ def cancelar_venta():
             "UPDATE ventas SET estado = 'cancelada' WHERE id = %s AND user_id = %s",
             (venta_id, session['user_id'])
         )
+
+        # --- REGISTRAR EN LA BITÁCORA DEL ADMIN ---
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo) 
+            VALUES (%s, %s, %s)
+        """, (session['user_id'], f"Canceló la Venta #{venta_id}", "Ventas"))
         
         conn.commit()
         

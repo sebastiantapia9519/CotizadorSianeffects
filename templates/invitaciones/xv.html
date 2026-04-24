@@ -1027,12 +1027,12 @@
         }
 
         .dropdown-menu-center {
-            position: absolute !important;
-            top: calc(100% + 10px) !important;
-            left: 50% !important;
+            position: fixed !important;
+            top: auto !important;
+            left: auto !important;
             right: auto !important;
             bottom: auto !important;
-            transform: translateX(-50%) !important;
+            transform: none !important;
             min-width: 260px;
             background: var(--card-bg) !important;
             backdrop-filter: blur(20px) saturate(180%);
@@ -1041,28 +1041,17 @@
             border-radius: 20px !important;
             padding: 10px !important;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15) !important;
-            z-index: 9999;
-        }
-
-        /* En móvil: nunca salirse de la pantalla */
-        @media (max-width: 480px) {
-            .dropdown-menu-center {
-                left: 50% !important;
-                transform: translateX(-50%) !important;
-                min-width: 240px;
-                max-width: 90vw;
-            }
+            z-index: 99999;
         }
 
         @keyframes agendaSlideIn {
             from {
                 opacity: 0;
-                transform: translateX(-50%) translateY(-8px);
+                transform: translateY(-8px);
             }
-
             to {
                 opacity: 1;
-                transform: translateX(-50%) translateY(0);
+                transform: translateY(0);
             }
         }
 
@@ -1240,27 +1229,7 @@
                             <i class="fas fa-chevron-down ms-2" id="agendaChevron"
                                 style="font-size:0.75rem; transition: transform 0.25s ease;"></i>
                         </button>
-                        <ul class="dropdown-menu-center" id="agendaDropdown"
-                            style="display:none; list-style:none; margin:0; padding:10px;" role="menu">
-                            <li>
-                                <button class="dropdown-item" onclick="addToCalendar('google')">
-                                    <i class="fab fa-google" style="color:#EA4335;"></i> Google Calendar
-                                </button>
-                            </li>
-                            <li>
-                                <button class="dropdown-item" onclick="addToCalendar('outlook')">
-                                    <i class="fab fa-windows" style="color:#0078D4;"></i> Outlook / Office 365
-                                </button>
-                            </li>
-                            <li>
-                                <hr>
-                            </li>
-                            <li>
-                                <button class="dropdown-item" onclick="addToCalendar('ics')">
-                                    <i class="fab fa-apple" style="color:#555;"></i> Apple Calendar (.ics)
-                                </button>
-                            </li>
-                        </ul>
+                        
                     </div>
                 </div>
             </div>
@@ -1732,6 +1701,44 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
     <script>
+        // Crear el dropdown en el body para evitar el clip del backdrop-filter
+        (function() {
+            const menu = document.createElement('ul');
+            menu.id = 'agendaDropdown';
+            menu.role = 'menu';
+            menu.style.cssText = 'display:none; list-style:none; margin:0; padding:10px;';
+            menu.className = 'dropdown-menu-center';
+            menu.innerHTML = `
+                <li>
+                    <button class="dropdown-item" onclick="addToCalendar('google')">
+                        <i class="fab fa-google" style="color:#EA4335;"></i> Google Calendar
+                    </button>
+                </li>
+                <li>
+                    <button class="dropdown-item" onclick="addToCalendar('outlook')">
+                        <i class="fab fa-windows" style="color:#0078D4;"></i> Outlook / Office 365
+                    </button>
+                </li>
+                <li><hr></li>
+                <li>
+                    <button class="dropdown-item" onclick="addToCalendar('ics')">
+                        <i class="fab fa-apple" style="color:#555;"></i> Apple Calendar (.ics)
+                    </button>
+                </li>
+            `;
+            document.body.appendChild(menu);
+        })();
+
+        // Siempre arrancar desde arriba al cargar/refrescar
+        if ('scrollRestoration' in history) {
+            history.scrollRestoration = 'manual';
+        }
+        window.addEventListener('load', () => {
+            window.scrollTo({ top: 0, behavior: 'instant' });
+        });
+
+
+
         function entrarSitio(estilo = 'simple') {
             const welcome = document.getElementById('welcome-screen');
             const content = document.getElementById('main-content');
@@ -1956,12 +1963,26 @@
                 window.open(`https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&body=${desc}&location=${loc}&startdt=${eventData.start}&enddt=${eventData.end}`, '_blank');
             }
             else if (type === 'ics') {
-                // Genera un archivo .ics para Apple Calendar o dispositivos locales
-                const icsContent = `BEGIN:VCALENDAR\nVERSION:2.0\nBEGIN:VEVENT\nSUMMARY:${eventData.title}\nDESCRIPTION:${eventData.description}\nLOCATION:${eventData.location}\nDTSTART:${eventData.start}\nDTEND:${eventData.end}\nEND:VEVENT\nEND:VCALENDAR`;
-                const blob = new Blob([icsContent], { type: 'text/calendar;charset=utf-8' });
+                const icsContent = [
+                    'BEGIN:VCALENDAR',
+                    'VERSION:2.0',
+                    'PRODID:-//Sianeffects//XV Anos//ES',
+                    'BEGIN:VEVENT',
+                    'UID:' + Date.now() + '@sianeffects.com',
+                    'SUMMARY:' + eventData.title,
+                    'DESCRIPTION:' + eventData.description,
+                    'LOCATION:' + eventData.location,
+                    'DTSTART:' + eventData.start,
+                    'DTEND:' + eventData.end,
+                    'END:VEVENT',
+                    'END:VCALENDAR'
+                ].join('\r\n');
+
+                // Data URI funciona en iOS Safari, Android y macOS
+                const dataUri = 'data:text/calendar;charset=utf8,' + encodeURIComponent(icsContent);
                 const link = document.createElement('a');
-                link.href = window.URL.createObjectURL(blob);
-                link.setAttribute('download', 'boda_{{ inv["slug"] }}.ics');
+                link.href = dataUri;
+                link.setAttribute('download', 'evento.ics');
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
@@ -1973,16 +1994,31 @@
             e.stopPropagation();
             const menu = document.getElementById('agendaDropdown');
             const chevron = document.getElementById('agendaChevron');
+            const btn = document.getElementById('calendarMenu');
             const isOpen = menu.style.display === 'block';
 
             if (isOpen) {
-                menu.style.animation = 'none';
                 menu.style.display = 'none';
                 chevron.style.transform = 'rotate(0deg)';
             } else {
+                // Calcular posición real del botón en la pantalla
+                const rect = btn.getBoundingClientRect();
+                const menuWidth = 260;
+                let leftPos = rect.left + rect.width / 2 - menuWidth / 2;
+
+                // Que no se salga por la izquierda ni derecha en móvil
+                const margin = 10;
+                if (leftPos < margin) leftPos = margin;
+                if (leftPos + menuWidth > window.innerWidth - margin) {
+                    leftPos = window.innerWidth - menuWidth - margin;
+                }
+
+                menu.style.top = (rect.bottom + 10) + 'px';
+                menu.style.left = leftPos + 'px';
+                menu.style.width = menuWidth + 'px';
                 menu.style.display = 'block';
                 menu.style.animation = 'none';
-                menu.offsetHeight; // fuerza reflow para re-disparar animación
+                menu.offsetHeight;
                 menu.style.animation = 'agendaSlideIn 0.25s ease-out forwards';
                 chevron.style.transform = 'rotate(180deg)';
             }

@@ -1,8 +1,9 @@
 import os
 import csv
+import math
 from io import StringIO
 from flask import Response
-from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, send_from_directory, abort
+from flask import Blueprint, render_template, request, redirect, url_for, flash, session, current_app, send_from_directory, abort, jsonify
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
 
@@ -14,42 +15,104 @@ from services.cloudflare_service import delete_from_cloudflare
 
 admin_bp = Blueprint('admin', __name__)
 
+# --- FUNCIÓN AUXILIAR PARA TIEMPO HUMANO ---
+def time_ago(dt):
+    """Convierte un objeto datetime en una cadena de 'Hace X tiempo'"""
+    if not dt:
+        return "Nunca"
+    
+    # Aseguramos que ambas fechas sean 'offset-aware' (con timezone)
+    now = now_utc()
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+        
+    diff = now - dt
+
+    if diff.days > 365:
+        return f"Hace {diff.days // 365} años"
+    if diff.days > 30:
+        return f"Hace {diff.days // 30} meses"
+    if diff.days > 0:
+        return f"Hace {diff.days} días"
+    if diff.seconds > 3600:
+        return f"Hace {diff.seconds // 3600} horas"
+    if diff.seconds > 60:
+        return f"Hace {diff.seconds // 60} minutos"
+    return "Hace unos segundos"
+# -------------------------------------------
+
 @admin_bp.route('/')
 @admin_required
 def dashboard():
-    # 1. Datos de la base de datos
+    search_query = request.args.get('q', '').strip().lower()
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute('SELECT * FROM usuarios ORDER BY created_at DESC')
     
-    # Convertimos las filas a diccionarios mutables
-    users = [dict(row) for row in cursor.fetchall()] 
+    # 1. CONTAR TOTALES (Ultrarrápido en BD)
+    if search_query:
+        cursor.execute('SELECT COUNT(*) as total FROM usuarios WHERE LOWER(username) LIKE %s OR LOWER(email) LIKE %s', (f'%{search_query}%', f'%{search_query}%'))
+    else:
+        cursor.execute('SELECT COUNT(*) as total FROM usuarios')
+    total_users = cursor.fetchone()['total']
+
+    total_pages = math.ceil(total_users / per_page) if total_users > 0 else 1
+    offset = (page - 1) * per_page
+
+    # 2. TRAER SOLO LOS 20 USUARIOS (LIMIT y OFFSET directo en SQL)
+    if search_query:
+        cursor.execute('''
+            SELECT u.*, (SELECT COUNT(*) FROM ventas v WHERE v.user_id = u.id) as total_cotizaciones
+            FROM usuarios u 
+            WHERE LOWER(u.username) LIKE %s OR LOWER(u.email) LIKE %s
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+        ''', (f'%{search_query}%', f'%{search_query}%', per_page, offset))
+    else:
+        cursor.execute('''
+            SELECT u.*, (SELECT COUNT(*) FROM ventas v WHERE v.user_id = u.id) as total_cotizaciones
+            FROM usuarios u 
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+        ''', (per_page, offset))
+        
+    users = [dict(row) for row in cursor.fetchall()]
+
+    # 3. STATS GLOBALES (Calculadas en SQL en 1 milisegundo)
+    ahora_utc = now_utc()
+    cursor.execute('''
+        SELECT 
+            COUNT(CASE WHEN role > 0 THEN 1 END) as admins,
+            COUNT(CASE WHEN subscription_end > %s THEN 1 END) as activos,
+            COUNT(CASE WHEN subscription_end <= %s OR subscription_end IS NULL THEN 1 END) as vencidos,
+            COUNT(CASE WHEN last_login > %s THEN 1 END) as online_hoy,
+            COUNT(CASE WHEN role = 0 AND subscription_end < %s THEN 1 END) as en_riesgo
+        FROM usuarios
+    ''', (ahora_utc, ahora_utc, ahora_utc - timedelta(days=1), ahora_utc - timedelta(days=350)))
+    stats_db = cursor.fetchone()
+
+    stats = {
+        'total': total_users,
+        'activos': stats_db['activos'] if stats_db else 0,
+        'vencidos': stats_db['vencidos'] if stats_db else 0,
+        'admins': stats_db['admins'] if stats_db else 0,
+        'online_hoy': stats_db['online_hoy'] if stats_db else 0,
+        'en_riesgo': stats_db['en_riesgo'] if stats_db else 0
+    }
     
     cursor.close()
     conn.close()
-    
-    # 2. Configuración de tiempos LOCALES
-    ahora_utc = now_utc()
+
+    # 4. CONFIGURACIÓN DE TIEMPOS LOCALES
     ahora_local = utc_to_local(ahora_utc) 
-    
     hace_24h_local = ahora_local - timedelta(days=1)
     hace_24h_str = hace_24h_local.strftime('%Y-%m-%d %H:%M')
-    
-    proximos_a_borrar_local = ahora_local - timedelta(days=350)
-    fecha_limite_riesgo = proximos_a_borrar_local.strftime('%Y-%m-%d')
+    fecha_limite_riesgo = (ahora_local - timedelta(days=350)).strftime('%Y-%m-%d')
 
-    # 3. Estadísticas
-    stats = {
-        'total': len(users), 'activos': 0, 'vencidos': 0,
-        'admins': 0, 'online_hoy': 0, 'en_riesgo': 0
-    }
-
-    # 4. Procesamiento
+    # 5. PROCESAMIENTO (AHORA PYTHON SOLO ITERA 20 VECES, NO 5,000)
     for u in users:
-        if u['role'] > 0:
-            stats['admins'] += 1
-        
-        # Lógica de Suscripción
         if u['subscription_end']:
             try:
                 f_end = u['subscription_end']
@@ -57,25 +120,9 @@ def dashboard():
                     f_utc = datetime.strptime(f_end[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
                 else:
                     f_utc = f_end if f_end.tzinfo else f_end.replace(tzinfo=timezone.utc)
-                    
-                f_local = utc_to_local(f_utc)
-                
-                # CORRECCIÓN: Mandamos el objeto de fecha directo para que el HTML no truene
-                u['subscription_end'] = f_local
-                
-                if f_local > ahora_local:
-                    stats['activos'] += 1
-                else:
-                    stats['vencidos'] += 1
-                    if u['role'] == 0 and f_local < proximos_a_borrar_local:
-                        stats['en_riesgo'] += 1
-            except Exception as e:
-                current_app.logger.error(f"DATE_ERROR: Parseando subscription_end para user {u['id']} - {e}")
-                stats['vencidos'] += 1
-        else:
-            stats['vencidos'] += 1
+                u['subscription_end'] = utc_to_local(f_utc)
+            except: pass
 
-        # Lógica de Actividad (Last Login)
         if u['last_login']:
             try:
                 l_login = u['last_login']
@@ -83,26 +130,26 @@ def dashboard():
                     log_utc = datetime.strptime(l_login[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
                 else:
                     log_utc = l_login if l_login.tzinfo else l_login.replace(tzinfo=timezone.utc)
-                    
-                log_local = utc_to_local(log_utc)
-                
-                # CORRECCIÓN: Mandamos el objeto de fecha directo para que el HTML no truene
-                u['last_login'] = log_local
-                
-                if log_local > hace_24h_local:
-                    stats['online_hoy'] += 1
-            except Exception as e:
-                current_app.logger.warning(f"DATE_WARNING: Parseando last_login para user {u['id']} - {e}")
-                pass
+                u['last_login'] = utc_to_local(log_utc)
+                u['tiempo_humano'] = time_ago(log_utc)
+            except:
+                u['tiempo_humano'] = "Error"
+        else:
+            u['tiempo_humano'] = "Nunca"
 
-    # 5. Envío a la plantilla
+    # 6. Envío a la plantilla
     return render_template('admin.html', 
-                           users=users, 
+                           users=users, # Ya vienen solo 20 desde la BD
+                           search_query=search_query, 
                            now=ahora_local,
                            stats=stats, 
                            my_role=session.get('role'),
                            hace_24h_str=hace_24h_str,
-                           limite_riesgo=fecha_limite_riesgo)
+                           limite_riesgo=fecha_limite_riesgo,
+                           page=page,
+                           total_pages=total_pages,
+                           per_page=per_page,
+                           total_users=total_users)
 
 @admin_bp.route('/renovar/<int:user_id>/<int:meses>')
 @admin_required
@@ -122,13 +169,13 @@ def renovar(user_id, meses):
     target_user = cursor.fetchone()
     target_name = target_user['username'] if target_user else f"ID {user_id}"
     
-    cursor.execute('UPDATE usuarios SET subscription_end = %s WHERE id = %s', (nueva_fecha_fin, user_id))
+    # También reseteamos el estado a 'Activo' si estaban vencidos
+    cursor.execute('UPDATE usuarios SET subscription_end = %s, estado_suscripcion = %s WHERE id = %s', (nueva_fecha_fin, 'Activo', user_id))
     
     conn.commit()
     cursor.close()
     conn.close()
     
-    # LOG SIN ACENTOS
     current_app.logger.info(f"SUB_RENEWED: Admin '{admin_name}' (ID: {admin_id}) renovo la suscripcion de '{target_name}' por {meses} meses.")
     flash(f'Suscripción renovada por {meses} meses.', 'success')
     return redirect(url_for('admin.dashboard'))
@@ -160,7 +207,6 @@ def cambiar_rol(user_id, nuevo_rol):
     cursor.close()
     conn.close()
     
-    # LOG SIN ACENTOS
     current_app.logger.info(f"ROLE_CHANGED: Admin '{admin_name}' (ID: {admin_id}) cambio el rol de '{target_name}' a {nuevo_rol}.")
     return redirect(url_for('admin.dashboard'))
 
@@ -180,8 +226,6 @@ def reset_password():
     user_id = request.form.get('user_id')
     new_pass = request.form.get('new_password', '').strip()
 
-    current_app.logger.info(f"DEBUG: Form data received -> ID: {user_id}, Pass_Len: {len(new_pass)}")
-
     if not user_id or not new_pass:
         current_app.logger.warning("DEBUG: Cancelled. ID or Password missing.")
         return redirect(url_for('admin.dashboard'))
@@ -190,8 +234,7 @@ def reset_password():
     cursor = conn.cursor()
     try:
         hashed_password = generate_password_hash(new_pass, method='pbkdf2:sha256')
-        current_app.logger.info(f"DEBUG: Generated Hash Prefix: {hashed_password[:10]}")
-
+        
         cursor.execute('UPDATE usuarios SET password = %s WHERE id = %s', (hashed_password, user_id))
         conn.commit()
         
@@ -200,11 +243,9 @@ def reset_password():
             target = cursor.fetchone()
             target_name = target['username'] if target else f"ID {user_id}"
             
-            # LOG SIN ACENTOS
             current_app.logger.info(f"PASSWORD_RESET: Admin '{admin_name}' (ID: {current_uid}) reseteo la contrasena de '{target_name}'.")
             flash('Contraseña actualizada correctamente.', 'success')
         else:
-            current_app.logger.warning(f"DEBUG: FAIL. No user found with UID {user_id}")
             flash('Error: Usuario no encontrado en la base de datos.', 'error')
 
     except Exception as e:
@@ -235,7 +276,6 @@ def impersonate(user_id):
         session['username'] = user['username']
         session['role'] = user['role']
         
-        # LOG SIN ACENTOS
         current_app.logger.info(f"IMPERSONATE_START: Admin '{admin_name}' (ID: {admin_id}) entro a la cuenta del UID {user['id']}.")
         flash(f'Modo Fantasma: Ahora estás viendo el sistema como {user["username"]}', 'info')
         return redirect(url_for('main.index'))
@@ -272,9 +312,7 @@ def delete_user():
         return redirect(url_for('admin.dashboard'))
 
     try:
-        # =========================================================
-        #  LIMPIEZA DEL LOGO EN CLOUDFLARE R2 
-        # =========================================================
+        # LOGICA DE BORRADO...
         cursor.execute("SELECT logo_empresa FROM configuracion WHERE user_id = %s", (user_id,))
         config_user = cursor.fetchone()
         
@@ -287,37 +325,30 @@ def delete_user():
                 except Exception as e:
                     current_app.logger.warning(f"R2_CLEANUP_WARNING: No se pudo borrar el logo del usuario {user_id} - {e}")
 
-        # Borrar Configuración
         cursor.execute("DELETE FROM configuracion WHERE user_id = %s", (user_id,))
-        
-        # Borrar Detalles de Ventas y Ventas
         cursor.execute("DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id = %s)", (user_id,))
         cursor.execute("DELETE FROM ventas WHERE user_id = %s", (user_id,))
-
-        # Borrar de tutoriales
         cursor.execute("DELETE FROM tutoriales_estado WHERE user_id = %s", (user_id,))
-        
-        # Borrar Inventario y Materiales
         cursor.execute("DELETE FROM movimientos_inventario WHERE user_id = %s", (user_id,))
         cursor.execute("DELETE FROM materiales WHERE user_id = %s", (user_id,))
-        
-        # Borrar Maquinaria y Productos
         cursor.execute("DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id = %s)", (user_id,))
         cursor.execute("DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id = %s)", (user_id,))
         cursor.execute("DELETE FROM maquinaria WHERE user_id = %s", (user_id,))
         cursor.execute("DELETE FROM productos WHERE user_id = %s", (user_id,))
-        
-        # Borrar Logs de Envíos
         cursor.execute("DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id = %s)", (user_id,))
         cursor.execute("DELETE FROM shipping_zones WHERE user_id = %s", (user_id,))
         cursor.execute("DELETE FROM shipping_configs WHERE user_id = %s", (user_id,))
+        
+        # Eliminar logs de actividad si existe la tabla
+        try:
+             cursor.execute("DELETE FROM logs_actividad WHERE user_id = %s", (user_id,))
+        except Exception:
+             pass
 
-        # Finalmente borrar al usuario
         cursor.execute("DELETE FROM usuarios WHERE id = %s", (user_id,))
         
         conn.commit()
         
-        # LOG SIN ACENTOS
         current_app.logger.info(f"USER_DELETED: Admin '{admin_name}' (ID: {admin_id}) borro permanentemente la cuenta ID {user_id} y todos sus datos.")
         flash('Usuario y todos sus datos eliminados correctamente.', 'success')
         
@@ -381,7 +412,6 @@ def stop_impersonate():
         session['role'] = admin_user['role']
         session.pop('original_admin_id', None)
 
-        # LOG SIN ACENTOS
         current_app.logger.info(f"IMPERSONATE_STOP: Admin '{admin_user['username']}' (ID: {original_id}) salio del modo fantasma.")
         flash('Modo Fantasma finalizado. Bienvenido de vuelta, Jefe.', 'success')
         
@@ -440,7 +470,6 @@ def exportar_usuarios():
             u['last_login'] if u['last_login'] else 'Nunca'
         ])
 
-    # LOG DE AUDITORÍA DE EXPORTACIÓN
     current_app.logger.info(f"EXPORT_DATA: Admin '{admin_name}' (ID: {admin_id}) exporto la lista completa de usuarios.")
 
     output = si.getvalue()
@@ -452,3 +481,117 @@ def exportar_usuarios():
             "Content-type": "text/csv; charset=utf-8"
         }
     )
+
+@admin_bp.route('/sumar-tiempo', methods=['POST'])
+@admin_required
+def sumar_tiempo():
+    # Verifica que al menos sea Rol 1 (Diana)
+    if session.get('role') < 1:
+        flash('No tienes permisos para modificar suscripciones.', 'error')
+        return redirect(url_for('admin.dashboard'))
+
+    user_id = request.form.get('user_id')
+    
+    try:
+        dias_a_sumar = int(request.form.get('cantidad_dias', 0))
+    except ValueError:
+        flash('La cantidad de días debe ser un número entero.', 'error')
+        return redirect(url_for('admin.dashboard'))
+        
+    if dias_a_sumar <= 0:
+        flash('Debes sumar al menos 1 día.', 'warning')
+        return redirect(url_for('admin.dashboard'))
+
+    admin_name = session.get('username', 'Admin_Desconocido')
+    admin_id = session.get('user_id', 'N/A')
+
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        # Obtenemos la info actual del usuario
+        cursor.execute("SELECT username, subscription_end FROM usuarios WHERE id = %s", (user_id,))
+        target_user = cursor.fetchone()
+        
+        if not target_user:
+            flash('Usuario no encontrado.', 'error')
+            return redirect(url_for('admin.dashboard'))
+            
+        target_name = target_user['username']
+        current_sub_end = target_user['subscription_end']
+        
+        ahora = now_utc()
+        
+        # Le agregamos la zona horaria a la fecha de la base de datos para que Python no truene
+        if current_sub_end and current_sub_end.tzinfo is None:
+            current_sub_end = current_sub_end.replace(tzinfo=timezone.utc)
+        
+        # Si la suscripción ya estaba vencida, empezamos a contar desde hoy
+        if not current_sub_end or current_sub_end < ahora:
+            nueva_fecha_fin = ahora + timedelta(days=dias_a_sumar)
+        else:
+            # Si sigue activa, le sumamos los días a la fecha que ya tenía
+            nueva_fecha_fin = current_sub_end + timedelta(days=dias_a_sumar)
+            
+        # Actualizamos la base de datos, asegurando que vuelva a estar 'Activo'
+        cursor.execute('''
+            UPDATE usuarios 
+            SET subscription_end = %s, 
+                estado_suscripcion = %s,
+                dias_regalados = COALESCE(dias_regalados, 0) + %s
+            WHERE id = %s
+        ''', (nueva_fecha_fin, 'Activo', dias_a_sumar, user_id))
+        
+        conn.commit()
+        
+        current_app.logger.info(f"TIME_ADDED: Admin '{admin_name}' (ID: {admin_id}) sumo {dias_a_sumar} dias a '{target_name}'.")
+        flash(f'Se añadieron {dias_a_sumar} días correctamente a {target_name}.', 'success')
+        
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"Error sumando días a user {user_id}: {e}")
+        flash('Error interno al actualizar el tiempo.', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+        
+    return redirect(url_for('admin.dashboard'))
+
+@admin_bp.route('/api/log/<int:user_id>')
+@admin_required
+def api_ver_log(user_id):
+    """Devuelve los últimos 20 logs de actividad de un usuario en formato JSON para el Modal Front-End."""
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    try:
+        cursor.execute("""
+            SELECT accion, modulo, fecha 
+            FROM logs_actividad 
+            WHERE user_id = %s 
+            ORDER BY fecha DESC 
+            LIMIT 20
+        """, (user_id,))
+        logs_db = cursor.fetchall()
+        
+        lista_logs = []
+        for row in logs_db:
+            # Aprovechamos tu función time_ago() para mandar "Hace 2 horas"
+            tiempo_relativo = time_ago(row['fecha']) 
+            
+            lista_logs.append({
+                "accion": row['accion'],
+                "modulo": row['modulo'] if row['modulo'] else 'Sistema',
+                "hace_tiempo": tiempo_relativo,
+                "fecha_texto": row['fecha'].strftime('%d/%m/%Y %H:%M') if row['fecha'] else ''
+            })
+            
+        return jsonify({"success": True, "logs": lista_logs})
+        
+    except Exception as e:
+        current_app.logger.error(f"Error cargando logs JSON para {user_id}: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+        
+    finally:
+        cursor.close()
+        conn.close()

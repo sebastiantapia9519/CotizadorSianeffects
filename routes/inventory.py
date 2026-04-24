@@ -84,13 +84,20 @@ def materiales():
                     SET nombre=%s, es_paquete=%s, precio_compra=%s, cantidad_paquete=%s, precio_unitario=%s, unidad_medida=%s, stock_minimo=%s
                     WHERE id=%s AND user_id=%s
                 """, (nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo, id_actualizar, user_id))
-                current_app.logger.info(f"MATERIAL_UPDATED: Usuario '{u_name}' (ID: {user_id}) actualizo el material #{id_actualizar} ('{nombre}')")
+                
+                # --- NUEVO: REGISTRO ADMIN ---
+                cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
+                               (user_id, f"Actualizó material '{nombre}'", "Inventario"))
+                
             else:
                 cursor.execute("""
                     INSERT INTO materiales (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo)
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                 """, (user_id, nombre, es_paquete, precio_compra, cantidad_paquete, precio_unitario, unidad_medida, stock_minimo))
-                current_app.logger.info(f"MATERIAL_CREATED: Usuario '{u_name}' (ID: {user_id}) creo el material '{nombre}'")
+                
+                # --- NUEVO: REGISTRO ADMIN ---
+                cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
+                               (user_id, f"Creó el material '{nombre}'", "Inventario"))
             
             conn.commit()
             return redirect(url_for('inventory.materiales'))
@@ -212,11 +219,17 @@ def equipos():
             if id_actualizar:
                 cursor.execute("UPDATE maquinaria SET nombre=%s, costo_desgaste=%s WHERE id=%s AND user_id=%s", 
                              (nombre, costo_desgaste, id_actualizar, user_id))
-                current_app.logger.info(f"EQUIPMENT_UPDATED: Usuario '{u_name}' (ID: {user_id}) actualizo equipo #{id_actualizar} ('{nombre}')")
+                
+                # --- NUEVO: REGISTRO ADMIN ---
+                cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
+                               (user_id, f"Actualizó equipo '{nombre}'", "Equipos"))
             else:
                 cursor.execute("INSERT INTO maquinaria (user_id, nombre, costo_desgaste) VALUES (%s, %s, %s)", 
                              (user_id, nombre, costo_desgaste))
-                current_app.logger.info(f"EQUIPMENT_CREATED: Usuario '{u_name}' (ID: {user_id}) creo el equipo '{nombre}'")
+                             
+                # --- NUEVO: REGISTRO ADMIN ---
+                cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
+                               (user_id, f"Registró el equipo '{nombre}'", "Equipos"))
             
             conn.commit()
             return redirect(url_for('inventory.equipos', guardado='true'))
@@ -385,8 +398,11 @@ def guardar_receta():
             cursor.execute("INSERT INTO producto_maquinaria (producto_id, maquinaria_id) VALUES (%s, %s)", 
                            (pid, e['id']))
 
+        # --- NUEVO: REGISTRO ADMIN ---
+        cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
+                       (user_id, f"Creó la receta '{nombre_receta}'", "Recetas"))
+
         conn.commit()
-        current_app.logger.info(f"RECIPE_CREATED: Usuario '{u_name}' (ID: {user_id}) creo la receta '{nombre_receta}' (ID: {pid})")
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()

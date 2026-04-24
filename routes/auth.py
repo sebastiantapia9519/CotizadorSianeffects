@@ -42,7 +42,22 @@ def login():
                 session['username'] = user['username']
                 session['role'] = user['role']
 
-                # Log de éxito
+                # --- GUARDAR EN BITÁCORA PARA EL PANEL ADMIN ---
+                try:
+                    conn_log = get_db()
+                    cursor_log = conn_log.cursor()
+                    cursor_log.execute("""
+                        INSERT INTO logs_actividad (user_id, accion, modulo) 
+                        VALUES (%s, %s, %s)
+                    """, (user['id'], "Inició sesión en el sistema", "Acceso"))
+                    conn_log.commit()
+                    cursor_log.close()
+                    conn_log.close()
+                except Exception as e:
+                    current_app.logger.warning(f"No se pudo guardar el log de login: {e}")
+                # ------------------------------------------------------
+
+                # Log de éxito interno
                 current_app.logger.info(f"LOGIN_SUCCESS: User '{user['username']}' authenticated.")
                 return redirect(url_for('main.index'))
             else:
@@ -167,6 +182,11 @@ def registro():
                 )
                 VALUES (%s, %s, %s, %s)
             ''', (user_id, 35.00, 8.00, 10))
+
+            cursor.execute("""
+                INSERT INTO logs_actividad (user_id, accion, modulo) 
+                VALUES (%s, %s, %s)
+            """, (user_id, "Se registró en SianEffects", "Cuenta"))
 
             conn.commit()
             

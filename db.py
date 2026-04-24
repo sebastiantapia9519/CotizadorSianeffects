@@ -60,8 +60,10 @@ def init_db():
         last_login TIMESTAMP,
         origen_registro TEXT DEFAULT 'desconocido',
         utm_campaign TEXT,
-        estado_suscripcion TEXT DEFAULT 'activa',
+        estado_suscripcion TEXT DEFAULT 'Trial',
         fecha_cancelacion TIMESTAMP,
+        plan_type TEXT DEFAULT 'Free',
+        trial_start TIMESTAMP,
         tutorial_visto BOOLEAN DEFAULT FALSE
     )
     """)
@@ -174,6 +176,15 @@ def init_db():
         maquinaria_id INTEGER,
         FOREIGN KEY(producto_id) REFERENCES productos(id),
         FOREIGN KEY(maquinaria_id) REFERENCES maquinaria(id)
+    )
+    """)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS logs_actividad (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        accion TEXT,
+        fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES usuarios(id)
     )
     """)
 
