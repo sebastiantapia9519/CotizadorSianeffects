@@ -446,23 +446,53 @@
     }
 
     // --- ELIMINAR ---
-    function confirmarEliminarEquipo(urlReal, nombre) {
-        Swal.fire({
-            title: '¿Eliminar equipo?',
-            text: `Vas a borrar "${nombre}". Esta acción no se puede deshacer.`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#e9ecef',
-            cancelButtonText: '<span style="color:#495057; font-weight: bold;">Cancelar</span>',
-            confirmButtonText: 'Sí, borrar',
-            customClass: { popup: 'rounded-4' }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = urlReal;
-            }
-        });
-    }
+function confirmarEliminarEquipo(urlReal, nombre) {
+    Swal.fire({
+        title: '¿Eliminar equipo?',
+        text: `Vas a borrar "${nombre}". Esta acción no se puede deshacer.`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6e7881',
+        cancelButtonText: 'Cancelar',
+        confirmButtonText: 'Sí, eliminar',
+        customClass: { popup: 'rounded-4' }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // USAMOS FETCH PARA CONSULTAR SIN SALIR DE LA PÁGINA
+            fetch(urlReal)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'blocked') {
+                        // El modal aparece sobre la tabla actual
+                        const lista = data.recetas.join(', ');
+                        Swal.fire({
+                            title: 'Equipo en uso',
+                            html: `Este equipo es parte de la producción de: <br><br><b>${lista}</b>.<br><br>¿Quieres ir a Recetas para actualizar tus procesos?`,
+                            icon: 'info',
+                            showCancelButton: true,
+                            confirmButtonText: 'Sí, ir a Recetas',
+                            cancelButtonText: 'Regresar',
+                            confirmButtonColor: '#ff4a5a'
+                        }).then((res) => {
+                            if (res.isConfirmed) {
+                                window.location.href = "{{ url_for('inventory.recetas') }}";
+                            }
+                        });
+                    } else if (data.status === 'success') {
+                        // Recargamos solo si se borró con éxito
+                        location.reload();
+                    } else {
+                        Swal.fire('Error', 'No se pudo eliminar el equipo.', 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'Ocurrió un fallo en el servidor.', 'error');
+                });
+        }
+    });
+}
 
     // --- ALERTAS DE ÉXITO (FEEDBACK VISUAL) ---
     document.addEventListener("DOMContentLoaded", function() {

@@ -149,22 +149,34 @@ def materiales():
 @login_required
 def eliminar_material(id):
     user_id = session['user_id']
-    u_name = session.get('username', 'Anonimo')
-    
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # 1. Buscar dependencias
+        cursor.execute("""
+            SELECT p.nombre FROM productos p
+            JOIN producto_detalles pd ON p.id = pd.producto_id
+            WHERE pd.material_id = %s AND p.user_id = %s
+        """, (id, user_id))
+        recetas = cursor.fetchall()
+
+        if recetas:
+            # En lugar de devolver un script, devolvemos JSON
+            return jsonify({
+                "status": "blocked",
+                "recetas": [r['nombre'] for r in recetas]
+            })
+
+        # 2. Borrar si no hay dependencias
         cursor.execute("DELETE FROM materiales WHERE id=%s AND user_id=%s", (id, user_id))
         conn.commit()
-        current_app.logger.info(f"MATERIAL_DELETED: Usuario '{u_name}' (ID: {user_id}) elimino el material #{id}")
+        return jsonify({"status": "success"})
+
     except Exception as e:
-        conn.rollback()
-        current_app.logger.error(f"MATERIAL_DELETE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al eliminar material #{id} - {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()
         conn.close()
-    
-    return redirect(url_for('inventory.materiales'))
 
 # =========================
 # 3. EQUIPOS 
@@ -266,24 +278,38 @@ def equipos():
 @login_required
 def eliminar_equipo(id):
     user_id = session['user_id']
-    u_name = session.get('username', 'Anonimo')
-    
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # 1. BUSCAR DEPENDENCIAS (En producto_maquinaria)
+        cursor.execute("""
+            SELECT p.nombre 
+            FROM productos p
+            JOIN producto_maquinaria pm ON p.id = pm.producto_id
+            WHERE pm.maquinaria_id = %s AND p.user_id = %s
+        """, (id, user_id))
+        
+        recetas_usando_equipo = cursor.fetchall()
+
+        # 2. SI HAY DEPENDENCIAS: Bloqueamos y mandamos JSON
+        if recetas_usando_equipo:
+            return jsonify({
+                "status": "blocked",
+                "recetas": [r['nombre'] for r in recetas_usando_equipo]
+            })
+
+        # 3. SI NO HAY DEPENDENCIAS: Borrado normal
         cursor.execute('DELETE FROM maquinaria WHERE id=%s AND user_id=%s', (id, user_id))
         conn.commit()
-        current_app.logger.info(f"EQUIPMENT_DELETED: Usuario '{u_name}' (ID: {user_id}) elimino el equipo #{id}")
+        return jsonify({"status": "success"})
+        
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"EQUIPMENT_DELETE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al eliminar equipo #{id} - {e}")
+        current_app.logger.error(f"EQUIPMENT_DELETE_ERROR: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()
         conn.close()
-        
-    return redirect(url_for('inventory.equipos', eliminado='true'))
-
-
 # =========================
 # 4. RECETAS
 # =========================
@@ -347,21 +373,31 @@ def recetas():
             receta_dict['ingredientes_reales'] = json.dumps([dict(d) for d in detalles])
             recetas_lista.append(receta_dict)
             
+        cursor.execute("SELECT id, nombre, precio_unitario FROM materiales WHERE user_id = %s", (user_id,))
+        materiales_disponibles = [dict(row) for row in cursor.fetchall()]
+
+        cursor.execute("SELECT id, nombre, costo_desgaste FROM maquinaria WHERE user_id = %s", (user_id,))
+        maquinaria_disponible = [dict(row) for row in cursor.fetchall()]
+            
     except Exception as e:
         current_app.logger.error(f"RECIPE_LOAD_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al cargar recetas - {e}")
         recetas_lista = []
+        materiales_disponibles = [] # Evitamos que crashee el template si hay error
+        maquinaria_disponible = []
     finally:
-        cursor.close()
+        cursor.close()  # <-- Aquí se cerraba antes de tiempo
         conn.close()
 
     current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' (ID: {user_id}) consulto catalogo de recetas")
 
-    # 💡 LÓGICA DEL TUTORIAL
+    # LÓGICA DEL TUTORIAL
     mostrar_tour = debe_mostrar_tutorial(user_id, 'recetas')
     version_tour = obtener_version_tutorial('recetas')
 
     return render_template('recetas.html', 
                            recetas=recetas_lista,
+                           materiales_disponibles=materiales_disponibles,
+                           maquinaria_disponible=maquinaria_disponible,
                            mostrar_tour=mostrar_tour,
                            version_tour=version_tour)
 
@@ -373,24 +409,42 @@ def guardar_receta():
     
     data = request.get_json(silent=True)
     nombre_receta = data.get('nombre', '').strip() if data else ''
+    id_receta = data.get('id', None) # <--- NUEVO: Recibimos el ID si estamos editando
+    
     if not data or not nombre_receta:
         return jsonify({'error': 'Datos incompletos'}), 400
 
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s", (nombre_receta, user_id))
+        # Validar duplicados (excluyendo la receta actual si la estamos editando)
+        if id_receta:
+            cursor.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s AND id != %s", (nombre_receta, user_id, id_receta))
+        else:
+            cursor.execute("SELECT id FROM productos WHERE LOWER(nombre) = LOWER(%s) AND user_id = %s", (nombre_receta, user_id))
+            
         duplicado = cursor.fetchone()
         if duplicado:
             return jsonify({'error': f'Ya existe una receta llamada "{nombre_receta}".'}), 400
 
         items_json = json.dumps(data.get('materiales', []))
         
-        # POSTGRESQL: RETURNING id en lugar de lastrowid
-        cursor.execute("INSERT INTO productos (user_id, nombre, items) VALUES (%s, %s, %s) RETURNING id", 
-                       (user_id, nombre_receta, items_json))
-        pid = cursor.fetchone()['id']
+        if id_receta:
+            # MODO EDICIÓN: Actualizamos la tabla principal y borramos detalles viejos
+            cursor.execute("UPDATE productos SET nombre=%s, items=%s WHERE id=%s AND user_id=%s", 
+                           (nombre_receta, items_json, id_receta, user_id))
+            pid = id_receta
+            cursor.execute("DELETE FROM producto_detalles WHERE producto_id=%s", (pid,))
+            cursor.execute("DELETE FROM producto_maquinaria WHERE producto_id=%s", (pid,))
+            accion_log = f"Editó la receta '{nombre_receta}'"
+        else:
+            # MODO CREACIÓN: Insertamos la receta nueva
+            cursor.execute("INSERT INTO productos (user_id, nombre, items) VALUES (%s, %s, %s) RETURNING id", 
+                           (user_id, nombre_receta, items_json))
+            pid = cursor.fetchone()['id']
+            accion_log = f"Creó la receta '{nombre_receta}'"
 
+        # Insertar los materiales y maquinarias (aplica tanto para edición como creación)
         for m in data.get('materiales', []):
             cursor.execute("INSERT INTO producto_detalles (producto_id, material_id, cantidad) VALUES (%s, %s, %s)", 
                            (pid, m['id'], float(m.get('cantidad', 0))))
@@ -398,15 +452,14 @@ def guardar_receta():
             cursor.execute("INSERT INTO producto_maquinaria (producto_id, maquinaria_id) VALUES (%s, %s)", 
                            (pid, e['id']))
 
-        # --- NUEVO: REGISTRO ADMIN ---
         cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
-                       (user_id, f"Creó la receta '{nombre_receta}'", "Recetas"))
+                       (user_id, accion_log, "Recetas"))
 
         conn.commit()
         return jsonify({'success': True})
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"RECIPE_SAVE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al guardar receta nueva - {e}") 
+        current_app.logger.error(f"RECIPE_SAVE_ERROR: Usuario '{u_name}' fallo al guardar/editar receta - {e}") 
         return jsonify({'error': str(e)}), 500
     finally:
         cursor.close()

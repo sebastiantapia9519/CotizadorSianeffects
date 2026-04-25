@@ -684,12 +684,37 @@
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#e9ecef',
-            cancelButtonText: '<span style="color:#495057; font-weight: bold;">Cancelar</span>',
+            cancelButtonColor: '#6e7881',
             confirmButtonText: 'Sí, eliminar',
-            customClass: { popup: 'rounded-4' }
+            cancelButtonText: 'Cancelar'
         }).then((result) => {
-            if (result.isConfirmed) window.location.href = urlReal;
+            if (result.isConfirmed) {
+                // USAMOS FETCH PARA NO SALIR DE LA PÁGINA
+                fetch(urlReal)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'blocked') {
+                            // El modal de bloqueo aparece ENCIMA de la lista actual
+                            const lista = data.recetas.join(', ');
+                            Swal.fire({
+                                title: 'Material en uso',
+                                html: `No puedes eliminarlo porque está en las recetas de: <br><br><b>${lista}</b>.<br><br>¿Quieres ir a Recetas para editarlas?`,
+                                icon: 'info',
+                                showCancelButton: true,
+                                confirmButtonText: 'Sí, ir a Recetas',
+                                cancelButtonText: 'Regresar',
+                                confirmButtonColor: '#3085d6'
+                            }).then((res) => {
+                                if (res.isConfirmed) window.location.href = "{{ url_for('inventory.recetas') }}";
+                            });
+                        } else if (data.status === 'success') {
+                            Swal.fire('Eliminado', 'El material se fue para siempre.', 'success')
+                                .then(() => location.reload());
+                        } else {
+                            Swal.fire('Error', 'No se pudo eliminar el material.', 'error');
+                        }
+                    });
+            }
         });
     }
 

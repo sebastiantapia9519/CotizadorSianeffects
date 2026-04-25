@@ -12,10 +12,9 @@
         --sian-primary-hover: #e03e4c;
         --sian-bg-soft: #f8f9fa;
         --sian-border: #eef0f2;
-        --sian-teal: #20c997; /* El color verde agua de tus ingredientes */
+        --sian-teal: #20c997;
     }
 
-    /* CONTENEDOR PRINCIPAL TIPO PANEL */
     .sian-panel {
         background: #ffffff;
         border: 1px solid var(--sian-border);
@@ -24,7 +23,6 @@
         overflow: hidden;
     }
 
-    /* ESTILOS DE LA TABLA PREMIUM */
     .sian-table {
         margin-bottom: 0;
         width: 100%;
@@ -57,7 +55,6 @@
         }
     }
 
-    /* BOTÓN PRINCIPAL */
     .btn-sian {
         background-color: var(--sian-primary);
         color: #fff;
@@ -71,7 +68,6 @@
         transform: translateY(-1px);
     }
 
-    /* INPUTS LIMPIOS */
     .sian-input {
         border: 1px solid var(--sian-border);
         border-radius: 10px;
@@ -84,7 +80,6 @@
         background-color: #fff;
     }
 
-    /* ICONOS DE ACCIÓN MINIMALISTAS */
     .action-icon {
         color: #868e96;
         background: transparent;
@@ -105,7 +100,6 @@
         color: #dc3545;
     }
 
-    /* BOTÓN USAR */
     .btn-usar {
         color: #198754;
         font-weight: 700;
@@ -122,7 +116,6 @@
         color: #146c43;
     }
 
-    /* BADGE INGREDIENTES */
     .badge-sian {
         background-color: var(--sian-teal);
         color: white;
@@ -130,7 +123,6 @@
         font-size: 0.75rem;
     }
 
-    /* Tutorial Custom Styles */
     .driver-popover { border-radius: 12px !important; }
     .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
     .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
@@ -143,7 +135,7 @@
     
     [data-bs-theme="dark"] .sian-panel,
     [data-bs-theme="dark"] .modal-content {
-        background-color: #1e293b !important; /* Azul pizarra oscuro */
+        background-color: #1e293b !important;
         border-color: #334155 !important;
     }
 
@@ -204,13 +196,11 @@
     [data-bs-theme="dark"] .text-muted, 
     [data-bs-theme="dark"] .text-secondary { color: #94a3b8 !important; }
 
-    /* Asegurar que el icono de frasco en la lista se vea bien */
     [data-bs-theme="dark"] .bg-light.text-danger {
         background-color: rgba(220, 53, 69, 0.1) !important;
         border-color: transparent !important;
     }
 
-    /* Modales */
     [data-bs-theme="dark"] .modal-header.border-bottom-0 {
         border-color: #334155 !important;
     }
@@ -220,14 +210,23 @@
         border-bottom: 1px solid #334155 !important;
     }
 
-    /* Alertas y notas */
-    [data-bs-theme="dark"] .alert-warning {
-        background-color: rgba(245, 176, 65, 0.1) !important;
-        color: #f5b041 !important;
-    }
-
     [data-bs-theme="dark"] .btn-close {
         filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    /* ESTILO MODERNO PARA CHECKBOXES DE MAQUINARIA */
+    .maq-chip {
+        border-color: var(--sian-border) !important;
+        width: fit-content;
+        transition: background-color 0.2s, border-color 0.2s;
+    }
+    .maq-chip:hover {
+        background-color: #f8f9fa !important;
+        border-color: #ced4da !important;
+    }
+    [data-bs-theme="dark"] .maq-chip:hover {
+        background-color: #334155 !important;
+        border-color: #475569 !important;
     }
 </style>
 {% endblock %}
@@ -247,9 +246,9 @@
             <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
         </button>
         {% endif %}
-        <a href="{{ url_for('main.cotizador') }}" class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" id="tour-nueva-receta">
+        <button type="button" class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" id="tour-nueva-receta" onclick="abrirModalNueva()">
             <i class="fas fa-plus me-1"></i> Nueva Receta
-        </a>
+        </button>
     </div>
 </div>
 
@@ -302,7 +301,7 @@
                             <a href="{{ url_for('main.cotizador', cargar_receta=receta['id']) }}" class="btn-usar me-2" title="Cargar en Cotizador">
                                 <i class="fas fa-play me-1"></i> Usar
                             </a>
-                            <button class="action-icon" onclick='editarReceta({{ receta|tojson }})' title="Renombrar">
+                            <button class="action-icon" onclick='editarReceta({{ receta.id }})' title="Editar Receta Completa">
                                 <i class="fas fa-pen" style="font-size: 0.9rem;"></i>
                             </button>
                             <button type="button" class="action-icon danger"
@@ -318,8 +317,7 @@
                     <td colspan="3" class="text-center py-5 bg-white">
                         <i class="fas fa-clipboard-list fa-3x mb-3 text-muted opacity-25"></i>
                         <h6 class="fw-bold text-dark">No hay recetas guardadas</h6>
-                        <p class="text-muted small m-0">Ve al Cotizador y guarda tu primera combinación.</p>
-                        <a href="{{ url_for('main.cotizador') }}" class="btn btn-outline-secondary rounded-pill btn-sm mt-3 fw-bold px-3">Ir al Cotizador</a>
+                        <p class="text-muted small m-0">Ve al Cotizador o presiona "Nueva Receta" para guardar tu primera combinación.</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -331,33 +329,81 @@
     </div>
 </div>
 
-<div class="modal fade" id="modalReceta" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
+<div class="modal fade" id="modalNuevaReceta" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
         <div class="modal-content border-0 rounded-4 shadow-lg">
             <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold text-dark"><i class="fas fa-edit me-2 text-muted"></i>Renombrar Receta</h5>
+                <h5 class="modal-title fw-bold text-dark" id="tituloModalReceta">
+                    <i class="fas fa-hammer me-2 text-muted"></i>Armar Nueva Receta
+                </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <form method="post">
-                <div class="modal-body p-4">
-                    <input type="hidden" name="id_actualizar" id="inputId">
+            
+            <div class="modal-body p-4">
+                
+                <div class="mb-4">
+                    <label class="form-label small fw-bold text-muted">Nombre del Producto / Receta</label>
+                    <input type="text" id="nombreRecetaInput" class="form-control sian-input py-2 fw-bold text-dark" placeholder="Ej. Termo personalizado 500ml">
+                </div>
 
-                    <div class="mb-3">
-                        <label class="form-label small fw-bold text-muted">Nombre de la Receta</label>
-                        <input type="text" name="nombre" id="inputNombre" class="form-control sian-input py-2 fw-bold text-dark" required>
+                <label class="form-label small fw-bold text-muted">Añadir Materiales</label>
+                <div class="d-flex flex-column flex-sm-row gap-2 mb-3">
+                    <select id="selectMaterialReceta" class="form-select sian-input py-2 w-100">
+                        <option value="">Selecciona un material...</option>
+                        {% for mat in materiales_disponibles %}
+                        <option value="{{ mat.id }}" data-precio="{{ mat.precio_unitario }}">{{ mat.nombre }} - ${{ "%.2f"|format(mat.precio_unitario) }}</option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-sian px-4" onclick="agregarMaterialRow()" style="white-space: nowrap;">
+                        <i class="fas fa-plus"></i> Añadir
+                    </button>
+                </div>
+
+                <div class="sian-panel mb-4" style="border-radius: 10px;">
+                    <div class="table-responsive">
+                        <table class="sian-table" style="min-width: 400px;"> 
+                            <thead>
+                                <tr>
+                                    <th style="width: 50%;">Material</th>
+                                    <th>$ Unit.</th>
+                                    <th style="width: 100px;">Cant.</th>
+                                    <th style="text-align: center;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tablaMaterialesReceta">
+                                <tr id="filaVaciaMensaje">
+                                    <td colspan="4" class="text-center text-muted small py-3">No has agregado materiales a la receta.</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
+                </div>
 
-                    <div class="alert alert-warning small border-0 d-flex align-items-center rounded-3 shadow-sm mt-4 mb-0" style="background-color: #fff8e6; color: #856404;">
-                        <i class="fas fa-info-circle fs-4 me-3 opacity-75"></i>
-                        <div style="line-height: 1.4;">
-                            <strong>Nota importante:</strong> Solo puedes cambiar el nombre aquí. Para modificar insumos, carga la receta en el <b>Cotizador</b>, edítala y guárdala.
+                <label class="form-label small fw-bold text-muted">Maquinaria y Procesos (Opcional)</label>
+                <div class="border rounded-3 p-3 bg-light sian-input" style="max-height: 180px; overflow-y: auto;">
+                    <div class="d-flex flex-wrap gap-2">
+                        {% for maq in maquinaria_disponible %}
+                        <div class="form-check form-check-inline bg-white border rounded-pill px-3 py-1 m-0 shadow-sm d-flex align-items-center maq-chip">
+                            <input class="form-check-input check-maquinaria m-0 me-2" type="checkbox" value="{{ maq.id }}" id="maq_{{ maq.id }}" style="margin-top: 0 !important;">
+                            <label class="form-check-label text-dark small m-0 d-flex align-items-center" for="maq_{{ maq.id }}" style="cursor: pointer; line-height: 1.2;">
+                                <span class="fw-bold">{{ maq.nombre }}</span>
+                                <span class="text-success ms-1 fw-bold" style="font-size: 0.75rem;">(+${{ "%.2f"|format(maq.costo_desgaste) }})</span>
+                            </label>
                         </div>
+                        {% endfor %}
+                        
+                        {% if not maquinaria_disponible %}
+                        <div class="text-muted small p-2 w-100 text-center fst-italic">No tienes maquinaria registrada.</div>
+                        {% endif %}
                     </div>
                 </div>
-                <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="submit" class="btn btn-sian rounded-3 px-4 py-2 fw-bold w-100 shadow-sm">Guardar Nombre</button>
-                </div>
-            </form>
+
+            </div>
+            
+            <div class="modal-footer border-0 p-4 pt-3 gap-2 bg-white" style="border-top: 1px solid var(--sian-border) !important; z-index: 10;">
+                <button type="button" class="btn btn-light rounded-3 px-4 py-2 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sian rounded-3 px-4 py-2 fw-bold shadow-sm" onclick="guardarRecetaFetch()">Guardar Receta</button>
+            </div>
         </div>
     </div>
 </div>
@@ -385,12 +431,12 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- VARIABLE GLOBAL PARA MODO EDICIÓN ---
+    let recetaEnEdicionId = null;
+
     // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
     function repetirTutorialRecetas() {
-        if(typeof window.driver === 'undefined') {
-            console.error("Driver.js no está cargado.");
-            return;
-        }
+        if(typeof window.driver === 'undefined') return;
 
         const driverObj = window.driver.js.driver({
             showProgress: true,
@@ -399,108 +445,235 @@
             prevBtnText: '&larr; Atrás',
             allowClose: true,
             
-            // CONEXIÓN A BASE DE DATOS (Cuando el tour termina o se cierra)
             onDestroyed: () => {
                 {% if mostrar_tour %}
                 fetch('/api/tutorial/completado', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        modulo: 'recetas',
-                        version: {{ version_tour | default(1) }}
-                    })
+                    body: JSON.stringify({ modulo: 'recetas', version: {{ version_tour | default(1) }} })
                 }).catch(e => console.error("Error guardando tutorial:", e));
                 {% endif %}
             },
             
             steps: [
-                {
-                    popover: {
-                        title: 'Tus Recetas Guardadas 📖',
-                        description: 'Aquí se almacenan los productos que ya armaste. Así no tienes que volver a calcular los ingredientes desde cero cada vez que vendes.',
-                        align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-nueva-receta',
-                    popover: {
-                        title: '1. ¿Cómo crear una?',
-                        description: 'Para crear una receta nueva, debes ir a la pestaña "Cotizador", armar tu producto con los insumos y darle al botón "Guardar esta receta".',
-                        side: "bottom", align: 'end'
-                    }
-                },
-                {
-                    element: '#tour-tabla-recetas',
-                    popover: {
-                        title: '2. Gestión Rápida',
-                        description: 'Puedes ver los ingredientes exactos dándole clic al ojo, cambiarles el nombre (Lápiz), o enviarlas directamente a cobrar usando el botón "Usar".',
-                        side: "top", align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-buscador-recetas',
-                    popover: {
-                        title: '3. Búsqueda Inteligente',
-                        description: 'Encuentra rápidamente ese diseño de taza especial o ese pastel de 3 pisos usando esta barra de búsqueda.',
-                        side: "bottom", align: 'start'
-                    }
-                }
+                { popover: { title: 'Tus Recetas Guardadas 📖', description: 'Aquí se almacenan los productos que ya armaste.', align: 'center' } },
+                { element: '#tour-nueva-receta', popover: { title: '1. ¿Cómo crear una?', description: 'Da clic aquí para armar una nueva receta con tus materiales.', side: "bottom", align: 'end' } },
+                { element: '#tour-tabla-recetas', popover: { title: '2. Gestión Rápida', description: 'Usa el ojito para ver los ingredientes, el lápiz para editar la receta completa o el play para usarla.', side: "top", align: 'center' } },
+                { element: '#tour-buscador-recetas', popover: { title: '3. Búsqueda Inteligente', description: 'Encuentra rápidamente tus diseños.', side: "bottom", align: 'start' } }
             ]
         });
         driverObj.drive();
     }
 
-    // MAGIA DE JINJA: Solo arranca si Python dice que es su primera vez
     {% if mostrar_tour %}
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof window.driver !== 'undefined') {
-            setTimeout(() => {
-                repetirTutorialRecetas();
-            }, 800); // 800ms de retraso para carga limpia
+            setTimeout(() => { repetirTutorialRecetas(); }, 800);
         }
     });
     {% endif %}
 
-
-    // --- ALERTAS DE ÉXITO (FEEDBACK VISUAL) ---
-    document.addEventListener("DOMContentLoaded", function() {
-        const urlParams = new URLSearchParams(window.location.search);
+    // --- PREPARAR MODAL PARA NUEVA RECETA (Limpiar datos) ---
+    function abrirModalNueva() {
+        recetaEnEdicionId = null;
+        document.getElementById('tituloModalReceta').innerHTML = '<i class="fas fa-hammer me-2 text-muted"></i>Armar Nueva Receta';
+        document.getElementById('nombreRecetaInput').value = '';
+        document.getElementById('selectMaterialReceta').value = '';
         
-        if (urlParams.has('renombrada')) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Nombre Actualizado',
-                showConfirmButton: false,
-                timer: 1500,
-                customClass: { popup: 'rounded-4' }
-            });
-            window.history.replaceState(null, null, window.location.pathname);
-        }
-
-        if (urlParams.has('eliminada')) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Receta Eliminada',
-                showConfirmButton: false,
-                timer: 1500,
-                customClass: { popup: 'rounded-4' }
-            });
-            window.history.replaceState(null, null, window.location.pathname);
-        }
-    });
-
-    // --- MODALES ---
-    function editarReceta(r) {
-        document.getElementById('inputId').value = r.id;
-        document.getElementById('inputNombre').value = r.nombre;
-        new bootstrap.Modal(document.getElementById('modalReceta')).show();
+        // Limpiar tabla y checkboxes
+        document.getElementById('tablaMaterialesReceta').innerHTML = '<tr id="filaVaciaMensaje"><td colspan="4" class="text-center text-muted small py-3">No has agregado materiales a la receta.</td></tr>';
+        document.querySelectorAll('.check-maquinaria').forEach(cb => cb.checked = false);
+        
+        new bootstrap.Modal(document.getElementById('modalNuevaReceta')).show();
     }
 
+    // --- CONVERTIMOS EL CATÁLOGO DE PYTHON A JAVASCRIPT ---
+    const catalogoMateriales = {{ materiales_disponibles | tojson | safe }};
+
+    // --- PREPARAR MODAL PARA EDITAR RECETA (Cargar datos) ---
+    function editarReceta(idReceta) {
+        const urlBase = "{{ url_for('api.obtener_receta', id=999999) }}";
+        const urlFetch = urlBase.replace('999999', idReceta);
+
+        fetch(urlFetch)
+            .then(res => {
+                if(!res.ok) throw new Error("Status: " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if(data.error) {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error, customClass: { popup: 'rounded-4' } });
+                    return;
+                }
+                
+                recetaEnEdicionId = data.id;
+                document.getElementById('tituloModalReceta').innerHTML = '<i class="fas fa-edit me-2 text-muted"></i>Editar Receta';
+                document.getElementById('nombreRecetaInput').value = data.nombre;
+                
+                const tbody = document.getElementById('tablaMaterialesReceta');
+                tbody.innerHTML = '';
+                document.querySelectorAll('.check-maquinaria').forEach(cb => cb.checked = false);
+                
+                // Cargar Materiales en la tablita
+                if(data.materiales && data.materiales.length > 0) {
+                    data.materiales.forEach(mat => {
+                        // AQUÍ ESTÁ LA MAGIA: Buscamos el ID en nuestro catálogo para sacar nombre y precio
+                        const infoReal = catalogoMateriales.find(m => m.id === mat.id) || {};
+                        const nombreVisual = infoReal.nombre || mat.nombre || "Material desconocido";
+                        const precioVisual = parseFloat(infoReal.precio_unitario || mat.precio_unitario || 0).toFixed(2);
+
+                        const tr = document.createElement('tr');
+                        tr.id = `row_mat_${mat.id}`;
+                        tr.className = 'material-item';
+                        tr.dataset.id = mat.id;
+                        tr.innerHTML = `
+                            <td class="fw-bold text-dark small">${nombreVisual}</td>
+                            <td class="text-muted small">$${precioVisual}</td>
+                            <td>
+                                <input type="number" class="form-control form-control-sm sian-input cantidad-material py-1 text-center fw-bold" value="${mat.cantidad}" min="0.1" step="0.1" style="width: 70px;">
+                            </td>
+                            <td style="text-align: right;">
+                                <button type="button" class="action-icon danger" onclick="eliminarMaterialRow(this)" title="Quitar"><i class="fas fa-times"></i></button>
+                            </td>
+                        `;
+                        tbody.appendChild(tr);
+                    });
+                } else {
+                    tbody.innerHTML = '<tr id="filaVaciaMensaje"><td colspan="4" class="text-center text-muted small py-3">No has agregado materiales a la receta.</td></tr>';
+                }
+                
+                // Marcar la Maquinaria que ya tenía
+                if(data.maquinaria) {
+                    data.maquinaria.forEach(maq => {
+                        const cb = document.getElementById(`maq_${maq.id}`);
+                        if(cb) cb.checked = true;
+                    });
+                }
+                
+                new bootstrap.Modal(document.getElementById('modalNuevaReceta')).show();
+            })
+            .catch(err => {
+                console.error("Detalle del error:", err);
+                Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'Ocurrió un problema al cargar los datos de la receta.', customClass: { popup: 'rounded-4' } });
+            });
+    }
+
+    // --- LÓGICA DE AGREGAR/ELIMINAR EN TABLA ---
+    function agregarMaterialRow() {
+        const select = document.getElementById('selectMaterialReceta');
+        const selectedOption = select.options[select.selectedIndex];
+        
+        if (!selectedOption.value) return; 
+
+        const id = selectedOption.value;
+        const textoMaterial = selectedOption.text.split(' - $')[0]; 
+        const precio = parseFloat(selectedOption.getAttribute('data-precio') || 0);
+
+        if (document.querySelector(`#row_mat_${id}`)) {
+            Swal.fire({ icon: 'info', title: 'Aviso', text: 'Este material ya está en la receta.', timer: 2000, showConfirmButton: false });
+            return;
+        }
+
+        const msjVacio = document.getElementById('filaVaciaMensaje');
+        if (msjVacio) msjVacio.remove();
+
+        const tbody = document.getElementById('tablaMaterialesReceta');
+        const tr = document.createElement('tr');
+        tr.id = `row_mat_${id}`;
+        tr.className = 'material-item';
+        tr.dataset.id = id;
+
+        tr.innerHTML = `
+            <td class="fw-bold text-dark small">${textoMaterial}</td>
+            <td class="text-muted small">$${precio.toFixed(2)}</td>
+            <td><input type="number" class="form-control form-control-sm sian-input cantidad-material py-1 text-center fw-bold" value="1" min="0.1" step="0.1" style="width: 70px;"></td>
+            <td style="text-align: right;"><button type="button" class="action-icon danger" onclick="eliminarMaterialRow(this)" title="Quitar"><i class="fas fa-times"></i></button></td>
+        `;
+        tbody.appendChild(tr);
+        select.value = ""; 
+    }
+
+    function eliminarMaterialRow(btn) {
+        btn.closest('tr').remove();
+        const tbody = document.getElementById('tablaMaterialesReceta');
+        if (tbody.querySelectorAll('tr').length === 0) {
+            tbody.innerHTML = '<tr id="filaVaciaMensaje"><td colspan="4" class="text-center text-muted small py-3">No has agregado materiales a la receta.</td></tr>';
+        }
+    }
+
+    // --- GUARDAR O ACTUALIZAR RECETA ---
+    function guardarRecetaFetch() {
+        const nombre = document.getElementById('nombreRecetaInput').value.trim();
+        
+        if (!nombre) {
+            Swal.fire({ icon: 'warning', title: 'Falta el nombre', text: 'Por favor, ponle un nombre a tu producto/receta.', customClass: { popup: 'rounded-4' } });
+            return;
+        }
+
+        const materiales = [];
+        document.querySelectorAll('.material-item').forEach(row => {
+            const id = row.dataset.id;
+            const cantidad = row.querySelector('.cantidad-material').value;
+            materiales.push({ id: parseInt(id), cantidad: parseFloat(cantidad) });
+        });
+
+        if (materiales.length === 0) {
+            Swal.fire({ icon: 'warning', title: 'Receta vacía', text: 'Debes agregar al menos un material a la receta.', customClass: { popup: 'rounded-4' } });
+            return;
+        }
+
+        const maquinaria = [];
+        document.querySelectorAll('.check-maquinaria:checked').forEach(checkbox => {
+            maquinaria.push({ id: parseInt(checkbox.value) });
+        });
+
+        // ARMAMOS EL PAYLOAD (Incluyendo el ID si estamos editando)
+        const payload = {
+            id: recetaEnEdicionId, // Si es nuevo será 'null'
+            nombre: nombre,
+            materiales: materiales,
+            maquinaria: maquinaria
+        };
+
+        const btnGuardar = document.querySelector('#modalNuevaReceta .btn-sian');
+        const txtOriginal = btnGuardar.innerHTML;
+        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
+        btnGuardar.disabled = true;
+
+        fetch("{{ url_for('inventory.guardar_receta') }}", {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    icon: 'success',
+                    title: recetaEnEdicionId ? '¡Receta actualizada!' : '¡Receta guardada!',
+                    showConfirmButton: false,
+                    timer: 1500,
+                    customClass: { popup: 'rounded-4' }
+                }).then(() => { window.location.reload(); });
+            } else {
+                Swal.fire({ icon: 'error', title: 'Oops...', text: "Error: " + (data.error || "No se pudo guardar."), customClass: { popup: 'rounded-4' } });
+                btnGuardar.innerHTML = txtOriginal;
+                btnGuardar.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            Swal.fire({ icon: 'error', title: 'Error de red', text: "Ocurrió un error al conectar con el servidor.", customClass: { popup: 'rounded-4' } });
+            btnGuardar.innerHTML = txtOriginal;
+            btnGuardar.disabled = false;
+        });
+    }
+
+    // --- EXTRAS (Detalles rápidos, Búsqueda, Eliminar) ---
     function verDetallesReceta(receta) {
         document.getElementById('detallesNombreReceta').textContent = receta.nombre;
         const lista = document.getElementById('listaIngredientes');
         lista.innerHTML = '';
-
         try {
             const items = JSON.parse(receta.ingredientes_reales || '[]');
             if (items.length === 0) {
@@ -516,32 +689,26 @@
                 });
             }
         } catch (e) {
-            console.error("Error al procesar ingredientes:", e);
             lista.innerHTML = '<li class="text-danger">No se pudieron cargar los detalles.</li>';
         }
         new bootstrap.Modal(document.getElementById('modalDetallesReceta')).show();
     }
 
-    // --- BÚSQUEDA ---
     function filtrarTabla() {
         const input = document.getElementById('buscadorRecetas');
         const filter = input.value.toLowerCase();
         const rows = document.getElementsByClassName('item-receta');
         let visibles = 0;
-
         for (let i = 0; i < rows.length; i++) {
             const nombre = rows[i].querySelector('.nombre-receta').innerText || "";
             if (nombre.toLowerCase().indexOf(filter) > -1) {
-                rows[i].style.display = ""; 
-                visibles++;
+                rows[i].style.display = ""; visibles++;
             } else {
                 rows[i].style.display = "none";
             }
         }
-        
         const tabla = document.getElementById('tablaRecetas');
         const msj = document.getElementById('sinResultados');
-        
         if (visibles === 0 && rows.length > 0) {
             tabla.parentNode.classList.add('d-none');
             msj.classList.remove('d-none');
@@ -551,7 +718,6 @@
         }
     }
 
-    // --- ELIMINACIÓN SEGURA ---
     function confirmarEliminarReceta(urlReal, nombre) {
         Swal.fire({
             title: '¿Eliminar receta?',
@@ -564,10 +730,16 @@
             confirmButtonText: 'Sí, borrar',
             customClass: { popup: 'rounded-4' }
         }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = urlReal;
-            }
+            if (result.isConfirmed) window.location.href = urlReal;
         });
     }
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.has('eliminada')) {
+            Swal.fire({ icon: 'success', title: 'Receta Eliminada', showConfirmButton: false, timer: 1500, customClass: { popup: 'rounded-4' } });
+            window.history.replaceState(null, null, window.location.pathname);
+        }
+    });
 </script>
 {% endblock %}
