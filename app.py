@@ -392,11 +392,11 @@ def test_mail():
     
     # Intentamos enviar el código de prueba usando el alias de seguridad
     exito = enviar_correo_sian(
-        subject="Sianeffects: Código de Prueba",
+        subject="Prueba Directa Sianeffects",
         recipient=destinatario,
         template="auth_code",
-        sender_alias="accounts", # El alias que creamos para validaciones
-        code="999888"            # Código de prueba "hardcodeado"
+        sender_alias=None,
+        code="123456"
     )
     
     if exito:
