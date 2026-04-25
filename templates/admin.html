@@ -363,9 +363,17 @@
                                         </button>
                                     </li>
                                     <li>
-                                        <a class="dropdown-item" href="{{ url_for('admin.renovar', user_id=u['id'], meses=12) }}">
-                                            <i class="fas fa-calendar-check text-primary opacity-75 me-1"></i> Sumar 1 Año
-                                        </a>
+                                        <form action="{{ url_for('admin.renovar') }}" method="POST" class="m-0 p-0 require-confirm"
+                                            data-title="¿Renovar por 1 Mes?"
+                                            data-text="Se añadirá 1 mes a la suscripción del usuario."
+                                            data-icon="info"
+                                            data-btn-text="Sí, renovar">
+                                            <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                                            <input type="hidden" name="meses" value="1">
+                                            <button type="submit" class="dropdown-item text-start">
+                                                <i class="fas fa-calendar-check text-primary opacity-75 me-1"></i> Sumar 1 Mes
+                                            </button>
+                                        </form>
                                     </li>
 
                                     <li><hr class="dropdown-divider my-1"></li>
@@ -388,15 +396,44 @@
                                     <li><hr class="dropdown-divider my-1"></li>
                                     <li><h6 class="dropdown-header">ADMINISTRACIÓN</h6></li>
                                         {% if u['role'] == 0 %}
-                                        <li><a class="dropdown-item" href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=1) }}"><i class="fas fa-shield-alt text-info opacity-75 me-1"></i> Hacer Admin</a></li>
+                                        <li>
+                                            <form action="{{ url_for('admin.cambiar_rol') }}" method="POST" class="m-0 p-0 require-confirm"
+                                                data-title="¿Dar permisos de Admin?"
+                                                data-text="Este usuario tendrá acceso total al panel de control."
+                                                data-icon="warning"
+                                                data-btn-text="Sí, hacer Admin">
+                                                <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                                                <input type="hidden" name="nuevo_rol" value="1">
+                                                <button type="submit" class="dropdown-item text-start">
+                                                    <i class="fas fa-shield-alt text-info opacity-75 me-1"></i> Hacer Admin
+                                                </button>
+                                            </form>
+                                        </li>
                                         {% else %}
-                                        <li><a class="dropdown-item" href="{{ url_for('admin.cambiar_rol', user_id=u['id'], nuevo_rol=0) }}"><i class="fas fa-user-times text-danger opacity-75 me-1"></i> Quitar Admin</a></li>
+                                        <li>
+                                            <form action="{{ url_for('admin.cambiar_rol') }}" method="POST" class="m-0 p-0 require-confirm"
+                                                data-title="¿Quitar permisos de Admin?"
+                                                data-text="El usuario volverá a ser un cliente normal."
+                                                data-icon="warning"
+                                                data-btn-text="Sí, quitar permisos">
+                                                <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                                                <input type="hidden" name="nuevo_rol" value="0">
+                                                <button type="submit" class="dropdown-item text-start">
+                                                    <i class="fas fa-user-times text-danger opacity-75 me-1"></i> Quitar Admin
+                                                </button>
+                                            </form>
+                                        </li>
                                         {% endif %}
 
                                     <li>
-                                        <form action="{{ url_for('admin.delete_user') }}" method="POST" onsubmit="return confirm('⚠️ ESTO BORRARÁ TODO (Ventas, inventario). ¿Seguro?');">
+                                        <form action="{{ url_for('admin.delete_user') }}" method="POST" class="m-0 p-0 require-confirm"
+                                            data-title="⚠️ ¿ELIMINAR USUARIO?"
+                                            data-text="ESTO BORRARÁ TODO (Ventas, inventario). Esta acción no se puede deshacer."
+                                            data-icon="error"
+                                            data-btn-color="#d33"
+                                            data-btn-text="Sí, eliminar permanentemente">
                                             <input type="hidden" name="user_id" value="{{ u['id'] }}">
-                                            <button type="submit" class="dropdown-item text-danger">
+                                            <button type="submit" class="dropdown-item text-danger text-start">
                                                 <i class="fas fa-trash-alt opacity-75 me-1"></i> Eliminar Cuenta
                                             </button>
                                         </form>
@@ -527,8 +564,12 @@
 </div>
 {% endblock %}
 
+
 {% block scripts %}
 <script>
+    // ==========================================
+    // 1. FUNCIONES DE MODALES (INTACTAS)
+    // ==========================================
     function abrirReset(id, name) {
         document.getElementById('resetUserId').value = id;
         document.getElementById('resetUsername').innerText = name;
@@ -585,33 +626,83 @@
             });
     }
 
+    // ==========================================
+    // 2. MANEJO DE FORMULARIOS Y ALERTAS
+    // ==========================================
     document.addEventListener('DOMContentLoaded', function () {
-        // Bloqueo de botones submit para evitar doble click
+        
+        // Función centralizada para poner el botón en estado "Procesando..."
+        function activarSpinner(form) {
+            const btn = form.querySelector('button[type="submit"]');
+            if(btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando...';
+            }
+        }
+
+        // Interceptar todos los formularios
         document.querySelectorAll('form').forEach(form => {
             form.addEventListener('submit', function(e) {
-                // Solo bloqueamos forms que se mandan por POST (como añadir dias o borrar usuario).
-                // No bloqueamos los GET como el buscador, para no congelar la pantalla.
-                if(this.method.toLowerCase() === 'post') {
-                    const btn = this.querySelector('button[type="submit"]');
-                    if(btn) {
-                        if (btn.disabled) {
-                            e.preventDefault();
-                            return;
+                
+                // Si es un GET (como el buscador), lo dejamos fluir normal sin bloquear botones
+                if(this.method.toLowerCase() !== 'post') return;
+
+                // A) LÓGICA PARA FORMULARIOS PELIGROSOS (SweetAlert)
+                if (this.classList.contains('require-confirm')) {
+                    e.preventDefault(); // Pausamos el envío real del form
+
+                    // Extraemos la configuración de los data-attributes, con valores por defecto
+                    const title = this.dataset.title || '¿Estás seguro?';
+                    const text = this.dataset.text || 'Por favor, confirma esta acción.';
+                    const icon = this.dataset.icon || 'warning';
+                    const confirmBtnColor = this.dataset.btnColor || '#101828';
+                    const confirmBtnText = this.dataset.btnText || 'Sí, continuar';
+
+                    Swal.fire({
+                        title: title,
+                        text: text,
+                        icon: icon,
+                        showCancelButton: true,
+                        confirmButtonColor: confirmBtnColor,
+                        cancelButtonColor: '#6c757d', // Gris estándar para el botón cancelar
+                        confirmButtonText: confirmBtnText,
+                        cancelButtonText: 'Cancelar',
+                        reverseButtons: true // Pone el botón de cancelar a la izquierda
+                    }).then((result) => {
+                        if (result.isConfirmed) {
+                            // Si dijo que sí, ponemos el spinner y mandamos el form
+                            activarSpinner(this);
+                            this.submit();
                         }
-                        btn.disabled = true;
-                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando...';
+                    });
+                } 
+                // B) LÓGICA PARA FORMULARIOS NORMALES (Solo Spinner Anti-Doble Clic)
+                else {
+                    const btn = this.querySelector('button[type="submit"]');
+                    if (btn && btn.disabled) {
+                        e.preventDefault(); // Si ya está deshabilitado, evitamos que siga procesando
+                        return;
                     }
+                    activarSpinner(this);
                 }
             });
         });
 
+        // ==========================================
+        // 3. FLASH MESSAGES (Notificaciones Flask)
+        // ==========================================
         {% with messages = get_flashed_messages(with_categories = true) %}
         {% if messages %}
         {% for category, message in messages %}
+        
+        // Ajuste de categorías: Flask usa 'danger', pero Swal usa 'error'
+        let swalIcon = "{{ category }}";
+        if(swalIcon === "danger") swalIcon = "error";
+
         Swal.fire({
             title: "{{ '¡Éxito!' if category == 'success' else 'Atención' }}",
             text: "{{ message }}",
-            icon: "{{ category }}",
+            icon: swalIcon,
             confirmButtonColor: '#101828',
             timer: 3000,
             timerProgressBar: true

@@ -31,7 +31,6 @@ def get_db_connection():
         database_url,
         cursor_factory=psycopg2.extras.DictCursor
     )
-    conn.autocommit = True
     return conn
 
 # ======================================================
@@ -64,6 +63,8 @@ def init_db():
         fecha_cancelacion TIMESTAMP,
         plan_type TEXT DEFAULT 'Free',
         trial_start TIMESTAMP,
+        
+        verificado BOOLEAN DEFAULT FALSE,
         tutorial_visto BOOLEAN DEFAULT FALSE
     )
     """)
@@ -194,6 +195,7 @@ def init_db():
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         accion TEXT,
+        detalle TEXT,
         fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES usuarios(id)
     )
