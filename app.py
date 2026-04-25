@@ -83,10 +83,6 @@ app.logger.info("Sistema de monitoreo iniciado correctamente (Hora Local Monterr
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
-# Tu logger ahora registrará si el mail falla
-app.logger.info("Servicio de correo SMTP configurado correctamente.")
-
-
 # =========================
 # SESIÓN
 # =========================
@@ -367,26 +363,24 @@ from services.mail_service import enviar_correo_sian
 
 @app.route('/test-mail')
 def test_mail():
-    # Toma el email de la URL, ej: /test-mail?email=tu_correo@gmail.com
     destinatario = request.args.get('email')
     
     if not destinatario:
         return "Error: Agrega ?email=tu_correo@gmail.com al final de la URL"
     
-    # Intentamos enviar el código de prueba usando el alias de seguridad
     exito = enviar_correo_sian(
         subject="Prueba Directa Sianeffects",
         recipient=destinatario,
         template="auth_code",
-        sender_alias=None,
+        sender_alias="contacto",
         code="123456"
     )
     
     if exito:
         app.logger.info(f"Test de correo disparado hacia {destinatario}")
-        return f"¡Correo enviado a {destinatario}! Revisa tu bandeja (y la carpeta de Seguridad y Accesos)."
+        return f"¡Correo enviado a {destinatario}! Revisa tu bandeja."
     else:
-        return "Hubo un error al intentar procesar el envío. Revisa limpieza.log"
+        return "Hubo un error. Revisa limpieza.log"
 
 
 
