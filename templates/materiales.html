@@ -269,9 +269,25 @@
     </div>
 </div>
 
+{% if config['inventario_activo'] %}
+<div class="d-flex flex-wrap gap-2 mt-3 mb-2 animate__animated animate__fadeIn" id="filtrosStock">
+    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 active filter-btn" onclick="setStockFilter('all', this)">
+        Todos
+    </button>
+    <button class="btn btn-sm btn-outline-warning rounded-pill px-3 filter-btn" onclick="setStockFilter('low', this)">
+        <i class="fas fa-exclamation-triangle me-1"></i> Stock Bajo
+    </button>
+    <button class="btn btn-sm btn-outline-danger rounded-pill px-3 filter-btn" onclick="setStockFilter('empty', this)">
+        <i class="fas fa-times-circle me-1"></i> Agotados
+    </button>
+</div>
+{% endif %}
+
 <div class="row g-4" id="contenedorMateriales">
     {% for mat in materiales %}
-    <div class="col-12 col-md-6 col-lg-4 col-xl-3 item-material">
+    <div class="col-12 col-md-6 col-lg-4 col-xl-3 item-material" 
+     data-stock="{{ mat['stock_actual'] }}" 
+     data-min="{{ mat['stock_minimo'] }}">
         <div class="card h-100 sian-card p-3 d-flex flex-column">
 
             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -299,42 +315,56 @@
             </div>
 
             <div class="row mt-4 align-items-end">
-                <div class="col-5">
-                    <p class="text-muted mb-0"
-                        style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
-                        Costo Unit.</p>
-                    <div class="h5 fw-bold text-dark mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
-                </div>
+    <div class="col-5">
+        <p class="text-muted mb-0" style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+            Costo Unit.
+        </p>
+        <div class="h5 fw-bold text-dark mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
+    </div>
 
-                {% if config['inventario_activo'] %}
-                <div class="col-7 text-end">
-                    <p class="text-muted mb-0"
-                        style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
-                        En Stock</p>
-                    <div class="d-flex align-items-center justify-content-end gap-1 mb-2">
-                        {% if mat['stock_actual'] <= mat['stock_minimo'] %} <i
-                            class="fas fa-circle text-warning border border-white rounded-circle"
-                            style="font-size: 0.7rem; box-shadow: 0 0 0 2px #fff;" title="Stock Bajo"></i>
-                            {% endif %}
-                            <span class="h4 fw-bold text-dark mb-0 lh-1" style="letter-spacing: -0.5px;">{{
-                                mat['stock_actual']|float|round(2) }}</span>
-                            <small class="text-muted text-lowercase align-self-end pb-1" style="font-size: 0.75rem;">{{
-                                mat['unidad_medida']|default('pza') }}</small>
-                    </div>
+    {% if config['inventario_activo'] %}
+    <div class="col-7 text-end">
+        <p class="text-muted mb-0" style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+            En Stock
+        </p>
+        <div class="d-flex align-items-center justify-content-end gap-1 mb-2">
+            
+            {% if mat['stock_actual'] <= 0 %}
+                <i class="fas fa-circle text-danger border border-white rounded-circle animate__animated animate__pulse animate__infinite" 
+                   style="font-size: 0.7rem; box-shadow: 0 0 0 2px #fff;" title="Agotado"></i>
+                <span class="h4 fw-bold text-danger mb-0 lh-1" style="letter-spacing: -0.5px;">
+                    {{ mat['stock_actual']|float|round(2) }}
+                </span>
+            
+            {% elif mat['stock_actual'] <= mat['stock_minimo'] %}
+                <i class="fas fa-circle text-warning border border-white rounded-circle" 
+                   style="font-size: 0.7rem; box-shadow: 0 0 0 2px #fff;" title="Stock Bajo"></i>
+                <span class="h4 fw-bold text-dark mb-0 lh-1" style="letter-spacing: -0.5px;">
+                    {{ mat['stock_actual']|float|round(2) }}
+                </span>
+            
+            {% else %}
+                <span class="h4 fw-bold text-dark mb-0 lh-1" style="letter-spacing: -0.5px;">
+                    {{ mat['stock_actual']|float|round(2) }}
+                </span>
+            {% endif %}
 
-                    <div class="d-flex justify-content-end gap-2 mt-1">
-                        <button class="btn-stock-action minus" onclick='abrirModalMerma({{ mat|tojson|safe }})'
-                            title="Registrar Merma">
-                            <i class="fas fa-minus" style="font-size: 0.9rem;"></i>
-                        </button>
-                        <button class="btn-stock-action plus" onclick='abrirModalStock({{ mat|tojson|safe }})'
-                            title="Registrar Compra">
-                            <i class="fas fa-plus" style="font-size: 0.9rem;"></i>
-                        </button>
-                    </div>
-                </div>
-                {% endif %}
-            </div>
+            <small class="text-muted text-lowercase align-self-end pb-1" style="font-size: 0.75rem;">
+                {{ mat['unidad_medida']|default('pza') }}
+            </small>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2 mt-1">
+            <button class="btn-stock-action minus" onclick='abrirModalMerma({{ mat|tojson|safe }})' title="Registrar Merma">
+                <i class="fas fa-minus" style="font-size: 0.9rem;"></i>
+            </button>
+            <button class="btn-stock-action plus" onclick='abrirModalStock({{ mat|tojson|safe }})' title="Registrar Compra">
+                <i class="fas fa-plus" style="font-size: 0.9rem;"></i>
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
 
         </div>
     </div>
@@ -446,7 +476,7 @@
                     {% endif %}
 
                     <div class="d-grid mt-4">
-                        <button type="submit" class="btn btn-sian fw-bold rounded-3 py-2">Guardar Material</button>
+                        <button type="button" class="btn btn-sian fw-bold rounded-3 py-2" onclick="guardarMaterialFetch()">Guardar Material</button>
                     </div>
                 </form>
             </div>
@@ -538,190 +568,85 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
-    function repetirTutorialMateriales() {
-        if(typeof window.driver === 'undefined') {
-            console.error("Driver.js no está cargado.");
-            return;
-        }
+    // --- 1. VARIABLES GLOBALES Y ESTADOS ---
+    let historialOffset = 0;
+    const HISTORIAL_LIMIT = 20;
+    let modalStockObj, modalMermaObj, materialActual = null;
+    let currentStockFilter = 'all'; // Estado del filtro de Diana
 
+    // --- 2. LÓGICA DEL TUTORIAL (DRIVER.JS) ---
+    function repetirTutorialMateriales() {
+        if(typeof window.driver === 'undefined') return;
         const driverObj = window.driver.js.driver({
             showProgress: true,
             doneBtnText: '¡Entendido!',
             nextBtnText: 'Siguiente &rarr;',
             prevBtnText: '&larr; Atrás',
             allowClose: true,
-            
-            // CONEXIÓN A BASE DE DATOS (Cuando el tour termina o se cierra)
             onDestroyed: () => {
                 {% if mostrar_tour %}
                 fetch('/api/tutorial/completado', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        modulo: 'materiales',
-                        version: {{ version_tour | default(1) }}
-                    })
-                }).catch(e => console.error("Error guardando tutorial:", e));
+                    body: JSON.stringify({ modulo: 'materiales', version: {{ version_tour | default(1) }} })
+                }).catch(e => console.error("Error tutorial:", e));
                 {% endif %}
             },
-            
             steps: [
-                {
-                    popover: {
-                        title: 'Tus Materiales 📦',
-                        description: 'Esta es tu bodega digital. Aquí registrarás todo lo que compras para fabricar tus productos o realizar tus servicios.',
-                        align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-nuevo-material',
-                    popover: {
-                        title: '1. Agregar Insumos',
-                        description: 'Haz clic aquí para registrar un material. Pon cuánto te costó el paquete completo y el sistema calculará tu costo unitario matemáticamente.',
-                        side: "bottom", align: 'end'
-                    }
-                },
-                {
-                    element: '#contenedorMateriales', // Apuntamos a la grilla general
-                    popover: {
-                        title: '2. Control Rápido',
-                        description: 'Tus materiales aparecerán aquí. Usa los botones verdes (+) para sumar compras nuevas a tu stock, o los rojos (-) para descontar mermas o errores.',
-                        side: "top", align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-historial',
-                    popover: {
-                        title: '3. Auditoría de Inventario',
-                        description: '¿No te cuadran las cuentas? Haz clic aquí para ver un registro exacto (con fecha y hora) de cada gramo o pieza que entró y salió de tu negocio.',
-                        side: "bottom", align: 'end'
-                    }
-                },
-                {
-                    element: '#tour-buscador',
-                    popover: {
-                        title: '4. Búsqueda Veloz',
-                        description: 'Cuando tu negocio crezca y tengas cientos de materiales, usa esta barra para encontrarlos al instante.',
-                        side: "bottom", align: 'start'
-                    }
-                }
+                { popover: { title: 'Tus Materiales 📦', description: 'Esta es tu bodega digital. Aquí registrarás todo lo que compras.', align: 'center' } },
+                { element: '#tour-nuevo-material', popover: { title: '1. Agregar Insumos', description: 'Registra materiales nuevos aquí.', side: "bottom", align: 'end' } },
+                { element: '#contenedorMateriales', popover: { title: '2. Control Rápido', description: 'Usa (+) para compras y (-) para mermas.', side: "top", align: 'center' } },
+                { element: '#tour-historial', popover: { title: '3. Auditoría', description: 'Revisa cada movimiento de stock.', side: "bottom", align: 'end' } }
             ]
         });
         driverObj.drive();
     }
 
-    // MAGIA DE JINJA: Solo arranca si Python dice que es su primera vez
     {% if mostrar_tour %}
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof window.driver !== 'undefined') {
-            setTimeout(() => {
-                repetirTutorialMateriales();
-            }, 800); // 800ms de retraso para carga limpia
-        }
-    });
+    document.addEventListener('DOMContentLoaded', () => { setTimeout(repetirTutorialMateriales, 800); });
     {% endif %}
 
+    // --- 3. LÓGICA DE FILTRADO (EL DESEO DE DIANA) ---
+    function setStockFilter(filter, btn) {
+        currentStockFilter = filter;
+        document.querySelectorAll('.filter-btn').forEach(b => {
+            b.classList.remove('active', 'btn-secondary', 'btn-warning', 'btn-danger');
+            b.classList.add('btn-outline-secondary');
+        });
+        btn.classList.remove('btn-outline-secondary');
+        if(filter === 'all') btn.classList.add('active', 'btn-secondary');
+        if(filter === 'low') btn.classList.add('active', 'btn-warning');
+        if(filter === 'empty') btn.classList.add('active', 'btn-danger');
+        filtrarMateriales();
+    }
 
-    // --- BÚSQUEDA ---
     function filtrarMateriales() {
-        const input = document.getElementById('buscadorMateriales');
-        const filter = input.value.toLowerCase();
+        const searchText = document.getElementById('buscadorMateriales').value.toLowerCase();
         const items = document.getElementsByClassName('item-material');
         let visibles = 0;
 
-        for (let i = 0; i < items.length; i++) {
-            const nombre = items[i].querySelector('.nombre-material').innerText || "";
-            if (nombre.toLowerCase().indexOf(filter) > -1) {
-                items[i].classList.remove('d-none');
+        Array.from(items).forEach(item => {
+            const nombre = item.querySelector('.nombre-material').innerText.toLowerCase();
+            const stock = parseFloat(item.getAttribute('data-stock') || 0);
+            const min = parseFloat(item.getAttribute('data-min') || 0);
+
+            let pasaFiltroStock = true;
+            if (currentStockFilter === 'low') pasaFiltroStock = (stock <= min && stock > 0);
+            else if (currentStockFilter === 'empty') pasaFiltroStock = (stock <= 0);
+
+            const pasaBuscador = nombre.includes(searchText);
+
+            if (pasaFiltroStock && pasaBuscador) {
+                item.classList.remove('d-none');
                 visibles++;
             } else {
-                items[i].classList.add('d-none');
+                item.classList.add('d-none');
             }
-        }
+        });
         document.getElementById('sinResultados').classList.toggle('d-none', visibles !== 0 || items.length === 0);
     }
 
-    // --- LÓGICA MODAL MATERIAL ---
-    function limpiarModal() {
-        document.getElementById('formMaterial').reset();
-        document.getElementById('id_actualizar').value = '';
-        document.getElementById('unidad_medida').value = 'pieza';
-        document.getElementById('cantidad_paquete').value = '1';
-
-        const stockMinInput = document.getElementById('stock_minimo');
-        if (stockMinInput) stockMinInput.value = '5';
-        actualizarLabelStockMinimo();
-    }
-
-    function editarMaterial(mat) {
-        const modal = new bootstrap.Modal(document.getElementById('modalMaterial'));
-        document.getElementById('id_actualizar').value = mat.id;
-        document.getElementById('nombre').value = mat.nombre;
-        document.getElementById('precio_compra').value = mat.precio_compra;
-        document.getElementById('cantidad_paquete').value = mat.cantidad_paquete || 1;
-        document.getElementById('unidad_medida').value = mat.unidad_medida || 'pieza';
-
-        const stockMinInput = document.getElementById('stock_minimo');
-        if (stockMinInput) stockMinInput.value = mat.stock_minimo !== undefined ? mat.stock_minimo : 5;
-        actualizarLabelStockMinimo();
-        modal.show();
-    }
-
-    function actualizarLabelStockMinimo() {
-        const selectUnidad = document.getElementById('unidad_medida');
-        const labelStock = document.getElementById('labelUnidadMinima');
-        if (selectUnidad && labelStock) {
-            labelStock.innerText = selectUnidad.options[selectUnidad.selectedIndex].text;
-        }
-    }
-
-    // --- ELIMINAR ---
-    function confirmarEliminar(urlReal, nombre) {
-        Swal.fire({
-            title: '¿Eliminar material?',
-            text: `Vas a borrar "${nombre}".`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6e7881',
-            confirmButtonText: 'Sí, eliminar',
-            cancelButtonText: 'Cancelar'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                // USAMOS FETCH PARA NO SALIR DE LA PÁGINA
-                fetch(urlReal)
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.status === 'blocked') {
-                            // El modal de bloqueo aparece ENCIMA de la lista actual
-                            const lista = data.recetas.join(', ');
-                            Swal.fire({
-                                title: 'Material en uso',
-                                html: `No puedes eliminarlo porque está en las recetas de: <br><br><b>${lista}</b>.<br><br>¿Quieres ir a Recetas para editarlas?`,
-                                icon: 'info',
-                                showCancelButton: true,
-                                confirmButtonText: 'Sí, ir a Recetas',
-                                cancelButtonText: 'Regresar',
-                                confirmButtonColor: '#3085d6'
-                            }).then((res) => {
-                                if (res.isConfirmed) window.location.href = "{{ url_for('inventory.recetas') }}";
-                            });
-                        } else if (data.status === 'success') {
-                            Swal.fire('Eliminado', 'El material se fue para siempre.', 'success')
-                                .then(() => location.reload());
-                        } else {
-                            Swal.fire('Error', 'No se pudo eliminar el material.', 'error');
-                        }
-                    });
-            }
-        });
-    }
-
-    // --- LÓGICA COMPRA (ENTRADA) ---
-    let modalStockObj;
-    let materialActual = null;
-
+    // --- 4. GESTIÓN DE MODALES (ABRIR / CONFIGURAR) ---
     function abrirModalStock(mat) {
         materialActual = mat;
         document.getElementById('stock_id').value = mat.id;
@@ -745,48 +670,6 @@
         modalStockObj.show();
     }
 
-    function cambiarModoIngreso() {
-        if (!materialActual) return;
-        const tipo = document.getElementById('stock_tipo_ingreso').value;
-        const label = document.getElementById('stock_unidad_label');
-        const ayuda = document.getElementById('stock_ayuda');
-        const unidad = materialActual.unidad_medida || 'pieza';
-
-        if (tipo === 'paquete' && parseFloat(materialActual.cantidad_paquete) > 1) {
-            label.innerText = 'Cajas/Paquetes';
-            ayuda.innerHTML = `Suma <b>${parseFloat(materialActual.cantidad_paquete).toFixed(2)} ${unidad}(s)</b> por paquete al inventario.`;
-        } else {
-            label.innerText = unidad;
-            ayuda.innerHTML = `Entrada directa de unidades al almacén.`;
-        }
-    }
-
-    function guardarCompra() {
-        const id = document.getElementById('stock_id').value;
-        const cant = document.getElementById('stock_cantidad').value;
-        const precio = document.getElementById('stock_nuevo_precio').value;
-        const tipo_ingreso = document.getElementById('stock_tipo_ingreso').value;
-
-        if (!cant || cant <= 0) return Swal.fire('Atención', 'Ingresa una cantidad válida.', 'warning');
-
-        fetch('/api/registrar_compra', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, cantidad: cant, nuevo_precio: precio, tipo_ingreso })
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({ icon: 'success', title: 'Inventario Sumado', showConfirmButton: false, timer: 1200 }).then(() => location.reload());
-                } else {
-                    Swal.fire('Error', data.error, 'error');
-                }
-            });
-    }
-
-    // --- LÓGICA MERMA (SALIDA) ---
-    let modalMermaObj;
-
     function abrirModalMerma(mat) {
         document.getElementById('merma_id').value = mat.id;
         document.getElementById('merma_nombre').innerText = mat.nombre;
@@ -797,110 +680,113 @@
         modalMermaObj.show();
     }
 
-    function guardarMerma() {
-        const id = document.getElementById('merma_id').value;
-        const cant = document.getElementById('merma_cantidad').value;
+    function cambiarModoIngreso() {
+        if (!materialActual) return;
+        const tipo = document.getElementById('stock_tipo_ingreso').value;
+        const label = document.getElementById('stock_unidad_label');
+        const ayuda = document.getElementById('stock_ayuda');
+        const unidad = materialActual.unidad_medida || 'pieza';
 
-        if (!cant || cant <= 0) return Swal.fire('Atención', 'Ingresa una cantidad válida.', 'warning');
+        if (tipo === 'paquete' && parseFloat(materialActual.cantidad_paquete) > 1) {
+            label.innerText = 'Cajas/Pzs';
+            ayuda.innerHTML = `Suma <b>${parseFloat(materialActual.cantidad_paquete).toFixed(2)} ${unidad}(s)</b> al stock.`;
+        } else {
+            label.innerText = unidad;
+            ayuda.innerHTML = `Entrada directa de unidades.`;
+        }
+    }
 
-        fetch('/api/registrar_merma', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, cantidad: cant })
-        })
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) {
-                    Swal.fire({ icon: 'success', title: 'Merma Registrada', showConfirmButton: false, timer: 1200 }).then(() => location.reload());
-                } else {
-                    Swal.fire('Error', data.error, 'error');
-                }
+    function limpiarModal() {
+        document.getElementById('formMaterial').reset();
+        document.getElementById('id_actualizar').value = '';
+        actualizarLabelStockMinimo();
+    }
+
+    function editarMaterial(mat) {
+        limpiarModal();
+        document.getElementById('id_actualizar').value = mat.id;
+        document.getElementById('nombre').value = mat.nombre;
+        document.getElementById('precio_compra').value = mat.precio_compra;
+        document.getElementById('cantidad_paquete').value = mat.cantidad_paquete;
+        document.getElementById('unidad_medida').value = mat.unidad_medida || 'pieza';
+        if (document.getElementById('stock_minimo')) document.getElementById('stock_minimo').value = mat.stock_minimo || 5;
+        actualizarLabelStockMinimo();
+        new bootstrap.Modal(document.getElementById('modalMaterial')).show();
+    }
+
+    function actualizarLabelStockMinimo() {
+        const select = document.getElementById('unidad_medida');
+        const label = document.getElementById('labelUnidadMinima');
+        if (select && label) label.innerText = select.options[select.selectedIndex].text;
+    }
+
+    // --- 5. PROCESOS ASÍNCRONOS (FETCH + SWAL) ---
+    function guardarMaterialFetch() {
+        const form = document.getElementById('formMaterial');
+        const formData = new FormData(form);
+        if (!formData.get('nombre')) return Swal.fire('Atención', 'Nombre obligatorio.', 'warning');
+        Swal.fire({ title: 'Guardando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        fetch("{{ url_for('inventory.materiales') }}", { method: 'POST', body: formData })
+            .then(res => res.json().then(data => ({ status: res.status, body: data })))
+            .then(res => {
+                if (res.status === 200) location.reload();
+                else Swal.fire('Error', res.body.message || 'Error al guardar.', 'error');
             });
     }
 
-    // --- HISTORIAL ESCALABLE (PAGINACIÓN) ---
-    // Variables movidas a nivel global para que todo funcione
-    let historialOffset = 0;
-    const HISTORIAL_LIMIT = 20; // Cuántos registros trae por clic
-
-    // Se dispara al abrir el modal por primera vez
-    function abrirHistorial() {
-        historialOffset = 0; // Reiniciamos el conteo
-        document.getElementById('listaHistorial').innerHTML = ''; // Limpiamos la lista
-        cargarDatosHistorial();
+    function confirmarEliminar(urlReal, nombre) {
+        Swal.fire({ title: '¿Eliminar?', text: `Borrar "${nombre}".`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Sí, borrar' })
+        .then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                fetch(urlReal).then(r => r.json()).then(data => {
+                    if (data.status === 'blocked') {
+                        Swal.fire({ title: 'En uso', html: `Está en: <b>${data.recetas.join(', ')}</b>.`, icon: 'info', confirmButtonText: 'Ir a Recetas' })
+                        .then(res => { if (res.isConfirmed) window.location.href = "{{ url_for('inventory.recetas') }}"; });
+                    } else location.reload();
+                });
+            }
+        });
     }
 
-    // Se dispara al darle click al botón "Cargar anteriores"
-    function cargarMasHistorial() {
-        historialOffset += HISTORIAL_LIMIT;
-        cargarDatosHistorial();
+    function guardarCompra() {
+        const payload = { id: document.getElementById('stock_id').value, cantidad: document.getElementById('stock_cantidad').value, nuevo_precio: document.getElementById('stock_nuevo_precio').value, tipo_ingreso: document.getElementById('stock_tipo_ingreso').value };
+        if (!payload.cantidad || payload.cantidad <= 0) return Swal.fire('Atención', 'Cantidad inválida.', 'warning');
+        Swal.fire({ title: 'Actualizando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        fetch('/api/registrar_compra', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(r => r.json()).then(data => { if (data.success) location.reload(); else Swal.fire('Error', data.error, 'error'); });
     }
 
-    // La función principal que hace el fetch a tu backend
+    function guardarMerma() {
+        const payload = { id: document.getElementById('merma_id').value, cantidad: document.getElementById('merma_cantidad').value };
+        if (!payload.cantidad || payload.cantidad <= 0) return Swal.fire('Atención', 'Cantidad inválida.', 'warning');
+        Swal.fire({ title: 'Registrando merma...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        fetch('/api/registrar_merma', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+        .then(r => r.json()).then(data => { if (data.success) location.reload(); else Swal.fire('Error', data.error, 'error'); });
+    }
+
+    // --- 6. HISTORIAL ---
+    function abrirHistorial() { historialOffset = 0; document.getElementById('listaHistorial').innerHTML = ''; cargarDatosHistorial(); }
+    function cargarMasHistorial() { historialOffset += HISTORIAL_LIMIT; cargarDatosHistorial(); }
     function cargarDatosHistorial() {
         const contenedor = document.getElementById('listaHistorial');
         const loading = document.getElementById('loadingHistorial');
         const btnMas = document.getElementById('contenedorCargarMas');
-
-        btnMas.classList.add('d-none'); // Ocultamos el botón mientras carga
-        loading.classList.remove('d-none');
-
+        btnMas.classList.add('d-none'); loading.classList.remove('d-none');
         fetch(`/api/inventario/historial?offset=${historialOffset}&limit=${HISTORIAL_LIMIT}`)
-            .then(r => r.json())
-            .then(data => {
+            .then(r => r.json()).then(data => {
                 loading.classList.add('d-none');
-
-                if (data.length === 0 && historialOffset === 0) {
-                    contenedor.innerHTML = `
-                    <div class="text-center py-5 text-muted opacity-50">
-                        <i class="fas fa-wind fa-2x mb-3"></i>
-                        <p class="small">No hay movimientos recientes.</p>
-                    </div>`;
-                    return;
-                }
-
+                if (data.length === 0 && historialOffset === 0) { contenedor.innerHTML = '<p class="text-center py-4 opacity-50">Sin movimientos.</p>'; return; }
                 data.forEach(mov => {
                     const isEntrada = mov.tipo === 'entrada';
-                    const color = isEntrada ? 'text-success' : 'text-danger';
-                    const icon = isEntrada ? 'fa-arrow-down' : 'fa-arrow-up';
-                    const sign = isEntrada ? '+' : '-';
-                    const bg = isEntrada ? 'bg-success' : 'bg-danger';
-
                     const fecha = new Date(mov.fecha).toLocaleString('es-MX', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
-
                     contenedor.insertAdjacentHTML('beforeend', `
-                    <div class="list-group-item p-3">
-                        <div class="d-flex justify-content-between mb-2">
-                            <small class="text-muted fw-bold" style="font-size: 0.7rem;">${fecha}</small>
-                            <span class="badge ${bg} bg-opacity-10 ${color} rounded-pill border-0"><i class="fas ${icon} me-1"></i>${mov.tipo.toUpperCase()}</span>
-                        </div>
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
-                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.9rem;">${mov.material_nombre}</h6>
-                                <small class="text-muted" style="font-size: 0.75rem;">${mov.motivo}</small>
-                            </div>
-                            <div class="text-end">
-                                <div class="fw-bold ${color} mb-0" style="font-size: 1.1rem;">${sign}${mov.cantidad}</div>
-                                <small class="text-muted" style="font-size: 0.65rem;">Quedan: ${mov.stock_resultante}</small>
-                            </div>
-                        </div>
-                    </div>
-                `);
+                        <div class="list-group-item p-3">
+                            <div class="d-flex justify-content-between mb-1"><small class="text-muted fw-bold">${fecha}</small><span class="badge ${isEntrada ? 'bg-success' : 'bg-danger'} bg-opacity-10 ${isEntrada ? 'text-success' : 'text-danger'} rounded-pill">${mov.tipo.toUpperCase()}</span></div>
+                            <div class="d-flex justify-content-between align-items-center"><div><h6 class="mb-0 fw-bold">${mov.material_nombre}</h6><small class="text-muted">${mov.motivo}</small></div><div class="text-end"><div class="fw-bold ${isEntrada ? 'text-success' : 'text-danger'}">${isEntrada ? '+' : '-'}${mov.cantidad}</div></div></div>
+                        </div>`);
                 });
-
-                // Si la BD nos trajo exactamente el límite que pedimos, significa que probablemente hay más registros por descubrir
-                if (data.length === HISTORIAL_LIMIT) {
-                    btnMas.classList.remove('d-none');
-                } else if (historialOffset > 0 && data.length < HISTORIAL_LIMIT) {
-                    // Si ya no hay más, ponemos un mensajito amigable
-                    contenedor.insertAdjacentHTML('beforeend', `<div class="text-center p-3 small text-muted">No hay más movimientos en el historial.</div>`);
-                }
-            })
-            .catch(() => {
-                loading.classList.add('d-none');
-                if (historialOffset === 0) {
-                    contenedor.innerHTML = '<div class="p-4 text-center text-danger small">Error al cargar el historial.</div>';
-                }
+                if (data.length === HISTORIAL_LIMIT) btnMas.classList.remove('d-none');
             });
     }
 </script>

@@ -492,69 +492,61 @@
 
     // --- PREPARAR MODAL PARA EDITAR RECETA (Cargar datos) ---
     function editarReceta(idReceta) {
+        // Mostramos que estamos buscando la info
+        Swal.fire({
+            title: 'Cargando receta...',
+            text: 'Buscando ingredientes y maquinaria.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
         const urlBase = "{{ url_for('api.obtener_receta', id=999999) }}";
         const urlFetch = urlBase.replace('999999', idReceta);
 
         fetch(urlFetch)
-            .then(res => {
-                if(!res.ok) throw new Error("Status: " + res.status);
-                return res.json();
-            })
+            .then(res => res.json())
             .then(data => {
+                Swal.close(); // Cerramos el cargando
                 if(data.error) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: data.error, customClass: { popup: 'rounded-4' } });
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error });
                     return;
                 }
                 
+                // ... (Toda tu lógica actual de llenar el modal se queda igual) ...
                 recetaEnEdicionId = data.id;
                 document.getElementById('tituloModalReceta').innerHTML = '<i class="fas fa-edit me-2 text-muted"></i>Editar Receta';
                 document.getElementById('nombreRecetaInput').value = data.nombre;
-                
                 const tbody = document.getElementById('tablaMaterialesReceta');
                 tbody.innerHTML = '';
                 document.querySelectorAll('.check-maquinaria').forEach(cb => cb.checked = false);
-                
-                // Cargar Materiales en la tablita
+
                 if(data.materiales && data.materiales.length > 0) {
                     data.materiales.forEach(mat => {
-                        // AQUÍ ESTÁ LA MAGIA: Buscamos el ID en nuestro catálogo para sacar nombre y precio
                         const infoReal = catalogoMateriales.find(m => m.id === mat.id) || {};
-                        const nombreVisual = infoReal.nombre || mat.nombre || "Material desconocido";
-                        const precioVisual = parseFloat(infoReal.precio_unitario || mat.precio_unitario || 0).toFixed(2);
-
                         const tr = document.createElement('tr');
                         tr.id = `row_mat_${mat.id}`;
                         tr.className = 'material-item';
                         tr.dataset.id = mat.id;
                         tr.innerHTML = `
-                            <td class="fw-bold text-dark small">${nombreVisual}</td>
-                            <td class="text-muted small">$${precioVisual}</td>
-                            <td>
-                                <input type="number" class="form-control form-control-sm sian-input cantidad-material py-1 text-center fw-bold" value="${mat.cantidad}" min="0.1" step="0.1" style="width: 70px;">
-                            </td>
-                            <td style="text-align: right;">
-                                <button type="button" class="action-icon danger" onclick="eliminarMaterialRow(this)" title="Quitar"><i class="fas fa-times"></i></button>
-                            </td>
+                            <td class="fw-bold text-dark small">${infoReal.nombre || mat.nombre}</td>
+                            <td class="text-muted small">$${parseFloat(infoReal.precio_unitario || 0).toFixed(2)}</td>
+                            <td><input type="number" class="form-control form-control-sm sian-input cantidad-material py-1 text-center fw-bold" value="${mat.cantidad}" min="0.1" step="0.1" style="width: 70px;"></td>
+                            <td style="text-align: right;"><button type="button" class="action-icon danger" onclick="eliminarMaterialRow(this)"><i class="fas fa-times"></i></button></td>
                         `;
                         tbody.appendChild(tr);
                     });
-                } else {
-                    tbody.innerHTML = '<tr id="filaVaciaMensaje"><td colspan="4" class="text-center text-muted small py-3">No has agregado materiales a la receta.</td></tr>';
                 }
-                
-                // Marcar la Maquinaria que ya tenía
                 if(data.maquinaria) {
                     data.maquinaria.forEach(maq => {
                         const cb = document.getElementById(`maq_${maq.id}`);
                         if(cb) cb.checked = true;
                     });
                 }
-                
+
                 new bootstrap.Modal(document.getElementById('modalNuevaReceta')).show();
             })
-            .catch(err => {
-                console.error("Detalle del error:", err);
-                Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'Ocurrió un problema al cargar los datos de la receta.', customClass: { popup: 'rounded-4' } });
+            .catch(() => {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'No pudimos conectar con el servidor.' });
             });
     }
 
@@ -604,68 +596,43 @@
     // --- GUARDAR O ACTUALIZAR RECETA ---
     function guardarRecetaFetch() {
         const nombre = document.getElementById('nombreRecetaInput').value.trim();
-        
-        if (!nombre) {
-            Swal.fire({ icon: 'warning', title: 'Falta el nombre', text: 'Por favor, ponle un nombre a tu producto/receta.', customClass: { popup: 'rounded-4' } });
-            return;
-        }
+        if (!nombre) return Swal.fire({ icon: 'warning', title: 'Falta el nombre' });
 
         const materiales = [];
         document.querySelectorAll('.material-item').forEach(row => {
-            const id = row.dataset.id;
-            const cantidad = row.querySelector('.cantidad-material').value;
-            materiales.push({ id: parseInt(id), cantidad: parseFloat(cantidad) });
+            materiales.push({ id: parseInt(row.dataset.id), cantidad: parseFloat(row.querySelector('.cantidad-material').value) });
         });
 
-        if (materiales.length === 0) {
-            Swal.fire({ icon: 'warning', title: 'Receta vacía', text: 'Debes agregar al menos un material a la receta.', customClass: { popup: 'rounded-4' } });
-            return;
-        }
+        if (materiales.length === 0) return Swal.fire({ icon: 'warning', title: 'Receta vacía' });
 
-        const maquinaria = [];
-        document.querySelectorAll('.check-maquinaria:checked').forEach(checkbox => {
-            maquinaria.push({ id: parseInt(checkbox.value) });
+        // MOSTRAR INDICADOR DE PROCESO
+        Swal.fire({
+            title: 'Guardando receta...',
+            text: 'Estamos calculando los nuevos costos.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
         });
 
-        // ARMAMOS EL PAYLOAD (Incluyendo el ID si estamos editando)
         const payload = {
-            id: recetaEnEdicionId, // Si es nuevo será 'null'
+            id: recetaEnEdicionId,
             nombre: nombre,
             materiales: materiales,
-            maquinaria: maquinaria
+            maquinaria: Array.from(document.querySelectorAll('.check-maquinaria:checked')).map(cb => ({ id: parseInt(cb.value) }))
         };
-
-        const btnGuardar = document.querySelector('#modalNuevaReceta .btn-sian');
-        const txtOriginal = btnGuardar.innerHTML;
-        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
-        btnGuardar.disabled = true;
 
         fetch("{{ url_for('inventory.guardar_receta') }}", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
-        .then(response => response.json())
+        .then(r => r.json())
         .then(data => {
             if (data.success) {
-                Swal.fire({
-                    icon: 'success',
-                    title: recetaEnEdicionId ? '¡Receta actualizada!' : '¡Receta guardada!',
-                    showConfirmButton: false,
-                    timer: 1500,
-                    customClass: { popup: 'rounded-4' }
-                }).then(() => { window.location.reload(); });
+                Swal.fire({ icon: 'success', title: '¡Listo!', showConfirmButton: false, timer: 1500 })
+                    .then(() => location.reload());
             } else {
-                Swal.fire({ icon: 'error', title: 'Oops...', text: "Error: " + (data.error || "No se pudo guardar."), customClass: { popup: 'rounded-4' } });
-                btnGuardar.innerHTML = txtOriginal;
-                btnGuardar.disabled = false;
+                Swal.fire({ icon: 'error', title: 'Error', text: data.error });
             }
-        })
-        .catch(error => {
-            console.error("Error:", error);
-            Swal.fire({ icon: 'error', title: 'Error de red', text: "Ocurrió un error al conectar con el servidor.", customClass: { popup: 'rounded-4' } });
-            btnGuardar.innerHTML = txtOriginal;
-            btnGuardar.disabled = false;
         });
     }
 
@@ -718,6 +685,7 @@
         }
     }
 
+    // --- ELIMINAR RECETA ---
     function confirmarEliminarReceta(urlReal, nombre) {
         Swal.fire({
             title: '¿Eliminar receta?',
@@ -725,12 +693,28 @@
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#e9ecef',
-            cancelButtonText: '<span style="color:#495057; font-weight: bold;">Cancelar</span>',
             confirmButtonText: 'Sí, borrar',
-            customClass: { popup: 'rounded-4' }
+            cancelButtonText: 'Cancelar'
         }).then((result) => {
-            if (result.isConfirmed) window.location.href = urlReal;
+            if (result.isConfirmed) {
+                // INDICADOR DE ELIMINACIÓN
+                Swal.fire({
+                    title: 'Eliminando...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                fetch(urlReal)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({ icon: 'success', title: 'Receta Eliminada', timer: 1500, showConfirmButton: false })
+                                .then(() => location.reload());
+                        } else {
+                            Swal.fire('Error', 'No se pudo eliminar la receta.', 'error');
+                        }
+                    });
+            }
         });
     }
 

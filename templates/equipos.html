@@ -306,7 +306,7 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="submit" class="btn btn-sian rounded-3 px-4 py-2 fw-bold w-100 shadow-sm">Guardar Equipo</button>
+                    <button type="button" class="btn btn-sian rounded-3 px-4 py-2 fw-bold w-100 shadow-sm" onclick="guardarEquipoFetch()">Guardar Equipo</button>
                 </div>
             </form>
         </div>
@@ -316,12 +316,12 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
+    // --- VARIABLE GLOBAL PARA MODAL ---
+    let modalEquipoObj;
+
     // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
     function repetirTutorialEquipos() {
-        if(typeof window.driver === 'undefined') {
-            console.error("Driver.js no está cargado.");
-            return;
-        }
+        if(typeof window.driver === 'undefined') return;
 
         const driverObj = window.driver.js.driver({
             showProgress: true,
@@ -329,8 +329,6 @@
             nextBtnText: 'Siguiente &rarr;',
             prevBtnText: '&larr; Atrás',
             allowClose: true,
-            
-            // CONEXIÓN A BASE DE DATOS (Cuando el tour termina o se cierra)
             onDestroyed: () => {
                 {% if mostrar_tour %}
                 fetch('/api/tutorial/completado', {
@@ -343,94 +341,49 @@
                 }).catch(e => console.error("Error guardando tutorial:", e));
                 {% endif %}
             },
-            
             steps: [
-                {
-                    popover: {
-                        title: 'Maquinaria y Procesos ⚡',
-                        description: 'Las máquinas cuestan, se desgastan y consumen luz. Aquí registraremos esa "renta" para que nunca la pagues de tu bolsa.',
-                        align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-nuevo-equipo',
-                    popover: {
-                        title: '1. Agrega tu primer equipo',
-                        description: 'Dale clic aquí. Solo necesitas ponerle nombre (ej. "Horno" o "Impresora") y cuánto vas a cobrar de desgaste por cada vez que lo uses (ej. $5.00).',
-                        side: "bottom", align: 'end'
-                    }
-                },
-                {
-                    element: '#tour-tabla-equipos',
-                    popover: {
-                        title: '2. Tu panel de control',
-                        description: 'Aquí se irán listando. Si sube la luz o el mantenimiento, usa el botón del lápiz para ajustar la tarifa.',
-                        side: "top", align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-buscador-equipos',
-                    popover: {
-                        title: '3. Encuentra rápido',
-                        description: 'Si tu taller crece, usa el buscador para filtrar tus máquinas al instante.',
-                        side: "bottom", align: 'start'
-                    }
-                }
+                { popover: { title: 'Maquinaria y Procesos ⚡', description: 'Las máquinas cuestan, se desgastan y consumen luz. Aquí registraremos esa "renta" para que nunca la pagues de tu bolsa.', align: 'center' } },
+                { element: '#tour-nuevo-equipo', popover: { title: '1. Agrega tu primer equipo', description: 'Solo necesitas nombre y cuánto vas a cobrar de desgaste por uso.', side: "bottom", align: 'end' } },
+                { element: '#tour-tabla-equipos', popover: { title: '2. Tu panel de control', description: 'Lista de equipos. Ajusta sus tarifas conforme suban tus costos operativos.', side: "top", align: 'center' } },
+                { element: '#tour-buscador-equipos', popover: { title: '3. Encuentra rápido', description: 'Filtra tus máquinas por nombre al instante.', side: "bottom", align: 'start' } }
             ]
         });
         driverObj.drive();
     }
 
-    // MAGIA DE JINJA: Solo arranca si Python dice que es su primera vez
     {% if mostrar_tour %}
     document.addEventListener('DOMContentLoaded', function() {
         if (typeof window.driver !== 'undefined') {
-            setTimeout(() => {
-                repetirTutorialEquipos();
-            }, 800); // 800ms de retraso para carga limpia
+            setTimeout(() => { repetirTutorialEquipos(); }, 800);
         }
     });
     {% endif %}
 
-
-    let modalEquipoObj;
-
     // --- BÚSQUEDA EN LA TABLA ---
     function filtrarTabla() {
-        const input = document.getElementById('buscadorEquipos');
-        const filter = input.value.toLowerCase();
+        const filter = document.getElementById('buscadorEquipos').value.toLowerCase();
         const rows = document.getElementsByClassName('item-equipo');
         let visibles = 0;
 
         for (let i = 0; i < rows.length; i++) {
             const nombre = rows[i].querySelector('.nombre-equipo').innerText || "";
             if (nombre.toLowerCase().indexOf(filter) > -1) {
-                rows[i].style.display = ""; // Muestra la fila
-                visibles++;
+                rows[i].style.display = ""; visibles++;
             } else {
-                rows[i].style.display = "none"; // Oculta la fila
+                rows[i].style.display = "none";
             }
         }
         
-        const tabla = document.getElementById('tablaEquipos');
-        const msj = document.getElementById('sinResultados');
-        
-        if (visibles === 0 && rows.length > 0) {
-            tabla.classList.add('d-none');
-            msj.classList.remove('d-none');
-        } else {
-            tabla.classList.remove('d-none');
-            msj.classList.add('d-none');
-        }
+        document.getElementById('tablaEquipos').classList.toggle('d-none', visibles === 0 && rows.length > 0);
+        document.getElementById('sinResultados').classList.toggle('d-none', visibles !== 0 || rows.length === 0);
     }
 
-    // --- MODALES ---
+    // --- CONTROL DE MODAL (ABRIR / EDITAR) ---
     function abrirModalNuevo() {
         document.getElementById('modalTitle').innerText = "Nuevo Equipo";
         document.getElementById('inputId').value = "";
         document.getElementById('inputNombre').value = "";
         document.getElementById('inputCosto').value = "";
-        
         if (!modalEquipoObj) modalEquipoObj = new bootstrap.Modal(document.getElementById('modalEquipo'));
         modalEquipoObj.show();
     }
@@ -440,88 +393,97 @@
         document.getElementById('inputId').value = eq.id;
         document.getElementById('inputNombre').value = eq.nombre;
         document.getElementById('inputCosto').value = eq.costo_desgaste;
-        
         if (!modalEquipoObj) modalEquipoObj = new bootstrap.Modal(document.getElementById('modalEquipo'));
         modalEquipoObj.show();
     }
 
-    // --- ELIMINAR ---
-function confirmarEliminarEquipo(urlReal, nombre) {
-    Swal.fire({
-        title: '¿Eliminar equipo?',
-        text: `Vas a borrar "${nombre}". Esta acción no se puede deshacer.`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#6e7881',
-        cancelButtonText: 'Cancelar',
-        confirmButtonText: 'Sí, eliminar',
-        customClass: { popup: 'rounded-4' }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            // USAMOS FETCH PARA CONSULTAR SIN SALIR DE LA PÁGINA
-            fetch(urlReal)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.status === 'blocked') {
-                        // El modal aparece sobre la tabla actual
-                        const lista = data.recetas.join(', ');
-                        Swal.fire({
-                            title: 'Equipo en uso',
-                            html: `Este equipo es parte de la producción de: <br><br><b>${lista}</b>.<br><br>¿Quieres ir a Recetas para actualizar tus procesos?`,
-                            icon: 'info',
-                            showCancelButton: true,
-                            confirmButtonText: 'Sí, ir a Recetas',
-                            cancelButtonText: 'Regresar',
-                            confirmButtonColor: '#ff4a5a'
-                        }).then((res) => {
-                            if (res.isConfirmed) {
-                                window.location.href = "{{ url_for('inventory.recetas') }}";
-                            }
-                        });
-                    } else if (data.status === 'success') {
-                        // Recargamos solo si se borró con éxito
-                        location.reload();
-                    } else {
-                        Swal.fire('Error', 'No se pudo eliminar el equipo.', 'error');
-                    }
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    Swal.fire('Error', 'Ocurrió un fallo en el servidor.', 'error');
+    // --- 1. GUARDAR EQUIPO (ASÍNCRONO CON SPINNER) ---
+    function guardarEquipoFetch() {
+        const id = document.getElementById('inputId').value;
+        const nombre = document.getElementById('inputNombre').value.trim();
+        const costo = document.getElementById('inputCosto').value;
+
+        if (!nombre || !costo) return Swal.fire({ icon: 'warning', title: 'Atención', text: 'Todos los campos son obligatorios.' });
+
+        // FEEDBACK DE CARGA
+        Swal.fire({
+            title: 'Procesando...',
+            text: 'Guardando los cambios en tu maquinaria.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        const formData = new FormData();
+        formData.append('id_actualizar', id);
+        formData.append('nombre', nombre);
+        formData.append('costo_desgaste', costo);
+
+        fetch("{{ url_for('inventory.equipos') }}", { method: 'POST', body: formData })
+            .then(r => r.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    Swal.fire({ icon: 'success', title: '¡Éxito!', showConfirmButton: false, timer: 1500 })
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.message });
+                }
+            })
+            .catch(() => Swal.fire({ icon: 'error', title: 'Error', text: 'Fallo al conectar con el servidor.' }));
+    }
+
+    // --- 2. ELIMINAR EQUIPO (ASÍNCRONO SIN PANTALLA BLANCA) ---
+    function confirmarEliminarEquipo(urlReal, nombre) {
+        Swal.fire({
+            title: '¿Eliminar equipo?',
+            text: `Vas a borrar "${nombre}". Esta acción no se puede deshacer.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6e7881',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar',
+            customClass: { popup: 'rounded-4' }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // INDICADOR DE CARGA
+                Swal.fire({
+                    title: 'Eliminando...',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
                 });
-        }
-    });
-}
 
-    // --- ALERTAS DE ÉXITO (FEEDBACK VISUAL) ---
+                fetch(urlReal)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'blocked') {
+                            const lista = data.recetas.join(', ');
+                            Swal.fire({
+                                title: 'Equipo en uso',
+                                html: `Este equipo es parte de la producción de: <br><br><b>${lista}</b>.<br><br>¿Quieres ir a Recetas para actualizar tus procesos?`,
+                                icon: 'info',
+                                showCancelButton: true,
+                                confirmButtonText: 'Sí, ir a Recetas',
+                                cancelButtonText: 'Regresar',
+                                confirmButtonColor: '#ff4a5a'
+                            }).then((res) => {
+                                if (res.isConfirmed) window.location.href = "{{ url_for('inventory.recetas') }}";
+                            });
+                        } else if (data.status === 'success') {
+                            Swal.fire({ icon: 'success', title: 'Eliminado', timer: 1200, showConfirmButton: false })
+                                .then(() => location.reload());
+                        } else {
+                            Swal.fire('Error', 'No se pudo eliminar.', 'error');
+                        }
+                    });
+            }
+        });
+    }
+
+    // --- COMPATIBILIDAD CON ALERTAS DE URL (Opcional) ---
     document.addEventListener("DOMContentLoaded", function() {
-        // Leemos la URL actual
         const urlParams = new URLSearchParams(window.location.search);
-        
-        // Si Python nos mandó "?guardado=true"
-        if (urlParams.has('guardado')) {
-            Swal.fire({
-                icon: 'success',
-                title: '¡Cambios Guardados!',
-                text: 'El equipo se actualizó correctamente en tu cuenta.',
-                showConfirmButton: false,
-                timer: 2000,
-                customClass: { popup: 'rounded-4' }
-            });
-            // Limpiamos la URL para que no salga la alerta si el usuario recarga la página
-            window.history.replaceState(null, null, window.location.pathname);
-        }
-
-        // Si Python nos mandó "?eliminado=true"
-        if (urlParams.has('eliminado')) {
-            Swal.fire({
-                icon: 'success',
-                title: 'Equipo Eliminado',
-                showConfirmButton: false,
-                timer: 1500,
-                customClass: { popup: 'rounded-4' }
-            });
+        if (urlParams.has('guardado') || urlParams.has('eliminado')) {
+            Swal.fire({ icon: 'success', title: 'Completado', timer: 1500, showConfirmButton: false });
             window.history.replaceState(null, null, window.location.pathname);
         }
     });

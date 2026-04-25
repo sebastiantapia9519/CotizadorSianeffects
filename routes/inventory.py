@@ -44,21 +44,10 @@ def materiales():
             duplicado = cursor.fetchone()
 
             if duplicado:
-                return f"""
-                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-                <script>
-                    window.onload = function() {{
-                        Swal.fire({{
-                            icon: 'error',
-                            title: 'Material duplicado',
-                            text: 'Error: Ya tienes un material llamado "{nombre}".',
-                            confirmButtonColor: '#ff4757'
-                        }}).then((result) => {{
-                            window.history.back();
-                        }});
-                    }};
-                </script>
-                """
+                return jsonify({
+                    "status": "error", 
+                    "message": f'Ya tienes un material llamado "{nombre}".'
+                }), 400
 
             # Conversión de valores numéricos con manejo de errores
             try:
@@ -100,12 +89,12 @@ def materiales():
                                (user_id, f"Creó el material '{nombre}'", "Inventario"))
             
             conn.commit()
-            return redirect(url_for('inventory.materiales'))
+            return jsonify({"status": "success", "message": "Material guardado."})
             
         except Exception as e:
             conn.rollback()
             current_app.logger.error(f"MATERIAL_SAVE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al guardar material - {e}")
-            return f"Error al guardar: {e}"
+            return jsonify({"status": "error", "message": str(e)}), 500
         finally:
             cursor.close()
             conn.close()
@@ -202,26 +191,7 @@ def equipos():
             duplicado = cursor.fetchone()
             
             if duplicado:
-                cursor.close()
-                conn.close()
-                return f"""
-                <body style="background-color: #f8f9fa;">
-                <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-                <script>
-                    window.onload = function() {{
-                        Swal.fire({{
-                            icon: 'error',
-                            title: 'Maquinaria duplicada',
-                            text: 'Error: Ya existe maquinaria con el nombre "{nombre}".',
-                            confirmButtonColor: '#ff4a5a',
-                            borderRadius: '16px'
-                        }}).then((result) => {{
-                            window.history.back();
-                        }});
-                    }};
-                </script>
-                </body>
-                """
+                return jsonify({"status": "error", "message": f'Ya existe maquinaria con el nombre "{nombre}".'}), 400
 
             try:
                 costo_desgaste = float(request.form.get('costo_desgaste') or 0)
@@ -244,12 +214,12 @@ def equipos():
                                (user_id, f"Registró el equipo '{nombre}'", "Equipos"))
             
             conn.commit()
-            return redirect(url_for('inventory.equipos', guardado='true'))
+            return jsonify({"status": "success", "message": "Equipo guardado correctamente."})
             
         except Exception as e:
             conn.rollback()
             current_app.logger.error(f"EQUIPMENT_SAVE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al guardar equipo - {e}")
-            return f"Error al procesar equipo: {e}"
+            return jsonify({"status": "error", "message": f"Error: {str(e)}"}), 500
         finally:
             cursor.close()
             conn.close()
@@ -265,7 +235,7 @@ def equipos():
 
     current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' (ID: {user_id}) consulto catalogo de equipos")
 
-    # 💡 LÓGICA DEL TUTORIAL
+    # LÓGICA DEL TUTORIAL
     mostrar_tour = debe_mostrar_tutorial(user_id, 'equipos')
     version_tour = obtener_version_tutorial('equipos')
 
@@ -470,22 +440,23 @@ def guardar_receta():
 def eliminar_receta(id):
     user_id = session['user_id']
     u_name = session.get('username', 'Anonimo')
-    
     conn = get_db()
     cursor = conn.cursor()
     try:
+        # Limpieza de dependencias
         cursor.execute("DELETE FROM producto_detalles WHERE producto_id=%s", (id,))
         cursor.execute("DELETE FROM producto_maquinaria WHERE producto_id=%s", (id,))
         cursor.execute("DELETE FROM productos WHERE id=%s AND user_id=%s", (id, user_id))
         conn.commit()
-        current_app.logger.info(f"RECIPE_DELETED: Usuario '{u_name}' (ID: {user_id}) elimino la receta #{id}")
+        # Retornamos éxito en JSON para que el JS lo maneje
+        return jsonify({"success": True})
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"RECIPE_DELETE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al eliminar receta #{id} - {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
     finally:
         cursor.close()
         conn.close()
-    return redirect(url_for('inventory.recetas', eliminada='true'))
 
 # =========================
 # 5. REGISTRAR COMPRA (STOCK)
