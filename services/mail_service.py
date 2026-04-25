@@ -1,39 +1,43 @@
 # services/mail_service.py
-from flask_mail import Message
+import os
+import resend
 from flask import current_app, render_template
 from threading import Thread
-from extensions import mail  # Importamos la instancia limpia
 
-def send_async_email(app, msg):
-    """Envía el correo usando el contexto de la aplicación en un hilo aparte."""
+# Inicializamos Resend con la API key del entorno
+resend.api_key = os.environ.get("RESEND_API_KEY")
+
+def _send_async(app, params):
+    """Envía el correo en un hilo aparte para no bloquear la app."""
     with app.app_context():
         try:
-            mail.send(msg)
+            resend.Emails.send(params)
         except Exception as e:
-            app.logger.error(f"Error enviando correo SMTP: {str(e)}")
+            app.logger.error(f"Error enviando correo Resend: {str(e)}")
 
 def enviar_correo_sian(subject, recipient, template, sender_alias="hola", **kwargs):
     """
-    Función maestra para enviar correos.
-    sender_alias: puede ser 'accounts', 'notifications', 'hola', 'dianareyes', etc.
+    Función maestra para enviar correos via Resend.
+    sender_alias: 'hola', 'contacto', 'notificaciones', etc.
     """
-    # Obtenemos la instancia real de la app
     app = current_app._get_current_object()
-    
-    # Construimos el remitente con tu dominio de Namecheap
-    # Ejemplo: Sianeffects <notifications@sianeffects.com>
+
     sender_email = f"{sender_alias}@sianeffects.com"
     full_sender = f"Sianeffects <{sender_email}>"
-    
-    msg = Message(subject, sender=full_sender, recipients=[recipient])
-    
-    # Renderiza el HTML desde la carpeta templates/emails/
+
+    # Renderiza el HTML desde templates/emails/
     try:
-        msg.html = render_template(f"emails/{template}.html", **kwargs)
+        html_content = render_template(f"emails/{template}.html", **kwargs)
     except Exception as e:
         app.logger.error(f"Error renderizando template de email: {str(e)}")
         return False
 
-    # Disparamos el hilo para no bloquear la ejecución principal
-    Thread(target=send_async_email, args=(app, msg)).start()
+    params = {
+        "from": full_sender,
+        "to": [recipient],
+        "subject": subject,
+        "html": html_content,
+    }
+
+    Thread(target=_send_async, args=(app, params)).start()
     return True
