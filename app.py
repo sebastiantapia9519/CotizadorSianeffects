@@ -192,6 +192,7 @@ def tarea_limpieza():
                               'productos', 'ventas', 'shipping_configs', 'shipping_zones']:
                     cursor.execute(f"DELETE FROM {tabla} WHERE user_id IN ({ph})", ids_tuple)
 
+                cursor.execute(f"DELETE FROM tutoriales_estado WHERE user_id IN ({ph})", ids_tuple)
                 cursor.execute(f"DELETE FROM usuarios WHERE id IN ({ph})", ids_tuple)
 
                 for email in emails:
@@ -385,10 +386,12 @@ def tarea_purga_no_verificados():
                 ids_tuple = tuple(ids)
 
                 # Borramos en cascada (tablas hijas primero)
+                # Borramos en cascada (tablas hijas primero)
                 cursor.execute(f"DELETE FROM auth_codes WHERE user_id IN ({ph})", ids_tuple)
                 cursor.execute(f"DELETE FROM logs_actividad WHERE user_id IN ({ph})", ids_tuple)
                 cursor.execute(f"DELETE FROM configuracion WHERE user_id IN ({ph})", ids_tuple)
                 cursor.execute(f"DELETE FROM shipping_configs WHERE user_id IN ({ph})", ids_tuple)
+                cursor.execute(f"DELETE FROM tutoriales_estado WHERE user_id IN ({ph})", ids_tuple)
                 cursor.execute(f"DELETE FROM usuarios WHERE id IN ({ph})", ids_tuple)
 
                 conn.commit()
