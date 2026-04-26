@@ -413,12 +413,18 @@ def verificar_email():
                 session.pop('email_por_verificar', None)
                 flash('¡Correo verificado! Ya puedes iniciar sesión.', 'success')
 
+                # 1. Extraemos el nombre del usuario de la base de datos
+                cursor.execute('SELECT username FROM usuarios WHERE id = %s', (record['user_id'],))
+                user_data = cursor.fetchone()
+                nombre_a_enviar = user_data['username'] if user_data else "Emprendedor"
+
                 # Correo de bienvenida DESPUÉS del commit
                 enviar_correo_sian(
                     subject="¡Bienvenido/a a Sianeffects!",
                     recipient=email,
                     template="bienvenida",
-                    sender_alias="hola"
+                    sender_alias="hola",
+                    nombre=nombre_a_enviar
                 )
 
                 return redirect(url_for('auth.login'))
