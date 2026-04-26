@@ -201,10 +201,9 @@ def registro():
     # VALIDACIONES DE NEGOCIO (antes de tocar la BD)
     # ----------------------------------------------------------------
 
-    # Anti-abuso de prueba gratuita: revisamos cookie en el navegador del usuario
     if request.cookies.get('has_free_trial'):
-        flash('Este dispositivo ya utilizó una prueba gratuita.', 'warning')
-        return redirect(url_for('main.plan_vencido'))
+        flash('¿Ya tienes una cuenta? Puedes iniciar sesión en lugar de registrarte de nuevo.', 'info')
+        
 
     # Validación de formato de username:
     # Solo letras minúsculas, números y guion bajo. Entre 3 y 20 caracteres.
