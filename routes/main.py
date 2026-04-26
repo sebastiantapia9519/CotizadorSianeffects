@@ -64,13 +64,13 @@ def cotizador():
         cursor.execute('SELECT * FROM configuracion WHERE user_id=%s', (uid,))
         config = cursor.fetchone()
         
-        cursor.execute('SELECT * FROM materiales WHERE user_id=%s', (uid,))
+        cursor.execute('SELECT * FROM materiales WHERE user_id=%s ORDER BY nombre ASC', (uid,))
         materiales = cursor.fetchall()
         
-        cursor.execute('SELECT * FROM productos WHERE user_id=%s', (uid,))
+        cursor.execute('SELECT * FROM productos WHERE user_id=%s ORDER BY nombre ASC', (uid,))
         productos = cursor.fetchall()
         
-        cursor.execute('SELECT * FROM maquinaria WHERE user_id=%s', (uid,))
+        cursor.execute('SELECT * FROM maquinaria WHERE user_id=%s ORDER BY nombre ASC', (uid,))
         equipos = cursor.fetchall()
 
         data = {
