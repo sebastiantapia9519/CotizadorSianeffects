@@ -1,0 +1,315 @@
+{% extends "layout.html" %}
+
+{% block extra_css %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+    /* Adaptación de Select2 al diseño de Sianeffects y Modo Oscuro */
+    .select2-container {
+        width: 100% !important; /* Forza responsividad en móviles */
+    }
+    .select2-container .select2-selection--multiple {
+        border-radius: 1rem;
+        min-height: 42px;
+        border: 1px solid var(--bs-border-color);
+        background-color: var(--bs-body-bg);
+        padding-left: 8px;
+    }
+    /* Estilo de las "píldoras" de usuarios seleccionados */
+    .select2-container--default .select2-selection--multiple .select2-selection__choice {
+        background-color: var(--sian-pink-light);
+        border: 1px solid var(--sian-pink);
+        color: var(--sian-pink);
+        border-radius: 12px;
+        padding: 3px 10px;
+        margin-top: 6px;
+        font-size: 0.85rem;
+        font-weight: 600;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove {
+        color: var(--sian-pink);
+        margin-right: 8px;
+        border-right: none;
+        font-weight: bold;
+    }
+    .select2-container--default .select2-selection--multiple .select2-selection__choice__remove:hover {
+        color: #dc3545;
+        background: transparent;
+    }
+    /* MODO OSCURO FIXES PARA EL DROPDOWN */
+    [data-bs-theme="dark"] .select2-dropdown {
+        background-color: var(--bs-body-bg);
+        border-color: var(--bs-border-color);
+    }
+    [data-bs-theme="dark"] .select2-container--default .select2-results__option[aria-selected=true] {
+        background-color: #334155;
+    }
+    [data-bs-theme="dark"] .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--sian-pink);
+        color: white;
+    }
+    [data-bs-theme="dark"] .select2-search__field {
+        background-color: transparent !important;
+        color: var(--bs-body-color) !important;
+    }
+    /* Mejoras UX */
+    .btn-outline-primary {
+        cursor: pointer;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4 mb-5">
+    <div class="row">
+        <div class="col-lg-4 mb-4">
+            <div class="card card-custom p-4 shadow-sm h-100">
+                <h4 class="fw-bold mb-4" style="color: var(--sian-pink);">
+                    <i class="fas fa-bullhorn me-2"></i>Nueva Alerta
+                </h4>
+                <form method="POST" id="formNotificaciones" action="{{ url_for('admin.gestion_notificaciones') }}">
+                    
+                    <div class="mb-4 p-1 bg-light rounded-pill border d-flex" style="background-color: var(--bs-tertiary-bg) !important;">
+                        <input type="radio" class="btn-check" name="tipo_alcance" id="alcance_directo" value="directo" checked autocomplete="off">
+                        <label class="btn btn-outline-primary border-0 rounded-pill w-50 fw-bold" for="alcance_directo">
+                            <i class="fas fa-envelope me-1"></i> Directo
+                        </label>
+
+                        <input type="radio" class="btn-check" name="tipo_alcance" id="alcance_global" value="global" autocomplete="off">
+                        <label class="btn btn-outline-primary border-0 rounded-pill w-50 fw-bold" for="alcance_global">
+                            <i class="fas fa-bullhorn me-1"></i> Global (Fijo)
+                        </label>
+                    </div>
+                    
+                    <div id="texto_ayuda_alcance" class="form-text small opacity-75 mb-3 text-center">
+                        Envía una alerta de un solo uso a los buzones que elijas.
+                    </div>
+
+                    <div id="seccion_destinatarios">
+                        <div class="mb-3 p-3 bg-light rounded-4 border" style="background-color: var(--bs-tertiary-bg) !important;">
+                            <label class="form-label small fw-bold text-primary"><i class="fas fa-filter me-1"></i> Envío por Segmento</label>
+                            <select name="segmento" class="form-select form-select-sm rounded-pill border-0 shadow-sm">
+                                <option value="">-- No aplicar filtro --</option>
+                                <option value="todos">Todos los usuarios actuales</option>
+                                <option value="activos">Suscripciones Activas</option>
+                                <option value="vencidos">Suscripciones Vencidas</option>
+                                <option value="por_vencer">Vencen pronto (Próximos 5 días)</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label small fw-bold"> Selección Manual (Individual)</label>
+                            <select name="user_ids" class="form-select select2-multiple" multiple="multiple">
+                                {% for u in usuarios %}
+                                <option value="{{ u.id }}">{{ u.username }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="form-text small opacity-75">Puedes usar el filtro arriba, elegir usuarios aquí, o ambos.</div>
+                        </div>
+                        <hr class="opacity-10 mb-4">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Título</label>
+                        <input type="text" name="titulo" class="form-control rounded-pill" placeholder="Ej: ¡Nuevo tutorial disponible!" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label small fw-bold">Enlace / Botón (Opcional)</label>
+                        <div class="input-group shadow-sm rounded-pill">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fas fa-link"></i></span>
+                            <input type="url" name="url_link" class="form-control border-start-0 rounded-end-pill bg-transparent" placeholder="https://tiktok.com/...">
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <label class="form-label small fw-bold">Nivel de Urgencia</label>
+                            <select name="tipo" class="form-select rounded-pill">
+                                <option value="info">Info (Azul - Normal)</option>
+                                <option value="success">Éxito (Verde - Positivo)</option>
+                                <option value="warning">Aviso (Amarillo - Precaución)</option>
+                                <option value="danger">Urgente (Rojo - Crítico)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label small fw-bold">Mensaje</label>
+                        <textarea name="mensaje" class="form-control rounded-4 shadow-sm" rows="3" placeholder="Escribe el contenido aquí..." required></textarea>
+                    </div>
+
+                    <button type="submit" id="btn_submit" class="btn btn-primary w-100 rounded-pill fw-bold py-2 shadow">
+                        <i class="fas fa-paper-plane me-2"></i>Lanzar Notificación
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="card card-custom p-4 shadow-sm h-100">
+                <h4 class="fw-bold mb-3"><i class="fas fa-history me-2 text-muted"></i>Historial de Notificaciones Enviadas</h4>
+                
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="text-muted small text-uppercase" style="letter-spacing: 0.5px;">
+                            <tr>
+                                <th>Destinatario</th>
+                                <th>Alerta</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for h in historial %}
+                            <tr>
+                                <td>
+                                    <div class="fw-bold" style="color: var(--bs-emphasis-color);">
+                                        {% if h.tipo_envio == 'global' %}
+                                            <i class="fas fa-globe-americas me-1 text-primary"></i> <span class="text-primary">Global (Todos)</span>
+                                        {% else %}
+                                            <i class="fas fa-users me-1 text-muted"></i> {{ h.total_enviados }} Destinatarios
+                                        {% endif %}
+                                    </div>
+                                    <small class="text-muted"><i class="far fa-clock me-1"></i>{{ h.fecha_envio.strftime('%d/%m %H:%M') if h.fecha_envio else 'Reciente' }}</small>
+                                </td>
+                                
+                                <td>
+                                    <div class="d-flex align-items-center mb-1">
+                                        <span class="badge bg-{{ h.tipo }} me-2">{{ h.titulo }}</span>
+                                        {% if h.url %}
+                                            <a href="{{ h.url }}" target="_blank" class="text-primary" title="Ver enlace adjunto">
+                                                <i class="fas fa-external-link-alt small"></i>
+                                            </a>
+                                        {% endif %}
+                                    </div>
+                                    <p class="small mb-0 text-truncate text-muted" style="max-width: 250px;">{{ h.mensaje }}</p>
+                                </td>
+                                
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="progress flex-grow-1" style="height: 6px; background-color: var(--bs-secondary-bg);">
+                                            {% set porcentaje = (h.total_leidos / h.total_enviados * 100) | int if h.total_enviados > 0 else 0 %}
+                                            <div class="progress-bar {% if h.tipo_envio == 'global' %}bg-primary{% else %}bg-success{% endif %}" role="progressbar" style="width: {{ porcentaje }}%;"></div>
+                                        </div>
+                                        <small class="fw-bold text-muted" style="min-width: 45px;">{{ h.total_leidos }}/{{ h.total_enviados }}</small>
+                                    </div>
+                                    <small class="text-muted d-block mt-1" style="font-size: 0.7rem;">Vistas</small>
+                                </td>
+                                
+                                <td class="text-end">
+                                    {% if h.tipo_envio == 'global' %}
+                                        {% set ruta_borrar = url_for('admin.eliminar_global_admin', id=h.lote_id) %}
+                                    {% else %}
+                                        {% set ruta_borrar = url_for('admin.eliminar_notificacion_admin', lote_id=h.lote_id) %}
+                                    {% endif %}
+
+                                    <a href="{{ ruta_borrar }}" 
+                                       class="btn btn-sm btn-outline-danger border-0 rounded-circle btn-delete-alerta"
+                                       title="Eliminar campaña"
+                                       data-usuarios="{{ h.total_enviados }}">
+                                        <i class="fas fa-trash"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-5 text-muted">
+                                    <i class="far fa-folder-open fs-1 mb-3 opacity-50"></i>
+                                    <p class="mb-0">Aún no has enviado notificaciones.</p>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function() {
+        // Inicializar buscador de usuarios
+        $('.select2-multiple').select2({
+            placeholder: "Buscar por nombre (Ej: Diana, Oddy...)",
+            allowClear: true,
+            width: '100%',
+            language: { noResults: function() { return "No se encontró ningún usuario"; } }
+        });
+
+        // Lógica de UI para el tipo de envío (Directo vs Global)
+        $('input[name="tipo_alcance"]').change(function() {
+            if ($(this).val() === 'global') {
+                $('#seccion_destinatarios').slideUp(); 
+                $('#texto_ayuda_alcance').html('<span class="text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> ATENCIÓN:</span> Este anuncio le aparecerá a TODOS los usuarios (actuales y nuevos registros) hasta que lo cierren.');
+                
+                $('#formNotificaciones').attr('action', "{{ url_for('admin.crear_anuncio_global') }}");
+                $('#btn_submit').removeClass('btn-primary').addClass('btn-danger').html('<i class="fas fa-bullhorn me-2"></i>Fijar Anuncio Global');
+            } else {
+                $('#seccion_destinatarios').slideDown();
+                $('#texto_ayuda_alcance').html('Envía una alerta de un solo uso a los buzones que elijas.');
+                
+                $('#formNotificaciones').attr('action', "{{ url_for('admin.gestion_notificaciones') }}");
+                $('#btn_submit').removeClass('btn-danger').addClass('btn-primary').html('<i class="fas fa-paper-plane me-2"></i>Lanzar Notificación');
+            }
+        });
+
+        // Interceptar formulario para mostrar loader SweetAlert2
+        $('#formNotificaciones').on('submit', function() {
+            let esGlobal = $('input[name="tipo_alcance"]:checked').val() === 'global';
+            let tituloSwal = esGlobal ? 'Publicando Anuncio...' : 'Procesando Envíos...';
+            let textoSwal = esGlobal ? 'Fijando el anuncio para todos los usuarios actuales y futuros.' : 'Repartiendo la notificación a los buzones seleccionados.';
+
+            Swal.fire({
+                title: tituloSwal,
+                text: textoSwal,
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                }
+            });
+
+            // Prevenir doble submit bloqueando el botón visualmente
+            $('#btn_submit').prop('disabled', true).addClass('opacity-50');
+        });
+
+        // NUEVO: SWEETALERT2 PARA CONFIRMAR ELIMINACIÓN DE CAMPAÑA
+        $('.btn-delete-alerta').on('click', function(e) {
+            e.preventDefault(); // Evita que el navegador vaya al enlace inmediatamente
+            let targetUrl = $(this).attr('href');
+            let totalUsuarios = $(this).data('usuarios');
+
+            Swal.fire({
+                title: '¿Eliminar alerta definitivamente?',
+                text: `Esta notificación desaparecerá del panel de ${totalUsuarios} usuarios y del historial. No se puede deshacer.`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#dc3545', // Rojo peligro
+                cancelButtonColor: '#6c757d',  // Gris secundario
+                confirmButtonText: '<i class="fas fa-trash me-2"></i>Sí, eliminar',
+                cancelButtonText: 'Cancelar'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    // Muestra el loader mientras espera respuesta del servidor
+                    Swal.fire({
+                        title: 'Eliminando...',
+                        allowOutsideClick: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            Swal.showLoading();
+                        }
+                    });
+                    // Dirige al navegador a la URL para borrar en el backend
+                    window.location.href = targetUrl;
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}

@@ -25,11 +25,45 @@ def index():
 def landing_cotizador():
     return render_template('landing_promos.html')
 
+# ========================================================
+# SISTEMA DE ALERTAS (PARA EL MENÚ Y NOTIFICACIONES)
+# ========================================================
 @main_bp.app_context_processor
 def inject_notifications():
     if 'user_id' in session:
         return {'notificaciones': obtener_alertas(session['user_id'])}
     return {'notificaciones': []}
+
+@main_bp.route('/marcar-leida/<int:notif_id>')
+@login_required
+def marcar_leida(notif_id):
+    conn = get_db()  
+    cursor = conn.cursor()
+    cursor.execute("UPDATE notificaciones_manuales SET leida = TRUE WHERE id = %s", (notif_id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(request.referrer)
+
+@main_bp.route('/marcar-visto-global/<int:anuncio_id>')
+@login_required
+def marcar_visto_global(anuncio_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    uid = session['user_id']
+    try:
+        # Usamos ON CONFLICT por si el usuario le pica dos veces rápido
+        cursor.execute("""
+            INSERT INTO anuncios_vistos (user_id, anuncio_id) 
+            VALUES (%s, %s) 
+            ON CONFLICT DO NOTHING
+        """, (uid, anuncio_id))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
+    return redirect(request.referrer)
+
 
 def procesar_fila_fechas(fila_db):
     if not fila_db: return None

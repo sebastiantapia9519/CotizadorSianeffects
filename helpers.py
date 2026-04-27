@@ -95,14 +95,17 @@ def subscription_required(f):
 # ========================================================
 def obtener_alertas(user_id):
     """
-    Revisa stock bajo y vencimiento de suscripción.
+    Sistema Híbrido:
+    1. Alertas automáticas (Stock y Suscripción).
+    2. Alertas manuales directas (buzón individual).
+    3. Anuncios Globales (permanentes para todos).
     """
     alertas = []
     conn = get_db_connection()
     cursor = conn.cursor()
     
     try:
-        # 1. REVISAR STOCK (Para todos los que tengan inventario activo)
+        # --- 1. REVISAR STOCK ---
         cursor.execute("SELECT inventario_activo FROM configuracion WHERE user_id=%s", (user_id,))
         config = cursor.fetchone()
         
@@ -123,14 +126,12 @@ def obtener_alertas(user_id):
                     'url': '/materiales' 
                 })
 
-        # 2. REVISAR SUSCRIPCIÓN (SOLO PARA MORTALES - ROL 0)
+        # --- 2. REVISAR SUSCRIPCIÓN (Solo Rol 0) ---
         cursor.execute("SELECT subscription_end, role FROM usuarios WHERE id=%s", (user_id,))
         user = cursor.fetchone()
         
-        # El filtro user['role'] == 0 asegura que a TI no te salgan avisos de pago
         if user and user['role'] == 0 and user['subscription_end']:
             try:
-                # BLINDAJE SQLITE/POSTGRES
                 f_end = user['subscription_end']
                 if isinstance(f_end, str):
                     fecha_fin = datetime.strptime(f_end[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
@@ -147,11 +148,84 @@ def obtener_alertas(user_id):
                         'url': '/configuracion'
                     })
             except Exception as e:
-                current_app.logger.warning(f"ALERT_DATE_ERROR: Fallo calculando alerta de fecha para user {user_id} - {e}")
-                pass
+                current_app.logger.warning(f"ALERT_DATE_ERROR: {e}")
+
+        # --- 3. NOTIFICACIONES MANUALES (BD) ---
+        cursor.execute("""
+            SELECT id, titulo, mensaje, tipo, url
+            FROM notificaciones_manuales 
+            WHERE user_id = %s AND leida = FALSE
+            ORDER BY fecha_creacion DESC
+        """, (user_id,))
+        
+        manuales = cursor.fetchall()
+        for n in manuales:
+            url_destino = n['url'] if n['url'] else '#'
+            
+            if not n['url']:
+                clase_icono = 'fas fa-bell'
+            elif 'tiktok.com' in url_destino:
+                clase_icono = 'fab fa-tiktok'
+            elif 'instagram.com' in url_destino:
+                clase_icono = 'fab fa-instagram'
+            elif 'facebook.com' in url_destino:
+                clase_icono = 'fab fa-facebook'
+            elif 'youtube.com' in url_destino or 'youtu.be' in url_destino:
+                clase_icono = 'fab fa-youtube'
+            elif 'wa.me' in url_destino or 'whatsapp.com' in url_destino:
+                clase_icono = 'fab fa-whatsapp'
+            else:
+                clase_icono = 'fas fa-external-link-alt'
+            
+            alertas.append({
+                'id_db': n['id'],
+                'es_global': False,  # <-- IMPORTANTE para el layout
+                'tipo': n['tipo'],
+                'icono_completo': clase_icono, 
+                'msg': f"<b>{n['titulo']}</b>: {n['mensaje']}",
+                'url': url_destino
+            })
+
+        # --- 4. ANUNCIOS GLOBALES (PERMANENTES) ---
+        cursor.execute("""
+            SELECT g.id, g.titulo, g.mensaje, g.tipo, g.url
+            FROM anuncios_globales g
+            LEFT JOIN anuncios_vistos v ON g.id = v.anuncio_id AND v.user_id = %s
+            WHERE g.activo = TRUE AND v.anuncio_id IS NULL
+            ORDER BY g.fecha_creacion DESC
+        """, (user_id,))
+        
+        globales = cursor.fetchall()
+        for g in globales:
+            url_destino = g['url'] if g['url'] else '#'
+            
+            # Inteligencia de Iconos
+            if not g['url']:
+                clase_icono = 'fas fa-bullhorn' # Megáfono para anuncios globales
+            elif 'tiktok.com' in url_destino:
+                clase_icono = 'fab fa-tiktok'
+            elif 'instagram.com' in url_destino:
+                clase_icono = 'fab fa-instagram'
+            elif 'facebook.com' in url_destino:
+                clase_icono = 'fab fa-facebook'
+            elif 'youtube.com' in url_destino or 'youtu.be' in url_destino:
+                clase_icono = 'fab fa-youtube'
+            elif 'wa.me' in url_destino or 'whatsapp.com' in url_destino:
+                clase_icono = 'fab fa-whatsapp'
+            else:
+                clase_icono = 'fas fa-external-link-alt'
+
+            alertas.append({
+                'id_db': g['id'],
+                'es_global': True, # <-- IMPORTANTE para el layout
+                'tipo': g['tipo'],
+                'icono_completo': clase_icono,
+                'msg': f"<b>{g['titulo']}</b>: {g['mensaje']}",
+                'url': url_destino
+            })
 
     except Exception as e:
-        current_app.logger.error(f"ALERT_FETCH_ERROR: Fallo general obteniendo alertas para user {user_id} - {e}")
+        current_app.logger.error(f"ALERT_FETCH_ERROR: Fallo general para user {user_id} - {e}")
     finally:
         cursor.close()
         conn.close()

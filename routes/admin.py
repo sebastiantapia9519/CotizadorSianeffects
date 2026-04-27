@@ -15,6 +15,7 @@
 import os
 import csv
 import math
+import uuid
 from io import StringIO
 
 from flask import (
@@ -809,3 +810,176 @@ def api_ver_log(user_id):
     finally:
         cursor.close()
         conn.close()
+
+# =============================================================================
+# GESTIÓN DE NOTIFICACIONES MANUALES (ADMIN)
+# =============================================================================
+@admin_bp.route('/notificaciones-admin', methods=['GET', 'POST'])
+@admin_required
+def gestion_notificaciones():
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        seleccionados = request.form.getlist('user_ids')
+        segmento = request.form.get('segmento', '').strip()
+        titulo = request.form.get('titulo')
+        mensaje = request.form.get('mensaje')
+        url_link = request.form.get('url_link', '').strip()
+        tipo = request.form.get('tipo', 'info')
+        
+        if not url_link: url_link = None
+        
+        try:
+            final_user_ids = set()
+            ahora_utc = now_utc()
+            
+            # --- FUNCIÓN EXTRACCIÓN ROBUSTA ---
+            def extraer_ids(registros):
+                for r in registros:
+                    try:
+                        uid = r['id'] if hasattr(r, 'keys') else r[0]
+                        final_user_ids.add(int(uid))
+                    except: pass
+
+            # --- EVALUAR SEGMENTOS ---
+            if segmento == 'todos':
+                cursor.execute("SELECT id FROM usuarios")
+                extraer_ids(cursor.fetchall())
+            elif segmento == 'activos':
+                cursor.execute("SELECT id FROM usuarios WHERE subscription_end > %s", (ahora_utc,))
+                extraer_ids(cursor.fetchall())
+            elif segmento == 'vencidos':
+                cursor.execute("SELECT id FROM usuarios WHERE subscription_end <= %s OR subscription_end IS NULL", (ahora_utc,))
+                extraer_ids(cursor.fetchall())
+            elif segmento == 'por_vencer':
+                from datetime import timedelta
+                limite = ahora_utc + timedelta(days=5)
+                cursor.execute("SELECT id FROM usuarios WHERE subscription_end BETWEEN %s AND %s", (ahora_utc, limite))
+                extraer_ids(cursor.fetchall())
+
+            if seleccionados:
+                for uid in seleccionados:
+                    if uid.isdigit(): final_user_ids.add(int(uid))
+
+            # --- INSERCIÓN MASIVA AGRUPADA POR LOTE ---
+            if final_user_ids:
+                # Generamos un ID único para este envío (ej. 'batch-8f4a2b')
+                lote_id = f"batch-{uuid.uuid4().hex[:8]}" 
+                
+                for uid in final_user_ids:
+                    cursor.execute("""
+                        INSERT INTO notificaciones_manuales (user_id, titulo, mensaje, tipo, url, batch_id)
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                    """, (uid, titulo, mensaje, tipo, url_link, lote_id))
+                
+                conn.commit()
+                flash(f"¡Éxito! Notificación enviada a {len(final_user_ids)} usuario(s).", "success")
+            else:
+                flash("No seleccionaste ningún usuario o filtro válido.", "warning")
+                
+        except Exception as e:
+            conn.rollback()
+            current_app.logger.error(f"Error en broadcast: {e}")
+            flash("Error interno al procesar el envío masivo.", "danger")
+        
+        return redirect(url_for('admin.gestion_notificaciones'))
+
+    # 1. Traer Notificaciones Directas (Lotes)
+    cursor.execute("""
+        SELECT 
+            'directo' as tipo_envio,
+            COALESCE(batch_id, id::text) as lote_id,
+            titulo, mensaje, tipo, url,
+            MAX(fecha_creacion) as fecha_envio,
+            COUNT(id) as total_enviados,
+            COUNT(CASE WHEN leida = TRUE THEN 1 END) as total_leidos
+        FROM notificaciones_manuales
+        GROUP BY lote_id, titulo, mensaje, tipo, url
+    """)
+    # Convertimos a diccionario normal para poder juntarlos
+    historial_directo = [dict(row) for row in cursor.fetchall()]
+
+    # 2. Traer Anuncios Globales (Permanentes)
+    cursor.execute("""
+        SELECT 
+            'global' as tipo_envio,
+            id::text as lote_id,
+            titulo, mensaje, tipo, url,
+            fecha_creacion as fecha_envio,
+            (SELECT COUNT(*) FROM usuarios) as total_enviados,
+            (SELECT COUNT(*) FROM anuncios_vistos WHERE anuncio_id = g.id) as total_leidos
+        FROM anuncios_globales g
+    """)
+    historial_global = [dict(row) for row in cursor.fetchall()]
+
+    # 3. Mezclamos ambos historiales y los ordenamos por fecha (el más reciente primero)
+    historial_completo = historial_directo + historial_global
+    historial_completo.sort(key=lambda x: x['fecha_envio'], reverse=True)
+    
+    # Nos quedamos con los últimos 50 envíos en total
+    historial_completo = historial_completo[:50]
+    
+    # Convertimos la fecha UTC de la base de datos a la hora local (Monterrey/CDMX)
+    for h in historial_completo:
+        if h['fecha_envio']:
+            h['fecha_envio'] = utc_to_local(h['fecha_envio'])
+            
+    # Lista de usuarios para el selector
+    cursor.execute("SELECT id, username FROM usuarios ORDER BY username ASC")
+    usuarios = cursor.fetchall()
+    
+    cursor.close()
+    conn.close()
+    return render_template('dashboard/notificaciones.html', historial=historial_completo, usuarios=usuarios)
+
+# =============================================================================
+# ELIMINAR LOTE DE NOTIFICACIONES
+# =============================================================================
+@admin_bp.route('/eliminar-notificacion-admin/<string:lote_id>')
+@admin_required
+def eliminar_notificacion_admin(lote_id):
+    conn = get_db()
+    cursor = conn.cursor()
+    # Borra todos los registros que compartan este batch_id (o el id viejo)
+    cursor.execute("""
+        DELETE FROM notificaciones_manuales 
+        WHERE batch_id = %s OR id::text = %s
+    """, (lote_id, lote_id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    flash("Lote de notificaciones eliminado para todos los usuarios", "info")
+    return redirect(url_for('admin.gestion_notificaciones'))
+
+@admin_bp.route('/crear-anuncio-global', methods=['POST'])
+@admin_required
+def crear_anuncio_global():
+    titulo = request.form.get('titulo')
+    mensaje = request.form.get('mensaje')
+    tipo = request.form.get('tipo', 'info')
+    url = request.form.get('url_link')
+
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("""
+        INSERT INTO anuncios_globales (titulo, mensaje, tipo, url)
+        VALUES (%s, %s, %s, %s)
+    """, (titulo, mensaje, tipo, url))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    flash("Anuncio global lanzado con éxito", "success")
+    return redirect(url_for('admin.gestion_notificaciones'))
+
+@admin_bp.route('/eliminar-global-admin/<int:id>')
+@admin_required
+def eliminar_global_admin(id):
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM anuncios_globales WHERE id = %s", (id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    flash("Anuncio global eliminado y retirado de todos los usuarios", "info")
+    return redirect(url_for('admin.gestion_notificaciones'))

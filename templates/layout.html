@@ -233,6 +233,34 @@
         .border {
              border-color: var(--bs-border-color) !important;
         }
+        /* Estilo para el botón de cerrar notificación manual */
+        .msg-container {
+            position: relative;
+        }
+
+        .btn-mark-read {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 5px 8px;
+            border-radius: 50%;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            z-index: 10;
+            opacity: 0.6;
+        }
+
+        .btn-mark-read:hover {
+            background-color: var(--sian-pink-light);
+            color: var(--sian-pink) !important;
+            opacity: 1;
+        }
+
+        /* Ajuste para que el texto no se encime con la X */
+        .dropdown-item.pe-5 {
+            padding-right: 35px !important;
+        }
     </style>
     {% block extra_css %}{% endblock %}
 
@@ -264,35 +292,49 @@
 
             {% if session.get('user_id') %}
             <div class="dropdown me-2 order-lg-last">
-                <a class="nav-icon-btn d-flex align-items-center justify-content-center" href="#" role="button"
-                    data-bs-toggle="dropdown">
+                <a class="nav-icon-btn d-flex align-items-center justify-content-center" href="#" role="button" data-bs-toggle="dropdown">
                     <i class="fas fa-bell"></i>
                     {% if notificaciones %}
                     <span class="notification-badge pulse-animation"></span>
                     {% endif %}
                 </a>
                 <ul class="dropdown-menu dropdown-menu-end shadow border-0 p-2"
-                    style="width: 300px; max-height: 400px; overflow-y: auto; border-radius: 16px;">
-                    <li class="dropdown-header text-uppercase small fw-bold text-muted">Notificaciones</li>
+                    style="width: 320px; max-height: 400px; overflow-y: auto; border-radius: 16px;">
+                    <li class="dropdown-header text-uppercase small fw-bold text-muted d-flex justify-content-between align-items-center">
+                        Notificaciones
+                        {% if notificaciones %}
+                            {% endif %}
+                    </li>
 
                     {% if notificaciones %}
-                    {% for n in notificaciones %}
-                    <li>
-                        <a class="dropdown-item rounded p-2 mb-1 d-flex align-items-start text-wrap" href="{{ n.url }}">
-                            <div class="me-2 mt-1 text-{{ n.tipo }}">
-                                <i class="fas fa-{{ n.icono }}"></i>
-                            </div>
-                            <div>
-                                <small class="d-block" style="color: var(--bs-body-color);">{{ n.msg|safe }}</small>
-                            </div>
-                        </a>
-                    </li>
-                    {% endfor %}
+                        {% for n in notificaciones %}
+                        <li class="position-relative msg-container">
+                            <a class="dropdown-item rounded p-2 mb-1 d-flex align-items-start text-wrap pe-5" 
+                            href="{{ n.url }}"
+                            {% if n.url and n.url.startswith('http') %} target="_blank" rel="noopener noreferrer" {% endif %}>
+                                
+                                <div class="me-2 mt-1 text-{{ n.tipo }}">
+                                    <i class="{{ n.icono_completo | default('fas fa-' ~ n.icono) }}"></i>
+                                </div>
+                                <div>
+                                    <small class="d-block" style="color: var(--bs-body-color);">{{ n.msg|safe }}</small>
+                                </div>
+                            </a>
+                            
+                            {% if n.id_db %}
+                                {% set ruta_leida = url_for('main.marcar_visto_global', anuncio_id=n.id_db) if n.es_global else url_for('main.marcar_leida', notif_id=n.id_db) %}
+                                
+                                <a href="{{ ruta_leida }}" class="btn-mark-read text-muted" title="Cerrar">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            {% endif %}
+                        </li>
+                        {% endfor %}
                     {% else %}
-                    <li class="text-center p-3 text-muted">
-                        <i class="far fa-bell-slash mb-2"></i><br>
-                        <small>Sin novedades por ahora</small>
-                    </li>
+                        <li class="text-center p-3 text-muted">
+                            <i class="far fa-bell-slash mb-2"></i><br>
+                            <small>Sin novedades por ahora</small>
+                        </li>
                     {% endif %}
                 </ul>
             </div>
