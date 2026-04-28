@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 # Importes de tu ecosistema
 from db import get_db_connection as get_db
-from helpers import login_required
+from helpers import login_required, subscription_required
 from utils.datetime_utils import utc_to_local
 from utils.tutorial_utils import debe_mostrar_tutorial, obtener_version_tutorial 
 
@@ -78,7 +78,7 @@ def procesar_fila_fechas(fila_db):
 # 1. SERVICIO DE LECTURA (GET) - CARGA TODA LA VISTA DE CONFIGURACIÓN
 # ==============================================================================
 @config_bp.route('/configuracion', methods=['GET'])
-@login_required
+@subscription_required
 def configuracion():
     conn = get_db()
     cursor = conn.cursor()
@@ -156,7 +156,7 @@ def configuracion():
 # 2. SERVICIO: ACTUALIZAR PERFIL Y CONTACTO
 # ==============================================================================
 @config_bp.route('/configuracion/perfil', methods=['POST'])
-@login_required
+@subscription_required
 def actualizar_perfil():
     conn = get_db()
     cursor = conn.cursor()
@@ -247,7 +247,7 @@ def actualizar_password():
 # 4. SERVICIO: ACTUALIZAR NEGOCIO (EXCLUSIVIDAD ÍCONO VS LOGO)
 # ==============================================================================
 @config_bp.route('/configuracion/negocio', methods=['POST'])
-@login_required
+@subscription_required
 def actualizar_negocio():
     conn = get_db()
     cursor = conn.cursor()
@@ -364,7 +364,7 @@ def actualizar_negocio():
 # 5. SERVICIO: LOGÍSTICA (TARIFAS BASE)
 # ==============================================================================
 @config_bp.route('/configuracion/logistica/base', methods=['POST'])
-@login_required
+@subscription_required
 def actualizar_logistica_base():
     conn = get_db()
     cursor = conn.cursor()
@@ -448,7 +448,7 @@ def actualizar_logistica_base():
 # 6. SERVICIOS: GESTIÓN DE ZONAS Y TARIFAS
 # ==============================================================================
 @config_bp.route('/configuracion/logistica/zona/crear', methods=['POST'])
-@login_required
+@subscription_required
 def crear_zona():
     conn = get_db()
     cursor = conn.cursor()
@@ -492,7 +492,7 @@ def crear_zona():
     return redirect(url_for('configuracion.configuracion') + '#list-envios')
 
 @config_bp.route('/configuracion/logistica/zona/eliminar', methods=['POST'])
-@login_required
+@subscription_required
 def eliminar_zona():
     conn = get_db()
     cursor = conn.cursor()
@@ -526,7 +526,7 @@ def eliminar_zona():
     return redirect(url_for('configuracion.configuracion') + '#list-envios')
 
 @config_bp.route('/configuracion/logistica/tarifa/crear', methods=['POST'])
-@login_required
+@subscription_required
 def crear_tarifa():
     conn = get_db()
     cursor = conn.cursor()
@@ -566,7 +566,7 @@ def crear_tarifa():
     return redirect(url_for('configuracion.configuracion') + '#list-envios')
 
 @config_bp.route('/configuracion/logistica/tarifa/eliminar', methods=['POST'])
-@login_required
+@subscription_required
 def eliminar_tarifa():
     conn = get_db()
     cursor = conn.cursor()

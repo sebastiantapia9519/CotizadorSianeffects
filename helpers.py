@@ -79,10 +79,18 @@ def subscription_required(f):
             else:
                 fecha_fin = f_end if f_end.tzinfo else f_end.replace(tzinfo=timezone.utc)
             
-            # Comparamos con la hora actual en UTC
             if datetime.now(timezone.utc) > fecha_fin:
-                flash('Tu suscripción ha vencido. Renueva para continuar.', 'error')
-                return redirect(url_for('main.plan_vencido')) 
+                dias_vencido = (datetime.now(timezone.utc) - fecha_fin).days
+
+                if dias_vencido == 0:
+                    # Venció hoy — dejamos pasar con banner de urgencia
+                    session['grace_period'] = True
+                    return f(*args, **kwargs)
+                else:
+                    # Ya pasó 1 día completo — bloqueamos
+                    session.pop('grace_period', None)
+                    flash('Tu suscripción ha vencido. Contáctanos para renovar.', 'error')
+                    return redirect(url_for('main.plan_vencido'))
         except Exception as e:
             current_app.logger.error(f"AUTH_DATE_ERROR: Fallo al verificar fecha de suscripcion para user {session.get('user_id')} - {e}")
             pass

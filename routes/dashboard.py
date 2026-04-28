@@ -106,9 +106,6 @@ def index():
             elif 3 <= cots <= 14: segmentos["Exploradores (3-14)"] += 1
             else: segmentos["Power Users (15+)"] += 1
 
-        # LOG DE AUDITORÍA SIN ACENTOS
-        current_app.logger.info(f"DATA_ACCESS: Admin '{admin_name}' (ID: {admin_id}) consulto el dashboard global (Mes: {mes_sel or 'Todo'}, Anio: {anio_sel or 'Todo'})")
-
         return render_template(
             'dashboard/index.html',
             total_usuarios=total_usuarios, activos=activos, vencidos=vencidos, proximos_a_vencer=proximos_a_vencer,

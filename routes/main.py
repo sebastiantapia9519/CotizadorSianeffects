@@ -152,7 +152,7 @@ def tutorial_completado():
 
 # --- API PARA CARGAR RECETA EN EL COTIZADOR ---
 @main_bp.route('/api/receta/<int:id>')
-@login_required
+@subscription_required
 def obtener_receta_api(id):
     conn = get_db()
     cursor = conn.cursor()
@@ -186,7 +186,7 @@ def obtener_receta_api(id):
 
 # --- GUARDAR VENTA (LA FUNCION MAS CRITICA) ---
 @main_bp.route('/guardar_venta', methods=['POST'])
-@login_required
+@subscription_required
 def guardar_venta():
     data = request.get_json()
     conn = get_db() 
@@ -404,7 +404,7 @@ def guardar_venta():
 
 # --- ACTUALIZAR VENTA (ABONOS) ---
 @main_bp.route('/api/actualizar_venta', methods=['POST'])
-@login_required
+@subscription_required
 def actualizar_venta():
     data = request.get_json()
     venta_id = data.get('id')
@@ -452,7 +452,7 @@ def actualizar_venta():
 # --- RUTAS DE VISUALIZACIÓN ---
 
 @main_bp.route('/historial')
-@login_required
+@subscription_required
 def historial():
     conn = get_db()
     cursor = conn.cursor()
@@ -545,7 +545,7 @@ def privacidad(): return render_template('privacidad.html')
 def plan_vencido(): return render_template('plan_vencido.html')
 
 @main_bp.route('/api/get_cotizacion/<int:id>')
-@login_required
+@subscription_required
 def get_cotizacion(id):
     conn = get_db()
     cursor = conn.cursor()
@@ -589,7 +589,7 @@ def get_cotizacion(id):
 def ayuda(): return render_template('ayuda.html')
 
 @main_bp.route('/descargar_excel')
-@login_required
+@subscription_required
 def descargar_excel():
     conn = get_db()
     uid = session['user_id']

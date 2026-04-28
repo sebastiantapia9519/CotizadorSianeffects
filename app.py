@@ -32,7 +32,8 @@ from flask import (
     jsonify,
     redirect,
     url_for,
-    send_from_directory
+    send_from_directory,
+    has_request_context
 )
 from flask_apscheduler import APScheduler
 
@@ -125,7 +126,59 @@ app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 # =============================================================================
 # TAREAS AUTOMÁTICAS (JOBS DEL SCHEDULER)
 # =============================================================================
+def tarea_avisos_vencimiento():
+    """
+    Manda correos automáticos 3 días y 1 día antes de que venza la suscripción.
+    Corre cada hora — la ventana de 1 hora evita correos duplicados.
+    """
+    with app.app_context():
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        try:
+            ahora = now_utc()
 
+            for dias, subject, template in [
+                (3, "⏳ Tu acceso a Sianeffects vence en 3 días", "aviso_vencimiento_3"),
+                (1, "🚨 Último aviso: tu acceso vence mañana", "aviso_vencimiento_1"),
+            ]:
+                ventana_inicio = ahora + timedelta(days=dias)
+                ventana_fin    = ventana_inicio + timedelta(hours=1)
+
+                cursor.execute("""
+                    SELECT id, email, username FROM usuarios
+                    WHERE role = 0
+                      AND subscription_end >= %s
+                      AND subscription_end < %s
+                """, (ventana_inicio, ventana_fin))
+
+                for u in cursor.fetchall():
+                    enviar_correo_sian(
+                        subject=subject,
+                        recipient=u['email'],
+                        template=template,
+                        sender_alias="hola",
+                        username=u['username'],
+                        dias=dias
+                    )
+                    logging.info(f"AVISO_VENCIMIENTO_{dias}D: Correo enviado a {u['email']}")
+
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            logging.error(f"Error en tarea_avisos_vencimiento: {e}")
+        finally:
+            cursor.close()
+            conn.close()
+
+if not scheduler.get_job('AvisosVencimiento'):
+    scheduler.add_job(
+        id='AvisosVencimiento',
+        func=tarea_avisos_vencimiento,
+        trigger='cron',
+        minute=0,
+        replace_existing=True
+    )
+    
 # -----------------------------------------------------------------------------
 # JOB 1 — Limpieza general (cotizaciones, cuentas inactivas, invitaciones)
 # Frecuencia: 2x al día (12 AM y 12 PM)
@@ -481,7 +534,9 @@ def inject_user_config():
         'margen_ganancia': 100
     }
 
-    if 'user_id' in session:
+    # Validamos PRIMERO que estemos dentro de una petición HTTP
+    # Si es un Job de APScheduler, esto dará False y se saltará la validación de sesión
+    if has_request_context() and 'user_id' in session:
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
@@ -497,6 +552,7 @@ def inject_user_config():
                 f"CONTEXT_ERROR: Fallo al inyectar config para usuario {session.get('user_id')}: {e}"
             )
 
+    # Retorna la configuración por defecto para Jobs en segundo plano o usuarios no logueados
     return {'config': default_config}
 
 
