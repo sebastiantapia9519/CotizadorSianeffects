@@ -345,9 +345,6 @@ def tarea_recordatorio_verificacion():
     - Aún no recibieron este recordatorio (recordatorio_enviado = FALSE)
 
     Solo se manda UNA vez por usuario gracias al flag recordatorio_enviado.
-
-    REQUIERE esta migración en la BD antes de activar:
-        ALTER TABLE usuarios ADD COLUMN recordatorio_enviado BOOLEAN DEFAULT FALSE;
     """
     with app.app_context():
         conn = get_db_connection()

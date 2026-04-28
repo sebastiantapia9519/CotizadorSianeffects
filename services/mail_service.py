@@ -1,7 +1,7 @@
 # services/mail_service.py
 import os
 import resend
-from flask import current_app, render_template
+from flask import current_app
 from threading import Thread
 
 # Inicializamos Resend con la API key del entorno
@@ -27,7 +27,8 @@ def enviar_correo_sian(subject, recipient, template, sender_alias="hola", **kwar
 
     # Renderiza el HTML desde templates/emails/
     try:
-        html_content = render_template(f"emails/{template}.html", **kwargs)
+        jinja_template = app.jinja_env.get_template(f"emails/{template}.html")
+        html_content = jinja_template.render(**kwargs)
     except Exception as e:
         app.logger.error(f"Error renderizando template de email: {str(e)}")
         return False
