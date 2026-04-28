@@ -170,15 +170,8 @@ def tarea_avisos_vencimiento():
             cursor.close()
             conn.close()
 
-if not scheduler.get_job('AvisosVencimiento'):
-    scheduler.add_job(
-        id='AvisosVencimiento',
-        func=tarea_avisos_vencimiento,
-        trigger='cron',
-        minute=0,
-        replace_existing=True
-    )
-    
+
+
 # -----------------------------------------------------------------------------
 # JOB 1 — Limpieza general (cotizaciones, cuentas inactivas, invitaciones)
 # Frecuencia: 2x al día (12 AM y 12 PM)
@@ -508,6 +501,16 @@ if not scheduler.get_job('PurgaNoVerificados'):
     scheduler.add_job(
         id='PurgaNoVerificados',
         func=tarea_purga_no_verificados,
+        trigger='cron',
+        minute=0,
+        replace_existing=True
+    )
+
+# Job 5: Avisos de vencimiento
+if not scheduler.get_job('AvisosVencimiento'):
+    scheduler.add_job(
+        id='AvisosVencimiento',
+        func=tarea_avisos_vencimiento,
         trigger='cron',
         minute=0,
         replace_existing=True
