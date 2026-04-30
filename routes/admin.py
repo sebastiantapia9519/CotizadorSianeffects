@@ -63,59 +63,87 @@ def time_ago(dt):
 
 
 # =============================================================================
-# DASHBOARD PRINCIPAL
+# DASHBOARD PRINCIPAL (ACTUALIZADO CON FILTROS Y ORDENAMIENTO)
 # =============================================================================
 
 @admin_bp.route('/')
 @admin_required
 def dashboard():
     """
-    Lista paginada de usuarios con búsqueda, stats globales y paginación.
-    Toda la lógica pesada corre en SQL — Python solo itera los 20 resultados
-    de la página actual, no toda la tabla.
+    Lista paginada de usuarios con búsqueda, filtros, ordenamiento dinámico y paginación.
     """
+    # 1. Capturar parámetros de la URL
     search_query = request.args.get('q', '').strip().lower()
+    status_filter = request.args.get('status', 'all')
+    sort_by = request.args.get('sort', 'created_at_desc')
     page = request.args.get('page', 1, type=int)
     per_page = 20
+
+    ahora_utc = now_utc()
 
     conn = get_db()
     cursor = conn.cursor()
 
     try:
-        # Conteo total (para calcular páginas)
-        if search_query:
-            cursor.execute(
-                'SELECT COUNT(*) as total FROM usuarios WHERE LOWER(username) LIKE %s OR LOWER(email) LIKE %s',
-                (f'%{search_query}%', f'%{search_query}%')
-            )
-        else:
-            cursor.execute('SELECT COUNT(*) as total FROM usuarios')
+        # 2. CONSTRUCCIÓN DINÁMICA DEL WHERE
+        base_where = "WHERE 1=1"
+        params = []
 
+        if search_query:
+            base_where += " AND (LOWER(u.username) LIKE %s OR LOWER(u.email) LIKE %s)"
+            params.extend([f'%{search_query}%', f'%{search_query}%'])
+
+        # Filtros de Estado
+        if status_filter == 'expirados':
+            base_where += " AND u.plan_type != 'Free' AND u.subscription_end < %s"
+            params.append(ahora_utc)
+        elif status_filter == 'activos':
+            base_where += " AND u.plan_type != 'Free' AND u.subscription_end >= %s"
+            params.append(ahora_utc)
+        elif status_filter == 'trial':
+            base_where += " AND u.estado_suscripcion = 'Trial'"
+        elif status_filter == 'free':
+            base_where += " AND u.plan_type = 'Free'"
+
+        # 3. CONTEO TOTAL (Para la Paginación)
+        # Importante: Usamos 'usuarios u' para que coincida con el alias en base_where
+        count_sql = f"SELECT COUNT(*) as total FROM usuarios u {base_where}"
+        cursor.execute(count_sql, params)
         total_users = cursor.fetchone()['total']
         total_pages = math.ceil(total_users / per_page) if total_users > 0 else 1
         offset = (page - 1) * per_page
 
-        # Usuarios de la página actual con conteo de cotizaciones en subconsulta
-        if search_query:
-            cursor.execute('''
-                SELECT u.*, (SELECT COUNT(*) FROM ventas v WHERE v.user_id = u.id) as total_cotizaciones
-                FROM usuarios u
-                WHERE LOWER(u.username) LIKE %s OR LOWER(u.email) LIKE %s
-                ORDER BY created_at DESC
-                LIMIT %s OFFSET %s
-            ''', (f'%{search_query}%', f'%{search_query}%', per_page, offset))
+        # 4. CONSTRUCCIÓN DINÁMICA DEL ORDER BY
+        if sort_by == 'username_asc':
+            order_clause = "ORDER BY u.username ASC"
+        elif sort_by == 'username_desc':
+            order_clause = "ORDER BY u.username DESC"
+        elif sort_by == 'expiracion_asc':
+            order_clause = "ORDER BY u.subscription_end ASC NULLS LAST"
+        elif sort_by == 'expiracion_desc':
+            order_clause = "ORDER BY u.subscription_end DESC NULLS LAST"
+        elif sort_by == 'last_login_desc':
+            order_clause = "ORDER BY u.last_login DESC NULLS LAST"
+        elif sort_by == 'last_login_asc':
+            order_clause = "ORDER BY u.last_login ASC NULLS FIRST"
         else:
-            cursor.execute('''
-                SELECT u.*, (SELECT COUNT(*) FROM ventas v WHERE v.user_id = u.id) as total_cotizaciones
-                FROM usuarios u
-                ORDER BY created_at DESC
-                LIMIT %s OFFSET %s
-            ''', (per_page, offset))
+            order_clause = "ORDER BY u.created_at DESC"
 
+        # 5. OBTENCIÓN DE DATOS PAGINADOS
+        data_sql = f"""
+            SELECT u.*, (SELECT COUNT(*) FROM ventas v WHERE v.user_id = u.id) as total_cotizaciones
+            FROM usuarios u
+            {base_where}
+            {order_clause}
+            LIMIT %s OFFSET %s
+        """
+        data_params = params.copy()
+        data_params.extend([per_page, offset])
+        
+        cursor.execute(data_sql, data_params)
         users = [dict(row) for row in cursor.fetchall()]
 
-        # Stats globales calculadas en una sola query SQL
-        ahora_utc = now_utc()
+        # 6. STATS GLOBALES (Independientes de los filtros de la tabla)
         cursor.execute('''
             SELECT
                 COUNT(CASE WHEN role > 0 THEN 1 END) as admins,
@@ -128,13 +156,17 @@ def dashboard():
 
         stats_db = cursor.fetchone()
         stats = {
-            'total':     total_users,
+            'total':     total_users if status_filter == 'all' and not search_query else stats_db['activos'] + stats_db['vencidos'], # Aproximación global
             'activos':   stats_db['activos']   if stats_db else 0,
             'vencidos':  stats_db['vencidos']  if stats_db else 0,
             'admins':    stats_db['admins']    if stats_db else 0,
             'online_hoy': stats_db['online_hoy'] if stats_db else 0,
             'en_riesgo': stats_db['en_riesgo'] if stats_db else 0,
         }
+        
+        # Corrección del total absoluto global
+        cursor.execute("SELECT COUNT(*) as v FROM usuarios")
+        stats['total'] = cursor.fetchone()['v']
 
     except Exception as e:
         current_app.logger.error(f"ADMIN_DASHBOARD_ERROR: {e}")
@@ -144,7 +176,7 @@ def dashboard():
         cursor.close()
         conn.close()
 
-    # Conversión de fechas a hora local (solo sobre los 20 registros)
+    # 7. CONVERSIÓN DE FECHAS A HORA LOCAL (Solo en los 20 resultados)
     ahora_local = utc_to_local(ahora_utc)
     for u in users:
         if u['subscription_end']:
@@ -171,6 +203,7 @@ def dashboard():
         else:
             u['tiempo_humano'] = "Nunca"
 
+    # 8. ENVIAR TODO AL TEMPLATE
     return render_template('admin.html',
         users=users,
         search_query=search_query,
@@ -182,8 +215,10 @@ def dashboard():
         page=page,
         total_pages=total_pages,
         per_page=per_page,
-        total_users=total_users
-    )
+        total_users=total_users,
+        status_filter=status_filter,  
+        sort_by=sort_by               
+    )   
 
 
 # =============================================================================
@@ -623,6 +658,7 @@ def sumar_tiempo():
             UPDATE usuarios
             SET subscription_end   = %s,
                 estado_suscripcion = %s,
+                plan_type          = CASE WHEN plan_type = 'Free' THEN 'Pro' ELSE plan_type END,
                 dias_regalados     = COALESCE(dias_regalados, 0) + %s
             WHERE id = %s
         ''', (nueva_fecha_fin, 'Activo', dias_a_sumar, user_id))

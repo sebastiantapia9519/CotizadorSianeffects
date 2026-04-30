@@ -32,12 +32,12 @@
         border-radius: 12px;
         background: #ffffff;
         box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
-        overflow: hidden;
     }
 
     .table-responsive {
+        border-radius: 12px;
         overflow: visible !important;
-        min-height: 250px; /* Evita que el menú se corte si hay 1 solo registro */
+        min-height: 200px;
     }
 
     .table thead th {
@@ -49,6 +49,12 @@
         letter-spacing: 0.05em;
         padding: 12px 24px;
         border-bottom: 1px solid #eaecf0;
+    }
+
+    /* Hover para los encabezados interactivos */
+    .table thead th.sortable-header:hover {
+        background-color: #f2f4f7;
+        color: #1a1c1e;
     }
 
     .table tbody td {
@@ -159,6 +165,7 @@
     [data-bs-theme="dark"] .text-muted { color: #94a3b8 !important; }
     [data-bs-theme="dark"] .border { border-color: #334155 !important; }
     [data-bs-theme="dark"] .table thead th { background-color: #0f172a !important; color: #94a3b8; border-color: #334155; }
+    [data-bs-theme="dark"] .table thead th.sortable-header:hover { background-color: #1e293b !important; color: #f8fafc; }
     [data-bs-theme="dark"] .table tbody td { border-color: #334155; }
     [data-bs-theme="dark"] .avatar-circle { background-color: #334155 !important; color: #f8fafc !important; }
     [data-bs-theme="dark"] .btn-white { background-color: #1e293b !important; border-color: #334155 !important; color: #f8fafc !important; }
@@ -194,313 +201,381 @@
     </div>
 </div>
 
-<div class="card border-0 shadow-sm mb-4 table-card p-1">
-    <div class="card-body p-2">
-        <div class="row g-2 align-items-center">
-            <div class="col-md-6">
-                <form method="GET" action="{{ url_for('admin.dashboard') }}" class="input-group input-group-sm">
-                    <button type="submit" class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></button>
-                    <input type="text" name="q" value="{{ request.args.get('q', '') }}" class="form-control border-0 bg-transparent shadow-none" placeholder="Buscar por usuario o email y presionar Enter...">
-                    {% if request.args.get('q') %}
-                        <a href="{{ url_for('admin.dashboard') }}" class="btn btn-link text-danger text-decoration-none px-2"><i class="fas fa-times"></i> Limpiar</a>
-                    {% endif %}
-                </form>
-            </div>
-            <div class="col-md-6 text-end pe-3 d-none d-md-block">
-                {% if search_query %}
-                    <small class="text-muted fw-bold">{{ total_users }} resultados para "{{ search_query }}"</small>
-                {% else %}
-                    <small class="text-muted fw-bold">{{ total_users }} registros en total</small>
-                {% endif %}
+<!-- ===================================================
+     NUEVA BARRA DE FILTROS Y BÚSQUEDA
+     =================================================== -->
+<div class="card border-0 shadow-sm mb-4 table-card p-2" id="filtros-panel">
+    <form id="formFiltrosMaster" class="row g-2 align-items-center m-0">
+        <!-- Buscador -->
+        <div class="col-md-5">
+            <div class="input-group input-group-sm">
+                <button type="submit" class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></button>
+                <input type="text" name="q" value="{{ q }}" class="form-control border-0 bg-transparent shadow-none px-0" placeholder="Buscar por usuario o email...">
             </div>
         </div>
-    </div>
+        
+        <!-- Filtro de Estado -->
+        <div class="col-md-3">
+            <select name="status" class="form-select form-select-sm border-0 shadow-none bg-light text-muted fw-medium rounded-3">
+                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Todos los estados</option>
+                <option value="activos" {% if status_filter == 'activos' %}selected{% endif %}>🟢 Premium Activos</option>
+                <option value="expirados" {% if status_filter == 'expirados' %}selected{% endif %}>🔴 Expirados / Vencidos</option>
+                <option value="trial" {% if status_filter == 'trial' %}selected{% endif %}>⏱️ En Prueba (Trial)</option>
+                <option value="free" {% if status_filter == 'free' %}selected{% endif %}>⚪ Plan Gratis</option>
+            </select>
+        </div>
+
+        <!-- Ordenamiento (Añadidas TODAS las opciones para que el JS funcione sin fallar) -->
+        <div class="col-md-3 d-none d-md-block"> <!-- Se puede ocultar si prefieres usar solo la tabla -->
+            <select name="sort" class="form-select form-select-sm border-0 shadow-none bg-light text-muted fw-medium rounded-3">
+                <option value="created_at_desc" {% if sort_by == 'created_at_desc' %}selected{% endif %}>Más recientes primero</option>
+                <option value="username_asc" {% if sort_by == 'username_asc' %}selected{% endif %}>Alfabético (A-Z)</option>
+                <option value="username_desc" {% if sort_by == 'username_desc' %}selected{% endif %}>Alfabético (Z-A)</option>
+                <option value="expiracion_asc" {% if sort_by == 'expiracion_asc' %}selected{% endif %}>Próximos a vencer</option>
+                <option value="expiracion_desc" {% if sort_by == 'expiracion_desc' %}selected{% endif %}>Mayor tiempo restante</option>
+                <option value="last_login_desc" {% if sort_by == 'last_login_desc' %}selected{% endif %}>Conexión reciente</option>
+                <option value="last_login_asc" {% if sort_by == 'last_login_asc' %}selected{% endif %}>Conexión antigua</option>
+            </select>
+        </div>
+
+        <div class="col-md-1 text-end">
+            {% if q or status_filter != 'all' or sort_by != 'created_at_desc' %}
+                <button type="button" class="btn btn-sm btn-light text-danger w-100 rounded-3" onclick="resetFiltros()" title="Limpiar Filtros">
+                    <i class="fas fa-times"></i>
+                </button>
+            {% else %}
+                <!-- Espaciador visual para mantener alineación -->
+                <button type="button" class="btn btn-sm btn-light text-muted w-100 rounded-3 disabled" style="opacity: 0.5;">
+                    <i class="fas fa-filter"></i>
+                </button>
+            {% endif %}
+        </div>
+    </form>
 </div>
 
-<div class="card table-card border-0 shadow-sm">
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0" style="table-layout: fixed; width: 100%;">
-            <thead>
+<!-- ===================================================
+     CONTENEDOR AJAX (TABLA + PAGINACIÓN)
+     =================================================== -->
+<div id="contenedor-tabla-master">
+    <div class="card table-card border-0 shadow-sm mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" style="table-layout: fixed; width: 100%;">
+                <thead>
                 <tr>
-                    <th class="ps-3 ps-md-4">Usuario / Empresa</th>
+                    <th class="ps-3 ps-md-4 sortable-header text-nowrap" style="cursor: pointer; user-select: none;" onclick="toggleSort('username')">
+                        Usuario / Empresa 
+                        {% if sort_by == 'username_asc' %}
+                            <i class="fas fa-sort-alpha-up text-primary ms-1"></i>
+                        {% elif sort_by == 'username_desc' %}
+                            <i class="fas fa-sort-alpha-down text-primary ms-1"></i>
+                        {% else %}
+                            <i class="fas fa-sort text-muted ms-1 opacity-25"></i>
+                        {% endif %}
+                    </th>
+
                     <th class="d-none d-md-table-cell" style="width: 15%;">Rol</th>
-                    <th class="d-none d-md-table-cell" style="width: 15%;">Última Vez</th>
-                    <th class="d-none d-md-table-cell" style="width: 110px;">Estado</th>
+                    
+                    <th class="d-none d-md-table-cell sortable-header text-nowrap" style="cursor: pointer; user-select: none; width: 15%;" onclick="toggleSort('last_login')">
+                        Última Vez 
+                        {% if sort_by == 'last_login_desc' %}
+                            <i class="fas fa-sort-numeric-down-alt text-primary ms-1"></i>
+                        {% elif sort_by == 'last_login_asc' %}
+                            <i class="fas fa-sort-numeric-up text-primary ms-1"></i>
+                        {% else %}
+                            <i class="fas fa-sort text-muted ms-1 opacity-25"></i>
+                        {% endif %}
+                    </th>
+
+                    <th class="d-none d-md-table-cell sortable-header text-nowrap" style="cursor: pointer; user-select: none; width: 110px;" onclick="toggleSort('expiracion')">
+                        Estado 
+                        {% if sort_by == 'expiracion_asc' %}
+                            <i class="fas fa-sort-amount-up text-primary ms-1"></i>
+                        {% elif sort_by == 'expiracion_desc' %}
+                            <i class="fas fa-sort-amount-down text-primary ms-1"></i>
+                        {% else %}
+                            <i class="fas fa-sort text-muted ms-1 opacity-25"></i>
+                        {% endif %}
+                    </th>
                     <th class="text-center pe-3 pe-md-4" style="width: 50px;"></th>
                 </tr>
             </thead>
-            <tbody>
-                {% if users %}
-                    {% for u in users %}
-                    {% set sub_end = u['subscription_end'] %}
-                    {% set now_obj = now %} 
-                    
-                    {# Cálculo de días restantes #}
-                    {% set dias_restantes = 0 %}
-                    {% if sub_end %}
-                        {% set delta = sub_end - now_obj %}
-                        {% set dias_restantes = delta.days %}
-                    {% endif %}
-                    
-                    {% set is_active = dias_restantes > 0 %}
-                    {% set plan = u['plan_type']|default('Free') %}
-                    {% set estado_bd = u['estado_suscripcion']|default('Trial') %}
+                <tbody>
+                    {% if users %}
+                        {% for u in users %}
+                        {% set sub_end = u['subscription_end'] %}
+                        {% set now_obj = now %} 
+                        
+                        {# Cálculo de días restantes exacto #}
+                        {% set dias_restantes = 0 %}
+                        {% set is_active = false %}
+                        {% if sub_end %}
+                            {% set delta = sub_end - now_obj %}
+                            {% set dias_restantes = delta.days %}
+                            {# Si la fecha de fin es mayor a la de este segundo, ESTÁ ACTIVO #}
+                            {% set is_active = sub_end > now_obj %} 
+                        {% endif %}
+                        {% set plan = u['plan_type']|default('Free') %}
+                        {% set estado_bd = u['estado_suscripcion']|default('Trial') %}
 
-                    {# LÓGICA DE ESTADOS PRO #}
-                    {% set badge_class = 'badge-vencido' %}
-                    {% set badge_text = 'Expirado' %}
+                        {# LÓGICA DE ESTADOS PRO #}
+                        {% set badge_class = 'badge-vencido' %}
+                        {% set badge_text = 'Expirado' %}
 
-                    {% if u['role'] >= 1 %}
-                        {% set badge_class = 'badge-activo' %}
-                        {% set badge_text = '∞ Ilimitado' %}
-                    {% elif estado_bd == 'Cancelado' %}
-                        {% set badge_class = 'badge-suspendido' %}
-                        {% set badge_text = 'Cancelado' %}
-                    {% elif estado_bd == 'Suspendido' %}
-                        {% set badge_class = 'badge-suspendido' %}
-                        {% set badge_text = 'Suspendido' %}
-                    {% elif is_active %}
-                        {% if estado_bd == 'Trial' %}
-                            {% set badge_class = 'badge-prueba' %}
-                            {% set badge_text = 'En Prueba' %}
-                            {% if dias_restantes <= 3 %}
-                                {% set badge_class = 'badge-alerta' %}
-                                {% set badge_text = 'Vence en ' ~ dias_restantes ~ 'd' %}
-                            {% endif %}
-                        {% else %}
+                        {% if u['role'] >= 1 %}
                             {% set badge_class = 'badge-activo' %}
-                            {% set badge_text = 'Activo' %}
-                            {% if dias_restantes <= 3 %}
-                                {% set badge_class = 'badge-alerta' %}
-                                {% set badge_text = 'Vence en ' ~ dias_restantes ~ 'd' %}
+                            {% set badge_text = '∞ Ilimitado' %}
+                        {% elif estado_bd == 'Cancelado' %}
+                            {% set badge_class = 'badge-suspendido' %}
+                            {% set badge_text = 'Cancelado' %}
+                        {% elif estado_bd == 'Suspendido' %}
+                            {% set badge_class = 'badge-suspendido' %}
+                            {% set badge_text = 'Suspendido' %}
+                        {% elif is_active %}
+                            {% if estado_bd == 'Trial' %}
+                                {% set badge_class = 'badge-prueba' %}
+                                {% set badge_text = 'En Prueba' %}
+                                {% if dias_restantes <= 3 %}
+                                    {% set badge_class = 'badge-alerta' %}
+                                    {% set badge_text = 'Vence en ' ~ dias_restantes ~ 'd' %}
+                                {% endif %}
+                            {% else %}
+                                {% set badge_class = 'badge-activo' %}
+                                {% set badge_text = 'Activo' %}
+                                {% if dias_restantes <= 3 %}
+                                    {% set badge_class = 'badge-alerta' %}
+                                    {% set badge_text = 'Vence en ' ~ dias_restantes ~ 'd' %}
+                                {% endif %}
                             {% endif %}
                         {% endif %}
+
+                        <tr>
+                            <td class="ps-3 ps-md-4">
+                                <div class="d-flex align-items-start align-items-md-center gap-3">
+                                    <div class="avatar-circle flex-shrink-0 mt-1 mt-md-0">
+                                        {{ u['username'][0]|upper }}
+                                    </div>
+                                    <div style="min-width: 0; flex: 1;">
+
+                                        <div class="d-flex justify-content-between align-items-start mb-1">
+                                            <div class="fw-bold text-dark text-truncate pe-2" style="font-size: 0.95rem;" 
+                                                title="Registro: {{ u['created_at'].strftime('%d/%m/%Y') if u['created_at'] else 'N/A' }} | Restantes: {{ dias_restantes }} días">
+                                                {{ u['username'] }}
+                                            </div>
+
+                                            <div class="d-md-none flex-shrink-0">
+                                                <span class="status-badge {{ badge_class }} px-2 py-1" style="font-size: 0.6rem;">
+                                                    {{ badge_text }}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div class="d-flex align-items-center gap-2 text-truncate mb-1">
+                                            <small class="text-muted text-truncate" style="font-size: 0.8rem;">{{ u['email'] }}</small>
+                                            {% if u['telefono'] %}
+                                            <a href="https://wa.me/{{ u['telefono']|replace('+', '')|replace(' ', '') }}" target="_blank" class="text-success flex-shrink-0">
+                                                <i class="fab fa-whatsapp"></i>
+                                            </a>
+                                            {% endif %}
+                                        </div>
+
+                                        <small class="text-primary d-block text-truncate" style="font-size: 0.75rem;">
+                                            <i class="fas fa-building me-1"></i> {{ u['company_name']|default('Sin Empresa') }}
+                                        </small>
+
+                                        <div class="d-flex d-md-none flex-wrap align-items-center gap-3 mt-2 pt-2" style="border-top: 1px dashed #eaecf0;">
+                                            <span class="badge-rol">{{ plan|upper }}</span>
+                                            <div class="text-muted" style="font-size: 0.7rem;">
+                                                <i class="fas fa-file-invoice text-secondary me-1"></i> {{ u['total_cotizaciones']|default(0) }}
+                                            </div>
+                                            <div class="text-muted" style="font-size: 0.7rem;">
+                                                <i class="fas fa-clock text-secondary me-1"></i> {{ u['tiempo_humano'] }}
+                                            </div>
+                                            {% if not is_active and u['role'] == 0 %}
+                                            <div class="text-danger fw-bold ms-auto" style="font-size: 0.7rem;">Vence: {{ u['subscription_end'].strftime('%d/%m') if u['subscription_end'] else '--' }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td class="d-none d-md-table-cell">
+                                <span class="badge-rol">{{ plan|upper }}</span>
+                                <div class="mt-1 small fw-bold {{ 'text-warning' if u['role'] == 2 else 'text-info' if u['role'] == 1 else 'text-muted' }}">
+                                    {% if u['role'] == 2 %}👑 Dueño{% elif u['role'] == 1 %}🛡️ Admin{% else %}<i class="fas fa-user text-muted me-1"></i>Usuario{% endif %}
+                                </div>
+                            </td>
+
+                            <td class="d-none d-md-table-cell text-nowrap">
+                                <span class="text-dark fw-medium small">{{ u['tiempo_humano'] }}</span>
+                                <div class="small text-muted mt-1" style="font-size: 0.7rem;">{{ u['total_cotizaciones']|default(0) }} cotizaciones</div>
+                            </td>
+
+                            <td class="d-none d-md-table-cell">
+                                <span class="status-badge {{ badge_class }}">
+                                    {{ badge_text }}
+                                </span>
+                                {% if u['role'] == 0 %}
+                                <div class="small text-muted mt-1" style="font-size: 0.7rem;">
+                                    Vence: <strong class="text-dark">{{ u['subscription_end'].strftime('%d/%m/%Y') if u['subscription_end'] else '--' }}</strong>
+                                </div>
+                                {% endif %}
+                            </td>
+
+                            <td class="text-center pe-3 pe-md-4">
+                                <div class="dropdown">
+                                    <button class="btn action-btn mx-auto" type="button" data-bs-toggle="dropdown" data-bs-boundary="window">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end custom-dropdown-menu">
+                                        <li><h6 class="dropdown-header">TIEMPO Y MEMBRESÍA</h6></li>
+                                        <li>
+                                            <button class="dropdown-item" onclick="abrirModalDias('{{ u['id'] }}', '{{ u['username'] }}')">
+                                                <i class="fas fa-plus-circle text-success opacity-75 me-1"></i> Sumar Días
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <form action="{{ url_for('admin.renovar') }}" method="POST" class="m-0 p-0 require-confirm"
+                                                data-title="¿Renovar por 1 Mes?"
+                                                data-text="Se añadirá 1 mes a la suscripción del usuario."
+                                                data-icon="info"
+                                                data-btn-text="Sí, renovar">
+                                                <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                                                <input type="hidden" name="meses" value="1">
+                                                <button type="submit" class="dropdown-item text-start">
+                                                    <i class="fas fa-calendar-check text-primary opacity-75 me-1"></i> Sumar 1 Mes
+                                                </button>
+                                            </form>
+                                        </li>
+
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li><h6 class="dropdown-header">SOPORTE</h6></li>
+                                        <li>
+                                            <button class="dropdown-item" onclick="abrirReset('{{ u['id'] }}', '{{ u['username'] }}')">
+                                                <i class="fas fa-key text-warning opacity-75 me-1"></i> Reset Clave
+                                            </button>
+                                        </li>
+
+                                        {% if u['role'] <= 1 %} 
+                                        <li>
+                                            <a class="dropdown-item" href="{{ url_for('admin.impersonate', user_id=u['id']) }}">
+                                                <i class="fas fa-user-secret text-secondary opacity-75 me-1"></i> Entrar como cliente
+                                            </a>
+                                        </li>
+                                        {% endif %}
+
+                                        {% if session['role'] == 2 and u['id'] != session['user_id'] %}
+                                        <li><hr class="dropdown-divider my-1"></li>
+                                        <li><h6 class="dropdown-header">ADMINISTRACIÓN</h6></li>
+                                            {% if u['role'] == 0 %}
+                                            <li>
+                                                <form action="{{ url_for('admin.cambiar_rol') }}" method="POST" class="m-0 p-0 require-confirm"
+                                                    data-title="¿Dar permisos de Admin?"
+                                                    data-text="Este usuario tendrá acceso total al panel de control."
+                                                    data-icon="warning"
+                                                    data-btn-text="Sí, hacer Admin">
+                                                    <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                                                    <input type="hidden" name="nuevo_rol" value="1">
+                                                    <button type="submit" class="dropdown-item text-start">
+                                                        <i class="fas fa-shield-alt text-info opacity-75 me-1"></i> Hacer Admin
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            {% else %}
+                                            <li>
+                                                <form action="{{ url_for('admin.cambiar_rol') }}" method="POST" class="m-0 p-0 require-confirm"
+                                                    data-title="¿Quitar permisos de Admin?"
+                                                    data-text="El usuario volverá a ser un cliente normal."
+                                                    data-icon="warning"
+                                                    data-btn-text="Sí, quitar permisos">
+                                                    <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                                                    <input type="hidden" name="nuevo_rol" value="0">
+                                                    <button type="submit" class="dropdown-item text-start">
+                                                        <i class="fas fa-user-times text-danger opacity-75 me-1"></i> Quitar Admin
+                                                    </button>
+                                                </form>
+                                            </li>
+                                            {% endif %}
+
+                                        <li>
+                                            <form action="{{ url_for('admin.delete_user') }}" method="POST" class="m-0 p-0 require-confirm"
+                                                data-title="⚠️ ¿ELIMINAR USUARIO?"
+                                                data-text="ESTO BORRARÁ TODO (Ventas, inventario). Esta acción no se puede deshacer."
+                                                data-icon="error"
+                                                data-btn-color="#d33"
+                                                data-btn-text="Sí, eliminar permanentemente">
+                                                <input type="hidden" name="user_id" value="{{ u['id'] }}">
+                                                <button type="submit" class="dropdown-item text-danger text-start">
+                                                    <i class="fas fa-trash-alt opacity-75 me-1"></i> Eliminar Cuenta
+                                                </button>
+                                            </form>
+                                        </li>
+                                        {% endif %}
+                                        
+                                        <li><h6 class="dropdown-header">INFORMACIÓN</h6></li>
+                                        <li>
+                                            <a class="dropdown-item" href="javascript:void(0)" onclick="abrirModalLog('{{ u['id'] }}', '{{ u['username'] }}')">
+                                                <i class="fas fa-list text-info opacity-75 me-1"></i> Ver Actividad
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="fas fa-search fs-2 mb-3 text-secondary opacity-50"></i>
+                                <p class="m-0">No se encontraron usuarios.</p>
+                            </td>
+                        </tr>
                     {% endif %}
+                </tbody>
+            </table>
+        </div>
 
-                    <tr>
-                        <td class="ps-3 ps-md-4">
-                            <div class="d-flex align-items-start align-items-md-center gap-3">
-                                <div class="avatar-circle flex-shrink-0 mt-1 mt-md-0">
-                                    {{ u['username'][0]|upper }}
-                                </div>
-                                <div style="min-width: 0; flex: 1;">
+        {% if total_pages > 1 %}
+        <div class="card-footer bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3" style="border-top: 1px solid #eaecf0 !important;">
+            <small class="text-muted fw-medium">
+                Mostrando <span class="text-dark fw-bold">{{ (page - 1) * per_page + 1 }}</span> a 
+                <span class="text-dark fw-bold">{{ [page * per_page, total_users]|min }}</span> de 
+                <span class="text-dark fw-bold">{{ total_users }}</span> usuarios
+            </small>
 
-                                    <div class="d-flex justify-content-between align-items-start mb-1">
-                                        <div class="fw-bold text-dark text-truncate pe-2" style="font-size: 0.95rem;" 
-                                            title="Registro: {{ u['created_at'].strftime('%d/%m/%Y') if u['created_at'] else 'N/A' }} | Restantes: {{ dias_restantes }} días">
-                                            {{ u['username'] }}
-                                        </div>
+            <nav aria-label="Navegación de usuarios">
+                <ul class="pagination pagination-sm m-0 gap-1">
+                    <li class="page-item {{ 'disabled' if page == 1 else '' }}">
+                        <a class="page-link border-0 {{ 'text-muted' if page == 1 else 'text-dark' }} bg-transparent fw-medium" 
+                            href="{{ url_for('admin.dashboard', page=page-1, q=q, status=status_filter, sort=sort_by) if page > 1 else '#' }}" tabindex="-1">Anterior</a>
+                    </li>
 
-                                        <div class="d-md-none flex-shrink-0">
-                                            <span class="status-badge {{ badge_class }} px-2 py-1" style="font-size: 0.6rem;">
-                                                {{ badge_text }}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    <div class="d-flex align-items-center gap-2 text-truncate mb-1">
-                                        <small class="text-muted text-truncate" style="font-size: 0.8rem;">{{ u['email'] }}</small>
-                                        {% if u['telefono'] %}
-                                        <a href="https://wa.me/{{ u['telefono']|replace('+', '')|replace(' ', '') }}" target="_blank" class="text-success flex-shrink-0">
-                                            <i class="fab fa-whatsapp"></i>
-                                        </a>
-                                        {% endif %}
-                                    </div>
-
-                                    <small class="text-primary d-block text-truncate" style="font-size: 0.75rem;">
-                                        <i class="fas fa-building me-1"></i> {{ u['company_name']|default('Sin Empresa') }}
-                                    </small>
-
-                                    <div class="d-flex d-md-none flex-wrap align-items-center gap-3 mt-2 pt-2" style="border-top: 1px dashed #eaecf0;">
-                                        <span class="badge-rol">{{ plan|upper }}</span>
-                                        <div class="text-muted" style="font-size: 0.7rem;">
-                                            <i class="fas fa-file-invoice text-secondary me-1"></i> {{ u['total_cotizaciones']|default(0) }}
-                                        </div>
-                                        <div class="text-muted" style="font-size: 0.7rem;">
-                                            <i class="fas fa-clock text-secondary me-1"></i> {{ u['tiempo_humano'] }}
-                                        </div>
-                                        {% if not is_active and u['role'] == 0 %}
-                                        <div class="text-danger fw-bold ms-auto" style="font-size: 0.7rem;">Vence: {{ u['subscription_end'].strftime('%d/%m') if u['subscription_end'] else '--' }}</div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-
-                        <td class="d-none d-md-table-cell">
-                            <span class="badge-rol">{{ plan|upper }}</span>
-                            <div class="mt-1 small fw-bold {{ 'text-warning' if u['role'] == 2 else 'text-info' if u['role'] == 1 else 'text-muted' }}">
-                                {% if u['role'] == 2 %}👑 Dueño{% elif u['role'] == 1 %}🛡️ Admin{% else %}<i class="fas fa-user text-muted me-1"></i>Usuario{% endif %}
-                            </div>
-                        </td>
-
-                        <td class="d-none d-md-table-cell text-nowrap">
-                            <span class="text-dark fw-medium small">{{ u['tiempo_humano'] }}</span>
-                            <div class="small text-muted mt-1" style="font-size: 0.7rem;">{{ u['total_cotizaciones']|default(0) }} cotizaciones</div>
-                        </td>
-
-                        <td class="d-none d-md-table-cell">
-                            <span class="status-badge {{ badge_class }}">
-                                {{ badge_text }}
-                            </span>
-                            {% if u['role'] == 0 %}
-                            <div class="small text-muted mt-1" style="font-size: 0.7rem;">
-                                Vence: <strong class="text-dark">{{ u['subscription_end'].strftime('%d/%m/%Y') if u['subscription_end'] else '--' }}</strong>
-                            </div>
-                            {% endif %}
-                        </td>
-
-                        <td class="text-center pe-3 pe-md-4">
-                            <div class="dropdown">
-                                <button class="btn action-btn mx-auto" type="button" data-bs-toggle="dropdown" data-bs-boundary="window">
-                                    <i class="fas fa-ellipsis-v"></i>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end custom-dropdown-menu">
-                                    <li><h6 class="dropdown-header">TIEMPO Y MEMBRESÍA</h6></li>
-                                    <li>
-                                        <button class="dropdown-item" onclick="abrirModalDias('{{ u['id'] }}', '{{ u['username'] }}')">
-                                            <i class="fas fa-plus-circle text-success opacity-75 me-1"></i> Sumar Días
-                                        </button>
-                                    </li>
-                                    <li>
-                                        <form action="{{ url_for('admin.renovar') }}" method="POST" class="m-0 p-0 require-confirm"
-                                            data-title="¿Renovar por 1 Mes?"
-                                            data-text="Se añadirá 1 mes a la suscripción del usuario."
-                                            data-icon="info"
-                                            data-btn-text="Sí, renovar">
-                                            <input type="hidden" name="user_id" value="{{ u['id'] }}">
-                                            <input type="hidden" name="meses" value="1">
-                                            <button type="submit" class="dropdown-item text-start">
-                                                <i class="fas fa-calendar-check text-primary opacity-75 me-1"></i> Sumar 1 Mes
-                                            </button>
-                                        </form>
-                                    </li>
-
-                                    <li><hr class="dropdown-divider my-1"></li>
-                                    <li><h6 class="dropdown-header">SOPORTE</h6></li>
-                                    <li>
-                                        <button class="dropdown-item" onclick="abrirReset('{{ u['id'] }}', '{{ u['username'] }}')">
-                                            <i class="fas fa-key text-warning opacity-75 me-1"></i> Reset Clave
-                                        </button>
-                                    </li>
-
-                                    {% if u['role'] <= 1 %} 
-                                    <li>
-                                        <a class="dropdown-item" href="{{ url_for('admin.impersonate', user_id=u['id']) }}">
-                                            <i class="fas fa-user-secret text-secondary opacity-75 me-1"></i> Entrar como cliente
-                                        </a>
-                                    </li>
-                                    {% endif %}
-
-                                    {% if session['role'] == 2 and u['id'] != session['user_id'] %}
-                                    <li><hr class="dropdown-divider my-1"></li>
-                                    <li><h6 class="dropdown-header">ADMINISTRACIÓN</h6></li>
-                                        {% if u['role'] == 0 %}
-                                        <li>
-                                            <form action="{{ url_for('admin.cambiar_rol') }}" method="POST" class="m-0 p-0 require-confirm"
-                                                data-title="¿Dar permisos de Admin?"
-                                                data-text="Este usuario tendrá acceso total al panel de control."
-                                                data-icon="warning"
-                                                data-btn-text="Sí, hacer Admin">
-                                                <input type="hidden" name="user_id" value="{{ u['id'] }}">
-                                                <input type="hidden" name="nuevo_rol" value="1">
-                                                <button type="submit" class="dropdown-item text-start">
-                                                    <i class="fas fa-shield-alt text-info opacity-75 me-1"></i> Hacer Admin
-                                                </button>
-                                            </form>
-                                        </li>
-                                        {% else %}
-                                        <li>
-                                            <form action="{{ url_for('admin.cambiar_rol') }}" method="POST" class="m-0 p-0 require-confirm"
-                                                data-title="¿Quitar permisos de Admin?"
-                                                data-text="El usuario volverá a ser un cliente normal."
-                                                data-icon="warning"
-                                                data-btn-text="Sí, quitar permisos">
-                                                <input type="hidden" name="user_id" value="{{ u['id'] }}">
-                                                <input type="hidden" name="nuevo_rol" value="0">
-                                                <button type="submit" class="dropdown-item text-start">
-                                                    <i class="fas fa-user-times text-danger opacity-75 me-1"></i> Quitar Admin
-                                                </button>
-                                            </form>
-                                        </li>
-                                        {% endif %}
-
-                                    <li>
-                                        <form action="{{ url_for('admin.delete_user') }}" method="POST" class="m-0 p-0 require-confirm"
-                                            data-title="⚠️ ¿ELIMINAR USUARIO?"
-                                            data-text="ESTO BORRARÁ TODO (Ventas, inventario). Esta acción no se puede deshacer."
-                                            data-icon="error"
-                                            data-btn-color="#d33"
-                                            data-btn-text="Sí, eliminar permanentemente">
-                                            <input type="hidden" name="user_id" value="{{ u['id'] }}">
-                                            <button type="submit" class="dropdown-item text-danger text-start">
-                                                <i class="fas fa-trash-alt opacity-75 me-1"></i> Eliminar Cuenta
-                                            </button>
-                                        </form>
-                                    </li>
-                                    {% endif %}
-                                    
-                                    <li><h6 class="dropdown-header">INFORMACIÓN</h6></li>
-                                    <li>
-                                        <a class="dropdown-item" href="javascript:void(0)" onclick="abrirModalLog('{{ u['id'] }}', '{{ u['username'] }}')">
-                                            <i class="fas fa-list text-info opacity-75 me-1"></i> Ver Actividad
-                                        </a>
-                                    </li>
-                                </ul>
-                            </div>
-                        </td>
-                    </tr>
+                    {% for p in range(1, total_pages + 1) %}
+                    <li class="page-item {{ 'active' if p == page else '' }}">
+                        <a class="page-link {{ 'rounded-2 border-0 bg-dark text-white fw-bold shadow-sm' if p == page else 'border-0 text-muted bg-transparent fw-medium' }}" 
+                            href="{{ url_for('admin.dashboard', page=p, q=q, status=status_filter, sort=sort_by) }}">{{ p }}</a>
+                    </li>
                     {% endfor %}
-                {% else %}
-                    <tr>
-                        <td colspan="5" class="text-center py-5 text-muted">
-                            <i class="fas fa-search fs-2 mb-3 text-secondary opacity-50"></i>
-                            <p class="m-0">No se encontraron usuarios.</p>
-                        </td>
-                    </tr>
-                {% endif %}
-            </tbody>
-        </table>
+
+                    <li class="page-item {{ 'disabled' if page == total_pages else '' }}">
+                        <a class="page-link border-0 {{ 'text-muted' if page == total_pages else 'text-dark' }} bg-transparent fw-medium" 
+                            href="{{ url_for('admin.dashboard', page=page+1, q=q, status=status_filter, sort=sort_by) if page < total_pages else '#' }}">Siguiente</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        {% else %}
+        <div class="card-footer bg-white border-0 py-3 text-center" style="border-top: 1px solid #eaecf0 !important;">
+            <small class="text-muted fw-medium">
+                Mostrando los <span class="text-dark fw-bold">{{ total_users }}</span> usuarios registrados.
+            </small>
+        </div>
+        {% endif %}
     </div>
-
-    {% if total_pages > 1 %}
-    <div class="card-footer bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3" style="border-top: 1px solid #eaecf0 !important;">
-        <small class="text-muted fw-medium">
-            Mostrando <span class="text-dark fw-bold">{{ (page - 1) * per_page + 1 }}</span> a 
-            <span class="text-dark fw-bold">{{ [page * per_page, total_users]|min }}</span> de 
-            <span class="text-dark fw-bold">{{ total_users }}</span> usuarios
-        </small>
-
-        <nav aria-label="Navegación de usuarios">
-            <ul class="pagination pagination-sm m-0 gap-1">
-                <li class="page-item {{ 'disabled' if page == 1 else '' }}">
-                    <a class="page-link border-0 {{ 'text-muted' if page == 1 else 'text-dark' }} bg-transparent fw-medium" 
-                        href="{{ url_for('admin.dashboard', page=page-1, q=request.args.get('q', '')) if page > 1 else '#' }}" tabindex="-1">Anterior</a>
-                </li>
-
-                {% for p in range(1, total_pages + 1) %}
-                <li class="page-item {{ 'active' if p == page else '' }}">
-                    <a class="page-link {{ 'rounded-2 border-0 bg-dark text-white fw-bold shadow-sm' if p == page else 'border-0 text-muted bg-transparent fw-medium' }}" 
-                        href="{{ url_for('admin.dashboard', page=p, q=request.args.get('q', '')) }}">{{ p }}</a>
-                </li>
-                {% endfor %}
-
-                <li class="page-item {{ 'disabled' if page == total_pages else '' }}">
-                    <a class="page-link border-0 {{ 'text-muted' if page == total_pages else 'text-dark' }} bg-transparent fw-medium" 
-                        href="{{ url_for('admin.dashboard', page=page+1, q=request.args.get('q', '')) if page < total_pages else '#' }}">Siguiente</a>
-                </li>
-            </ul>
-        </nav>
-    </div>
-    {% else %}
-    <div class="card-footer bg-white border-0 py-3 text-center" style="border-top: 1px solid #eaecf0 !important;">
-        <small class="text-muted fw-medium">
-            Mostrando los <span class="text-dark fw-bold">{{ total_users }}</span> usuarios registrados.
-        </small>
-    </div>
-    {% endif %}
 </div>
 
+<!-- ===================================================
+     MODALES (MANTENIDOS INTACTOS)
+     =================================================== -->
 <div class="modal fade" id="modalReset" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 rounded-4 shadow">
@@ -568,7 +643,124 @@
 {% block scripts %}
 <script>
     // ==========================================
-    // 1. FUNCIONES DE MODALES (INTACTAS)
+    // 0. MOTOR AJAX (HTML OVER THE WIRE)
+    // ==========================================
+    async function actualizarPanelAJAX(url) {
+        const contenedor = document.getElementById('contenedor-tabla-master');
+        
+        contenedor.style.transition = 'opacity 0.2s ease';
+        contenedor.style.opacity = '0.4';
+        contenedor.style.pointerEvents = 'none';
+
+        try {
+            const response = await fetch(url);
+            const htmlText = await response.text();
+            
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(htmlText, 'text/html');
+            
+            // Reemplazamos toda el área de la tabla y paginación
+            contenedor.innerHTML = doc.getElementById('contenedor-tabla-master').innerHTML;
+            
+            // Reemplazamos también la barra de filtros
+            document.getElementById('filtros-panel').innerHTML = doc.getElementById('filtros-panel').innerHTML;
+            
+            window.history.pushState({path: url}, '', url);
+            vincularEventosFiltros();
+            
+        } catch (error) {
+            console.error('Error AJAX:', error);
+            window.location.href = url; // Fallback
+        } finally {
+            contenedor.style.opacity = '1';
+            contenedor.style.pointerEvents = 'auto';
+        }
+    }
+
+    function vincularEventosFiltros() {
+        const formFiltros = document.getElementById('formFiltrosMaster');
+        if (!formFiltros) return;
+
+        formFiltros.addEventListener('submit', function(e) {
+            e.preventDefault();
+            const params = new URLSearchParams(new FormData(this));
+            params.set('page', '1'); // Reset de página al buscar
+            const url = `{{ url_for('admin.dashboard') }}?${params.toString()}`;
+            actualizarPanelAJAX(url);
+        });
+
+        // Autocompletado del buscador (AJAX mientras escribes)
+        const inputBuscador = formFiltros.querySelector('input[name="q"]');
+        if (inputBuscador) {
+            // Evitamos hacer 100 peticiones si escriben muy rápido usando un "debounce"
+            let timeoutBuscador = null;
+            inputBuscador.addEventListener('keyup', function(e) {
+                clearTimeout(timeoutBuscador);
+                timeoutBuscador = setTimeout(() => {
+                    formFiltros.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+                }, 400); // Espera 400ms después de que dejan de teclear
+            });
+        }
+
+        formFiltros.querySelectorAll('select').forEach(select => {
+            select.addEventListener('change', () => {
+                formFiltros.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+            });
+        });
+    }
+
+    function resetFiltros() {
+        actualizarPanelAJAX(`{{ url_for('admin.dashboard') }}`);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        vincularEventosFiltros();
+    });
+
+    // --- LÓGICA DE ORDENAMIENTO POR ENCABEZADOS ---
+    function toggleSort(campo) {
+        const selectSort = document.querySelector('select[name="sort"]');
+        if (!selectSort) return;
+
+        let ordenActual = selectSort.value;
+        let nuevoOrden = campo + '_desc'; // Por defecto bajamos
+
+        // Si ya estábamos ordenando por ese campo hacia abajo, lo invertimos hacia arriba
+        if (ordenActual === campo + '_desc') {
+            nuevoOrden = campo + '_asc';
+        }
+
+        // Asignamos el valor al select oculto y disparamos el AJAX
+        selectSort.value = nuevoOrden;
+        selectSort.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Interceptar clics de Paginación
+    document.addEventListener('click', function(e) {
+        const linkPaginacion = e.target.closest('.page-link');
+        if (linkPaginacion && linkPaginacion.href && !linkPaginacion.href.includes('javascript:')) {
+            e.preventDefault();
+            actualizarPanelAJAX(linkPaginacion.href);
+        }
+    });
+
+    // ==========================================
+    // 1. FIX PARA MENÚS CORTADOS EN LA TABLA
+    // ==========================================
+    document.addEventListener('show.bs.dropdown', function (e) {
+        let tabla = e.target.closest('.table-responsive');
+        // Aumentamos el padding para que un menú largo no se corte con el borde de la tarjeta
+        if (tabla) { tabla.style.transition = 'padding-bottom 0.2s ease'; tabla.style.paddingBottom = '280px'; }
+    });
+
+    document.addEventListener('hide.bs.dropdown', function (e) {
+        let tabla = e.target.closest('.table-responsive');
+        if (tabla) { setTimeout(() => { tabla.style.paddingBottom = '0px'; }, 200); }
+    });
+
+
+    // ==========================================
+    // 2. FUNCIONES DE MODALES (INTACTAS)
     // ==========================================
     function abrirReset(id, name) {
         document.getElementById('resetUserId').value = id;
@@ -627,11 +819,10 @@
     }
 
     // ==========================================
-    // 2. MANEJO DE FORMULARIOS Y ALERTAS
+    // 3. MANEJO DE FORMULARIOS Y ALERTAS
     // ==========================================
     document.addEventListener('DOMContentLoaded', function () {
         
-        // Función centralizada para poner el botón en estado "Procesando..."
         function activarSpinner(form) {
             const btn = form.querySelector('button[type="submit"]');
             if(btn) {
@@ -640,62 +831,54 @@
             }
         }
 
-        // Interceptar todos los formularios
-        document.querySelectorAll('form').forEach(form => {
-            form.addEventListener('submit', function(e) {
-                
-                // Si es un GET (como el buscador), lo dejamos fluir normal sin bloquear botones
-                if(this.method.toLowerCase() !== 'post') return;
+        document.addEventListener('submit', function(e) {
+            const form = e.target;
+            
+            // Dejamos fluir el buscador (ya lo maneja nuestro AJAX arriba)
+            if(form.method.toLowerCase() !== 'post') return;
 
-                // A) LÓGICA PARA FORMULARIOS PELIGROSOS (SweetAlert)
-                if (this.classList.contains('require-confirm')) {
-                    e.preventDefault(); // Pausamos el envío real del form
+            if (form.classList.contains('require-confirm')) {
+                e.preventDefault();
 
-                    // Extraemos la configuración de los data-attributes, con valores por defecto
-                    const title = this.dataset.title || '¿Estás seguro?';
-                    const text = this.dataset.text || 'Por favor, confirma esta acción.';
-                    const icon = this.dataset.icon || 'warning';
-                    const confirmBtnColor = this.dataset.btnColor || '#101828';
-                    const confirmBtnText = this.dataset.btnText || 'Sí, continuar';
+                const title = form.dataset.title || '¿Estás seguro?';
+                const text = form.dataset.text || 'Por favor, confirma esta acción.';
+                const icon = form.dataset.icon || 'warning';
+                const confirmBtnColor = form.dataset.btnColor || '#101828';
+                const confirmBtnText = form.dataset.btnText || 'Sí, continuar';
 
-                    Swal.fire({
-                        title: title,
-                        text: text,
-                        icon: icon,
-                        showCancelButton: true,
-                        confirmButtonColor: confirmBtnColor,
-                        cancelButtonColor: '#6c757d', // Gris estándar para el botón cancelar
-                        confirmButtonText: confirmBtnText,
-                        cancelButtonText: 'Cancelar',
-                        reverseButtons: true // Pone el botón de cancelar a la izquierda
-                    }).then((result) => {
-                        if (result.isConfirmed) {
-                            // Si dijo que sí, ponemos el spinner y mandamos el form
-                            activarSpinner(this);
-                            this.submit();
-                        }
-                    });
-                } 
-                // B) LÓGICA PARA FORMULARIOS NORMALES (Solo Spinner Anti-Doble Clic)
-                else {
-                    const btn = this.querySelector('button[type="submit"]');
-                    if (btn && btn.disabled) {
-                        e.preventDefault(); // Si ya está deshabilitado, evitamos que siga procesando
-                        return;
+                Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: icon,
+                    showCancelButton: true,
+                    confirmButtonColor: confirmBtnColor,
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: confirmBtnText,
+                    cancelButtonText: 'Cancelar',
+                    reverseButtons: true
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        activarSpinner(form);
+                        form.submit();
                     }
-                    activarSpinner(this);
+                });
+            } else {
+                const btn = form.querySelector('button[type="submit"]');
+                if (btn && btn.disabled) {
+                    e.preventDefault();
+                    return;
                 }
-            });
+                activarSpinner(form);
+            }
         });
 
         // ==========================================
-        // 3. FLASH MESSAGES (Notificaciones Flask)
+        // 4. FLASH MESSAGES (Notificaciones Flask)
         // ==========================================
         {% with messages = get_flashed_messages(with_categories = true) %}
         {% if messages %}
         {% for category, message in messages %}
         
-        // Ajuste de categorías: Flask usa 'danger', pero Swal usa 'error'
         let swalIcon = "{{ category }}";
         if(swalIcon === "danger") swalIcon = "error";
 

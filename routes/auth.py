@@ -128,6 +128,11 @@ def login():
                 """, (user['id'], "Inició sesión en el sistema", "Acceso", ip_cliente))
                 conn.commit()
 
+                # Actualizamos la columna last_login del usuario para que tu Panel Master no mienta
+                cursor.execute("""
+                    UPDATE usuarios SET last_login = %s WHERE id = %s
+                """, (now_utc(), user['id']))
+
                 current_app.logger.info(
                     f"LOGIN_SUCCESS: Usuario '{user['username']}' autenticado desde {ip_cliente}."
                 )
