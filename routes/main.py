@@ -450,7 +450,6 @@ def actualizar_venta():
         conn.close()
 
 # --- RUTAS DE VISUALIZACIÓN ---
-
 @main_bp.route('/historial')
 @subscription_required
 def historial():
@@ -461,28 +460,40 @@ def historial():
     mostrar_tour = debe_mostrar_tutorial(uid, 'historial')
     version_tour = obtener_version_tutorial('historial')
     
+    # --- CAPTURA DE PARÁMETROS ---
     q = request.args.get('q', '').strip()
+    status = request.args.get('status', 'all')
     page = request.args.get('page', 1, type=int) 
     per_page = 20 
     offset = (page - 1) * per_page 
 
+    # --- 1. QUERY PARA CONTEO ---
     sql_count = "SELECT COUNT(*) FROM ventas WHERE user_id=%s"
     params_count = [uid]
 
     if q:
         sql_count += " AND (CAST(id AS TEXT) ILIKE %s OR cliente ILIKE %s)"
         params_count.extend([f'%{q}%', f'%{q}%'])
+    
+    if status != 'all':
+        sql_count += " AND estado = %s"
+        params_count.append(status)
 
     cursor.execute(sql_count, params_count)
     total_registros = cursor.fetchone()[0]
     total_pages = math.ceil(total_registros / per_page)
 
+    # --- 2. QUERY PARA DATOS ---
     sql = 'SELECT id, cliente, fecha, total, estado, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine FROM ventas WHERE user_id=%s'
     params = [uid]
     
     if q:
         sql += " AND (CAST(id AS TEXT) ILIKE %s OR cliente ILIKE %s)"
         params.extend([f'%{q}%', f'%{q}%'])
+        
+    if status != 'all':
+        sql += " AND estado = %s"
+        params.append(status)
         
     sql += " ORDER BY id DESC LIMIT %s OFFSET %s"
     params.extend([per_page, offset])
@@ -493,10 +504,17 @@ def historial():
     cursor.close()
     conn.close()
     
+    # --- 3. PROCESAMIENTO EN PYTHON ---
     ventas_display = [procesar_fila_fechas(v) for v in ventas_db]
-    
-    return render_template('historial.html', ventas=ventas_display, page=page, total_pages=total_pages, q=q,
-                           mostrar_tour=mostrar_tour, version_tour=version_tour)
+
+    return render_template('historial.html', 
+                           ventas=ventas_display, 
+                           page=page, 
+                           total_pages=total_pages, 
+                           q=q,
+                           status=status,
+                           mostrar_tour=mostrar_tour, 
+                           version_tour=version_tour)
 
 
 @main_bp.route('/ticket/<int:id>')

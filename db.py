@@ -1,6 +1,7 @@
 import os
 import psycopg2
 import psycopg2.extras
+from psycopg2 import pool # Importamos el motor de albercas
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -8,9 +9,76 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ======================================================
-# CONEXIÓN (PostgreSQL - 2 bases - DEV y PROD)
+# VARIABLES GLOBALES PARA EL POOL
+# ======================================================
+_db_pool = None
+
+def get_pool():
+    """Crea la piscina de conexiones una sola vez y la mantiene viva."""
+    global _db_pool
+    if _db_pool is None:
+        env = os.getenv("FLASK_ENV", "development")
+        
+        if env == "production":
+            database_url = os.getenv("DATABASE_URL_PROD")
+            if "shinkansen" in database_url:
+                raise Exception("ERROR: Estás apuntando a DEV en producción")
+        else:
+            database_url = os.getenv("DATABASE_URL_DEV")
+            if "nozomi" in database_url:
+                raise Exception("ERROR: Estás apuntando a PROD en desarrollo")
+
+        if not database_url:
+            raise ValueError("Falta la variable de base de datos según el entorno.")
+
+        # Creamos un pool de 1 a 20 conexiones persistentes
+        _db_pool = psycopg2.pool.ThreadedConnectionPool(
+            1, 20, 
+            database_url, 
+            cursor_factory=psycopg2.extras.DictCursor
+        )
+    return _db_pool
+
+
+# ======================================================
+# CLASE WRAPPER
+# ======================================================
+class PooledConnectionWrapper:
+    """
+    Simula ser una conexión normal. Así, cuando hagas conn.close() 
+    en tus rutas, en lugar de matarla, la devuelve al pool.
+    """
+    def __init__(self, pool):
+        self._pool = pool
+        self._conn = pool.getconn()
+
+    def cursor(self, *args, **kwargs):
+        return self._conn.cursor(*args, **kwargs)
+
+    def commit(self):
+        self._conn.commit()
+
+    def rollback(self):
+        self._conn.rollback()
+
+    def close(self):
+        # En lugar de destruir la conexión, la regresamos a la alberca
+        self._pool.putconn(self._conn)
+
+
+# ======================================================
+# CONEXIÓN (PostgreSQL)
 # ======================================================
 def get_db_connection():
+    """Ahora extrae una conexión viva en milisegundos."""
+    p = get_pool()
+    return PooledConnectionWrapper(p)
+
+# ======================================================
+# INIT DB
+# ======================================================
+def init_db():
+    conn = get_db_connection()
     env = os.getenv("FLASK_ENV", "development")
 
     if env == "production":
