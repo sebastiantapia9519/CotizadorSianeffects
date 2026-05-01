@@ -92,6 +92,11 @@ def cotizador():
     cursor = conn.cursor()
     uid = session['user_id']
     try:
+        # actualizar fecha de ultimo ingreso
+        cursor.execute("""
+            UPDATE usuarios SET last_login = %s WHERE id = %s
+        """, (now_utc(), user['id']))
+
         mostrar_tour = debe_mostrar_tutorial(uid, 'cotizador')
         version_tour = obtener_version_tutorial('cotizador')
 
