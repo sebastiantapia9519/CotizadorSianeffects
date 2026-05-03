@@ -1,5 +1,7 @@
 import json
-from utils.datetime_utils import ahora_sql
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
+from utils.datetime_utils import ahora_sql, now_utc, utc_to_local
 from flask import Blueprint, jsonify, session, request, current_app
 from db import get_db_connection as get_db
 from helpers import login_required
@@ -220,6 +222,93 @@ def actualizar_venta():
         cursor.close()
         conn.close()
 
+@api_bp.route('/actualizar_expiracion_cotizacion', methods=['POST'])
+@login_required
+def actualizar_expiracion_cotizacion():
+    data = request.get_json()
+    cotizacion_id = data.get('id')
+    nueva_fecha_str = data.get('nueva_fecha') 
+    
+    if not cotizacion_id or not nueva_fecha_str:
+        return jsonify({'success': False, 'error': 'Faltan datos (ID o nueva fecha)'}), 400
+
+    try:
+        import pytz
+        from datetime import datetime
+        from dateutil.relativedelta import relativedelta
+        from utils.datetime_utils import now_utc, utc_to_local
+        
+        # 1. Parsear fecha solo para la validación lógica inicial
+        nueva_fecha_date = datetime.strptime(nueva_fecha_str, '%Y-%m-%d').date()
+        ahora_local = utc_to_local(now_utc())
+        hoy_local_date = ahora_local.date()
+        limite_mes_date = (ahora_local + relativedelta(months=1)).date()
+
+        if nueva_fecha_date <= hoy_local_date:
+            return jsonify({'success': False, 'error': 'La fecha de expiración debe ser en el futuro'}), 400
+        
+        if nueva_fecha_date > limite_mes_date:
+            return jsonify({'success': False, 'error': 'No puedes extender la cotización más de 1 mes'}), 400
+
+        # ==========================================
+        # 2. FIX DEL DESFASE DE ZONA HORARIA
+        # ==========================================
+        # Creamos un datetime y le asignamos el final del día (23:59:59)
+        nueva_fecha_dt = datetime.strptime(nueva_fecha_str, '%Y-%m-%d')
+        nueva_fecha_dt = nueva_fecha_dt.replace(hour=23, minute=59, second=59)
+        
+        # Le asignamos la zona horaria local para que la matemática sea exacta
+        tz_local = pytz.timezone('America/Mexico_City')
+        nueva_fecha_local = tz_local.localize(nueva_fecha_dt)
+        
+        # Convertimos a UTC (Que es como tu sistema lee/escribe nativamente en Postgres)
+        nueva_fecha_utc = nueva_fecha_local.astimezone(pytz.utc)
+        # ==========================================
+
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # 3. Verificar que exista y pertenezca al usuario
+        cursor.execute(
+            "SELECT id FROM ventas WHERE id = %s AND user_id = %s AND estado = 'cotizacion'",
+            (cotizacion_id, session['user_id'])
+        )
+        cotizacion = cursor.fetchone()
+
+        if not cotizacion:
+            return jsonify({'success': False, 'error': 'Cotización no encontrada o sin permisos'}), 404
+
+        # 4. Actualizar enviando el objeto UTC exacto
+        cursor.execute('''
+            UPDATE ventas
+            SET fecha_vencimiento = %s
+            WHERE id = %s
+        ''', (nueva_fecha_utc, cotizacion_id))
+
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo) 
+            VALUES (%s, %s, %s)
+        """, (session['user_id'], f"Extendió vigencia de Cotización #{cotizacion_id} a {nueva_fecha_str}", "Ventas"))
+
+        conn.commit()
+        
+        u_name = session.get('username', 'Anonimo')
+        current_app.logger.info(f"QUOTE_UPDATED: Usuario '{u_name}' extendió la cotización #{cotizacion_id} a {nueva_fecha_str}")
+
+        return jsonify({'success': True, 'nueva_fecha': nueva_fecha_str})
+
+    except ValueError:
+        return jsonify({'success': False, 'error': 'El formato de la fecha es inválido. Usa YYYY-MM-DD'}), 400
+    except Exception as e:
+        if 'conn' in locals() and conn:
+            conn.rollback()
+        current_app.logger.error(f"SYSTEM_ERROR en actualizar_expiracion_cotizacion: {str(e)}")
+        return jsonify({'success': False, 'error': 'Ocurrió un error en el servidor'}), 500
+    finally:
+        if 'cursor' in locals() and cursor:
+            cursor.close()
+        if 'conn' in locals() and conn:
+            conn.close()
 
 @api_bp.route('/cancelar_venta', methods=['POST'])
 @login_required

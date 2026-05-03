@@ -51,7 +51,6 @@
         border-bottom: 1px solid #eaecf0;
     }
 
-    /* Hover para los encabezados interactivos */
     .table thead th.sortable-header:hover {
         background-color: #f2f4f7;
         color: #1a1c1e;
@@ -75,11 +74,11 @@
         line-height: 1;
     }
 
-    .badge-activo { background-color: #ecfdf3; color: #027a48; border: 1px solid #d1fae5; }
-    .badge-vencido { background-color: #fef3f2; color: #b42318; border: 1px solid #fee2e2; }
-    .badge-alerta { background-color: #fffbeb; color: #d97706; border: 1px solid #fef3c7; } 
-    .badge-suspendido { background-color: #f2f4f7; color: #475467; border: 1px solid #eaecf0; } 
-    .badge-prueba { background-color: #eff8ff; color: #175cd3; border: 1px solid #dbeafe; }
+    .badge-activo    { background-color: #ecfdf3; color: #027a48; border: 1px solid #d1fae5; }
+    .badge-vencido   { background-color: #fef3f2; color: #b42318; border: 1px solid #fee2e2; }
+    .badge-alerta    { background-color: #fffbeb; color: #d97706; border: 1px solid #fef3c7; }
+    .badge-suspendido{ background-color: #f2f4f7; color: #475467; border: 1px solid #eaecf0; }
+    .badge-prueba    { background-color: #eff8ff; color: #175cd3; border: 1px solid #dbeafe; }
 
     .badge-rol {
         font-size: 0.65rem;
@@ -173,6 +172,166 @@
     [data-bs-theme="dark"] .custom-dropdown-menu { background-color: #1e293b !important; border-color: #334155 !important; }
     [data-bs-theme="dark"] .dropdown-item { color: #f8fafc !important; }
     [data-bs-theme="dark"] .dropdown-item:hover { background-color: #334155 !important; }
+
+    /* ===================================================
+       3. FILTROS — VERSIÓN RESPONSIVE CORREGIDA
+       =================================================== */
+    .filtros-wrapper {
+        background: #ffffff;
+        border: 1px solid #eaecf0;
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, 0.05);
+        padding: 12px 16px;
+        margin-bottom: 1.5rem;
+    }
+
+    .filtros-row-1 {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .filtros-search-wrap {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        background: #f9fafb;
+        border: 1px solid #eaecf0;
+        border-radius: 8px;
+        padding: 0 12px;
+        height: 36px;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .filtros-search-wrap:focus-within {
+        border-color: #d0d5dd;
+        background: #fff;
+    }
+    .filtros-search-wrap input {
+        border: none;
+        background: transparent;
+        outline: none;
+        font-size: 0.85rem;
+        color: #344054;
+        width: 100%;
+    }
+    .filtros-search-wrap input::placeholder { color: #98a2b3; }
+
+    /* Sort — ícono en mobile, texto completo en desktop */
+    .filtros-sort {
+        height: 36px;
+        border: 1px solid #eaecf0;
+        border-radius: 8px;
+        background: #f9fafb;
+        color: #344054;
+        font-size: 0.8rem;
+        font-weight: 500;
+        padding: 0 10px;
+        cursor: pointer;
+        outline: none;
+        flex-shrink: 0;
+        min-width: 36px;
+        max-width: 36px;
+        -webkit-appearance: none;
+        appearance: none;
+        text-indent: -9999px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%2398a2b3' stroke-width='2'%3E%3Cpath d='M8 6h13M8 12h9M8 18h5'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: center;
+        transition: border-color 0.2s, background 0.2s;
+    }
+    .filtros-sort:focus {
+        border-color: #d0d5dd;
+        background-color: #fff;
+    }
+
+    @media (min-width: 576px) {
+        .filtros-sort {
+            text-indent: 0;
+            max-width: 220px;
+            padding: 0 32px 0 12px;
+            background-position: right 10px center;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2398a2b3' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+        }
+    }
+
+    .filtros-reset-btn {
+        height: 36px;
+        width: 36px;
+        flex-shrink: 0;
+        border-radius: 8px;
+        border: 1px solid #eaecf0;
+        background: #f9fafb;
+        color: #98a2b3;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 0.8rem;
+        transition: all 0.15s;
+    }
+    .filtros-reset-btn.activo {
+        background: #fff1f2;
+        border-color: #fecdd3;
+        color: #e11d48;
+    }
+    .filtros-reset-btn.activo:hover {
+        background: #ffe4e6;
+    }
+
+    .filtros-divider {
+        height: 1px;
+        background: #f2f4f7;
+        margin: 10px 0;
+    }
+
+    /* Pills — scroll horizontal en mobile, SIN wrap */
+    .filtros-pills-row {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+        padding-bottom: 2px;
+    }
+    .filtros-pills-row::-webkit-scrollbar { display: none; }
+
+    .btn-filter {
+        flex-shrink: 0; /* CRÍTICO: evita compresión en mobile */
+        font-size: 0.78rem;
+        font-weight: 600;
+        padding: 5px 14px;
+        border-radius: 50px;
+        border: 1px solid #eaecf0;
+        background: #fff;
+        color: #667085;
+        cursor: pointer;
+        white-space: nowrap;
+        transition: all 0.15s ease;
+        line-height: 1.4;
+    }
+    .btn-filter:hover {
+        background: #f9fafb;
+        border-color: #d0d5dd;
+        color: #344054;
+    }
+    .btn-filter.active {
+        background: #101828;
+        color: #fff;
+        border-color: #101828;
+    }
+
+    /* Dark Mode — Filtros */
+    [data-bs-theme="dark"] .filtros-wrapper { background: #1e293b; border-color: #334155; }
+    [data-bs-theme="dark"] .filtros-search-wrap { background: #0f172a; border-color: #334155; }
+    [data-bs-theme="dark"] .filtros-search-wrap:focus-within { background: #1e293b; }
+    [data-bs-theme="dark"] .filtros-search-wrap input { color: #f8fafc; }
+    [data-bs-theme="dark"] .filtros-sort { background-color: #0f172a; border-color: #334155; color: #f8fafc; }
+    [data-bs-theme="dark"] .filtros-sort:focus { background-color: #1e293b; }
+    [data-bs-theme="dark"] .filtros-reset-btn { background: #0f172a; border-color: #334155; color: #64748b; }
+    [data-bs-theme="dark"] .filtros-divider { background: #334155; }
+    [data-bs-theme="dark"] .btn-filter { background: #1e293b; border-color: #334155; color: #94a3b8; }
+    [data-bs-theme="dark"] .btn-filter:hover { background: #334155; }
+    [data-bs-theme="dark"] .btn-filter.active { background: #3b82f6; border-color: #3b82f6; color: #fff; }
 </style>
 {% endblock %}
 
@@ -202,55 +361,70 @@
 </div>
 
 <!-- ===================================================
-     NUEVA BARRA DE FILTROS Y BÚSQUEDA
+     BARRA DE FILTROS Y BÚSQUEDA (RESPONSIVE)
      =================================================== -->
-<div class="card border-0 shadow-sm mb-4 table-card p-2" id="filtros-panel">
-    <form id="formFiltrosMaster" class="row g-2 align-items-center m-0">
-        <!-- Buscador -->
-        <div class="col-md-5">
-            <div class="input-group input-group-sm">
-                <button type="submit" class="input-group-text bg-transparent border-0 text-muted"><i class="fas fa-search"></i></button>
-                <input type="text" name="q" value="{{ q }}" class="form-control border-0 bg-transparent shadow-none px-0" placeholder="Buscar por usuario o email...">
-            </div>
-        </div>
-        
-        <!-- Filtro de Estado -->
-        <div class="col-md-3">
-            <select name="status" class="form-select form-select-sm border-0 shadow-none bg-light text-muted fw-medium rounded-3">
-                <option value="all" {% if status_filter == 'all' %}selected{% endif %}>Todos los estados</option>
-                <option value="activos" {% if status_filter == 'activos' %}selected{% endif %}>🟢 Premium Activos</option>
-                <option value="expirados" {% if status_filter == 'expirados' %}selected{% endif %}>🔴 Expirados / Vencidos</option>
-                <option value="trial" {% if status_filter == 'trial' %}selected{% endif %}>⏱️ En Prueba (Trial)</option>
-                <option value="free" {% if status_filter == 'free' %}selected{% endif %}>⚪ Plan Gratis</option>
-            </select>
+<div id="filtros-panel">
+<form id="formFiltrosMaster" class="filtros-wrapper">
+    <input type="hidden" name="status" id="hiddenStatus" value="{{ status_filter }}">
+
+    <!-- Fila 1: Buscador + Sort + Reset -->
+    <div class="filtros-row-1">
+        <div class="filtros-search-wrap">
+            <i class="fas fa-search text-muted me-2" style="font-size:0.75rem;flex-shrink:0;"></i>
+            <input type="text" name="q" id="inputBuscador"
+                value="{{ q }}"
+                placeholder="Buscar usuario o email...">
         </div>
 
-        <!-- Ordenamiento (Añadidas TODAS las opciones para que el JS funcione sin fallar) -->
-        <div class="col-md-3 d-none d-md-block"> <!-- Se puede ocultar si prefieres usar solo la tabla -->
-            <select name="sort" class="form-select form-select-sm border-0 shadow-none bg-light text-muted fw-medium rounded-3">
-                <option value="created_at_desc" {% if sort_by == 'created_at_desc' %}selected{% endif %}>Más recientes primero</option>
-                <option value="username_asc" {% if sort_by == 'username_asc' %}selected{% endif %}>Alfabético (A-Z)</option>
-                <option value="username_desc" {% if sort_by == 'username_desc' %}selected{% endif %}>Alfabético (Z-A)</option>
-                <option value="expiracion_asc" {% if sort_by == 'expiracion_asc' %}selected{% endif %}>Próximos a vencer</option>
-                <option value="expiracion_desc" {% if sort_by == 'expiracion_desc' %}selected{% endif %}>Mayor tiempo restante</option>
-                <option value="last_login_desc" {% if sort_by == 'last_login_desc' %}selected{% endif %}>Conexión reciente</option>
-                <option value="last_login_asc" {% if sort_by == 'last_login_asc' %}selected{% endif %}>Conexión antigua</option>
-            </select>
-        </div>
+        <select name="sort" class="filtros-sort" title="Ordenar por">
+            <option value="created_at_desc" {% if sort_by == 'created_at_desc' %}selected{% endif %}>Más recientes</option>
+            <option value="username_asc"    {% if sort_by == 'username_asc' %}selected{% endif %}>Alfabético A→Z</option>
+            <option value="username_desc"   {% if sort_by == 'username_desc' %}selected{% endif %}>Alfabético Z→A</option>
+            <option value="expiracion_asc"  {% if sort_by == 'expiracion_asc' %}selected{% endif %}>Próximos a vencer</option>
+            <option value="expiracion_desc" {% if sort_by == 'expiracion_desc' %}selected{% endif %}>Mayor tiempo</option>
+            <option value="last_login_desc" {% if sort_by == 'last_login_desc' %}selected{% endif %}>Conexión reciente</option>
+            <option value="last_login_asc"  {% if sort_by == 'last_login_asc' %}selected{% endif %}>Conexión antigua</option>
+        </select>
 
-        <div class="col-md-1 text-end">
-            {% if q or status_filter != 'all' or sort_by != 'created_at_desc' %}
-                <button type="button" class="btn btn-sm btn-light text-danger w-100 rounded-3" onclick="resetFiltros()" title="Limpiar Filtros">
-                    <i class="fas fa-times"></i>
-                </button>
-            {% else %}
-                <!-- Espaciador visual para mantener alineación -->
-                <button type="button" class="btn btn-sm btn-light text-muted w-100 rounded-3 disabled" style="opacity: 0.5;">
-                    <i class="fas fa-filter"></i>
-                </button>
-            {% endif %}
-        </div>
-    </form>
+        <button type="button"
+            class="filtros-reset-btn {% if q or status_filter != 'all' or sort_by != 'created_at_desc' %}activo{% endif %}"
+            onclick="resetFiltros()"
+            title="Limpiar filtros">
+            <i class="fas {% if q or status_filter != 'all' or sort_by != 'created_at_desc' %}fa-times{% else %}fa-sliders-h{% endif %}"></i>
+        </button>
+    </div>
+
+    <div class="filtros-divider"></div>
+
+    <!-- Fila 2: Pills de estado (scroll horizontal en mobile) -->
+    <div class="filtros-pills-row">
+        <button type="button"
+            class="btn-filter {% if not status_filter or status_filter == 'all' %}active{% endif %}"
+            onclick="setAdminStatus('all', this)">
+            Todos <span class="opacity-50 fw-normal" style="font-size:0.72rem;">{{ stats['total'] }}</span>
+        </button>
+        <button type="button"
+            class="btn-filter {% if status_filter == 'activos' %}active{% endif %}"
+            onclick="setAdminStatus('activos', this)">
+            🟢 Premium Activos
+        </button>
+        <button type="button"
+            class="btn-filter {% if status_filter == 'expirados' %}active{% endif %}"
+            onclick="setAdminStatus('expirados', this)">
+            🔴 Expirados
+        </button>
+        <button type="button"
+            class="btn-filter {% if status_filter == 'trial' %}active{% endif %}"
+            onclick="setAdminStatus('trial', this)">
+            ⏱️ En Prueba
+        </button>
+        <button type="button"
+            class="btn-filter {% if status_filter == 'free' %}active{% endif %}"
+            onclick="setAdminStatus('free', this)">
+            ⚪ Plan Gratis
+        </button>
+    </div>
+</form>
 </div>
 
 <!-- ===================================================
@@ -263,7 +437,7 @@
                 <thead>
                 <tr>
                     <th class="ps-3 ps-md-4 sortable-header text-nowrap" style="cursor: pointer; user-select: none;" onclick="toggleSort('username')">
-                        Usuario / Empresa 
+                        Usuario / Empresa
                         {% if sort_by == 'username_asc' %}
                             <i class="fas fa-sort-alpha-up text-primary ms-1"></i>
                         {% elif sort_by == 'username_desc' %}
@@ -274,9 +448,9 @@
                     </th>
 
                     <th class="d-none d-md-table-cell" style="width: 15%;">Rol</th>
-                    
+
                     <th class="d-none d-md-table-cell sortable-header text-nowrap" style="cursor: pointer; user-select: none; width: 15%;" onclick="toggleSort('last_login')">
-                        Última Vez 
+                        Última Vez
                         {% if sort_by == 'last_login_desc' %}
                             <i class="fas fa-sort-numeric-down-alt text-primary ms-1"></i>
                         {% elif sort_by == 'last_login_asc' %}
@@ -287,7 +461,7 @@
                     </th>
 
                     <th class="d-none d-md-table-cell sortable-header text-nowrap" style="cursor: pointer; user-select: none; width: 110px;" onclick="toggleSort('expiracion')">
-                        Estado 
+                        Estado
                         {% if sort_by == 'expiracion_asc' %}
                             <i class="fas fa-sort-amount-up text-primary ms-1"></i>
                         {% elif sort_by == 'expiracion_desc' %}
@@ -298,26 +472,23 @@
                     </th>
                     <th class="text-center pe-3 pe-md-4" style="width: 50px;"></th>
                 </tr>
-            </thead>
+                </thead>
                 <tbody>
                     {% if users %}
                         {% for u in users %}
                         {% set sub_end = u['subscription_end'] %}
-                        {% set now_obj = now %} 
-                        
-                        {# Cálculo de días restantes exacto #}
+                        {% set now_obj = now %}
+
                         {% set dias_restantes = 0 %}
                         {% set is_active = false %}
                         {% if sub_end %}
                             {% set delta = sub_end - now_obj %}
                             {% set dias_restantes = delta.days %}
-                            {# Si la fecha de fin es mayor a la de este segundo, ESTÁ ACTIVO #}
-                            {% set is_active = sub_end > now_obj %} 
+                            {% set is_active = sub_end > now_obj %}
                         {% endif %}
                         {% set plan = u['plan_type']|default('Free') %}
                         {% set estado_bd = u['estado_suscripcion']|default('Trial') %}
 
-                        {# LÓGICA DE ESTADOS PRO #}
                         {% set badge_class = 'badge-vencido' %}
                         {% set badge_text = 'Expirado' %}
 
@@ -357,7 +528,7 @@
                                     <div style="min-width: 0; flex: 1;">
 
                                         <div class="d-flex justify-content-between align-items-start mb-1">
-                                            <div class="fw-bold text-dark text-truncate pe-2" style="font-size: 0.95rem;" 
+                                            <div class="fw-bold text-dark text-truncate pe-2" style="font-size: 0.95rem;"
                                                 title="Registro: {{ u['created_at'].strftime('%d/%m/%Y') if u['created_at'] else 'N/A' }} | Restantes: {{ dias_restantes }} días">
                                                 {{ u['username'] }}
                                             </div>
@@ -455,7 +626,7 @@
                                             </button>
                                         </li>
 
-                                        {% if u['role'] <= 1 %} 
+                                        {% if u['role'] <= 1 %}
                                         <li>
                                             <a class="dropdown-item" href="{{ url_for('admin.impersonate', user_id=u['id']) }}">
                                                 <i class="fas fa-user-secret text-secondary opacity-75 me-1"></i> Entrar como cliente
@@ -510,7 +681,7 @@
                                             </form>
                                         </li>
                                         {% endif %}
-                                        
+
                                         <li><h6 class="dropdown-header">INFORMACIÓN</h6></li>
                                         <li>
                                             <a class="dropdown-item" href="javascript:void(0)" onclick="abrirModalLog('{{ u['id'] }}', '{{ u['username'] }}')">
@@ -537,27 +708,27 @@
         {% if total_pages > 1 %}
         <div class="card-footer bg-white border-0 py-3 d-flex flex-column flex-md-row justify-content-between align-items-center gap-3" style="border-top: 1px solid #eaecf0 !important;">
             <small class="text-muted fw-medium">
-                Mostrando <span class="text-dark fw-bold">{{ (page - 1) * per_page + 1 }}</span> a 
-                <span class="text-dark fw-bold">{{ [page * per_page, total_users]|min }}</span> de 
+                Mostrando <span class="text-dark fw-bold">{{ (page - 1) * per_page + 1 }}</span> a
+                <span class="text-dark fw-bold">{{ [page * per_page, total_users]|min }}</span> de
                 <span class="text-dark fw-bold">{{ total_users }}</span> usuarios
             </small>
 
             <nav aria-label="Navegación de usuarios">
                 <ul class="pagination pagination-sm m-0 gap-1">
                     <li class="page-item {{ 'disabled' if page == 1 else '' }}">
-                        <a class="page-link border-0 {{ 'text-muted' if page == 1 else 'text-dark' }} bg-transparent fw-medium" 
+                        <a class="page-link border-0 {{ 'text-muted' if page == 1 else 'text-dark' }} bg-transparent fw-medium"
                             href="{{ url_for('admin.dashboard', page=page-1, q=q, status=status_filter, sort=sort_by) if page > 1 else '#' }}" tabindex="-1">Anterior</a>
                     </li>
 
                     {% for p in range(1, total_pages + 1) %}
                     <li class="page-item {{ 'active' if p == page else '' }}">
-                        <a class="page-link {{ 'rounded-2 border-0 bg-dark text-white fw-bold shadow-sm' if p == page else 'border-0 text-muted bg-transparent fw-medium' }}" 
+                        <a class="page-link {{ 'rounded-2 border-0 bg-dark text-white fw-bold shadow-sm' if p == page else 'border-0 text-muted bg-transparent fw-medium' }}"
                             href="{{ url_for('admin.dashboard', page=p, q=q, status=status_filter, sort=sort_by) }}">{{ p }}</a>
                     </li>
                     {% endfor %}
 
                     <li class="page-item {{ 'disabled' if page == total_pages else '' }}">
-                        <a class="page-link border-0 {{ 'text-muted' if page == total_pages else 'text-dark' }} bg-transparent fw-medium" 
+                        <a class="page-link border-0 {{ 'text-muted' if page == total_pages else 'text-dark' }} bg-transparent fw-medium"
                             href="{{ url_for('admin.dashboard', page=page+1, q=q, status=status_filter, sort=sort_by) if page < total_pages else '#' }}">Siguiente</a>
                     </li>
                 </ul>
@@ -574,7 +745,7 @@
 </div>
 
 <!-- ===================================================
-     MODALES (MANTENIDOS INTACTOS)
+     MODALES (INTACTOS)
      =================================================== -->
 <div class="modal fade" id="modalReset" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered modal-sm">
@@ -629,8 +800,7 @@
                 </div>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body bg-light" id="logContentBody">
-                </div>
+            <div class="modal-body bg-light" id="logContentBody"></div>
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-white w-100 rounded-pill shadow-sm" data-bs-dismiss="modal">Cerrar</button>
             </div>
@@ -642,257 +812,288 @@
 
 {% block scripts %}
 <script>
-    // ==========================================
-    // 0. MOTOR AJAX (HTML OVER THE WIRE)
-    // ==========================================
-    async function actualizarPanelAJAX(url) {
-        const contenedor = document.getElementById('contenedor-tabla-master');
-        
-        contenedor.style.transition = 'opacity 0.2s ease';
-        contenedor.style.opacity = '0.4';
-        contenedor.style.pointerEvents = 'none';
+// ==========================================
+// MOTOR AJAX — Filtros y Tabla
+// ==========================================
+async function actualizarPanelAJAX(url) {
+    const contenedor = document.getElementById('contenedor-tabla-master');
+    contenedor.style.transition = 'opacity 0.2s ease';
+    contenedor.style.opacity = '0.4';
+    contenedor.style.pointerEvents = 'none';
 
-        try {
-            const response = await fetch(url);
-            const htmlText = await response.text();
-            
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(htmlText, 'text/html');
-            
-            // Reemplazamos toda el área de la tabla y paginación
-            contenedor.innerHTML = doc.getElementById('contenedor-tabla-master').innerHTML;
-            
-            // Reemplazamos también la barra de filtros
-            document.getElementById('filtros-panel').innerHTML = doc.getElementById('filtros-panel').innerHTML;
-            
-            window.history.pushState({path: url}, '', url);
-            vincularEventosFiltros();
-            
-        } catch (error) {
-            console.error('Error AJAX:', error);
-            window.location.href = url; // Fallback
-        } finally {
-            contenedor.style.opacity = '1';
-            contenedor.style.pointerEvents = 'auto';
-        }
-    }
+    try {
+        const response = await fetch(url);
+        const htmlText = await response.text();
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(htmlText, 'text/html');
 
-    function vincularEventosFiltros() {
-        const formFiltros = document.getElementById('formFiltrosMaster');
-        if (!formFiltros) return;
+        // Solo reemplazamos la tabla — los filtros NO se tocan para no perder estado visual
+        const nuevaTabla = doc.getElementById('contenedor-tabla-master');
+        if (nuevaTabla) contenedor.innerHTML = nuevaTabla.innerHTML;
 
-        formFiltros.addEventListener('submit', function(e) {
-            e.preventDefault();
-            const params = new URLSearchParams(new FormData(this));
-            params.set('page', '1'); // Reset de página al buscar
-            const url = `{{ url_for('admin.dashboard') }}?${params.toString()}`;
-            actualizarPanelAJAX(url);
-        });
-
-        // Autocompletado del buscador (AJAX mientras escribes)
-        const inputBuscador = formFiltros.querySelector('input[name="q"]');
-        if (inputBuscador) {
-            // Evitamos hacer 100 peticiones si escriben muy rápido usando un "debounce"
-            let timeoutBuscador = null;
-            inputBuscador.addEventListener('keyup', function(e) {
-                clearTimeout(timeoutBuscador);
-                timeoutBuscador = setTimeout(() => {
-                    formFiltros.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                }, 400); // Espera 400ms después de que dejan de teclear
-            });
+        // Sincronizamos el sort desde la respuesta (para que los íconos de columna sean correctos)
+        const nuevoForm = doc.getElementById('formFiltrosMaster');
+        if (nuevoForm) {
+            const nuevoSort = nuevoForm.querySelector('select[name="sort"]');
+            const localSort = document.querySelector('select[name="sort"]');
+            if (nuevoSort && localSort) localSort.value = nuevoSort.value;
         }
 
-        formFiltros.querySelectorAll('select').forEach(select => {
-            select.addEventListener('change', () => {
-                formFiltros.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-            });
-        });
-    }
-
-    function resetFiltros() {
-        actualizarPanelAJAX(`{{ url_for('admin.dashboard') }}`);
-    }
-
-    document.addEventListener('DOMContentLoaded', () => {
+        window.history.pushState({ path: url }, '', url);
         vincularEventosFiltros();
+
+    } catch (error) {
+        console.error('Error AJAX:', error);
+        window.location.href = url;
+    } finally {
+        contenedor.style.opacity = '1';
+        contenedor.style.pointerEvents = 'auto';
+    }
+}
+
+function buildUrl() {
+    const form = document.getElementById('formFiltrosMaster');
+    if (!form) return '{{ url_for("admin.dashboard") }}';
+    const params = new URLSearchParams(new FormData(form));
+    params.set('page', '1');
+    return `{{ url_for('admin.dashboard') }}?${params.toString()}`;
+}
+
+function vincularEventosFiltros() {
+    const formFiltros = document.getElementById('formFiltrosMaster');
+    if (!formFiltros) return;
+
+    // Prevenir submit nativo
+    formFiltros.addEventListener('submit', function(e) {
+        e.preventDefault();
+        actualizarPanelAJAX(buildUrl());
     });
 
-    // --- LÓGICA DE ORDENAMIENTO POR ENCABEZADOS ---
-    function toggleSort(campo) {
-        const selectSort = document.querySelector('select[name="sort"]');
-        if (!selectSort) return;
-
-        let ordenActual = selectSort.value;
-        let nuevoOrden = campo + '_desc'; // Por defecto bajamos
-
-        // Si ya estábamos ordenando por ese campo hacia abajo, lo invertimos hacia arriba
-        if (ordenActual === campo + '_desc') {
-            nuevoOrden = campo + '_asc';
-        }
-
-        // Asignamos el valor al select oculto y disparamos el AJAX
-        selectSort.value = nuevoOrden;
-        selectSort.dispatchEvent(new Event('change', { bubbles: true }));
+    // Buscador con debounce 380ms
+    const inputBuscador = document.getElementById('inputBuscador');
+    if (inputBuscador) {
+        let timer = null;
+        inputBuscador.addEventListener('input', function() {
+            clearTimeout(timer);
+            // Actualizar botón reset en tiempo real
+            actualizarEstadoResetBtn();
+            timer = setTimeout(() => actualizarPanelAJAX(buildUrl()), 380);
+        });
     }
 
-    // Interceptar clics de Paginación
-    document.addEventListener('click', function(e) {
-        const linkPaginacion = e.target.closest('.page-link');
-        if (linkPaginacion && linkPaginacion.href && !linkPaginacion.href.includes('javascript:')) {
-            e.preventDefault();
-            actualizarPanelAJAX(linkPaginacion.href);
-        }
-    });
-
-    // ==========================================
-    // 1. FIX PARA MENÚS CORTADOS EN LA TABLA
-    // ==========================================
-    document.addEventListener('show.bs.dropdown', function (e) {
-        let tabla = e.target.closest('.table-responsive');
-        // Aumentamos el padding para que un menú largo no se corte con el borde de la tarjeta
-        if (tabla) { tabla.style.transition = 'padding-bottom 0.2s ease'; tabla.style.paddingBottom = '280px'; }
-    });
-
-    document.addEventListener('hide.bs.dropdown', function (e) {
-        let tabla = e.target.closest('.table-responsive');
-        if (tabla) { setTimeout(() => { tabla.style.paddingBottom = '0px'; }, 200); }
-    });
-
-
-    // ==========================================
-    // 2. FUNCIONES DE MODALES (INTACTAS)
-    // ==========================================
-    function abrirReset(id, name) {
-        document.getElementById('resetUserId').value = id;
-        document.getElementById('resetUsername').innerText = name;
-        new bootstrap.Modal(document.getElementById('modalReset')).show();
+    // Sort cambia → AJAX inmediato
+    const selectSort = formFiltros.querySelector('select[name="sort"]');
+    if (selectSort) {
+        selectSort.addEventListener('change', () => {
+            actualizarEstadoResetBtn();
+            actualizarPanelAJAX(buildUrl());
+        });
     }
+}
 
-    function abrirModalDias(id, name) {
-        document.getElementById('diasUserId').value = id;
-        document.getElementById('diasUsername').innerText = name;
-        new bootstrap.Modal(document.getElementById('modalDias')).show();
+function actualizarEstadoResetBtn() {
+    const q = document.getElementById('inputBuscador')?.value || '';
+    const sort = document.querySelector('select[name="sort"]')?.value || 'created_at_desc';
+    const status = document.getElementById('hiddenStatus')?.value || 'all';
+    const hayFiltros = status !== 'all' || q !== '' || sort !== 'created_at_desc';
+
+    const btnReset = document.querySelector('.filtros-reset-btn');
+    if (btnReset) {
+        btnReset.classList.toggle('activo', hayFiltros);
+        btnReset.querySelector('i').className = `fas ${hayFiltros ? 'fa-times' : 'fa-sliders-h'}`;
     }
+}
 
-    function abrirModalLog(id, name) {
-        document.getElementById('logUsername').innerText = name;
-        const bodyContent = document.getElementById('logContentBody');
-        
-        bodyContent.innerHTML = `
-            <div class="text-center py-4">
-                <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
-                <div class="mt-2 small text-muted">Cargando actividad...</div>
-            </div>`;
-        
-        new bootstrap.Modal(document.getElementById('modalLog')).show();
+function resetFiltros() {
+    const input = document.getElementById('inputBuscador');
+    if (input) input.value = '';
 
-        fetch(`/admin/api/log/${id}`)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success && data.logs.length > 0) {
-                    let html = '<div class="px-2 pt-2">';
-                    data.logs.forEach((log, index) => {
-                        let isRecent = index === 0 ? 'border-primary' : 'border-secondary opacity-75';
-                        html += `
-                        <div class="mb-3 ps-3 border-start ${isRecent}">
-                            <div class="d-flex justify-content-between align-items-start mb-1">
-                                <span class="badge bg-white text-dark border">${log.modulo}</span>
-                                <small class="text-muted" style="font-size: 0.65rem;">${log.hace_tiempo}</small>
-                            </div>
-                            <div class="text-dark fw-medium" style="font-size: 0.85rem;">${log.accion}</div>
-                            <div class="text-muted" style="font-size: 0.7rem;">${log.fecha_texto}</div>
-                        </div>`;
-                    });
-                    html += '</div>';
-                    bodyContent.innerHTML = html;
-                } else {
-                    bodyContent.innerHTML = `
-                    <div class="text-center py-5">
-                        <i class="fas fa-folder-open fs-2 mb-3 text-secondary opacity-50"></i>
-                        <p class="m-0 text-muted small">No hay actividad registrada aún.</p>
+    const sort = document.querySelector('select[name="sort"]');
+    if (sort) sort.value = 'created_at_desc';
+
+    const hidden = document.getElementById('hiddenStatus');
+    if (hidden) hidden.value = 'all';
+
+    // Pills: activar solo "Todos"
+    document.querySelectorAll('.btn-filter').forEach((b, i) => {
+        b.classList.toggle('active', i === 0);
+    });
+
+    actualizarEstadoResetBtn();
+    actualizarPanelAJAX('{{ url_for("admin.dashboard") }}');
+}
+
+function setAdminStatus(status, btnElement) {
+    // Actualizar input oculto
+    const hidden = document.getElementById('hiddenStatus');
+    if (hidden) hidden.value = status;
+
+    // Visual inmediato en pills
+    document.querySelectorAll('.btn-filter').forEach(b => b.classList.remove('active'));
+    if (btnElement) btnElement.classList.add('active');
+
+    // Actualizar botón reset
+    actualizarEstadoResetBtn();
+
+    // Disparar AJAX
+    actualizarPanelAJAX(buildUrl());
+}
+
+// Paginación interceptada con AJAX
+document.addEventListener('click', function(e) {
+    const link = e.target.closest('.page-link');
+    if (link && link.href && !link.href.includes('javascript:')) {
+        e.preventDefault();
+        actualizarPanelAJAX(link.href);
+    }
+});
+
+// Sort por columnas (encabezados de tabla)
+function toggleSort(campo) {
+    const selectSort = document.querySelector('select[name="sort"]');
+    if (!selectSort) return;
+    const actual = selectSort.value;
+    selectSort.value = actual === `${campo}_desc` ? `${campo}_asc` : `${campo}_desc`;
+    actualizarEstadoResetBtn();
+    actualizarPanelAJAX(buildUrl());
+}
+
+// Fix dropdown cortado dentro de la tabla
+document.addEventListener('show.bs.dropdown', function(e) {
+    const tabla = e.target.closest('.table-responsive');
+    if (tabla) { tabla.style.transition = 'padding-bottom 0.2s ease'; tabla.style.paddingBottom = '280px'; }
+});
+document.addEventListener('hide.bs.dropdown', function(e) {
+    const tabla = e.target.closest('.table-responsive');
+    if (tabla) { setTimeout(() => { tabla.style.paddingBottom = '0px'; }, 200); }
+});
+
+// Init al cargar la página
+document.addEventListener('DOMContentLoaded', () => {
+    vincularEventosFiltros();
+});
+
+// ==========================================
+// MODALES
+// ==========================================
+function abrirReset(id, name) {
+    document.getElementById('resetUserId').value = id;
+    document.getElementById('resetUsername').innerText = name;
+    new bootstrap.Modal(document.getElementById('modalReset')).show();
+}
+
+function abrirModalDias(id, name) {
+    document.getElementById('diasUserId').value = id;
+    document.getElementById('diasUsername').innerText = name;
+    new bootstrap.Modal(document.getElementById('modalDias')).show();
+}
+
+function abrirModalLog(id, name) {
+    document.getElementById('logUsername').innerText = name;
+    const body = document.getElementById('logContentBody');
+    body.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary spinner-border-sm" role="status"></div>
+            <div class="mt-2 small text-muted">Cargando actividad...</div>
+        </div>`;
+    new bootstrap.Modal(document.getElementById('modalLog')).show();
+
+    fetch(`/admin/api/log/${id}`)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.logs.length > 0) {
+                let html = '<div class="px-2 pt-2">';
+                data.logs.forEach((log, index) => {
+                    const borde = index === 0 ? 'border-primary' : 'border-secondary opacity-75';
+                    html += `
+                    <div class="mb-3 ps-3 border-start ${borde}">
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <span class="badge bg-white text-dark border">${log.modulo}</span>
+                            <small class="text-muted" style="font-size:0.65rem;">${log.hace_tiempo}</small>
+                        </div>
+                        <div class="text-dark fw-medium" style="font-size:0.85rem;">${log.accion}</div>
+                        <div class="text-muted" style="font-size:0.7rem;">${log.fecha_texto}</div>
                     </div>`;
-                }
-            })
-            .catch(error => {
-                bodyContent.innerHTML = `<div class="text-center py-4 text-danger small"><i class="fas fa-exclamation-circle me-1"></i> Error al cargar datos.</div>`;
-            });
+                });
+                html += '</div>';
+                body.innerHTML = html;
+            } else {
+                body.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="fas fa-folder-open fs-2 mb-3 text-secondary opacity-50"></i>
+                    <p class="m-0 text-muted small">No hay actividad registrada aún.</p>
+                </div>`;
+            }
+        })
+        .catch(() => {
+            body.innerHTML = `<div class="text-center py-4 text-danger small"><i class="fas fa-exclamation-circle me-1"></i> Error al cargar datos.</div>`;
+        });
+}
+
+// ==========================================
+// FORMULARIOS CON CONFIRMACIÓN Y SPINNER
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+
+    function activarSpinner(form) {
+        const btn = form.querySelector('button[type="submit"]');
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando...';
+        }
     }
 
-    // ==========================================
-    // 3. MANEJO DE FORMULARIOS Y ALERTAS
-    // ==========================================
-    document.addEventListener('DOMContentLoaded', function () {
-        
-        function activarSpinner(form) {
-            const btn = form.querySelector('button[type="submit"]');
-            if(btn) {
-                btn.disabled = true;
-                btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando...';
-            }
-        }
+    document.addEventListener('submit', function(e) {
+        const form = e.target;
 
-        document.addEventListener('submit', function(e) {
-            const form = e.target;
-            
-            // Dejamos fluir el buscador (ya lo maneja nuestro AJAX arriba)
-            if(form.method.toLowerCase() !== 'post') return;
+        // Solo aplica a POST
+        if (form.method.toLowerCase() !== 'post') return;
 
-            if (form.classList.contains('require-confirm')) {
-                e.preventDefault();
+        if (form.classList.contains('require-confirm')) {
+            e.preventDefault();
 
-                const title = form.dataset.title || '¿Estás seguro?';
-                const text = form.dataset.text || 'Por favor, confirma esta acción.';
-                const icon = form.dataset.icon || 'warning';
-                const confirmBtnColor = form.dataset.btnColor || '#101828';
-                const confirmBtnText = form.dataset.btnText || 'Sí, continuar';
-
-                Swal.fire({
-                    title: title,
-                    text: text,
-                    icon: icon,
-                    showCancelButton: true,
-                    confirmButtonColor: confirmBtnColor,
-                    cancelButtonColor: '#6c757d',
-                    confirmButtonText: confirmBtnText,
-                    cancelButtonText: 'Cancelar',
-                    reverseButtons: true
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        activarSpinner(form);
-                        form.submit();
-                    }
-                });
-            } else {
-                const btn = form.querySelector('button[type="submit"]');
-                if (btn && btn.disabled) {
-                    e.preventDefault();
-                    return;
+            Swal.fire({
+                title:              form.dataset.title   || '¿Estás seguro?',
+                text:               form.dataset.text    || 'Por favor, confirma esta acción.',
+                icon:               form.dataset.icon    || 'warning',
+                showCancelButton:   true,
+                confirmButtonColor: form.dataset.btnColor || '#101828',
+                cancelButtonColor:  '#6c757d',
+                confirmButtonText:  form.dataset.btnText || 'Sí, continuar',
+                cancelButtonText:   'Cancelar',
+                reverseButtons:     true
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    activarSpinner(form);
+                    form.submit();
                 }
-                activarSpinner(form);
-            }
-        });
-
-        // ==========================================
-        // 4. FLASH MESSAGES (Notificaciones Flask)
-        // ==========================================
-        {% with messages = get_flashed_messages(with_categories = true) %}
-        {% if messages %}
-        {% for category, message in messages %}
-        
-        let swalIcon = "{{ category }}";
-        if(swalIcon === "danger") swalIcon = "error";
-
-        Swal.fire({
-            title: "{{ '¡Éxito!' if category == 'success' else 'Atención' }}",
-            text: "{{ message }}",
-            icon: swalIcon,
-            confirmButtonColor: '#101828',
-            timer: 3000,
-            timerProgressBar: true
-        });
-        {% endfor %}
-        {% endif %}
-        {% endwith %}
+            });
+        } else {
+            const btn = form.querySelector('button[type="submit"]');
+            if (btn && btn.disabled) { e.preventDefault(); return; }
+            activarSpinner(form);
+        }
     });
+
+    // ==========================================
+    // FLASH MESSAGES (Notificaciones Flask)
+    // ==========================================
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    {% for category, message in messages %}
+    let swalIcon = "{{ category }}";
+    if (swalIcon === "danger") swalIcon = "error";
+    Swal.fire({
+        title: "{{ '¡Éxito!' if category == 'success' else 'Atención' }}",
+        text: "{{ message }}",
+        icon: swalIcon,
+        confirmButtonColor: '#101828',
+        timer: 3000,
+        timerProgressBar: true
+    });
+    {% endfor %}
+    {% endif %}
+    {% endwith %}
+});
 </script>
 {% endblock %}

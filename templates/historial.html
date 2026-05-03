@@ -534,25 +534,20 @@
 </div>
 
 <div class="filter-pills animate__animated animate__fadeIn">
-    <button class="btn-filter {% if status == 'all' or not status %}active{% endif %}" 
-            data-filter="all" 
-            onclick="setStatusFilter('all')">Todas</button>
-            
-    <button class="btn-filter {% if status == 'pagado' %}active{% endif %}" 
-            data-filter="pagado" 
-            onclick="setStatusFilter('pagado')">Pagadas</button>
-            
-    <button class="btn-filter {% if status == 'anticipo' %}active{% endif %}" 
-            data-filter="anticipo" 
-            onclick="setStatusFilter('anticipo')">Con Anticipo</button>
-            
-    <button class="btn-filter {% if status == 'cotizacion' %}active{% endif %}" 
-            data-filter="cotizacion" 
-            onclick="setStatusFilter('cotizacion')">Cotizaciones</button>
-            
-    <button class="btn-filter {% if status == 'cancelada' %}active{% endif %}" 
-            data-filter="cancelada" 
-            onclick="setStatusFilter('cancelada')">Anuladas</button>
+    <button class="btn-filter {% if status == 'all' or not status %}active{% endif %}" data-filter="all"
+        onclick="setStatusFilter('all')">Todas</button>
+
+    <button class="btn-filter {% if status == 'pagado' %}active{% endif %}" data-filter="pagado"
+        onclick="setStatusFilter('pagado')">Pagadas</button>
+
+    <button class="btn-filter {% if status == 'anticipo' %}active{% endif %}" data-filter="anticipo"
+        onclick="setStatusFilter('anticipo')">Con Anticipo</button>
+
+    <button class="btn-filter {% if status == 'cotizacion' %}active{% endif %}" data-filter="cotizacion"
+        onclick="setStatusFilter('cotizacion')">Cotizaciones</button>
+
+    <button class="btn-filter {% if status == 'cancelada' %}active{% endif %}" data-filter="cancelada"
+        onclick="setStatusFilter('cancelada')">Anuladas</button>
 </div>
 
 <div class="card card-custom" id="tour-tabla-historial">
@@ -569,7 +564,8 @@
             </thead>
             <tbody>
                 {% for v in ventas %}
-                <tr class="item-venta {{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}" data-estado="{{ v['estado'] }}">
+                <tr class="item-venta {{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}"
+                    data-estado="{{ v['estado'] }}">
                     <td class="ps-3 ps-md-4">
                         <div class="fw-bold text-dark text-nowrap">#{{ v['id'] }}</div>
                         <div class="text-muted text-xs mt-1 text-nowrap">
@@ -670,6 +666,16 @@
                                         onclick="abonar({{v['id']}}, {{v['saldo_pendiente']}}, '{{v['estado']}}')">
                                         <i class="fas fa-dollar-sign text-success w-20px text-center"></i> Registrar
                                         Abono
+                                    </button>
+                                </li>
+                                {% endif %}
+
+                                {% if v['estado'] == 'cotizacion' %}
+                                <li>
+                                    <button class="dropdown-item d-flex align-items-center gap-2" type="button"
+                                        onclick="extenderExpiracion({{ v['id'] }}, '{{ (v['fecha_vencimiento'] | string)[:10] if v['fecha_vencimiento'] else '' }}')">
+                                        <i class="fas fa-calendar-plus text-warning w-20px text-center"></i> Extender
+                                        Vigencia
                                     </button>
                                 </li>
                                 {% endif %}
@@ -805,12 +811,12 @@
 <script>
     // --- 0. VARIABLES GLOBALES DE ESTADO ---
     // Tomamos el estado inicial desde Flask
-    let currentStatusFilter = '{{ status | default("all") }}'; 
+    let currentStatusFilter = '{{ status | default("all") }}';
 
     // --- 1. EL MOTOR AJAX ("HTML OVER THE WIRE") ---
     async function actualizarTablaAJAX(url) {
         const contenedor = document.getElementById('tour-tabla-historial');
-        
+
         // 1. Efecto visual de que está "pensando" (opacidad suave)
         contenedor.style.transition = 'opacity 0.2s ease';
         contenedor.style.opacity = '0.4';
@@ -832,12 +838,12 @@
             contenedor.innerHTML = nuevoContenido;
 
             // 6. Cambiar la URL del navegador sin recargar (para que funcione el botón "Atrás")
-            window.history.pushState({path: url}, '', url);
-            
+            window.history.pushState({ path: url }, '', url);
+
         } catch (error) {
             console.error('Error al actualizar por AJAX:', error);
             // Fallback: Si algo sale mal con el internet, recargamos normal
-            window.location.href = url; 
+            window.location.href = url;
         } finally {
             // 7. Devolver el color y habilitar clicks
             contenedor.style.opacity = '1';
@@ -848,7 +854,7 @@
     // --- 2. LÓGICA DE FILTRADO POR BOTONES (PILLS) ---
     function setStatusFilter(filter) {
         currentStatusFilter = filter;
-        
+
         // Cambiar el color del botón visualmente de inmediato
         document.querySelectorAll('.btn-filter').forEach(b => {
             b.classList.remove('active');
@@ -868,7 +874,7 @@
         // Interceptar el formulario de búsqueda
         const formBusqueda = document.getElementById('formBuscador');
         if (formBusqueda) {
-            formBusqueda.addEventListener('submit', function(e) {
+            formBusqueda.addEventListener('submit', function (e) {
                 e.preventDefault(); // Evitamos que la página se ponga blanca y recargue
                 const q = document.querySelector('.search-input').value;
                 const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${q}&page=1`;
@@ -879,7 +885,7 @@
 
     // Interceptar clics en la paginación usando delegación de eventos 
     // (Porque los botones de página se recrean cada que cambiamos de página)
-    document.addEventListener('click', function(e) {
+    document.addEventListener('click', function (e) {
         const linkPaginacion = e.target.closest('.page-link');
         // Si el usuario picó un número de página válido
         if (linkPaginacion && linkPaginacion.href && !linkPaginacion.href.includes('javascript:')) {
@@ -910,21 +916,22 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         modulo: 'historial',
-                        version: {{ version_tour | default(1) }}
-                    })
-                }).catch(e => console.error("Error guardando tutorial:", e));
-                {% endif %}
+                        version: {{ version_tour | default(1)
+                }}
+        })
+    }).catch (e => console.error("Error guardando tutorial:", e));
+    {% endif %}
             },
 
-            steps: [
-                { popover: { title: 'Tu Bitácora de Ventas 📖', description: 'Aquí queda registrado absolutamente todo: ventas cobradas, clientes que deben dinero y presupuestos enviados.', align: 'center' } },
-                { element: '#tour-buscador-historial', popover: { title: '1. Encuentra Rápido', description: 'Busca por nombre de cliente o directamente por número de folio para encontrar ventas pasadas en segundos.', side: "bottom", align: 'start' } },
-                { element: '#tour-tabla-historial', popover: { title: '2. Estados Claros', description: 'Revisa de un vistazo qué está PAGADO (dinero en tu bolsa), qué es ANTICIPO (falta liquidar) y qué es solo COTIZACIÓN.', side: "top", align: 'center' } },
-                { element: '#tour-acciones', popover: { title: '3. El menú mágico', description: 'Haz clic en los 3 puntitos para: ver qué materiales usaste en esa venta, cobrar lo que te deben, imprimir el ticket en PDF o anular la venta si hubo un error.', side: "left", align: 'start' } },
-                { element: '#tour-btn-dashboard', popover: { title: '4. Panel de Finanzas', description: 'Cuando quieras ver resúmenes mensuales, gráficas de ganancias y exportar tu información a Excel, haz clic aquí.', side: "bottom", align: 'end' } }
-            ]
+    steps: [
+        { popover: { title: 'Tu Bitácora de Ventas 📖', description: 'Aquí queda registrado absolutamente todo: ventas cobradas, clientes que deben dinero y presupuestos enviados.', align: 'center' } },
+        { element: '#tour-buscador-historial', popover: { title: '1. Encuentra Rápido', description: 'Busca por nombre de cliente o directamente por número de folio para encontrar ventas pasadas en segundos.', side: "bottom", align: 'start' } },
+        { element: '#tour-tabla-historial', popover: { title: '2. Estados Claros', description: 'Revisa de un vistazo qué está PAGADO (dinero en tu bolsa), qué es ANTICIPO (falta liquidar) y qué es solo COTIZACIÓN.', side: "top", align: 'center' } },
+        { element: '#tour-acciones', popover: { title: '3. El menú mágico', description: 'Haz clic en los 3 puntitos para: ver qué materiales usaste en esa venta, cobrar lo que te deben, imprimir el ticket en PDF o anular la venta si hubo un error.', side: "left", align: 'start' } },
+        { element: '#tour-btn-dashboard', popover: { title: '4. Panel de Finanzas', description: 'Cuando quieras ver resúmenes mensuales, gráficas de ganancias y exportar tu información a Excel, haz clic aquí.', side: "bottom", align: 'end' } }
+    ]
         });
-        driverObj.drive();
+    driverObj.drive();
     }
 
     {% if mostrar_tour %}
@@ -1145,5 +1152,91 @@
         let tabla = e.target.closest('.table-responsive');
         if (tabla) { setTimeout(() => { tabla.style.paddingBottom = '0px'; }, 200); }
     });
+
+    // --- 10. EXTENDER VIGENCIA DE COTIZACIÓN ---
+    function extenderExpiracion(id, fechaActual) {
+        // 1. Limpiar la fecha para forzar el formato YYYY-MM-DD que exige el navegador
+        let fechaLimpia = "";
+        if (fechaActual) {
+            if (fechaActual.includes('/')) {
+                // Si la BD lo mandó como DD/MM/YYYY (Ej. 24/05/2026)
+                let partes = fechaActual.split('/');
+                if (partes.length === 3) {
+                    fechaLimpia = `${partes[2]}-${partes[1]}-${partes[0]}`;
+                }
+            } else if (fechaActual.length >= 10) {
+                // Si la BD lo mandó como YYYY-MM-DD HH:MM:SS
+                fechaLimpia = fechaActual.substring(0, 10);
+            }
+        }
+
+        // 2. Calcular fechas mínima (mañana) y máxima (1 mes) para nuestra validación
+        const hoy = new Date();
+        const manana = new Date(hoy);
+        manana.setDate(manana.getDate() + 1);
+
+        const limiteMaximo = new Date(hoy);
+        limiteMaximo.setMonth(limiteMaximo.getMonth() + 1);
+
+        const minStr = manana.toISOString().split('T')[0];
+        const maxStr = limiteMaximo.toISOString().split('T')[0];
+
+        // 3. Lanzar SweetAlert (Quitamos min y max del HTML para que no oculte fechas previas)
+        Swal.fire({
+            title: 'Extender Cotización',
+            html: `
+                <div class="text-muted text-sm mb-3">Selecciona la nueva fecha límite de validez. Máximo permitido: 1 mes.</div>
+                <input type="date" id="nuevaFechaInput" class="form-control rounded-3" value="${fechaLimpia}">
+            `,
+            showCancelButton: true,
+            confirmButtonText: 'Actualizar Fecha',
+            cancelButtonText: 'Cancelar',
+            confirmButtonColor: '#ff4a5a',
+            customClass: {
+                confirmButton: 'rounded-pill px-4',
+                cancelButton: 'rounded-pill px-4 text-dark'
+            },
+            preConfirm: () => {
+                const fechaElegida = document.getElementById('nuevaFechaInput').value;
+                if (!fechaElegida) {
+                    Swal.showValidationMessage('Por favor selecciona una fecha');
+                    return false;
+                }
+                // Aquí aplicamos la regla de negocio de forma segura
+                if (fechaElegida < minStr || fechaElegida > maxStr) {
+                    Swal.showValidationMessage('La fecha debe estar entre mañana y máximo 1 mes');
+                    return false;
+                }
+                return fechaElegida;
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const nuevaFecha = result.value;
+
+                fetch('/api/actualizar_expiracion_cotizacion', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ id: id, nueva_fecha: nuevaFecha })
+                })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.success) {
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Vigencia Extendida',
+                                showConfirmButton: false,
+                                timer: 1500
+                            }).then(() => location.reload());
+                        } else {
+                            Swal.fire('Error', data.error || 'Ocurrió un problema al actualizar', 'error');
+                        }
+                    })
+                    .catch(err => {
+                        console.error(err);
+                        Swal.fire('Error', 'Fallo de conexión con el servidor', 'error');
+                    });
+            }
+        });
+    }
 </script>
 {% endblock %}

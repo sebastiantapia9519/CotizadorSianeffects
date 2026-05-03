@@ -460,13 +460,13 @@ scheduler = APScheduler()
 scheduler.init_app(app)
 scheduler.start()
 
-# Job 1: Limpieza general — 12 AM y 12 PM todos los días
+# Job 1: Limpieza general — 12 AM todos los días
 if not scheduler.get_job('Limpieza'):
     scheduler.add_job(
         id='Limpieza',
         func=tarea_limpieza,
         trigger='cron',
-        hour='0,12',
+        hour='0',
         minute=0,
         replace_existing=True
     )
