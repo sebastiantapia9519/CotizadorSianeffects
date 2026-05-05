@@ -575,6 +575,7 @@ from routes.invitaciones_clientes import clientes_bp
 from routes.dashboard import dashboard_bp
 from routes.configuracion_bp import config_bp
 from routes.user_dashboard import user_dash_bp
+from routes.chatbot_equipos import chatbot_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
@@ -589,7 +590,7 @@ app.register_blueprint(clientes_bp)
 app.register_blueprint(dashboard_bp)
 app.register_blueprint(config_bp)
 app.register_blueprint(user_dash_bp)
-
+app.register_blueprint(chatbot_bp)
 
 # =============================================================================
 # MIDDLEWARE — Anti-caché

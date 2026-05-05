@@ -313,6 +313,112 @@
     </div>
 </div>
 
+<!-- CHATBOT FLOTANTE (solo visible en esta página) -->
+<div id="chatbot-container" class="chatbot-widget">
+    <button id="chatbot-toggle" class="chatbot-fab">
+        <i class="fas fa-robot"></i>
+    </button>
+    
+    <div id="chatbot-panel" class="chatbot-panel d-none">
+        <div class="chatbot-header">
+            <h6 class="mb-0 fw-bold">
+                <i class="fas fa-magic-wand-sparkles me-2"></i>SianBot
+            </h6>
+            <button id="chatbot-close" class="btn-close btn-close-white"></button>
+        </div>
+        
+        <div id="chatbot-messages" class="chatbot-messages">
+            <div class="message bot-message">
+                <div class="message-content">
+                    👋 ¡Hola! Soy SianBot, tu asistente de costos.<br><br>
+                    Dime qué equipo tienes (ej: <i>"Tengo una Cricut Maker 4"</i>) y te ayudo a calcular cuánto cobrar por desgaste.
+                </div>
+            </div>
+        </div>
+        
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbot-input" placeholder="Ej: Tengo una plancha de calor..." class="form-control">
+            <button id="chatbot-send" class="btn btn-sian">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<style>
+.chatbot-widget { position: fixed; bottom: 20px; right: 20px; z-index: 1050; }
+
+.chatbot-fab {
+    width: 60px; height: 60px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--sian-primary), #ff6b7a);
+    border: none; color: white; font-size: 1.5rem;
+    box-shadow: 0 4px 20px rgba(255, 74, 90, 0.4);
+    transition: all 0.3s; cursor: pointer;
+}
+.chatbot-fab:hover { transform: translateY(-3px); box-shadow: 0 6px 25px rgba(255, 74, 90, 0.6); }
+
+.chatbot-panel {
+    position: absolute; bottom: 80px; right: 0;
+    width: 380px; max-width: calc(100vw - 40px);
+    height: 550px; max-height: calc(100vh - 120px);
+    background: white; border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+    display: flex; flex-direction: column; overflow: hidden;
+}
+
+.chatbot-header {
+    background: linear-gradient(135deg, var(--sian-primary), #ff6b7a);
+    color: white; padding: 16px 20px;
+    display: flex; justify-content: space-between; align-items: center;
+}
+
+.chatbot-messages {
+    flex: 1; overflow-y: auto; padding: 20px;
+    background: #f8f9fa; display: flex; flex-direction: column; gap: 12px;
+}
+
+.message { display: flex; max-width: 80%; }
+.bot-message { align-self: flex-start; }
+.user-message { align-self: flex-end; }
+
+.message-content {
+    background: white; padding: 12px 16px; border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-size: 0.9rem;
+    line-height: 1.5;
+}
+.user-message .message-content {
+    background: var(--sian-primary); color: white;
+}
+
+.chatbot-input-area {
+    padding: 16px; background: white; border-top: 1px solid #eee;
+    display: flex; gap: 10px;
+}
+.chatbot-input-area input {
+    flex: 1; border: 1px solid #ddd; border-radius: 20px;
+    padding: 10px 16px; font-size: 0.9rem;
+}
+.chatbot-input-area button {
+    border-radius: 50%; width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+}
+
+/* Modo oscuro */
+[data-bs-theme="dark"] .chatbot-panel { background: #1e293b; }
+[data-bs-theme="dark"] .chatbot-messages { background: #0f172a; }
+[data-bs-theme="dark"] .message-content { background: #334155; color: #f8fafc; }
+[data-bs-theme="dark"] .user-message .message-content { background: var(--sian-primary); }
+[data-bs-theme="dark"] .chatbot-input-area { background: #1e293b; border-color: #334155; }
+[data-bs-theme="dark"] .chatbot-input-area input {
+    background: #0f172a; border-color: #334155; color: #f8fafc;
+}
+
+@media (max-width: 576px) {
+    .chatbot-panel { width: calc(100vw - 20px); height: calc(100vh - 100px); }
+    .chatbot-widget { bottom: 10px; right: 10px; }
+}
+</style>
+
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -487,6 +593,79 @@
             window.history.replaceState(null, null, window.location.pathname);
         }
     });
+
+
+    // ===== CHATBOT LOGIC =====
+const chatToggle = document.getElementById('chatbot-toggle');
+const chatPanel = document.getElementById('chatbot-panel');
+const chatClose = document.getElementById('chatbot-close');
+const chatInput = document.getElementById('chatbot-input');
+const chatSend = document.getElementById('chatbot-send');
+const chatMessages = document.getElementById('chatbot-messages');
+
+let chatAbierto = false;
+
+chatToggle.addEventListener('click', () => {
+    chatPanel.classList.toggle('d-none');
+    chatAbierto = !chatAbierto;
+});
+
+chatClose.addEventListener('click', () => {
+    chatPanel.classList.add('d-none');
+    chatAbierto = false;
+});
+
+chatSend.addEventListener('click', enviarMensaje);
+chatInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') enviarMensaje();
+});
+
+function enviarMensaje() {
+    const mensaje = chatInput.value.trim();
+    if (!mensaje) return;
+    
+    // Mostrar mensaje del usuario
+    agregarMensaje(mensaje, 'user');
+    chatInput.value = '';
+    
+    // Mostrar indicador de "escribiendo..."
+    const loadingId = agregarMensaje('Pensando...', 'bot', true);
+    
+    // Llamar al backend
+    fetch('/api/chat-equipos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: mensaje })
+    })
+    .then(r => r.json())
+    .then(data => {
+        // Quitar el "pensando..."
+        document.getElementById(loadingId).remove();
+        
+        if (data.reply) {
+            agregarMensaje(data.reply, 'bot');
+        } else {
+            agregarMensaje('❌ Hubo un error, intenta de nuevo.', 'bot');
+        }
+    })
+    .catch(() => {
+        document.getElementById(loadingId).remove();
+        agregarMensaje('❌ No pude conectar con el servidor.', 'bot');
+    });
+}
+
+function agregarMensaje(texto, tipo, esLoading = false) {
+    const msgDiv = document.createElement('div');
+    const msgId = 'msg-' + Date.now();
+    msgDiv.id = msgId;
+    msgDiv.className = `message ${tipo === 'user' ? 'user-message' : 'bot-message'}`;
+    msgDiv.innerHTML = `<div class="message-content">${texto}</div>`;
+    
+    chatMessages.appendChild(msgDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    return msgId;
+}
 </script>
 {% endblock %}
 {% endblock %}
