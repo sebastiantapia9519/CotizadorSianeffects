@@ -94,7 +94,7 @@ def dashboard():
             params.extend([f'%{search_query}%', f'%{search_query}%'])
 
         if status_filter == 'expirados':
-            base_where += " AND u.plan_type != 'Free' AND u.subscription_end < %s"
+            base_where += " AND u.plan_type != 'Free' OR u.subscription_end < %s"
             params.append(ahora_utc)
         elif status_filter == 'activos':
             base_where += " AND u.plan_type != 'Free' AND u.subscription_end >= %s"
