@@ -35,8 +35,8 @@ REGLAS ESTRICTAS:
 
 FORMATO DE RESPUESTA:
 "[Equipo]: $X-Y MXN/uso (~$A-B USD)
-- Por pieza: ~$C MXN
-- Setup (si aplica): ~$D MXN
+- Uso equipo: ~$C MXN
+- Extras (opcionales): ~$D
 ¿Ok o ajustamos?"
 
 Sé directo, amigable, sin rodeos."""
