@@ -608,5 +608,237 @@ Cuatro tipos de notificaciones en el Navbar:
   4. Grace period: Banner de urgencia cuando la suscripción venció ese día
 
 ================================================================================
+18. ASISTENTE INTELIGENTE DE COSTOS (CHATBOT IA)
+================================================================================
+
+PROPÓSITO
+---------
+Asistente conversacional integrado en el módulo de Equipos (/equipos) que ayuda
+a los usuarios a calcular el costo de desgaste correcto para su maquinaria,
+considerando consumo eléctrico, vida útil y mantenimiento prorrateado.
+
+ARQUITECTURA TÉCNICA
+--------------------
+- Backend:        Flask Blueprint (routes/chatbot_equipos.py)
+- Proveedor IA:   Google Gemini 2.5 Flash (google-genai SDK)
+- Modelo:         gemini-2.5-flash (API HTTP, puerto 443)
+- Contexto:       Conversacional con historial en Flask session
+- Interfaz:       Widget flotante (HTML/CSS/JS vanilla, sin dependencias)
+- Rate Limiting:  10 mensajes por minuto por sesión (protección anti-spam)
+- Timeout:        10 segundos máximo por respuesta
+
+STACK ESPECÍFICO
+----------------
+Componente              Detalle
+----------------------  -------------------------------------------------------
+SDK Python              google-genai (v0.8+)
+Variable de entorno     GEMINI_API_KEY (obtenida en ai.google.dev)
+Endpoint                /api/chat-equipos (POST)
+Reset de sesión         /api/chat-equipos/reset (POST)
+Almacenamiento          Flask session (historial últimos 20 mensajes)
+Renderizado UI          Solo visible en template equipos.html
+
+CONFIGURACIÓN EN RAILWAY
+-------------------------
+Variable                Valor
+----------------------  -------------------------------------------------------
+GEMINI_API_KEY          Clave API de Google AI Studio (gratuita hasta 1,500 req/día)
+
+LÍMITES DE LA API GRATUITA
+---------------------------
+- Requests diarios:     1,500 (suficiente para ~100 usuarios/día con 15 msg c/u)
+- Tokens por minuto:    1,000,000 (entrada + salida)
+- Requests por minuto:  15 (por proyecto, no por usuario)
+- Costo si se excede:   $0.075 USD por 1M tokens (Gemini Flash)
+
+PROMPT ENGINEERING Y REGLAS DE NEGOCIO
+---------------------------------------
+El sistema prompt (SYSTEM_PROMPT) define el comportamiento del asistente:
+
+Directivas clave:
+  - Máximo 4 líneas de respuesta (evita verbosidad)
+  - Respuesta directa al precio sugerido en MXN (ej: "$5-8 MXN/uso")
+  - Solo 2-3 bullets explicativos (luz, desgaste, setup si aplica)
+  - Asume uso moderado de 50-100 piezas/mes sin preguntar
+  - NO incluir materiales consumibles (film, vinil, tinta) en el costo
+  - Distribuir desgaste del equipo entre 100-300 piezas/mes (costo bajo por pieza)
+  - Nunca negar la existencia de modelos nuevos (estimar basado en similares)
+  - Soporte multiidioma y conversión automática de moneda (MXN + USD/EUR si aplica)
+  - Temperatura 0.5 (balance entre creatividad y consistencia)
+  - Max output tokens: sin límite estricto (controlado por el prompt)
+
+Ejemplo de interacción esperada:
+  Usuario:   "Tengo una Cricut Maker 4"
+  Asistente: "Cricut Maker 4: $8-12 MXN/uso
+              • Luz: ~$2
+              • Desgaste cuchilla: ~$6
+              • Tapete: ~$2
+              ¿Ok o ajustamos?"
+
+FLUJO DE CONVERSACIÓN
+----------------------
+1. Usuario hace clic en botón flotante (icono de robot, esquina inferior derecha)
+2. Panel de chat se despliega (380px × 550px, responsive en móviles)
+3. Mensaje de bienvenida predefinido con ejemplo de uso
+4. Usuario escribe consulta (ej: "Tengo una plancha de calor Cricut")
+5. Frontend muestra indicador "Pensando..."
+6. Backend consulta Gemini con historial de últimos 6 mensajes
+7. Respuesta se agrega al chat y al historial de sesión
+8. Usuario puede continuar preguntando o cerrar el widget
+
+GESTIÓN DE HISTORIAL Y CONTEXTO
+---------------------------------
+- session['chat_history']: Lista de diccionarios [{role, content}, ...]
+- Roles: 'Usuario' y 'Asistente'
+- Ventana de contexto: Últimos 6 mensajes (3 intercambios) enviados a Gemini
+- Capacidad total: 20 mensajes almacenados (10 intercambios), rotación FIFO
+- Limpieza: POST /api/chat-equipos/reset borra el historial completo
+- Persistencia: Durante la sesión Flask (31 días si permanente)
+
+ARQUITECTURA DEL WIDGET (FRONTEND)
+-----------------------------------
+Componente              Descripción
+----------------------  -------------------------------------------------------
+chatbot-toggle          Botón flotante con gradiente sian-primary (60×60px)
+chatbot-panel           Panel de chat desplegable (380px ancho, responsive)
+chatbot-header          Barra superior con título y botón de cierre
+chatbot-messages        Área scrollable de mensajes (flex-grow, fondo #f8f9fa)
+chatbot-input-area      Input de texto + botón de envío
+message-content         Burbujas de chat (blancas para bot, primary para usuario)
+
+Estados visuales:
+  - Bot escribiendo:    Mensaje temporal "Pensando..." (se reemplaza al recibir respuesta)
+  - Auto-scroll:        chatMessages.scrollTop = scrollHeight (siempre al último mensaje)
+  - Modo oscuro:        Soporte completo con [data-bs-theme="dark"]
+
+MANEJO DE ERRORES Y TIMEOUT
+-----------------------------
+Tipo de error                   Respuesta                                    Código HTTP
+------------------------------  -------------------------------------------  -----------
+Mensaje vacío                   {'error': 'Mensaje vacío'}                   400
+Timeout de API (>10s)           "❌ No pude conectar, intenta de nuevo"      500
+Cuota excedida (Gemini)         "Límite de API alcanzado. Intenta más tarde" 429
+Error de configuración          "Configuración de API inválida"              500
+Error genérico                  "Error del servidor. Intenta de nuevo"       500
+
+Todos los errores se registran en:
+  - app.logger (para Railway logs)
+  - print() para debug local
+
+INTEGRACIÓN CON EL MÓDULO DE EQUIPOS
+--------------------------------------
+El chatbot NO auto-rellena el formulario de equipos (por diseño).
+Flujo recomendado:
+  1. Usuario consulta: "¿Cuánto cobrar por mi Cricut Maker 4?"
+  2. Bot responde: "$8-12 MXN/uso" con desglose
+  3. Usuario cierra el chat
+  4. Usuario hace clic en "Nuevo Equipo"
+  5. Usuario ingresa manualmente el costo sugerido
+
+Posible mejora futura (no implementada):
+  - Botón "Usar este precio" en el chat que pre-llene el formulario
+  - Requiere JavaScript adicional para comunicar datos entre widget y modal
+
+SEGURIDAD Y PRIVACIDAD
+----------------------
+- API Key nunca expuesta al frontend (server-side only)
+- Historial NO se almacena en BD (solo en session, volátil)
+- No se registra contenido de mensajes en logs_actividad (LFPDPPP)
+- Rate limiting básico: máximo 10 mensajes por minuto por sesión
+  (implementable con session['last_requests'] y datetime.timedelta)
+
+MODO OSCURO
+-----------
+Soporte completo con selectores CSS:
+  [data-bs-theme="dark"] .chatbot-panel { background: #1e293b; }
+  [data-bs-theme="dark"] .message-content { background: #334155; color: #f8fafc; }
+  [data-bs-theme="dark"] .user-message .message-content { background: var(--sian-primary); }
+
+RESPONSIVIDAD (MOBILE-FIRST)
+-----------------------------
+@media (max-width: 576px):
+  - Panel ocupa casi pantalla completa: calc(100vw - 20px) × calc(100vh - 100px)
+  - Botón flotante en esquina inferior derecha (bottom: 10px, right: 10px)
+  - Input con padding táctil (10px vertical mínimo)
+  - Auto-scroll suave en iOS (scroll-behavior: smooth)
+
+DEPENDENCIAS EXTERNAS
+----------------------
+Ninguna. El widget usa:
+  - Font Awesome (ya cargado en layout.html para iconos)
+  - Bootstrap 5 (ya cargado, para clases de utilidad)
+  - Fetch API nativa (sin Axios ni jQuery)
+
+ESCALABILIDAD Y ROADMAP
+------------------------
+Fase actual (MVP):
+  - Solo en módulo de Equipos
+  - Gratis hasta 1,500 requests/día
+  - Sin persistencia de conversaciones
+
+Fase 2 (Expansión):
+  - Extender a Materiales y Recetas
+  - Historial persistente en BD (tabla chat_history)
+  - Analytics: equipos más consultados, precios promedio sugeridos
+
+Fase 3 (Monetización):
+  - Upgrade a Gemini Pro para respuestas más complejas
+  - Assistant API de OpenAI para lógica de costos avanzada
+  - Auto-fill del formulario desde el chat
+
+LOGS Y MONITOREO
+----------------
+Eventos registrados en app.logger:
+  CHATBOT_REQUEST       Usuario envió mensaje (solo timestamp, no contenido)
+  CHATBOT_ERROR         Fallo de API, timeout o error de parsing
+  CHATBOT_QUOTA         Cuota de Gemini excedida (trigger de alerta)
+
+No se registran mensajes de usuario ni respuestas del bot para cumplir LFPDPPP.
+
+COMANDOS DE DEBUG
+-----------------
+Endpoint de reset manual (útil para pruebas):
+  curl -X POST http://localhost:5000/api/chat-equipos/reset \
+    -H "Cookie: session=YOUR_SESSION_COOKIE"
+
+Verificar historial de sesión (Python shell):
+  from flask import session
+  print(session.get('chat_history', []))
+
+CASOS DE USO CUBIERTOS
+-----------------------
+1. Usuario nuevo sin conocimientos técnicos
+   → "Tengo una plancha de calor, ¿cuánto cobro?"
+   → Bot da precio estimado con desglose simple
+
+2. Usuario experto quiere validar su cálculo
+   → "Cobro $15 por uso de mi Cricut, ¿está bien?"
+   → Bot valida y sugiere ajuste si aplica
+
+3. Equipo desconocido o muy nuevo
+   → "Tengo una Cricut Maker 4" (modelo 2024)
+   → Bot NO niega existencia, estima basado en Maker 3
+
+4. Usuario en otro país
+   → "I have a heat press" (inglés)
+   → Bot responde en inglés con MXN + USD
+
+5. Consulta fuera de alcance
+   → "¿Es buena marca Cricut?"
+   → Bot declina amablemente y redirige al tema de costos
+
+TROUBLESHOOTING COMÚN
+----------------------
+Síntoma                         Causa probable                  Solución
+------------------------------  ------------------------------  ------------------------------
+Bot no responde                 GEMINI_API_KEY no configurada   Verificar variable en Railway
+"Pensando..." infinito          Timeout de API >10s             Revisar conectividad/firewall
+Respuestas en inglés            Prompt no cargado correctamente Verificar SYSTEM_PROMPT
+Historial no persiste           session.modified = True falta   Ya implementado en código actual
+Cuota excedida                  >1,500 requests en 24 hrs       Esperar reset diario o pagar
+
+================================================================================
+
+================================================================================
 FIN DEL MANUAL
 ================================================================================
