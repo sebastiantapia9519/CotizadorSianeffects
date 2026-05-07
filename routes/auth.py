@@ -213,11 +213,6 @@ def registro():
 
     # Validación de formato de username:
     # Solo letras minúsculas, números y guion bajo. Entre 3 y 20 caracteres.
-    # Esto previene usernames con caracteres raros o inyecciones visuales.
-    if not re.match(r'^[a-z0-9_]{3,20}$', username):
-        flash('El usuario solo puede tener letras, números y guion bajo (3-20 caracteres).', 'error')
-        return render_template('registro.html')
-
     # Validación de contraseña: mínimo 6 caracteres y que coincidan los campos
     if len(password) < 6 or password != confirm_password:
         flash('Revisa que la contraseña sea válida y coincida en ambos campos.', 'error')
