@@ -1,3 +1,4 @@
+from google.genai._interactions.types import interaction_create_params
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify, send_from_directory, abort, current_app
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
@@ -5,6 +6,7 @@ import pandas as pd
 import io
 import json
 import math
+import os
 from utils.datetime_utils import now_utc, utc_to_local, ahora_sql
 from db import get_db_connection as get_db
 from dateutil import parser
@@ -86,7 +88,7 @@ def procesar_fila_fechas(fila_db):
     return item
 
 @main_bp.route('/cotizador')
-@subscription_required
+@login_required
 def cotizador():
     conn = get_db()
     cursor = conn.cursor()
@@ -101,8 +103,18 @@ def cotizador():
         mostrar_tour = debe_mostrar_tutorial(uid, 'cotizador')
         version_tour = obtener_version_tutorial('cotizador')
 
+        # -------------------------------------------------------------
+        # CONSULTA DE CONFIGURACIÓN CON BLINDAJE (ANTI-CRASH)
+        # -------------------------------------------------------------
         cursor.execute('SELECT * FROM configuracion WHERE user_id=%s', (uid,))
         config = cursor.fetchone()
+        
+        # MAGIA DEFENSIVA: Si el usuario (viejo o con error) no tiene configuración, 
+        # le pasamos un diccionario vacío en lugar de "None".
+        # Así, los "config.get()" del HTML funcionarán perfecto y usarán sus valores por defecto.
+        if not config:
+            config = {}
+        # -------------------------------------------------------------
         
         cursor.execute('SELECT * FROM materiales WHERE user_id=%s ORDER BY nombre ASC', (uid,))
         materiales = cursor.fetchall()
@@ -158,7 +170,7 @@ def tutorial_completado():
 
 # --- API PARA CARGAR RECETA EN EL COTIZADOR ---
 @main_bp.route('/api/receta/<int:id>')
-@subscription_required
+@login_required
 def obtener_receta_api(id):
     conn = get_db()
     cursor = conn.cursor()
@@ -190,7 +202,8 @@ def obtener_receta_api(id):
         cursor.close()
         conn.close()
 
-# --- GUARDAR VENTA (LA FUNCION MAS CRITICA) ---
+
+# --- GUARDAR VENTA ---
 @main_bp.route('/guardar_venta', methods=['POST'])
 @subscription_required
 def guardar_venta():
@@ -250,7 +263,11 @@ def guardar_venta():
 
         pagado_historico = 0.0
         if venta_id:
-            cursor.execute("SELECT monto_pagado FROM ventas WHERE id=%s", (venta_id,))
+            cursor.execute("""
+                SELECT monto_pagado
+                FROM ventas
+                WHERE id=%s AND user_id=%s
+            """, (venta_id, u_id))
             row = cursor.fetchone()
             if row:
                 pagado_historico = float(row['monto_pagado'])
@@ -259,6 +276,15 @@ def guardar_venta():
 
         subtotal_calculado = 0.0
         costo_total_calculado = 0.0
+
+        # --- COSTOS OPERATIVOS (PORCENTAJE) ---
+        cursor.execute("""
+            SELECT porcentaje_gastos_operativos 
+            FROM configuracion 
+            WHERE user_id=%s
+        """, (u_id,))
+        config_row = cursor.fetchone()
+        porcentaje_operativo = float(config_row['porcentaje_gastos_operativos']) if config_row and config_row['porcentaje_gastos_operativos'] else 10.0
 
         for item in items:
             cantidad = float(item.get('cantidad', 0))
@@ -287,6 +313,12 @@ def guardar_venta():
             tax_amount_calculado = base_imponible * (tax_percent / 100)
             tax_engine = f"IVA {int(tax_percent)}%" if tax_percent.is_integer() else f"IVA {tax_percent}%"
 
+        # Calculamos el costo operativo basado en el costo base de los productos
+        costo_operativo_de_esta_venta = costo_total_calculado * (porcentaje_operativo / 100.0)
+        
+        # Se lo sumamos al costo total para saber tu costo real final
+        costo_total_calculado += costo_operativo_de_esta_venta
+
         total_calculado = base_imponible + tax_amount_calculado
         monto_pagado_real = min(monto_pagado_total, total_calculado)
         saldo_pendiente_real = total_calculado - monto_pagado_real
@@ -304,14 +336,22 @@ def guardar_venta():
             cursor.execute('''
                 UPDATE ventas 
                 SET cliente=%s, subtotal=%s, envio=%s, descuento_porcentaje=%s, descuento_monto=%s,
-                    impuestos=%s, tax_engine=%s,
-                    total=%s, costo_total=%s, estado=%s, monto_pagado=%s, saldo_pendiente=%s, fecha=%s
+                impuestos=%s, tax_engine=%s,
+                total=%s, costo_total=%s, costo_fijo_prorrateado=%s,
+                estado=%s, monto_pagado=%s, saldo_pendiente=%s, fecha=%s
                 WHERE id=%s AND user_id=%s
             ''', (
-                cliente, subtotal_calculado, costo_envio, descuento_pct, descuento_monto,
-                tax_amount_calculado, tax_engine,
-                total_calculado, costo_total_calculado, estado, monto_pagado_real, saldo_pendiente_real,
-                fecha_actual, venta_id, u_id
+                    cliente, subtotal_calculado, costo_envio, descuento_pct, descuento_monto,
+                    tax_amount_calculado, tax_engine,
+                    total_calculado,
+                    costo_total_calculado,
+                    round(costo_operativo_de_esta_venta, 2),
+                    estado,
+                    monto_pagado_real,
+                    saldo_pendiente_real,
+                    fecha_actual,
+                    venta_id,
+                    u_id
             ))
             cursor.execute('DELETE FROM venta_detalles WHERE venta_id=%s', (venta_id,))
         else:
@@ -320,17 +360,29 @@ def guardar_venta():
                     user_id, fecha, cliente, subtotal, envio, 
                     descuento_porcentaje, descuento_monto, 
                     impuestos, tax_engine,
-                    total, costo_total, estado, 
+                    total, costo_total, costo_fijo_prorrateado,
+                    estado, 
                     monto_pagado, saldo_pendiente, fecha_vencimiento
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             ''', (
-                u_id, fecha_actual, cliente, subtotal_calculado, costo_envio, 
-                descuento_pct, descuento_monto, 
-                tax_amount_calculado, tax_engine,
-                total_calculado, costo_total_calculado, estado, 
-                monto_pagado_real, saldo_pendiente_real, fecha_vencimiento
+                    u_id,
+                    fecha_actual,
+                    cliente,
+                    subtotal_calculado,
+                    costo_envio,
+                    descuento_pct,
+                    descuento_monto,
+                    tax_amount_calculado,
+                    tax_engine,
+                    total_calculado,
+                    costo_total_calculado,
+                    round(costo_operativo_de_esta_venta, 2),
+                    estado,
+                    monto_pagado_real,
+                    saldo_pendiente_real,
+                    fecha_vencimiento
             ))
             venta_id = cursor.fetchone()['id']
         
@@ -457,7 +509,7 @@ def actualizar_venta():
 
 # --- RUTAS DE VISUALIZACIÓN ---
 @main_bp.route('/historial')
-@subscription_required
+@login_required
 def historial():
     conn = get_db()
     cursor = conn.cursor()
@@ -566,10 +618,15 @@ def terminos(): return render_template('terminos.html')
 def privacidad(): return render_template('privacidad.html')
 
 @main_bp.route('/plan_vencido')
-def plan_vencido(): return render_template('plan_vencido.html')
+def plan_vencido(): 
+    return render_template(
+        'plan_vencido.html',
+        precio_mensual=os.getenv('STRIPE_PRICE_MENSUAL'),
+        precio_anual=os.getenv('STRIPE_PRICE_ANUAL')
+    )
 
 @main_bp.route('/api/get_cotizacion/<int:id>')
-@subscription_required
+@login_required
 def get_cotizacion(id):
     conn = get_db()
     cursor = conn.cursor()

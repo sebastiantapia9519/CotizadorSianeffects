@@ -1,6 +1,6 @@
 from flask import Blueprint, request, session, jsonify, render_template, redirect, url_for, current_app
 import json
-from helpers import login_required
+from helpers import login_required, subscription_required
 from db import get_db_connection as get_db
 from utils.datetime_utils import now_utc, ahora_sql
 
@@ -20,6 +20,9 @@ def materiales():
 
     # --- LÓGICA PARA GUARDAR O EDITAR (MÉTODO POST) ---
     if request.method == 'POST':
+        if session.get('role', 0) < 1:
+            return jsonify({"status": "error", "message": "Acceso de Solo Lectura. Renueva tu plan PRO para modificar materiales.", "code": "PRO_REQUIRED"}), 403
+            
         conn = get_db()
         cursor = conn.cursor()
         try:
@@ -135,7 +138,7 @@ def materiales():
                            version_tour=version_tour)
 
 @inventory_bp.route('/materiales/eliminar/<int:id>')
-@login_required
+@subscription_required
 def eliminar_material(id):
     user_id = session['user_id']
     conn = get_db()
@@ -177,6 +180,9 @@ def equipos():
     u_name = session.get('username', 'Anonimo')
     
     if request.method == 'POST':
+        if session.get('role', 0) < 1:
+            return jsonify({"status": "error", "message": "Acceso de Solo Lectura. Renueva tu plan PRO para modificar equipos.", "code": "PRO_REQUIRED"}), 403
+            
         conn = get_db()
         cursor = conn.cursor()
         try:
@@ -245,7 +251,7 @@ def equipos():
                            version_tour=version_tour)
 
 @inventory_bp.route('/equipos/eliminar/<int:id>')
-@login_required
+@subscription_required
 def eliminar_equipo(id):
     user_id = session['user_id']
     conn = get_db()
@@ -290,6 +296,11 @@ def recetas():
     u_name = session.get('username', 'Anonimo')
     
     if request.method == 'POST':
+        if session.get('role', 0) < 1:
+            from flask import flash
+            flash("Acceso de Solo Lectura. Renueva tu plan PRO para modificar recetas.", "warning")
+            return redirect(url_for('inventory.recetas'))
+            
         conn = get_db()
         cursor = conn.cursor()
         try:
@@ -372,7 +383,7 @@ def recetas():
                            version_tour=version_tour)
 
 @inventory_bp.route('/guardar_receta', methods=['POST'])
-@login_required
+@subscription_required
 def guardar_receta():
     user_id = session['user_id']
     u_name = session.get('username', 'Anonimo')
@@ -436,7 +447,7 @@ def guardar_receta():
         conn.close()
 
 @inventory_bp.route('/recetas/eliminar/<int:id>')
-@login_required
+@subscription_required
 def eliminar_receta(id):
     user_id = session['user_id']
     u_name = session.get('username', 'Anonimo')
@@ -462,7 +473,7 @@ def eliminar_receta(id):
 # 5. REGISTRAR COMPRA (STOCK)
 # =========================
 @inventory_bp.route('/api/registrar_compra', methods=['POST'])
-@login_required
+@subscription_required
 def registrar_compra():
     user_id = session['user_id']
     u_name = session.get('username', 'Anonimo')
@@ -553,7 +564,7 @@ def registrar_compra():
 # 6. REGISTRAR MERMA (AJUSTE NEGATIVO)
 # =========================
 @inventory_bp.route('/api/registrar_merma', methods=['POST'])
-@login_required
+@subscription_required
 def registrar_merma():
     user_id = session['user_id']
     u_name = session.get('username', 'Anonimo')

@@ -661,6 +661,18 @@ def inject_user_config():
     # Retorna la configuración por defecto para Jobs en segundo plano o usuarios no logueados
     return {'config': default_config}
 
+#============================================================================
+# CONTEXT PROCESSOR — Inyecta IDs de Stripe en TODAS las plantillas HTML
+#============================================================================
+
+@app.context_processor
+def inject_stripe_prices():
+    """Hace que los IDs de Stripe estén disponibles en todos los templates HTML"""
+    return dict(
+        stripe_mensual=os.getenv('STRIPE_PRICE_MENSUAL'),
+        stripe_anual=os.getenv('STRIPE_PRICE_ANUAL')
+    )
+
 
 # =============================================================================
 # REGISTRO DE BLUEPRINTS
@@ -681,7 +693,7 @@ from routes.invitaciones_clientes import clientes_bp
 from routes.dashboard import dashboard_bp
 from routes.configuracion_bp import config_bp
 from routes.user_dashboard import user_dash_bp
-from routes.chatbot_equipos import chatbot_bp
+from routes.chatbot import chatbot_bp
 from routes.payments import payments_bp
 
 app.register_blueprint(auth_bp)

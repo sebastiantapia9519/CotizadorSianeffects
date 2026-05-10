@@ -1,8 +1,8 @@
 ================================================================================
                     MANUAL TÉCNICO Y DE NEGOCIO: COTIZADOR SIANEFFECTS
 ================================================================================
-Última actualización: Abril 2026
-Versión: 2.0 — Migración a PostgreSQL + Railway + Resend
+Última actualización: Mayo 2026
+Versión: 2.1 — Integración de Costos Operativos y Mano de Obra Dinámica
 Descripción: Plataforma SaaS (Software as a Service) diseñada para creadores,
 artesanos y agencias. Permite la gestión integral de costos de producción,
 inventarios, creación de "recetas" (productos), cotizaciones, abonos, logística
@@ -51,15 +51,15 @@ SEGURIDAD DE SESIONES
 
 DOMINIO Y DNS (sianeffects.com en Namecheap)
 --------------------------------------------
-Registro           Host                  Valor                          Propósito
------------        -------------------   ----------------------------   ---------------------------------
-CNAME              www                   7i1w07xf.up.railway.app        Apunta al servidor Railway
-A Record           @                     162.255.119.87                 IP raíz requerida por Apple Mail
-TXT (DKIM)         resend._domainkey     p=MIGfMA0GCSqG...              Firma digital de Resend (Verified)
-TXT (SPF)          send                  v=spf1 include:amazonses...    Autorización de envío de Resend
-TXT (DMARC)        _dmarc                v=DMARC1; p=quarantine;...     Política anti-spoofing
-MX                 send                  feedback-smtp.us-east-1...     Return-path de rebotes Resend
-MX (@)             @                     mx1/mx2.privateemail.com        Recepción en Private Email
+Registro           Host                   Valor                          Propósito
+-----------        -------------------    ----------------------------   ---------------------------------
+CNAME              www                    7i1w07xf.up.railway.app        Apunta al servidor Railway
+A Record           @                      162.255.119.87                 IP raíz requerida por Apple Mail
+TXT (DKIM)         resend._domainkey      p=MIGfMA0GCSqG...              Firma digital de Resend (Verified)
+TXT (SPF)          send                   v=spf1 include:amazonses...    Autorización de envío de Resend
+TXT (DMARC)        _dmarc                 v=DMARC1; p=quarantine;...     Política anti-spoofing
+MX                 send                   feedback-smtp.us-east-1...     Return-path de rebotes Resend
+MX (@)             @                      mx1/mx2.privateemail.com       Recepción en Private Email
 
 ================================================================================
 2. SISTEMA DE CORREO TRANSACCIONAL (RESEND)
@@ -98,7 +98,7 @@ en la BD antes de recibir instrucciones para verificarse.
 
 TEMPLATES DE CORREO (templates/emails/)
 ----------------------------------------
-Archivo                          Uso
+Archivo                           Uso
 -------------------------------  -------------------------------------------------
 auth_code.html                   Código de verificación al registrarse
 bienvenida.html                  Correo de bienvenida tras verificar email
@@ -421,10 +421,30 @@ MAQUINARIA Y DESGASTE
 - Registro de equipos con costo fijo por ciclo de uso
 - Se incluye automáticamente en el costo base de cada receta que lo utilice
 
-RECETAS DE PRODUCCIÓN
-----------------------
-- Combinación de materiales + maquinaria + mano de obra
-- El sistema calcula el Costo Base Real de cada producto
+FACTOR OPERATIVO (Costos Fijos)
+-------------------------------
+- Permite aplicar un porcentaje configurable (ej. 10%) directo sobre el costo de producción.
+- Absorbe prorrateadamente gastos indirectos (renta, luz, internet) sin castigar 
+  productos de bajo costo.
+- Desactivable desde configuración para usuarios que no lo requieran.
+
+MANO DE OBRA (El Valor del Tiempo)
+----------------------------------
+Módulo híbrido activable vía UI. Si está encendido:
+- Calcula el valor por minuto del artesano.
+- Fórmula: Sueldo Mensual Deseado / (Horas Semanales × 4.33 semanas) / 60
+- Permite cobrar directamente en base a los minutos de fabricación en el Cotizador.
+Si está apagado:
+- El input en el Cotizador revierte a un "Comodín Financiero" manual ($).
+
+FÓRMULA DE PRECIO DE VENTA (Opción A - Margen Inteligente)
+----------------------------------------------------------
+Para evitar la inflación artificial del precio y proteger la competitividad:
+1. Costo Base = (Materiales + Maquinaria + Factor Operativo)
+2. Monto Ganancia = Costo Base × (Margen % / 100)
+3. Precio Sugerido = Costo Base + Monto Ganancia + Costo de Mano de Obra
+*Nota:* La mano de obra se suma "limpia" al final. No se multiplica por el Margen 
+de Ganancia para evitar el efecto de doble ganancia.
 
 IMPACTO EN INVENTARIO AL VENDER
 ---------------------------------
@@ -439,7 +459,8 @@ IMPACTO EN INVENTARIO AL VENDER
 
 MODOS DE OPERACIÓN
 -------------------
-A) Armar Receta:    Carga una receta guardada con su composición de materiales
+A) Armar Receta:    Carga una receta guardada con su composición de materiales, tiempo 
+                    y margen dinámico.
 B) Venta Rápida:    Concepto libre con precio manual y costo declarado ($0 = ganancia pura)
 
 ESTADOS DE UNA VENTA
@@ -458,9 +479,11 @@ el subtotal + envío. El motor de impuestos registra "IVA 16%" en tax_engine.
 
 TICKETS Y PDF
 -------------
-- El ticket se genera con los datos del negocio del usuario (logo, slogan, web)
-- Accesible por URL directa /ticket/<id> (sin requerir login para compartir)
-- El acceso al ticket queda registrado en logs_actividad
+- El ticket se genera con los datos del negocio del usuario (logo, slogan, web).
+- Notas y Políticas: Incluye bloque dinámico (hasta 150 caracteres) en el footer 
+  para garantías o términos, evitando tickets excesivamente largos.
+- Accesible por URL directa /ticket/<id> (sin requerir login para compartir).
+- El acceso al ticket queda registrado en logs_actividad.
 
 ================================================================================
 12. LOGÍSTICA DE ENVÍOS
@@ -542,26 +565,30 @@ PLANNERS
 
 SERVICIOS ACTIVOS
 -----------------
-Servicio              Descripción
---------------------  ----------------------------------------------------------
-CotizadorSianeffects  Aplicación Flask principal (Gunicorn, Puerto 8080)
-cotizador-prd         Base de datos PostgreSQL de producción
-cotizador-dev         Base de datos PostgreSQL de desarrollo (aislada)
+Servicio                Descripción
+----------------------  --------------------------------------------------------
+CotizadorSianeffects    Aplicación Flask principal (Gunicorn, Puerto 8080)
+cotizador-prd           Base de datos PostgreSQL de producción
+cotizador-dev           Base de datos PostgreSQL de desarrollo (aislada)
 
 VARIABLES DE ENTORNO REQUERIDAS EN RAILWAY
 -------------------------------------------
-SECRET_KEY            Clave de sesión Flask
-FLASK_ENV             'production'
-FLASK_DEBUG           '0'
-PORT                  '8080'
-DATABASE_URL_PROD     URL de conexión PostgreSQL de producción
-RESEND_API_KEY        Clave API de Resend para envío de correos
-R2_ACCESS_KEY         Credencial Cloudflare R2
-R2_SECRET_KEY         Credencial Cloudflare R2
-R2_ENDPOINT_URL       Endpoint del bucket R2
-R2_BUCKET_NAME        Nombre del bucket R2
-R2_PUBLIC_URL         URL pública del bucket R2
-TIMEZONE              'America/Mexico_City'
+SECRET_KEY              Clave de sesión Flask
+FLASK_ENV               'production'
+FLASK_DEBUG             '0'
+PORT                    '8080'
+DATABASE_URL_PROD       URL de conexión PostgreSQL de producción
+RESEND_API_KEY          Clave API de Resend para envío de correos
+R2_ACCESS_KEY           Credencial Cloudflare R2
+R2_SECRET_KEY           Credencial Cloudflare R2
+R2_ENDPOINT_URL         Endpoint del bucket R2
+R2_BUCKET_NAME          Nombre del bucket R2
+R2_PUBLIC_URL           URL pública del bucket R2
+TIMEZONE                'America/Mexico_City'
+STRIPE_SECRET_KEY       Clave secreta de producción (sk_live_...)
+STRIPE_WEBHOOK_SECRET   Firma de seguridad para recibir webhooks (whsec_...)
+STRIPE_PRICE_MENSUAL    ID del producto mensual en modo Live (price_...)
+STRIPE_PRICE_ANUAL      ID del producto anual en modo Live (price_...)
 
 DOMINIO
 -------
@@ -640,7 +667,7 @@ Renderizado UI          Solo visible en template equipos.html
 
 CONFIGURACIÓN EN RAILWAY
 -------------------------
-Variable                Valor
+Variable              Valor
 ----------------------  -------------------------------------------------------
 GEMINI_API_KEY          Clave API de Google AI Studio (gratuita hasta 1,500 req/día)
 
@@ -713,7 +740,7 @@ Estados visuales:
 
 MANEJO DE ERRORES Y TIMEOUT
 -----------------------------
-Tipo de error                   Respuesta                                    Código HTTP
+Tipo de error                   Respuesta                                   Código HTTP
 ------------------------------  -------------------------------------------  -----------
 Mensaje vacío                   {'error': 'Mensaje vacío'}                   400
 Timeout de API (>10s)           "❌ No pude conectar, intenta de nuevo"      500
@@ -838,6 +865,83 @@ Historial no persiste           session.modified = True falta   Ya implementado 
 Cuota excedida                  >1,500 requests en 24 hrs       Esperar reset diario o pagar
 
 ================================================================================
+19. PASARELA DE PAGOS AUTOMATIZADA (STRIPE)
+================================================================================
+
+PROPÓSITO
+---------
+Automatizar la transición de usuarios "freemium" o con plan vencido a "PRO"
+mediante cobros con tarjeta de crédito/débito. Elimina la intervención manual
+del administrador para activar cuentas.
+
+ARQUITECTURA DEL FLUJO DE PAGO
+------------------------------
+1. Interfaz: El usuario hace clic en "Pagar" en cualquier modal de bloqueo.
+2. Checkout: Redirección segura a la pasarela alojada por Stripe (Checkout Session).
+3. Transacción: Stripe procesa el cobro.
+4. Webhook (Backend): Stripe notifica asíncronamente a Railway sobre el éxito.
+5. Base de Datos: El Webhook actualiza el estado_suscripcion y subscription_end.
+6. Redirección: El usuario es devuelto a /pago-exitoso.
+7. Refresco de Sesión: Flask lee la BD actualizada y renueva la cookie al instante
+   para desbloquear la interfaz sin requerir un nuevo login.
+
+RUTAS Y ENDPOINTS (routes/payments.py)
+--------------------------------------
+Endpoint                        Método  Propósito
+------------------------------  ------  ----------------------------------------
+/create-checkout-session        POST    Genera la URL de cobro y redirige.
+/webhook                        POST    Recibe notificaciones de servidor a servidor.
+/pago-exitoso                   GET     Pantalla de éxito (actualiza sesión).
+/pago-cancelado                 GET     Pantalla de cancelación (sin cobros).
+
+EL CEREBRO: WEBHOOK (checkout.session.completed)
+------------------------------------------------
+El webhook es la única fuente de verdad para liberar una membresía. No se confía
+en la redirección del usuario (que podría cerrarse antes de tiempo).
+
+Flujo de validación:
+1. Verificación de firma: Valida Stripe-Signature contra STRIPE_WEBHOOK_SECRET
+   para evitar ataques de falsificación (spoofing).
+2. Extracción de Metadata: Se utiliza extracción directa por corchetes 
+   (session_obj['metadata']['user_id']) ya que el SDK de Stripe retorna un
+   StripeObject, el cual no soporta el método .get() nativo de Python en 
+   sus atributos anidados.
+3. Base de Datos: 
+   - Se calcula now_utc() + 30 o 365 días según el plan.
+   - UPDATE usuarios SET subscription_end = X, estado_suscripcion = 'Activo'
+4. Bitácora (logs_actividad): Se inserta el evento "Renovación PRO exitosa" 
+   almacenando el ID de sesión de Stripe en la columna detalle para rastreabilidad.
+5. Notificación: Dispara enviar_correo_sian de forma asíncrona (Alias: Pagos).
+
+REFRESCO DE SESIÓN (EL MATA-FANTASMAS)
+--------------------------------------
+Dado que el Webhook actualiza la BD pero no puede modificar las cookies del
+navegador del usuario, la ruta /pago-exitoso incluye una lógica de refresco:
+- Lee el user_id de la sesión actual.
+- Consulta el role y estado_suscripcion fresco de la BD.
+- Sobrescribe session['is_pro_active'] = True y elimina el grace_period.
+- Resultado: El usuario ve los candados desaparecer inmediatamente.
+
+VARIABLES DE ENTORNO REQUERIDAS (STRIPE LIVE)
+---------------------------------------------
+Variable                  Formato Esperado          Propósito
+------------------------  ------------------------  ----------------------------
+STRIPE_SECRET_KEY         sk_live_...               Autenticación backend -> Stripe
+STRIPE_WEBHOOK_SECRET     whsec_...                 Firma de seguridad del Webhook
+STRIPE_PRICE_MENSUAL      price_...                 ID del producto en catálogo
+STRIPE_PRICE_ANUAL        price_...                 ID del producto en catálogo
+
+*Nota de seguridad:* Las llaves sk_test_ y whsec_ locales se mantienen
+exclusivamente en el .env de desarrollo.
+
+ENTORNO DE DESARROLLO Y TESTING (Stripe CLI)
+--------------------------------------------
+Para simular pagos en local (localhost:5000), es obligatorio el uso de Stripe CLI
+para abrir un túnel inverso que permita recibir los webhooks:
+1. stripe login
+2. stripe listen --forward-to localhost:5000/payments/webhook
+3. Copiar el whsec_... arrojado por la terminal al archivo .env local.
+4. Reiniciar el servidor Flask.
 
 ================================================================================
 FIN DEL MANUAL

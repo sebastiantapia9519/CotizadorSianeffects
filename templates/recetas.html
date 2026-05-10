@@ -28,6 +28,7 @@
         width: 100%;
         border-collapse: collapse;
     }
+
     .sian-table th {
         background-color: var(--sian-bg-soft);
         color: #6c757d;
@@ -39,6 +40,7 @@
         border-bottom: 1px solid var(--sian-border);
         border-top: none;
     }
+
     .sian-table td {
         padding: 16px 24px;
         vertical-align: middle;
@@ -46,9 +48,11 @@
         color: #212529;
         transition: background-color 0.2s;
     }
+
     .sian-table tbody tr:last-child td {
         border-bottom: none;
     }
+
     @media (hover: hover) {
         .sian-table tbody tr:hover td {
             background-color: #fafbfa;
@@ -62,7 +66,9 @@
         box-shadow: 0 4px 10px rgba(255, 74, 90, 0.2);
         transition: all 0.2s;
     }
-    .btn-sian:active, .btn-sian:hover {
+
+    .btn-sian:active,
+    .btn-sian:hover {
         background-color: var(--sian-primary-hover);
         color: #fff;
         transform: translateY(-1px);
@@ -75,6 +81,7 @@
         background-color: var(--sian-bg-soft);
         transition: border-color 0.2s, background-color 0.2s;
     }
+
     .sian-input:focus {
         border-color: #b0b5ba;
         background-color: #fff;
@@ -91,11 +98,15 @@
         align-items: center;
         justify-content: center;
     }
-    .action-icon:active, .action-icon:hover {
+
+    .action-icon:active,
+    .action-icon:hover {
         background: var(--sian-bg-soft);
         color: #0d6efd;
     }
-    .action-icon.danger:active, .action-icon.danger:hover {
+
+    .action-icon.danger:active,
+    .action-icon.danger:hover {
         background: #fff5f5;
         color: #dc3545;
     }
@@ -111,6 +122,7 @@
         transition: all 0.2s;
         text-decoration: none;
     }
+
     .btn-usar:hover {
         background: #f0fdf4;
         color: #146c43;
@@ -123,16 +135,29 @@
         font-size: 0.75rem;
     }
 
-    .driver-popover { border-radius: 12px !important; }
-    .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
-    .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
+    .driver-popover {
+        border-radius: 12px !important;
+    }
+
+    .driver-popover-title {
+        font-weight: bold !important;
+        color: var(--sian-primary) !important;
+    }
+
+    .driver-popover-next-btn {
+        background-color: var(--sian-primary) !important;
+        text-shadow: none !important;
+        border: none !important;
+    }
 
 
     /* ===================================================
        2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
        =================================================== */
-    [data-bs-theme="dark"] body { background-color: #0f172a !important; }
-    
+    [data-bs-theme="dark"] body {
+        background-color: #0f172a !important;
+    }
+
     [data-bs-theme="dark"] .sian-panel,
     [data-bs-theme="dark"] .modal-content {
         background-color: #1e293b !important;
@@ -179,7 +204,7 @@
     [data-bs-theme="dark"] .btn-usar {
         color: #2ec4b6 !important;
     }
-    
+
     [data-bs-theme="dark"] .btn-usar:hover {
         background-color: rgba(46, 196, 182, 0.1) !important;
     }
@@ -191,10 +216,15 @@
     [data-bs-theme="dark"] .bg-light {
         background-color: #1e293b !important;
     }
-    
-    [data-bs-theme="dark"] .text-dark { color: #f8fafc !important; }
-    [data-bs-theme="dark"] .text-muted, 
-    [data-bs-theme="dark"] .text-secondary { color: #94a3b8 !important; }
+
+    [data-bs-theme="dark"] .text-dark {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .text-muted,
+    [data-bs-theme="dark"] .text-secondary {
+        color: #94a3b8 !important;
+    }
 
     [data-bs-theme="dark"] .bg-light.text-danger {
         background-color: rgba(220, 53, 69, 0.1) !important;
@@ -204,7 +234,7 @@
     [data-bs-theme="dark"] .modal-header.border-bottom-0 {
         border-color: #334155 !important;
     }
-    
+
     [data-bs-theme="dark"] .modal-header[style*="background-color: var(--sian-teal)"] {
         background-color: #1e293b !important;
         border-bottom: 1px solid #334155 !important;
@@ -220,10 +250,12 @@
         width: fit-content;
         transition: background-color 0.2s, border-color 0.2s;
     }
+
     .maq-chip:hover {
         background-color: #f8f9fa !important;
         border-color: #ced4da !important;
     }
+
     [data-bs-theme="dark"] .maq-chip:hover {
         background-color: #334155 !important;
         border-color: #475569 !important;
@@ -232,6 +264,7 @@
 {% endblock %}
 
 {% block content %}
+{% set is_pro = session.get('is_pro_active') or session.get('role', 0) >= 1 %}
 <div class="row align-items-center mb-4">
     <div class="col-md-5 mb-3 mb-md-0 text-center text-md-start">
         <h3 class="fw-bold m-0 text-dark" style="letter-spacing: -0.5px;">
@@ -239,26 +272,37 @@
         </h3>
         <p class="text-muted small m-0 mt-1">Tus combinaciones y productos pre-configurados.</p>
     </div>
-    
+
     <div class="col-md-7 d-flex justify-content-center justify-content-md-end gap-2 flex-wrap">
         {% if config['mostrar_ayuda'] %}
-        <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm" onclick="repetirTutorialRecetas()">
+        <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm"
+            onclick="repetirTutorialRecetas()">
             <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
         </button>
         {% endif %}
-        <button type="button" class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" id="tour-nueva-receta" onclick="abrirModalNueva()">
+        {% if is_pro %}
+        <button type="button" class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" id="tour-nueva-receta"
+            onclick="abrirModalNueva()">
             <i class="fas fa-plus me-1"></i> Nueva Receta
         </button>
+        {% else %}
+        <button type="button" class="btn btn-secondary rounded-3 px-4 fw-bold shadow-sm opacity-75"
+            id="tour-nueva-receta" data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+            <i class="fas fa-lock me-1"></i> Nueva Receta
+        </button>
+        {% endif %}
     </div>
 </div>
 
 <div class="mb-4">
     <div class="input-group shadow-sm" style="border-radius: 10px;" id="tour-buscador-recetas">
-        <span class="input-group-text bg-white border-end-0 border-light text-muted" style="border-radius: 10px 0 0 10px;">
+        <span class="input-group-text bg-white border-end-0 border-light text-muted"
+            style="border-radius: 10px 0 0 10px;">
             <i class="fas fa-search"></i>
         </span>
         <input type="text" id="buscadorRecetas" class="form-control border-start-0 border-light py-2 sian-input"
-            style="box-shadow: none; border-radius: 0 10px 10px 0;" placeholder="Buscar receta por nombre..." onkeyup="filtrarTabla()">
+            style="box-shadow: none; border-radius: 0 10px 10px 0;" placeholder="Buscar receta por nombre..."
+            onkeyup="filtrarTabla()">
     </div>
 </div>
 
@@ -282,8 +326,10 @@
                                 <i class="fas fa-flask"></i>
                             </div>
                             <div>
-                                <h6 class="fw-bold text-dark mb-0 nombre-receta" style="font-size: 0.95rem;">{{ receta['nombre'] }}</h6>
-                                <small class="text-muted" style="font-size: 0.7rem; font-weight: 600;">ID: #{{ receta['id'] }}</small>
+                                <h6 class="fw-bold text-dark mb-0 nombre-receta" style="font-size: 0.95rem;">{{
+                                    receta['nombre'] }}</h6>
+                                <small class="text-muted" style="font-size: 0.7rem; font-weight: 600;">ID: #{{
+                                    receta['id'] }}</small>
                             </div>
                         </div>
                     </td>
@@ -298,17 +344,31 @@
                     </td>
                     <td style="text-align: right;">
                         <div class="d-flex justify-content-end align-items-center gap-1">
-                            <a href="{{ url_for('main.cotizador', cargar_receta=receta['id']) }}" class="btn-usar me-2" title="Cargar en Cotizador">
+                            <a href="{{ url_for('main.cotizador', cargar_receta=receta['id']) }}" class="btn-usar me-2"
+                                title="Cargar en Cotizador">
                                 <i class="fas fa-play me-1"></i> Usar
                             </a>
-                            <button class="action-icon" onclick='editarReceta({{ receta.id }})' title="Editar Receta Completa">
+
+                            {% if is_pro %}
+                            <button class="action-icon" onclick='editarReceta({{ receta.id }})'
+                                title="Editar Receta Completa">
                                 <i class="fas fa-pen" style="font-size: 0.9rem;"></i>
                             </button>
                             <button type="button" class="action-icon danger"
-                                onclick="confirmarEliminarReceta('{{ url_for('inventory.eliminar_receta', id=receta['id']) }}', '{{ receta['nombre'] }}')" 
+                                onclick="confirmarEliminarReceta('{{ url_for('inventory.eliminar_receta', id=receta['id']) }}', '{{ receta['nombre'] }}')"
                                 title="Eliminar">
                                 <i class="fas fa-trash-alt" style="font-size: 0.9rem;"></i>
                             </button>
+                            {% else %}
+                            <button type="button" class="action-icon opacity-75" data-bs-toggle="modal"
+                                data-bs-target="#modalRenovacion" title="Renueva para editar">
+                                <i class="fas fa-lock" style="font-size: 0.9rem;"></i>
+                            </button>
+                            <button type="button" class="action-icon danger opacity-75" data-bs-toggle="modal"
+                                data-bs-target="#modalRenovacion" title="Renueva para eliminar">
+                                <i class="fas fa-lock" style="font-size: 0.9rem;"></i>
+                            </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -317,7 +377,8 @@
                     <td colspan="3" class="text-center py-5 bg-white">
                         <i class="fas fa-clipboard-list fa-3x mb-3 text-muted opacity-25"></i>
                         <h6 class="fw-bold text-dark">No hay recetas guardadas</h6>
-                        <p class="text-muted small m-0">Ve al Cotizador o presiona "Nueva Receta" para guardar tu primera combinación.</p>
+                        <p class="text-muted small m-0">Ve al Cotizador o presiona "Nueva Receta" para guardar tu
+                            primera combinación.</p>
                     </td>
                 </tr>
                 {% endfor %}
@@ -338,12 +399,13 @@
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            
+
             <div class="modal-body p-4">
-                
+
                 <div class="mb-4">
                     <label class="form-label small fw-bold text-muted">Nombre del Producto / Receta</label>
-                    <input type="text" id="nombreRecetaInput" class="form-control sian-input py-2 fw-bold text-dark" placeholder="Ej. Termo personalizado 500ml">
+                    <input type="text" id="nombreRecetaInput" class="form-control sian-input py-2 fw-bold text-dark"
+                        placeholder="Ej. Termo personalizado 500ml">
                 </div>
 
                 <label class="form-label small fw-bold text-muted">Añadir Materiales</label>
@@ -351,17 +413,19 @@
                     <select id="selectMaterialReceta" class="form-select sian-input py-2 w-100">
                         <option value="">Selecciona un material...</option>
                         {% for mat in materiales_disponibles %}
-                        <option value="{{ mat.id }}" data-precio="{{ mat.precio_unitario }}">{{ mat.nombre }} - ${{ "%.2f"|format(mat.precio_unitario) }}</option>
+                        <option value="{{ mat.id }}" data-precio="{{ mat.precio_unitario }}">{{ mat.nombre }} - ${{
+                            "%.2f"|format(mat.precio_unitario) }}</option>
                         {% endfor %}
                     </select>
-                    <button type="button" class="btn btn-sian px-4" onclick="agregarMaterialRow()" style="white-space: nowrap;">
+                    <button type="button" class="btn btn-sian px-4" onclick="agregarMaterialRow()"
+                        style="white-space: nowrap;">
                         <i class="fas fa-plus"></i> Añadir
                     </button>
                 </div>
 
                 <div class="sian-panel mb-4" style="border-radius: 10px;">
                     <div class="table-responsive">
-                        <table class="sian-table" style="min-width: 400px;"> 
+                        <table class="sian-table" style="min-width: 400px;">
                             <thead>
                                 <tr>
                                     <th style="width: 50%;">Material</th>
@@ -372,7 +436,8 @@
                             </thead>
                             <tbody id="tablaMaterialesReceta">
                                 <tr id="filaVaciaMensaje">
-                                    <td colspan="4" class="text-center text-muted small py-3">No has agregado materiales a la receta.</td>
+                                    <td colspan="4" class="text-center text-muted small py-3">No has agregado materiales
+                                        a la receta.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -383,26 +448,34 @@
                 <div class="border rounded-3 p-3 bg-light sian-input" style="max-height: 180px; overflow-y: auto;">
                     <div class="d-flex flex-wrap gap-2">
                         {% for maq in maquinaria_disponible %}
-                        <div class="form-check form-check-inline bg-white border rounded-pill px-3 py-1 m-0 shadow-sm d-flex align-items-center maq-chip">
-                            <input class="form-check-input check-maquinaria m-0 me-2" type="checkbox" value="{{ maq.id }}" id="maq_{{ maq.id }}" style="margin-top: 0 !important;">
-                            <label class="form-check-label text-dark small m-0 d-flex align-items-center" for="maq_{{ maq.id }}" style="cursor: pointer; line-height: 1.2;">
+                        <div
+                            class="form-check form-check-inline bg-white border rounded-pill px-3 py-1 m-0 shadow-sm d-flex align-items-center maq-chip">
+                            <input class="form-check-input check-maquinaria m-0 me-2" type="checkbox"
+                                value="{{ maq.id }}" id="maq_{{ maq.id }}" style="margin-top: 0 !important;">
+                            <label class="form-check-label text-dark small m-0 d-flex align-items-center"
+                                for="maq_{{ maq.id }}" style="cursor: pointer; line-height: 1.2;">
                                 <span class="fw-bold">{{ maq.nombre }}</span>
-                                <span class="text-success ms-1 fw-bold" style="font-size: 0.75rem;">(+${{ "%.2f"|format(maq.costo_desgaste) }})</span>
+                                <span class="text-success ms-1 fw-bold" style="font-size: 0.75rem;">(+${{
+                                    "%.2f"|format(maq.costo_desgaste) }})</span>
                             </label>
                         </div>
                         {% endfor %}
-                        
+
                         {% if not maquinaria_disponible %}
-                        <div class="text-muted small p-2 w-100 text-center fst-italic">No tienes maquinaria registrada.</div>
+                        <div class="text-muted small p-2 w-100 text-center fst-italic">No tienes maquinaria registrada.
+                        </div>
                         {% endif %}
                     </div>
                 </div>
 
             </div>
-            
-            <div class="modal-footer border-0 p-4 pt-3 gap-2 bg-white" style="border-top: 1px solid var(--sian-border) !important; z-index: 10;">
-                <button type="button" class="btn btn-light rounded-3 px-4 py-2 fw-bold" data-bs-dismiss="modal">Cancelar</button>
-                <button type="button" class="btn btn-sian rounded-3 px-4 py-2 fw-bold shadow-sm" onclick="guardarRecetaFetch()">Guardar Receta</button>
+
+            <div class="modal-footer border-0 p-4 pt-3 gap-2 bg-white"
+                style="border-top: 1px solid var(--sian-border) !important; z-index: 10;">
+                <button type="button" class="btn btn-light rounded-3 px-4 py-2 fw-bold"
+                    data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-sian rounded-3 px-4 py-2 fw-bold shadow-sm"
+                    onclick="guardarRecetaFetch()">Guardar Receta</button>
             </div>
         </div>
     </div>
@@ -416,12 +489,14 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <h6 id="detallesNombreReceta" class="fw-bold text-dark mb-3 border-bottom pb-2 text-truncate border-light"></h6>
+                <h6 id="detallesNombreReceta"
+                    class="fw-bold text-dark mb-3 border-bottom pb-2 text-truncate border-light"></h6>
                 <ul id="listaIngredientes" class="list-unstyled mb-0" style="line-height: 1.8;">
                 </ul>
             </div>
             <div class="modal-footer border-0 bg-light rounded-bottom-4 py-2">
-                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-sm btn-secondary rounded-pill px-4 fw-bold"
+                    data-bs-dismiss="modal">Cerrar</button>
             </div>
         </div>
     </div>
@@ -436,7 +511,7 @@
 
     // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
     function repetirTutorialRecetas() {
-        if(typeof window.driver === 'undefined') return;
+        if (typeof window.driver === 'undefined') return;
 
         const driverObj = window.driver.js.driver({
             showProgress: true,
@@ -444,29 +519,31 @@
             nextBtnText: 'Siguiente &rarr;',
             prevBtnText: '&larr; Atrás',
             allowClose: true,
-            
+
             onDestroyed: () => {
                 {% if mostrar_tour %}
                 fetch('/api/tutorial/completado', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ modulo: 'recetas', version: {{ version_tour | default(1) }} })
-                }).catch(e => console.error("Error guardando tutorial:", e));
-                {% endif %}
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ modulo: 'recetas', version: {{ version_tour | default(1)
+                }}
+        })
+    }).catch (e => console.error("Error guardando tutorial:", e));
+    {% endif %}
             },
-            
-            steps: [
-                { popover: { title: 'Tus Recetas Guardadas 📖', description: 'Aquí se almacenan los productos que ya armaste.', align: 'center' } },
-                { element: '#tour-nueva-receta', popover: { title: '1. ¿Cómo crear una?', description: 'Da clic aquí para armar una nueva receta con tus materiales.', side: "bottom", align: 'end' } },
-                { element: '#tour-tabla-recetas', popover: { title: '2. Gestión Rápida', description: 'Usa el ojito para ver los ingredientes, el lápiz para editar la receta completa o el play para usarla.', side: "top", align: 'center' } },
-                { element: '#tour-buscador-recetas', popover: { title: '3. Búsqueda Inteligente', description: 'Encuentra rápidamente tus diseños.', side: "bottom", align: 'start' } }
-            ]
+
+    steps: [
+        { popover: { title: 'Tus Recetas Guardadas 📖', description: 'Aquí se almacenan los productos que ya armaste.', align: 'center' } },
+        { element: '#tour-nueva-receta', popover: { title: '1. ¿Cómo crear una?', description: 'Da clic aquí para armar una nueva receta con tus materiales.', side: "bottom", align: 'end' } },
+        { element: '#tour-tabla-recetas', popover: { title: '2. Gestión Rápida', description: 'Usa el ojito para ver los ingredientes, el lápiz para editar la receta completa o el play para usarla.', side: "top", align: 'center' } },
+        { element: '#tour-buscador-recetas', popover: { title: '3. Búsqueda Inteligente', description: 'Encuentra rápidamente tus diseños.', side: "bottom", align: 'start' } }
+    ]
         });
-        driverObj.drive();
+    driverObj.drive();
     }
 
     {% if mostrar_tour %}
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.driver !== 'undefined') {
             setTimeout(() => { repetirTutorialRecetas(); }, 800);
         }
@@ -479,11 +556,11 @@
         document.getElementById('tituloModalReceta').innerHTML = '<i class="fas fa-hammer me-2 text-muted"></i>Armar Nueva Receta';
         document.getElementById('nombreRecetaInput').value = '';
         document.getElementById('selectMaterialReceta').value = '';
-        
+
         // Limpiar tabla y checkboxes
         document.getElementById('tablaMaterialesReceta').innerHTML = '<tr id="filaVaciaMensaje"><td colspan="4" class="text-center text-muted small py-3">No has agregado materiales a la receta.</td></tr>';
         document.querySelectorAll('.check-maquinaria').forEach(cb => cb.checked = false);
-        
+
         new bootstrap.Modal(document.getElementById('modalNuevaReceta')).show();
     }
 
@@ -507,11 +584,11 @@
             .then(res => res.json())
             .then(data => {
                 Swal.close(); // Cerramos el cargando
-                if(data.error) {
+                if (data.error) {
                     Swal.fire({ icon: 'error', title: 'Error', text: data.error });
                     return;
                 }
-                
+
                 // ... (Toda tu lógica actual de llenar el modal se queda igual) ...
                 recetaEnEdicionId = data.id;
                 document.getElementById('tituloModalReceta').innerHTML = '<i class="fas fa-edit me-2 text-muted"></i>Editar Receta';
@@ -520,7 +597,7 @@
                 tbody.innerHTML = '';
                 document.querySelectorAll('.check-maquinaria').forEach(cb => cb.checked = false);
 
-                if(data.materiales && data.materiales.length > 0) {
+                if (data.materiales && data.materiales.length > 0) {
                     data.materiales.forEach(mat => {
                         const infoReal = catalogoMateriales.find(m => m.id === mat.id) || {};
                         const tr = document.createElement('tr');
@@ -536,10 +613,10 @@
                         tbody.appendChild(tr);
                     });
                 }
-                if(data.maquinaria) {
+                if (data.maquinaria) {
                     data.maquinaria.forEach(maq => {
                         const cb = document.getElementById(`maq_${maq.id}`);
-                        if(cb) cb.checked = true;
+                        if (cb) cb.checked = true;
                     });
                 }
 
@@ -554,11 +631,11 @@
     function agregarMaterialRow() {
         const select = document.getElementById('selectMaterialReceta');
         const selectedOption = select.options[select.selectedIndex];
-        
-        if (!selectedOption.value) return; 
+
+        if (!selectedOption.value) return;
 
         const id = selectedOption.value;
-        const textoMaterial = selectedOption.text.split(' - $')[0]; 
+        const textoMaterial = selectedOption.text.split(' - $')[0];
         const precio = parseFloat(selectedOption.getAttribute('data-precio') || 0);
 
         if (document.querySelector(`#row_mat_${id}`)) {
@@ -582,7 +659,7 @@
             <td style="text-align: right;"><button type="button" class="action-icon danger" onclick="eliminarMaterialRow(this)" title="Quitar"><i class="fas fa-times"></i></button></td>
         `;
         tbody.appendChild(tr);
-        select.value = ""; 
+        select.value = "";
     }
 
     function eliminarMaterialRow(btn) {
@@ -625,15 +702,15 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         })
-        .then(r => r.json())
-        .then(data => {
-            if (data.success) {
-                Swal.fire({ icon: 'success', title: '¡Listo!', showConfirmButton: false, timer: 1500 })
-                    .then(() => location.reload());
-            } else {
-                Swal.fire({ icon: 'error', title: 'Error', text: data.error });
-            }
-        });
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    Swal.fire({ icon: 'success', title: '¡Listo!', showConfirmButton: false, timer: 1500 })
+                        .then(() => location.reload());
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: data.error });
+                }
+            });
     }
 
     // --- EXTRAS (Detalles rápidos, Búsqueda, Eliminar) ---
@@ -718,7 +795,7 @@
         });
     }
 
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('eliminada')) {
             Swal.fire({ icon: 'success', title: 'Receta Eliminada', showConfirmButton: false, timer: 1500, customClass: { popup: 'rounded-4' } });

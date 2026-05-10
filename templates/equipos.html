@@ -3,6 +3,7 @@
 {% block title %}Equipos | Sianeffects{% endblock %}
 
 {% block content %}
+{% set is_pro = session.get('is_pro_active') or session.get('role', 0) >= 1 %}
 <style>
     /* ===================================================
        1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
@@ -19,7 +20,8 @@
         border: 1px solid var(--sian-border);
         border-radius: 16px;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
-        overflow: hidden; /* Para que la tabla respete las esquinas redondeadas */
+        overflow: hidden;
+        /* Para que la tabla respete las esquinas redondeadas */
     }
 
     .sian-table {
@@ -27,6 +29,7 @@
         width: 100%;
         border-collapse: collapse;
     }
+
     .sian-table th {
         background-color: var(--sian-bg-soft);
         color: #6c757d;
@@ -38,6 +41,7 @@
         border-bottom: 1px solid var(--sian-border);
         border-top: none;
     }
+
     .sian-table td {
         padding: 14px 20px;
         vertical-align: middle;
@@ -46,9 +50,11 @@
         font-size: 0.95rem;
         transition: background-color 0.2s;
     }
+
     .sian-table tbody tr:last-child td {
         border-bottom: none;
     }
+
     @media (hover: hover) {
         .sian-table tbody tr:hover td {
             background-color: #fafbfa;
@@ -62,7 +68,9 @@
         box-shadow: 0 4px 10px rgba(255, 74, 90, 0.2);
         transition: all 0.2s;
     }
-    .btn-sian:active, .btn-sian:hover {
+
+    .btn-sian:active,
+    .btn-sian:hover {
         background-color: var(--sian-primary-hover);
         color: #fff;
         transform: translateY(-1px);
@@ -75,6 +83,7 @@
         background-color: var(--sian-bg-soft);
         transition: border-color 0.2s, background-color 0.2s;
     }
+
     .sian-input:focus {
         border-color: #b0b5ba;
         background-color: #fff;
@@ -91,11 +100,15 @@
         align-items: center;
         justify-content: center;
     }
-    .action-icon:active, .action-icon:hover {
+
+    .action-icon:active,
+    .action-icon:hover {
         background: var(--sian-bg-soft);
         color: #0d6efd;
     }
-    .action-icon.danger:active, .action-icon.danger:hover {
+
+    .action-icon.danger:active,
+    .action-icon.danger:hover {
         background: #fff5f5;
         color: #dc3545;
     }
@@ -113,9 +126,20 @@
     }
 
     /* Tutorial Custom Styles */
-    .driver-popover { border-radius: 12px !important; }
-    .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
-    .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
+    .driver-popover {
+        border-radius: 12px !important;
+    }
+
+    .driver-popover-title {
+        font-weight: bold !important;
+        color: var(--sian-primary) !important;
+    }
+
+    .driver-popover-next-btn {
+        background-color: var(--sian-primary) !important;
+        text-shadow: none !important;
+        border: none !important;
+    }
 
 
     /* ===================================================
@@ -123,42 +147,44 @@
        =================================================== */
     [data-bs-theme="dark"] .sian-panel,
     [data-bs-theme="dark"] .modal-content {
-        background-color: #1e293b !important; /* Azul pizarra (Sólido) */
+        background-color: #1e293b !important;
+        /* Azul pizarra (Sólido) */
         border-color: #334155 !important;
     }
-    
+
     [data-bs-theme="dark"] .sian-table th {
-        background-color: #0f172a !important; /* Azul marino profundo */
+        background-color: #0f172a !important;
+        /* Azul marino profundo */
         color: #94a3b8 !important;
         border-color: #334155 !important;
     }
-    
+
     [data-bs-theme="dark"] .sian-table td {
         color: #f8fafc !important;
         border-color: #334155 !important;
     }
-    
+
     /* 🔥 SOLUCIÓN AL HOVER BLANCO EN LA TABLA 🔥 */
     @media (hover: hover) {
         [data-bs-theme="dark"] .sian-table tbody tr:hover td {
             background-color: #334155 !important;
         }
     }
-    
+
     [data-bs-theme="dark"] .sian-input {
         background-color: #0f172a !important;
         border-color: #334155 !important;
         color: #f8fafc !important;
     }
-    
+
     [data-bs-theme="dark"] .sian-input:focus {
         border-color: var(--sian-primary) !important;
     }
-    
+
     [data-bs-theme="dark"] .action-icon:hover {
         background-color: #334155 !important;
     }
-    
+
     [data-bs-theme="dark"] .icon-box {
         background-color: rgba(245, 176, 65, 0.1) !important;
     }
@@ -167,25 +193,25 @@
     [data-bs-theme="dark"] .bg-white {
         background-color: #0f172a !important;
     }
-    
+
     [data-bs-theme="dark"] .border-light {
         border-color: #334155 !important;
     }
-    
+
     [data-bs-theme="dark"] .text-dark {
         color: #f8fafc !important;
     }
-    
+
     [data-bs-theme="dark"] .text-muted {
         color: #94a3b8 !important;
     }
-    
+
     [data-bs-theme="dark"] .input-group-text {
         background-color: #1e293b !important;
         border-color: #334155 !important;
         color: #f8fafc !important;
     }
-    
+
     [data-bs-theme="dark"] .btn-close {
         filter: invert(1) grayscale(100%) brightness(200%);
     }
@@ -200,23 +226,34 @@
     </div>
     <div class="col-md-6 d-flex justify-content-center justify-content-md-end gap-2 flex-wrap">
         {% if config['mostrar_ayuda'] %}
-        <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm" onclick="repetirTutorialEquipos()">
+        <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm"
+            onclick="repetirTutorialEquipos()">
             <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
         </button>
         {% endif %}
-        <button class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" onclick="abrirModalNuevo()" id="tour-nuevo-equipo">
+        {% if is_pro %}
+        <button class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" onclick="abrirModalNuevo()"
+            id="tour-nuevo-equipo">
             <i class="fas fa-plus me-1"></i> Nuevo Equipo
         </button>
+        {% else %}
+        <button type="button" class="btn btn-secondary rounded-3 px-4 fw-bold shadow-sm opacity-75"
+            data-bs-toggle="modal" data-bs-target="#modalRenovacion" id="tour-nuevo-equipo">
+            <i class="fas fa-lock me-1"></i> Nuevo Equipo
+        </button>
+        {% endif %}
     </div>
 </div>
 
 <div class="mb-4" id="tour-buscador-equipos">
     <div class="input-group shadow-sm" style="border-radius: 10px;">
-        <span class="input-group-text bg-white border-end-0 border-light text-muted" style="border-radius: 10px 0 0 10px;">
+        <span class="input-group-text bg-white border-end-0 border-light text-muted"
+            style="border-radius: 10px 0 0 10px;">
             <i class="fas fa-search"></i>
         </span>
         <input type="text" id="buscadorEquipos" class="form-control border-start-0 border-light py-2 sian-input"
-            style="box-shadow: none; border-radius: 0 10px 10px 0;" placeholder="Buscar maquinaria por nombre..." onkeyup="filtrarTabla()">
+            style="box-shadow: none; border-radius: 0 10px 10px 0;" placeholder="Buscar maquinaria por nombre..."
+            onkeyup="filtrarTabla()">
     </div>
 </div>
 
@@ -248,12 +285,25 @@
                     </td>
                     <td style="text-align: right;">
                         <div class="d-flex justify-content-end gap-1">
+                            {% if is_pro %}
                             <button class="action-icon" onclick='editarEquipo({{ eq|tojson|safe }})' title="Editar">
                                 <i class="fas fa-pen" style="font-size: 0.9rem;"></i>
                             </button>
-                            <button class="action-icon danger" onclick="confirmarEliminarEquipo('{{ url_for('inventory.eliminar_equipo', id=eq['id']) }}', '{{ eq['nombre'] }}')" title="Eliminar">
+                            <button class="action-icon danger"
+                                onclick="confirmarEliminarEquipo('{{ url_for('inventory.eliminar_equipo', id=eq['id']) }}', '{{ eq['nombre'] }}')"
+                                title="Eliminar">
                                 <i class="fas fa-trash-alt" style="font-size: 0.9rem;"></i>
                             </button>
+                            {% else %}
+                            <button type="button" class="action-icon opacity-75" data-bs-toggle="modal"
+                                data-bs-target="#modalRenovacion" title="Renueva para editar">
+                                <i class="fas fa-lock" style="font-size: 0.9rem;"></i>
+                            </button>
+                            <button type="button" class="action-icon danger opacity-75" data-bs-toggle="modal"
+                                data-bs-target="#modalRenovacion" title="Renueva para eliminar">
+                                <i class="fas fa-lock" style="font-size: 0.9rem;"></i>
+                            </button>
+                            {% endif %}
                         </div>
                     </td>
                 </tr>
@@ -269,7 +319,7 @@
             </tbody>
         </table>
     </div>
-    
+
     <div id="sinResultados" class="text-center py-5 d-none bg-white">
         <p class="text-muted fw-bold m-0"><i class="fas fa-search me-2"></i>No se encontró ese equipo.</p>
     </div>
@@ -288,7 +338,8 @@
 
                     <div class="mb-4">
                         <label class="form-label small fw-bold text-muted">Nombre de la Maquinaria</label>
-                        <input type="text" name="nombre" id="inputNombre" class="form-control sian-input py-2 fw-bold text-dark"
+                        <input type="text" name="nombre" id="inputNombre"
+                            class="form-control sian-input py-2 fw-bold text-dark"
                             placeholder="Ej. Plotter de Corte Silhouette" required>
                     </div>
 
@@ -298,15 +349,17 @@
                             Costo de luz, tinta o desgaste estimado por cada vez que utilizas este equipo.
                         </p>
                         <div class="input-group shadow-sm" style="border-radius: 10px;">
-                            <span class="input-group-text bg-white border-end-0 border-light text-success fw-bold" style="border-radius: 10px 0 0 10px;">$</span>
-                            <input type="number" step="any" name="costo_desgaste" id="inputCosto" 
+                            <span class="input-group-text bg-white border-end-0 border-light text-success fw-bold"
+                                style="border-radius: 10px 0 0 10px;">$</span>
+                            <input type="number" step="any" name="costo_desgaste" id="inputCosto"
                                 class="form-control sian-input border-start-0 border-light py-2 fw-bold text-success"
                                 style="border-radius: 0 10px 10px 0; box-shadow: none;" placeholder="0.00" required>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer border-0 p-4 pt-0">
-                    <button type="button" class="btn btn-sian rounded-3 px-4 py-2 fw-bold w-100 shadow-sm" onclick="guardarEquipoFetch()">Guardar Equipo</button>
+                    <button type="button" class="btn btn-sian rounded-3 px-4 py-2 fw-bold w-100 shadow-sm"
+                        onclick="guardarEquipoFetch()">Guardar Equipo</button>
                 </div>
             </form>
         </div>
@@ -318,7 +371,7 @@
     <button id="chatbot-toggle" class="chatbot-fab">
         <i class="fas fa-robot"></i>
     </button>
-    
+
     <div id="chatbot-panel" class="chatbot-panel d-none">
         <div class="chatbot-header">
             <h6 class="mb-0 fw-bold">
@@ -326,16 +379,17 @@
             </h6>
             <button id="chatbot-close" class="btn-close btn-close-white"></button>
         </div>
-        
+
         <div id="chatbot-messages" class="chatbot-messages">
             <div class="message bot-message">
                 <div class="message-content">
                     👋 ¡Hola! Soy SianBot, tu asistente de costos.<br><br>
-                    Dime qué equipo tienes (ej: <i>"Tengo una Cricut Maker 4"</i>) y te ayudo a calcular cuánto cobrar por desgaste.
+                    Dime qué equipo tienes (ej: <i>"Tengo una Cricut Maker 4"</i>) y te ayudo a calcular cuánto cobrar
+                    por desgaste.
                 </div>
             </div>
         </div>
-        
+
         <div class="chatbot-input-area">
             <input type="text" id="chatbot-input" placeholder="Ej: Tengo una plancha de calor..." class="form-control">
             <button id="chatbot-send" class="btn btn-sian">
@@ -346,77 +400,158 @@
 </div>
 
 <style>
-.chatbot-widget { position: fixed; bottom: 20px; right: 20px; z-index: 1050; }
+    .chatbot-widget {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 1050;
+    }
 
-.chatbot-fab {
-    width: 60px; height: 60px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--sian-primary), #ff6b7a);
-    border: none; color: white; font-size: 1.5rem;
-    box-shadow: 0 4px 20px rgba(255, 74, 90, 0.4);
-    transition: all 0.3s; cursor: pointer;
-}
-.chatbot-fab:hover { transform: translateY(-3px); box-shadow: 0 6px 25px rgba(255, 74, 90, 0.6); }
+    .chatbot-fab {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--sian-primary), #ff6b7a);
+        border: none;
+        color: white;
+        font-size: 1.5rem;
+        box-shadow: 0 4px 20px rgba(255, 74, 90, 0.4);
+        transition: all 0.3s;
+        cursor: pointer;
+    }
 
-.chatbot-panel {
-    position: absolute; bottom: 80px; right: 0;
-    width: 380px; max-width: calc(100vw - 40px);
-    height: 550px; max-height: calc(100vh - 120px);
-    background: white; border-radius: 16px;
-    box-shadow: 0 10px 40px rgba(0,0,0,0.15);
-    display: flex; flex-direction: column; overflow: hidden;
-}
+    .chatbot-fab:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 25px rgba(255, 74, 90, 0.6);
+    }
 
-.chatbot-header {
-    background: linear-gradient(135deg, var(--sian-primary), #ff6b7a);
-    color: white; padding: 16px 20px;
-    display: flex; justify-content: space-between; align-items: center;
-}
+    .chatbot-panel {
+        position: absolute;
+        bottom: 80px;
+        right: 0;
+        width: 380px;
+        max-width: calc(100vw - 40px);
+        height: 550px;
+        max-height: calc(100vh - 120px);
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
 
-.chatbot-messages {
-    flex: 1; overflow-y: auto; padding: 20px;
-    background: #f8f9fa; display: flex; flex-direction: column; gap: 12px;
-}
+    .chatbot-header {
+        background: linear-gradient(135deg, var(--sian-primary), #ff6b7a);
+        color: white;
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
 
-.message { display: flex; max-width: 80%; }
-.bot-message { align-self: flex-start; }
-.user-message { align-self: flex-end; }
+    .chatbot-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #f8f9fa;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
 
-.message-content {
-    background: white; padding: 12px 16px; border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05); font-size: 0.9rem;
-    line-height: 1.5;
-}
-.user-message .message-content {
-    background: var(--sian-primary); color: white;
-}
+    .message {
+        display: flex;
+        max-width: 80%;
+    }
 
-.chatbot-input-area {
-    padding: 16px; background: white; border-top: 1px solid #eee;
-    display: flex; gap: 10px;
-}
-.chatbot-input-area input {
-    flex: 1; border: 1px solid #ddd; border-radius: 20px;
-    padding: 10px 16px; font-size: 0.9rem;
-}
-.chatbot-input-area button {
-    border-radius: 50%; width: 44px; height: 44px;
-    display: flex; align-items: center; justify-content: center;
-}
+    .bot-message {
+        align-self: flex-start;
+    }
 
-/* Modo oscuro */
-[data-bs-theme="dark"] .chatbot-panel { background: #1e293b; }
-[data-bs-theme="dark"] .chatbot-messages { background: #0f172a; }
-[data-bs-theme="dark"] .message-content { background: #334155; color: #f8fafc; }
-[data-bs-theme="dark"] .user-message .message-content { background: var(--sian-primary); }
-[data-bs-theme="dark"] .chatbot-input-area { background: #1e293b; border-color: #334155; }
-[data-bs-theme="dark"] .chatbot-input-area input {
-    background: #0f172a; border-color: #334155; color: #f8fafc;
-}
+    .user-message {
+        align-self: flex-end;
+    }
 
-@media (max-width: 576px) {
-    .chatbot-panel { width: calc(100vw - 20px); height: calc(100vh - 100px); }
-    .chatbot-widget { bottom: 10px; right: 10px; }
-}
+    .message-content {
+        background: white;
+        padding: 12px 16px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .user-message .message-content {
+        background: var(--sian-primary);
+        color: white;
+    }
+
+    .chatbot-input-area {
+        padding: 16px;
+        background: white;
+        border-top: 1px solid #eee;
+        display: flex;
+        gap: 10px;
+    }
+
+    .chatbot-input-area input {
+        flex: 1;
+        border: 1px solid #ddd;
+        border-radius: 20px;
+        padding: 10px 16px;
+        font-size: 0.9rem;
+    }
+
+    .chatbot-input-area button {
+        border-radius: 50%;
+        width: 44px;
+        height: 44px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    /* Modo oscuro */
+    [data-bs-theme="dark"] .chatbot-panel {
+        background: #1e293b;
+    }
+
+    [data-bs-theme="dark"] .chatbot-messages {
+        background: #0f172a;
+    }
+
+    [data-bs-theme="dark"] .message-content {
+        background: #334155;
+        color: #f8fafc;
+    }
+
+    [data-bs-theme="dark"] .user-message .message-content {
+        background: var(--sian-primary);
+    }
+
+    [data-bs-theme="dark"] .chatbot-input-area {
+        background: #1e293b;
+        border-color: #334155;
+    }
+
+    [data-bs-theme="dark"] .chatbot-input-area input {
+        background: #0f172a;
+        border-color: #334155;
+        color: #f8fafc;
+    }
+
+    @media (max-width: 576px) {
+        .chatbot-panel {
+            width: calc(100vw - 20px);
+            height: calc(100vh - 100px);
+        }
+
+        .chatbot-widget {
+            bottom: 10px;
+            right: 10px;
+        }
+    }
 </style>
 
 {% block scripts %}
@@ -427,7 +562,7 @@
 
     // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
     function repetirTutorialEquipos() {
-        if(typeof window.driver === 'undefined') return;
+        if (typeof window.driver === 'undefined') return;
 
         const driverObj = window.driver.js.driver({
             showProgress: true,
@@ -439,26 +574,27 @@
                 {% if mostrar_tour %}
                 fetch('/api/tutorial/completado', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         modulo: 'equipos',
-                        version: {{ version_tour | default(1) }}
-                    })
-                }).catch(e => console.error("Error guardando tutorial:", e));
-                {% endif %}
+                        version: {{ version_tour | default(1)
+                }}
+        })
+    }).catch (e => console.error("Error guardando tutorial:", e));
+    {% endif %}
             },
-            steps: [
-                { popover: { title: 'Maquinaria y Procesos ⚡', description: 'Las máquinas cuestan, se desgastan y consumen luz. Aquí registraremos esa "renta" para que nunca la pagues de tu bolsa.', align: 'center' } },
-                { element: '#tour-nuevo-equipo', popover: { title: '1. Agrega tu primer equipo', description: 'Solo necesitas nombre y cuánto vas a cobrar de desgaste por uso.', side: "bottom", align: 'end' } },
-                { element: '#tour-tabla-equipos', popover: { title: '2. Tu panel de control', description: 'Lista de equipos. Ajusta sus tarifas conforme suban tus costos operativos.', side: "top", align: 'center' } },
-                { element: '#tour-buscador-equipos', popover: { title: '3. Encuentra rápido', description: 'Filtra tus máquinas por nombre al instante.', side: "bottom", align: 'start' } }
-            ]
+    steps: [
+        { popover: { title: 'Maquinaria y Procesos ⚡', description: 'Las máquinas cuestan, se desgastan y consumen luz. Aquí registraremos esa "renta" para que nunca la pagues de tu bolsa.', align: 'center' } },
+        { element: '#tour-nuevo-equipo', popover: { title: '1. Agrega tu primer equipo', description: 'Solo necesitas nombre y cuánto vas a cobrar de desgaste por uso.', side: "bottom", align: 'end' } },
+        { element: '#tour-tabla-equipos', popover: { title: '2. Tu panel de control', description: 'Lista de equipos. Ajusta sus tarifas conforme suban tus costos operativos.', side: "top", align: 'center' } },
+        { element: '#tour-buscador-equipos', popover: { title: '3. Encuentra rápido', description: 'Filtra tus máquinas por nombre al instante.', side: "bottom", align: 'start' } }
+    ]
         });
-        driverObj.drive();
+    driverObj.drive();
     }
 
     {% if mostrar_tour %}
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.driver !== 'undefined') {
             setTimeout(() => { repetirTutorialEquipos(); }, 800);
         }
@@ -479,7 +615,7 @@
                 rows[i].style.display = "none";
             }
         }
-        
+
         document.getElementById('tablaEquipos').classList.toggle('d-none', visibles === 0 && rows.length > 0);
         document.getElementById('sinResultados').classList.toggle('d-none', visibles !== 0 || rows.length === 0);
     }
@@ -586,7 +722,7 @@
     }
 
     // --- COMPATIBILIDAD CON ALERTAS DE URL (Opcional) ---
-    document.addEventListener("DOMContentLoaded", function() {
+    document.addEventListener("DOMContentLoaded", function () {
         const urlParams = new URLSearchParams(window.location.search);
         if (urlParams.has('guardado') || urlParams.has('eliminado')) {
             Swal.fire({ icon: 'success', title: 'Completado', timer: 1500, showConfirmButton: false });
@@ -596,76 +732,76 @@
 
 
     // ===== CHATBOT LOGIC =====
-const chatToggle = document.getElementById('chatbot-toggle');
-const chatPanel = document.getElementById('chatbot-panel');
-const chatClose = document.getElementById('chatbot-close');
-const chatInput = document.getElementById('chatbot-input');
-const chatSend = document.getElementById('chatbot-send');
-const chatMessages = document.getElementById('chatbot-messages');
+    const chatToggle = document.getElementById('chatbot-toggle');
+    const chatPanel = document.getElementById('chatbot-panel');
+    const chatClose = document.getElementById('chatbot-close');
+    const chatInput = document.getElementById('chatbot-input');
+    const chatSend = document.getElementById('chatbot-send');
+    const chatMessages = document.getElementById('chatbot-messages');
 
-let chatAbierto = false;
+    let chatAbierto = false;
 
-chatToggle.addEventListener('click', () => {
-    chatPanel.classList.toggle('d-none');
-    chatAbierto = !chatAbierto;
-});
-
-chatClose.addEventListener('click', () => {
-    chatPanel.classList.add('d-none');
-    chatAbierto = false;
-});
-
-chatSend.addEventListener('click', enviarMensaje);
-chatInput.addEventListener('keypress', (e) => {
-    if (e.key === 'Enter') enviarMensaje();
-});
-
-function enviarMensaje() {
-    const mensaje = chatInput.value.trim();
-    if (!mensaje) return;
-    
-    // Mostrar mensaje del usuario
-    agregarMensaje(mensaje, 'user');
-    chatInput.value = '';
-    
-    // Mostrar indicador de "escribiendo..."
-    const loadingId = agregarMensaje('Pensando...', 'bot', true);
-    
-    // Llamar al backend
-    fetch('/api/chat-equipos', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: mensaje })
-    })
-    .then(r => r.json())
-    .then(data => {
-        // Quitar el "pensando..."
-        document.getElementById(loadingId).remove();
-        
-        if (data.reply) {
-            agregarMensaje(data.reply, 'bot');
-        } else {
-            agregarMensaje('❌ Hubo un error, intenta de nuevo.', 'bot');
-        }
-    })
-    .catch(() => {
-        document.getElementById(loadingId).remove();
-        agregarMensaje('❌ No pude conectar con el servidor.', 'bot');
+    chatToggle.addEventListener('click', () => {
+        chatPanel.classList.toggle('d-none');
+        chatAbierto = !chatAbierto;
     });
-}
 
-function agregarMensaje(texto, tipo, esLoading = false) {
-    const msgDiv = document.createElement('div');
-    const msgId = 'msg-' + Date.now();
-    msgDiv.id = msgId;
-    msgDiv.className = `message ${tipo === 'user' ? 'user-message' : 'bot-message'}`;
-    msgDiv.innerHTML = `<div class="message-content">${texto}</div>`;
-    
-    chatMessages.appendChild(msgDiv);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-    
-    return msgId;
-}
+    chatClose.addEventListener('click', () => {
+        chatPanel.classList.add('d-none');
+        chatAbierto = false;
+    });
+
+    chatSend.addEventListener('click', enviarMensaje);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') enviarMensaje();
+    });
+
+    function enviarMensaje() {
+        const mensaje = chatInput.value.trim();
+        if (!mensaje) return;
+
+        // Mostrar mensaje del usuario
+        agregarMensaje(mensaje, 'user');
+        chatInput.value = '';
+
+        // Mostrar indicador de "escribiendo..."
+        const loadingId = agregarMensaje('Pensando...', 'bot', true);
+
+        // Llamar al backend
+        fetch('/api/chat-equipos', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: mensaje })
+        })
+            .then(r => r.json())
+            .then(data => {
+                // Quitar el "pensando..."
+                document.getElementById(loadingId).remove();
+
+                if (data.reply) {
+                    agregarMensaje(data.reply, 'bot');
+                } else {
+                    agregarMensaje('❌ Hubo un error, intenta de nuevo.', 'bot');
+                }
+            })
+            .catch(() => {
+                document.getElementById(loadingId).remove();
+                agregarMensaje('❌ No pude conectar con el servidor.', 'bot');
+            });
+    }
+
+    function agregarMensaje(texto, tipo, esLoading = false) {
+        const msgDiv = document.createElement('div');
+        const msgId = 'msg-' + Date.now();
+        msgDiv.id = msgId;
+        msgDiv.className = `message ${tipo === 'user' ? 'user-message' : 'bot-message'}`;
+        msgDiv.innerHTML = `<div class="message-content">${texto}</div>`;
+
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        return msgId;
+    }
 </script>
 {% endblock %}
 {% endblock %}

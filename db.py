@@ -180,6 +180,21 @@ def init_db():
     """)
 
     # =========================
+    # 2.5 GASTOS FIJOS MENSUALES
+    # =========================
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS gastos_fijos (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL,
+        nombre TEXT NOT NULL,
+        monto_mensual REAL DEFAULT 0,
+        activo BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(user_id) REFERENCES usuarios(id)
+    )
+    """)
+
+    # =========================
     # 3. MAQUINARIA
     # =========================
     cursor.execute("""

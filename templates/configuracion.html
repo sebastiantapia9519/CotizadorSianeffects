@@ -3,318 +3,1169 @@
 {% block extra_css %}
 <style>
     /* ==========================================================================
-       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       NUEVO DISEÑO DE CONFIGURACIÓN - INSPIRADO EN VERCEL/SHOPIFY
        ========================================================================== */
+
+    /* Variables de diseño mejoradas */
+    :root {
+        --config-spacing: 24px;
+        --config-radius: 12px;
+        --config-border: #e5e7eb;
+        --config-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        --config-hover-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
     body {
         background-color: #fafafa;
     }
 
-    /* --- Sidebar Navigation --- */
-    .saas-sidebar {
-        background: transparent;
-        padding-right: 1rem;
+    /* ===========================
+       LAYOUT PRINCIPAL
+       =========================== */
+    .config-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 20px;
     }
 
-    .saas-nav-link {
+    .config-header {
+        margin-bottom: 32px;
+        padding-bottom: 24px;
+        border-bottom: 1px solid var(--config-border);
+    }
+
+    .config-title {
+        font-size: 1.75rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0 0 8px 0;
+    }
+
+    .config-subtitle {
+        color: #6b7280;
+        font-size: 0.95rem;
+        margin: 0;
+    }
+
+    /* ===========================
+       SIDEBAR MEJORADO
+       =========================== */
+    .config-sidebar {
+        position: sticky;
+        top: 80px;
+        height: fit-content;
+    }
+
+    .sidebar-section {
+        margin-bottom: 24px;
+    }
+
+    .sidebar-label {
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: #9ca3af;
+        margin-bottom: 12px;
+        padding: 0 12px;
+        display: block;
+    }
+
+    .sidebar-nav {
+        background: white;
+        border-radius: var(--config-radius);
+        padding: 6px;
+        box-shadow: var(--config-shadow);
+    }
+
+    .sidebar-link {
         display: flex;
         align-items: center;
-        padding: 10px 16px;
+        padding: 12px 16px;
         color: #6b7280;
         font-weight: 600;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         border-radius: 8px;
-        margin-bottom: 4px;
-        transition: all 0.2s ease;
+        margin-bottom: 2px;
+        transition: all 0.15s ease;
         text-decoration: none;
+        position: relative;
     }
 
-    .saas-nav-link:hover {
-        background: #f3f4f6;
+    .sidebar-link:hover {
+        background: #f9fafb;
         color: #111827;
     }
 
-    .saas-nav-link.active {
-        background: var(--sian-pink-light);
+    .sidebar-link.active {
+        background: linear-gradient(135deg, rgba(255, 107, 129, 0.1), rgba(255, 107, 129, 0.05));
         color: var(--sian-pink);
         font-weight: 700;
     }
 
-    .saas-nav-icon {
-        width: 24px;
+    .sidebar-link.active::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 8px;
+        bottom: 8px;
+        width: 3px;
+        background: var(--sian-pink);
+        border-radius: 0 3px 3px 0;
+    }
+
+    .sidebar-icon {
+        width: 20px;
         text-align: center;
         margin-right: 12px;
-        font-size: 1.1rem;
+        font-size: 1rem;
     }
 
-    /* --- Modulos / Tarjetas --- */
-    .saas-card {
-        background: #ffffff;
-        border: 1px solid #e5e7eb;
+    .sidebar-badge {
+        margin-left: auto;
+        font-size: 0.65rem;
+        padding: 3px 8px;
         border-radius: 12px;
-        margin-bottom: 24px;
-        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
-        overflow: hidden;
+        background: #fee2e2;
+        color: #dc2626;
+        font-weight: 700;
     }
 
-    .saas-card-header {
+    /* ===========================
+       CARDS MODERNOS
+       =========================== */
+    .config-card {
+        background: white;
+        border-radius: var(--config-radius);
+        border: 1px solid var(--config-border);
+        margin-bottom: var(--config-spacing);
+        transition: box-shadow 0.2s ease;
+    }
+
+    .config-card:hover {
+        box-shadow: var(--config-hover-shadow);
+    }
+
+    .card-header-modern {
         padding: 20px 24px;
-        border-bottom: 1px solid #e5e7eb;
-        background: #ffffff;
+        border-bottom: 1px solid var(--config-border);
         display: flex;
         justify-content: space-between;
         align-items: center;
     }
 
-    .saas-card-header h5 {
+    .card-title-modern {
+        display: flex;
+        align-items: center;
+        gap: 12px;
         margin: 0;
-        font-weight: 700;
-        font-size: 1.1rem;
-        color: #111827;
     }
 
-    .saas-card-body {
+    .card-title-modern h5 {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+    }
+
+    .card-title-modern .title-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #f9fafb, #f3f4f6);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--sian-pink);
+        font-size: 1.2rem;
+    }
+
+    .card-badge {
+        font-size: 0.75rem;
+        padding: 4px 12px;
+        border-radius: 16px;
+        font-weight: 600;
+    }
+
+    .badge-active {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .badge-inactive {
+        background: #f3f4f6;
+        color: #6b7280;
+    }
+
+    .card-body-modern {
         padding: 24px;
     }
 
-    .saas-card-footer {
-        padding: 16px 24px;
-        background: #f9fafb;
-        border-top: 1px solid #e5e7eb;
-        text-align: right;
+    /* ===========================
+       SECCIONES COLAPSABLES
+       =========================== */
+    .collapsible-section {
+        border: 1px solid var(--config-border);
+        border-radius: 10px;
+        margin-bottom: 16px;
+        overflow: hidden;
+        transition: all 0.2s ease;
     }
 
-    /* --- Formularios --- */
-    .saas-label {
-        font-weight: 600;
-        font-size: 0.75rem;
-        color: #6b7280;
-        margin-bottom: 6px;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+    .collapsible-section:hover {
+        border-color: #d1d5db;
     }
 
-    .saas-input {
-        border: 1px solid #d1d5db;
-        border-radius: 8px;
-        padding: 10px 14px;
-        transition: border-color 0.2s, box-shadow 0.2s;
-        background-color: #fff;
-        font-weight: 500;
-        color: #111827;
+    .collapsible-header {
+        padding: 16px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        user-select: none;
+        background: #fafafa;
+        transition: background 0.15s ease;
     }
 
-    .saas-input:focus {
-        border-color: var(--sian-pink);
-        box-shadow: 0 0 0 3px var(--sian-pink-light);
-        outline: none;
+    .collapsible-header:hover {
+        background: #f3f4f6;
     }
 
-    /* --- Uploader de Logo --- */
-    .logo-uploader {
+    .collapsible-header.active {
+        background: white;
+        border-bottom: 1px solid var(--config-border);
+    }
+
+    .collapsible-title {
         display: flex;
         align-items: center;
-        gap: 20px;
+        gap: 12px;
+        font-weight: 600;
+        color: #374151;
     }
 
-    .logo-circle {
-        width: 72px;
-        height: 72px;
+    .collapsible-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    .collapsible-arrow {
+        transition: transform 0.2s ease;
+        color: #9ca3af;
+    }
+
+    .collapsible-arrow.active {
+        transform: rotate(180deg);
+    }
+
+    .collapsible-body {
+        padding: 20px;
+        display: none;
+    }
+
+    .collapsible-body.active {
+        display: block;
+    }
+
+    /* ===========================
+       FORMULARIOS MEJORADOS
+       =========================== */
+    .form-group-modern {
+        margin-bottom: 24px;
+    }
+
+    .form-label-modern {
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: #374151;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .form-label-modern .label-tooltip {
+        color: #9ca3af;
+        cursor: help;
+    }
+
+    .form-input-modern {
+        width: 100%;
+        padding: 12px 14px;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 0.95rem;
+        transition: all 0.15s ease;
+        background: white;
+    }
+
+    .form-input-modern:hover {
+        border-color: #d1d5db;
+    }
+
+    .form-input-modern:focus {
+        outline: none;
+        border-color: var(--sian-pink);
+        box-shadow: 0 0 0 3px rgba(255, 107, 129, 0.1);
+    }
+
+    .form-help-text {
+        font-size: 0.8rem;
+        color: #6b7280;
+        margin-top: 6px;
+    }
+
+    /* ===========================
+       SWITCHES MEJORADOS
+       =========================== */
+    .toggle-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 16px;
+        border-radius: 10px;
+        background: #fafafa;
+        margin-bottom: 12px;
+        transition: background 0.15s ease;
+    }
+
+    .toggle-row:hover {
+        background: #f3f4f6;
+    }
+
+    .toggle-info {
+        flex: 1;
+        margin-right: 16px;
+    }
+
+    .toggle-title {
+        font-weight: 600;
+        color: #111827;
+        margin-bottom: 4px;
+        font-size: 0.95rem;
+    }
+
+    .toggle-description {
+        color: #6b7280;
+        font-size: 0.85rem;
+        line-height: 1.5;
+    }
+
+    .toggle-switch {
+        flex-shrink: 0;
+    }
+
+    .switch-modern {
+        width: 48px;
+        height: 28px;
+        background: #d1d5db;
+        border-radius: 14px;
+        position: relative;
+        cursor: pointer;
+        transition: background 0.2s ease;
+    }
+
+    .switch-modern.active {
+        background: var(--sian-teal);
+    }
+
+    .switch-modern::after {
+        content: '';
+        position: absolute;
+        top: 3px;
+        left: 3px;
+        width: 22px;
+        height: 22px;
+        background: white;
         border-radius: 50%;
-        border: 2px dashed #d1d5db;
+        transition: transform 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .switch-modern.active::after {
+        transform: translateX(20px);
+    }
+
+    /* ===========================
+       TABS HORIZONTALES
+       =========================== */
+    .tabs-modern {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        background: #f3f4f6;
+        border-radius: 10px;
+        margin-bottom: 20px;
+    }
+
+    .tab-modern {
+        flex: 1;
+        padding: 10px 16px;
+        border-radius: 7px;
+        border: none;
+        background: transparent;
+        font-weight: 600;
+        font-size: 0.9rem;
+        color: #6b7280;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .tab-modern:hover {
+        color: #374151;
+    }
+
+    .tab-modern.active {
+        background: white;
+        color: #111827;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    /* ===========================
+       LOGO UPLOADER MEJORADO
+       =========================== */
+    .logo-upload-area {
+        display: flex;
+        align-items: center;
+        gap: 24px;
+        padding: 20px;
+        background: #fafafa;
+        border-radius: 10px;
+        border: 2px dashed #e5e7eb;
+        transition: all 0.2s ease;
+    }
+
+    .logo-upload-area:hover {
+        border-color: #d1d5db;
+        background: #f9fafb;
+    }
+
+    .logo-preview-circle {
+        width: 96px;
+        height: 96px;
+        border-radius: 50%;
+        background: white;
+        border: 3px solid #e5e7eb;
         display: flex;
         align-items: center;
         justify-content: center;
         overflow: hidden;
-        background: #f3f4f6;
         flex-shrink: 0;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
     }
 
-    .logo-circle img {
+    .logo-preview-circle img {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
 
-    /* --- Ticket Preview --- */
-    .ticket-preview {
-        background: white; padding: 20px; border: 2px dashed #ff6b81; border-radius: 10px;
-        margin: 0 auto; max-width: 300px; font-family: 'Nunito', sans-serif; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+    .logo-upload-info {
+        flex: 1;
     }
-    .tp-brand { text-align: center; margin-bottom: 15px; }
-    .tp-brand h4 { color: #ff6b81; font-weight: 900; text-transform: uppercase; margin: 0; font-size: 1.2rem; }
-    .tp-brand p { color: #2ec4b6; font-weight: 700; font-size: 0.85rem; margin: 0; }
-    .tp-type { background: #2ec4b6; color: white; text-align: center; font-weight: bold; border-radius: 4px; font-size: 0.8rem; margin: 10px 0; padding: 4px; }
-    .tp-info { border-bottom: 2px dotted #eee; font-size: 0.75rem; text-align: center; padding-bottom: 8px; margin-bottom: 10px; color: #666; }
-    .tp-table { width: 100%; font-size: 0.75rem; margin-bottom: 10px; border-collapse: collapse;}
-    .tp-table th { text-align: left; border-bottom: 1px solid #ff6b81; color: #ff6b81; padding-bottom: 4px;}
-    .tp-table td { padding: 4px 0; }
-    .tp-total { border-top: 1px dashed #ccc; text-align: right; padding-top: 10px; margin-top: 5px; }
-    .tp-total-amount { font-size: 1.4rem; font-weight: 900; color: #333; }
-    .tp-footer { text-align: center; font-size: 0.7rem; color: #999; margin-top: 15px; }
 
-    .ticket-bw, .ticket-bw .tp-type, .ticket-bw .tp-table th { border-color: #333 !important; color: #000 !important; }
-    .ticket-bw .tp-brand h4 { color: #000 !important; }
-    .ticket-bw .tp-brand p, .ticket-bw p[style*="color"] { color: #555 !important; }
-    .ticket-bw .tp-type { background: #333 !important; color: #fff !important; }
+    .logo-upload-btn {
+        background: #111827;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        margin-bottom: 8px;
+    }
 
-    /* Fix switches */
+    .logo-upload-btn:hover {
+        background: #374151;
+    }
+
+    /* ===========================
+       EMOJI SELECTOR MEJORADO
+       =========================== */
+    .emoji-grid-modern {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+        gap: 12px;
+        padding: 16px;
+        background: #fafafa;
+        border-radius: 10px;
+    }
+
+    .emoji-item-modern {
+        width: 100%;
+        aspect-ratio: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .emoji-item-modern:hover {
+        transform: scale(1.1);
+        border-color: #d1d5db;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .emoji-item-modern.selected {
+        background: linear-gradient(135deg, rgba(255, 107, 129, 0.1), rgba(255, 107, 129, 0.05));
+        border-color: var(--sian-pink);
+        border-width: 3px;
+    }
+
+    /* ===========================
+       BOTONES MODERNOS
+       =========================== */
+    .btn-primary-modern {
+        background: linear-gradient(135deg, var(--sian-pink), #ff4a5a);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 8px rgba(255, 107, 129, 0.25);
+    }
+
+    .btn-primary-modern:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(255, 107, 129, 0.35);
+    }
+
+    .btn-secondary-modern {
+        background: white;
+        color: #374151;
+        padding: 12px 24px;
+        border-radius: 8px;
+        border: 1.5px solid #e5e7eb;
+        font-weight: 600;
+        font-size: 0.95rem;
+        cursor: pointer;
+        transition: all 0.15s ease;
+    }
+
+    .btn-secondary-modern:hover {
+        border-color: #d1d5db;
+        background: #fafafa;
+    }
+
+    /* ===========================
+       PREVIEW TICKET MEJORADO
+       =========================== */
+    .ticket-preview-modern {
+        background: white;
+        padding: 24px;
+        border: 2px dashed var(--sian-pink);
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+        max-width: 320px;
+        margin: 0 auto;
+        font-family: 'Nunito', sans-serif;
+    }
+
+    /* ===========================
+       TABLA MEJORADA
+       =========================== */
+    .table-modern {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .table-modern thead th {
+        background: #fafafa;
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.8rem;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        border-bottom: 2px solid #e5e7eb;
+    }
+
+    .table-modern tbody tr {
+        transition: background 0.1s ease;
+    }
+
+    .table-modern tbody tr:hover {
+        background: #fafafa;
+    }
+
+    .table-modern tbody td {
+        padding: 16px;
+        border-bottom: 1px solid #f3f4f6;
+    }
+
+    /* ===========================
+       INPUTS DE RANGO
+       =========================== */
+    .range-input-group {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .range-input-group input[type="number"] {
+        flex: 1;
+    }
+
+    .range-label {
+        font-size: 0.85rem;
+        color: #6b7280;
+        font-weight: 600;
+        min-width: 80px;
+    }
+
+    /* ===========================
+       FIX PARA INPUT GROUPS MODERNOS
+       =========================== */
+    /* 1. Obligamos al grupo a mantener todo en la misma línea */
+    .input-group {
+        display: flex;
+        align-items: stretch;
+        width: 100%;
+    }
+
+    /* 2. Evitamos que el 100% rompa el contenedor */
+    .input-group .form-input-modern {
+        position: relative;
+        flex: 1 1 auto;
+        width: 1%;
+        min-width: 0;
+        margin-bottom: 0;
+    }
+
+    /* 3. Arreglamos las esquinas cuando el símbolo ($) está a la IZQUIERDA */
+    .input-group>.input-group-text:first-child {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+        border: 1.5px solid var(--config-border, #e5e7eb);
+        border-right: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .input-group>.form-input-modern:not(:first-child) {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+    }
+
+    /* 4. Arreglamos las esquinas cuando el símbolo (hrs, %) está a la DERECHA */
+    .input-group>.form-input-modern:not(:last-child) {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .input-group>.input-group-text:last-child {
+        border-top-left-radius: 0;
+        border-bottom-left-radius: 0;
+        border: 1.5px solid var(--config-border, #e5e7eb);
+        border-left: 0;
+        display: flex;
+        align-items: center;
+    }
+
+    /* ===========================
+       MODO OSCURO MEJORADO
+       =========================== */
+    [data-bs-theme="dark"] body {
+        background-color: #0a0f1a;
+    }
+
+    [data-bs-theme="dark"] .config-card {
+        background: #1a1f2e;
+        border-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .sidebar-nav {
+        background: #1a1f2e;
+        border-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .sidebar-link {
+        color: #9ca3af;
+    }
+
+    [data-bs-theme="dark"] .sidebar-link:hover {
+        background: #252b3b;
+        color: #f9fafb;
+    }
+
+    [data-bs-theme="dark"] .sidebar-link.active {
+        background: linear-gradient(135deg, rgba(255, 107, 129, 0.15), rgba(255, 107, 129, 0.08));
+        color: var(--sian-pink);
+    }
+
+    [data-bs-theme="dark"] .card-header-modern {
+        border-bottom-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .card-title-modern h5,
+    [data-bs-theme="dark"] .config-title {
+        color: #f9fafb;
+    }
+
+    [data-bs-theme="dark"] .config-subtitle,
+    [data-bs-theme="dark"] .form-help-text,
+    [data-bs-theme="dark"] .toggle-description {
+        color: #9ca3af;
+    }
+
+    [data-bs-theme="dark"] .form-input-modern {
+        background: #0a0f1a;
+        border-color: #2a3142;
+        color: #f9fafb;
+    }
+
+    [data-bs-theme="dark"] .form-input-modern:focus {
+        border-color: var(--sian-pink);
+    }
+
+    [data-bs-theme="dark"] .toggle-row {
+        background: #0a0f1a;
+    }
+
+    [data-bs-theme="dark"] .toggle-row:hover {
+        background: #141925;
+    }
+
+    [data-bs-theme="dark"] .toggle-title {
+        color: #f9fafb;
+    }
+
+    [data-bs-theme="dark"] .collapsible-section {
+        border-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .collapsible-header {
+        background: #141925;
+    }
+
+    [data-bs-theme="dark"] .collapsible-header:hover {
+        background: #1a1f2e;
+    }
+
+    [data-bs-theme="dark"] .collapsible-header.active {
+        background: #1a1f2e;
+        border-bottom-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .collapsible-title {
+        color: #e5e7eb;
+    }
+
+    [data-bs-theme="dark"] .logo-upload-area,
+    [data-bs-theme="dark"] .emoji-grid-modern {
+        background: #0a0f1a;
+        border-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .logo-preview-circle {
+        background: #141925;
+        border-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .emoji-item-modern {
+        background: #141925;
+        border-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .emoji-item-modern.selected {
+        background: linear-gradient(135deg, rgba(255, 107, 129, 0.2), rgba(255, 107, 129, 0.1));
+        border-color: var(--sian-pink);
+    }
+
+    [data-bs-theme="dark"] .tabs-modern {
+        background: #0a0f1a;
+    }
+
+    [data-bs-theme="dark"] .tab-modern {
+        color: #9ca3af;
+    }
+
+    [data-bs-theme="dark"] .tab-modern.active {
+        background: #1a1f2e;
+        color: #f9fafb;
+    }
+
+    [data-bs-theme="dark"] .table-modern thead th {
+        background: #0a0f1a;
+        color: #9ca3af;
+        border-bottom-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .table-modern tbody tr:hover {
+        background: #141925;
+    }
+
+    [data-bs-theme="dark"] .table-modern tbody td {
+        border-bottom-color: #2a3142;
+        color: #e5e7eb;
+    }
+
+    /* Fix de bordes para los símbolos en Modo Oscuro */
+    [data-bs-theme="dark"] .input-group>.input-group-text:first-child,
+    [data-bs-theme="dark"] .input-group>.input-group-text:last-child {
+        border-color: #2a3142 !important;
+        background-color: #141925;
+        /* Fondo oscuro sutil */
+        color: #9ca3af;
+    }
+
+    /* Si tienes un grupo azul/verde como el Factor Operativo, respetamos su color */
+    [data-bs-theme="dark"] .input-group>.bg-primary.input-group-text {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0d6efd !important;
+    }
+
+    /* ===========================
+       CHATBOT (MANTENIDO)
+       =========================== */
+    .chatbot-widget {
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 1050;
+    }
+
+    .chatbot-fab {
+        width: 64px;
+        height: 64px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #ff4a5a, #ff6b7a);
+        border: none;
+        color: white;
+        font-size: 1.6rem;
+        box-shadow: 0 8px 24px rgba(255, 74, 90, 0.4);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+
+    .chatbot-fab:hover {
+        transform: translateY(-4px) scale(1.05);
+        box-shadow: 0 12px 32px rgba(255, 74, 90, 0.5);
+    }
+
+    .chatbot-panel {
+        position: absolute;
+        bottom: 80px;
+        right: 0;
+        width: 400px;
+        max-width: calc(100vw - 40px);
+        height: 600px;
+        max-height: calc(100vh - 120px);
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .chatbot-header {
+        background: linear-gradient(135deg, #ff4a5a, #ff6b7a);
+        color: white;
+        padding: 20px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .chatbot-messages {
+        flex: 1;
+        overflow-y: auto;
+        padding: 20px;
+        background: #f9fafb;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .message {
+        display: flex;
+        max-width: 80%;
+    }
+
+    .bot-message {
+        align-self: flex-start;
+    }
+
+    .user-message {
+        align-self: flex-end;
+    }
+
+    .message-content {
+        background: white;
+        padding: 12px 16px;
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .user-message .message-content {
+        background: #ff4a5a;
+        color: white;
+    }
+
+    .chatbot-input-area {
+        padding: 16px;
+        background: white;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        gap: 12px;
+    }
+
+    .chatbot-input-area input {
+        flex: 1;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 24px;
+        padding: 12px 18px;
+        font-size: 0.9rem;
+    }
+
+    .chatbot-input-area input:focus {
+        outline: none;
+        border-color: var(--sian-pink);
+    }
+
+    .chatbot-input-area button {
+        border-radius: 50%;
+        width: 48px;
+        height: 48px;
+        background: var(--sian-pink);
+        border: none;
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .chatbot-input-area button:hover {
+        background: #ff4a5a;
+        transform: scale(1.05);
+    }
+
+    [data-bs-theme="dark"] .chatbot-panel {
+        background: #1a1f2e;
+    }
+
+    [data-bs-theme="dark"] .chatbot-messages {
+        background: #0a0f1a;
+    }
+
+    [data-bs-theme="dark"] .message-content {
+        background: #2a3142;
+        color: #f9fafb;
+    }
+
+    [data-bs-theme="dark"] .user-message .message-content {
+        background: #ff4a5a;
+    }
+
+    [data-bs-theme="dark"] .chatbot-input-area {
+        background: #1a1f2e;
+        border-top-color: #2a3142;
+    }
+
+    [data-bs-theme="dark"] .chatbot-input-area input {
+        background: #0a0f1a;
+        border-color: #2a3142;
+        color: #f9fafb;
+    }
+
+    /* ===========================
+       RESPONSIVE
+       =========================== */
+    @media (max-width: 768px) {
+        .config-sidebar {
+            position: relative;
+            top: 0;
+            margin-bottom: 24px;
+        }
+
+        .card-header-modern {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .logo-upload-area {
+            flex-direction: column;
+            text-align: center;
+        }
+
+        .emoji-grid-modern {
+            grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+        }
+
+        .chatbot-panel {
+            width: calc(100vw - 20px);
+            height: calc(100vh - 100px);
+        }
+    }
+
+    /* Fix para switches de Bootstrap existentes */
     .form-switch .form-check-input {
-        width: 2.5em;
-        height: 1.25em;
+        width: 48px;
+        height: 28px;
         cursor: pointer;
     }
+
     .form-switch .form-check-input:checked {
         background-color: var(--sian-teal);
         border-color: var(--sian-teal);
     }
-    /* --- Estilos para Selector de Emojis --- */
-    .emoji-grid-inline {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        margin-top: 10px;
-    }
-    .emoji-item {
-        font-size: 1.8rem;
-        width: 50px;
-        height: 50px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-radius: 12px;
-        cursor: pointer;
-        background: #f8f9fa;
-        border: 2px solid transparent;
-        transition: all 0.2s;
-    }
-    .emoji-item:hover {
-        transform: scale(1.1);
-    }
-    .emoji-item.selected {
-        background: var(--sian-pink-light);
-        border-color: var(--sian-pink);
+
+    /* Manteniendo estilos de ticket preview originales */
+    .ticket-preview {
+        background: white;
+        padding: 20px;
+        border: 2px dashed #ff6b81;
+        border-radius: 10px;
+        margin: 0 auto;
+        max-width: 300px;
+        font-family: 'Nunito', sans-serif;
+        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
     }
 
-    /* Tutorial Custom Styles */
-    .driver-popover { border-radius: 12px !important; }
-    .driver-popover-title { font-weight: bold !important; color: var(--sian-pink) !important; }
-    .driver-popover-next-btn { background-color: var(--sian-pink) !important; text-shadow: none !important; border: none !important;}
-
-
-    /* ===================================================
-       2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
-       =================================================== */
-    [data-bs-theme="dark"] body { background-color: #0f172a !important; }
-
-    /* Menú Lateral */
-    [data-bs-theme="dark"] .saas-nav-link {
-        color: #94a3b8 !important;
-    }
-    [data-bs-theme="dark"] .saas-nav-link:hover {
-        background-color: #1e293b !important;
-        color: #f8fafc !important;
-    }
-    [data-bs-theme="dark"] .saas-nav-link.active {
-        background-color: rgba(255, 107, 129, 0.15) !important; /* Rosa oscuro */
-        color: var(--sian-pink) !important;
+    .tp-brand {
+        text-align: center;
+        margin-bottom: 15px;
     }
 
-    /* Tarjetas Principales */
-    [data-bs-theme="dark"] .saas-card,
-    [data-bs-theme="dark"] .saas-card-header,
-    [data-bs-theme="dark"] .saas-card-footer {
-        background-color: #1e293b !important;
-        border-color: #334155 !important;
-    }
-    
-    [data-bs-theme="dark"] .saas-card-header h5 {
-        color: #f8fafc !important;
+    .tp-brand h4 {
+        color: #ff6b81;
+        font-weight: 900;
+        text-transform: uppercase;
+        margin: 0;
+        font-size: 1.2rem;
     }
 
-    /* Inputs y Textos */
-    [data-bs-theme="dark"] .saas-input,
-    [data-bs-theme="dark"] .form-control,
-    [data-bs-theme="dark"] .form-select {
-        background-color: #0f172a !important;
-        border-color: #334155 !important;
-        color: #f8fafc !important;
+    .tp-brand p {
+        color: #2ec4b6;
+        font-weight: 700;
+        font-size: 0.85rem;
+        margin: 0;
     }
 
-    [data-bs-theme="dark"] .saas-input:focus,
-    [data-bs-theme="dark"] .form-control:focus,
-    [data-bs-theme="dark"] .form-select:focus {
-        border-color: var(--sian-pink) !important;
+    .tp-type {
+        background: #2ec4b6;
+        color: white;
+        text-align: center;
+        font-weight: bold;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        margin: 10px 0;
+        padding: 4px;
     }
 
-    [data-bs-theme="dark"] .saas-label {
-        color: #94a3b8 !important;
+    .tp-info {
+        border-bottom: 2px dotted #eee;
+        font-size: 0.75rem;
+        text-align: center;
+        padding-bottom: 8px;
+        margin-bottom: 10px;
+        color: #666;
     }
 
-    /* Utilitarios y Fondos Blancos */
-    [data-bs-theme="dark"] .bg-white,
-    [data-bs-theme="dark"] .bg-light {
-        background-color: #0f172a !important;
+    .tp-table {
+        width: 100%;
+        font-size: 0.75rem;
+        margin-bottom: 10px;
+        border-collapse: collapse;
     }
 
-    [data-bs-theme="dark"] .border-light,
-    [data-bs-theme="dark"] .border,
-    [data-bs-theme="dark"] .border-bottom,
-    [data-bs-theme="dark"] .border-top {
-        border-color: #334155 !important;
+    .tp-table th {
+        text-align: left;
+        border-bottom: 1px solid #ff6b81;
+        color: #ff6b81;
+        padding-bottom: 4px;
     }
 
-    [data-bs-theme="dark"] .text-dark,
-    [data-bs-theme="dark"] .text-secondary {
-        color: #f8fafc !important;
+    .tp-table td {
+        padding: 4px 0;
     }
 
-    [data-bs-theme="dark"] .text-muted {
-        color: #94a3b8 !important;
+    .tp-total {
+        border-top: 1px dashed #ccc;
+        text-align: right;
+        padding-top: 10px;
+        margin-top: 5px;
     }
 
-    [data-bs-theme="dark"] .input-group-text {
-        background-color: #1e293b !important;
-        border-color: #334155 !important;
-        color: #94a3b8 !important;
+    .tp-total-amount {
+        font-size: 1.4rem;
+        font-weight: 900;
+        color: #333;
     }
 
-    /* Componentes Específicos: Logo y Emojis */
-    [data-bs-theme="dark"] .logo-circle {
-        background-color: #0f172a !important;
-        border-color: #334155 !important;
+    .tp-footer {
+        text-align: center;
+        font-size: 0.7rem;
+        color: #999;
+        margin-top: 15px;
     }
 
-    [data-bs-theme="dark"] .emoji-item {
-        background-color: #0f172a !important;
-    }
-    
-    [data-bs-theme="dark"] .emoji-item.selected {
-        background-color: rgba(255, 107, 129, 0.15) !important;
-        border-color: var(--sian-pink) !important;
+    .ticket-bw,
+    .ticket-bw .tp-type,
+    .ticket-bw .tp-table th {
+        border-color: #333 !important;
+        color: #000 !important;
     }
 
-    /* Modales */
-    [data-bs-theme="dark"] .modal-content,
-    [data-bs-theme="dark"] .modal-header,
-    [data-bs-theme="dark"] .modal-body,
-    [data-bs-theme="dark"] .modal-footer {
-        background-color: #1e293b !important;
-        border-color: #334155 !important;
+    .ticket-bw .tp-brand h4 {
+        color: #000 !important;
     }
 
-    /* El Ticket Preview (Aislado para que parezca un recibo real) */
+    .ticket-bw .tp-brand p,
+    .ticket-bw p[style*="color"] {
+        color: #555 !important;
+    }
+
+    .ticket-bw .tp-type {
+        background: #333 !important;
+        color: #fff !important;
+    }
+
     [data-bs-theme="dark"] .ticket-preview {
-        background-color: #ffffff !important; /* El ticket SIEMPRE es blanco */
+        background-color: #ffffff !important;
         color: #333 !important;
     }
-    
+
     [data-bs-theme="dark"] .ticket-preview .tp-total-amount,
     [data-bs-theme="dark"] .ticket-preview h4,
     [data-bs-theme="dark"] .ticket-preview p {
-        color: inherit !important; /* Evita que el dark mode lo vuelva blanco */
+        color: inherit !important;
     }
 
-    /* Botón X de modales */
+    /* Modal fixes */
+    [data-bs-theme="dark"] .modal-content {
+        background-color: #1a1f2e !important;
+        border-color: #2a3142 !important;
+    }
+
     [data-bs-theme="dark"] .btn-close {
         filter: invert(1) grayscale(100%) brightness(200%);
     }
@@ -322,478 +1173,1036 @@
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-end mb-3">
-    {% if config['mostrar_ayuda'] %}
-    <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm border border-light" onclick="repetirTutorialConfiguracion()">
-        <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
-    </button>
-    {% endif %}
-</div>
+<!-- Header mejorado -->
+<div class="config-container">
+    <div class="config-header">
+        <div class="d-flex justify-content-between align-items-start">
+            <div>
+                <h1 class="config-title">⚙️ Configuración</h1>
+                <p class="config-subtitle">Personaliza tu experiencia en Sianeffects y ajusta tu negocio</p>
+            </div>
+            {% if config['mostrar_ayuda'] %}
+            <button class="btn-secondary-modern" onclick="repetirTutorialConfiguracion()">
+                <i class="fas fa-question-circle me-2"></i>Ayuda
+            </button>
+            {% endif %}
+        </div>
+    </div>
 
-<div class="container mt-0 mb-5">
     <div class="row">
+        <!-- SIDEBAR MEJORADO -->
+        <div class="col-lg-3 col-md-4">
+            <div class="config-sidebar" id="list-tab" role="tablist">
 
-        <div class="col-md-3 mb-4" id="tour-sidebar-config">
-            <div class="saas-sidebar" id="list-tab" role="tablist">
-                <h6 class="px-3 mb-3 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase;">Ajustes</h6>
-                
-                <a class="saas-nav-link active" id="list-negocio-list" data-bs-toggle="list" href="#list-negocio" role="tab">
-                    <span class="saas-nav-icon"><i class="fas fa-store"></i></span> Mi Negocio
-                </a>
-                <a class="saas-nav-link" id="list-perfil-list" data-bs-toggle="list" href="#list-perfil" role="tab">
-                    <span class="saas-nav-icon"><i class="fas fa-user-circle"></i></span> Mi Perfil
-                </a>
-                <a class="saas-nav-link" id="list-seguridad-list" data-bs-toggle="list" href="#list-seguridad" role="tab">
-                    <span class="saas-nav-icon"><i class="fas fa-shield-alt"></i></span> Seguridad
-                </a>
-                <a class="saas-nav-link" id="list-envios-list" data-bs-toggle="list" href="#list-envios" role="tab">
-                    <span class="saas-nav-icon"><i class="fas fa-truck"></i></span> Logística
-                </a>
-                
-                <h6 class="px-3 mb-3 mt-4 text-muted fw-bold" style="font-size: 0.7rem; letter-spacing: 1px; text-transform: uppercase;">Facturación</h6>
-                <a class="saas-nav-link" id="list-suscripcion-list" data-bs-toggle="list" href="#list-suscripcion" role="tab">
-                    <span class="saas-nav-icon"><i class="fas fa-gem"></i></span> Plan actual
-                </a>
+                <div class="sidebar-section">
+                    <span class="sidebar-label">Configuración</span>
+                    <div class="sidebar-nav">
+                        <a class="sidebar-link active" id="list-negocio-list" data-bs-toggle="list" href="#list-negocio"
+                            role="tab">
+                            <span class="sidebar-icon"><i class="fas fa-store"></i></span>
+                            Mi Negocio
+                        </a>
+                        <a class="sidebar-link" id="list-perfil-list" data-bs-toggle="list" href="#list-perfil"
+                            role="tab">
+                            <span class="sidebar-icon"><i class="fas fa-user-circle"></i></span>
+                            Mi Perfil
+                        </a>
+                        <a class="sidebar-link" id="list-seguridad-list" data-bs-toggle="list" href="#list-seguridad"
+                            role="tab">
+                            <span class="sidebar-icon"><i class="fas fa-shield-alt"></i></span>
+                            Seguridad
+                        </a>
+                        <a class="sidebar-link" id="list-envios-list" data-bs-toggle="list" href="#list-envios"
+                            role="tab">
+                            <span class="sidebar-icon"><i class="fas fa-truck"></i></span>
+                            Logística
+                        </a>
+                    </div>
+                </div>
+
+                <div class="sidebar-section">
+                    <span class="sidebar-label">Cuenta</span>
+                    <div class="sidebar-nav">
+                        <a class="sidebar-link" id="list-suscripcion-list" data-bs-toggle="list"
+                            href="#list-suscripcion" role="tab">
+                            <span class="sidebar-icon"><i class="fas fa-gem"></i></span>
+                            Plan Actual
+                            {% if usuario['role'] == 0 %}
+                            <span class="sidebar-badge">PRO</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                </div>
+
             </div>
         </div>
 
-        <div class="col-md-9">
+        <!-- CONTENIDO PRINCIPAL MEJORADO -->
+        <div class="col-lg-9 col-md-8">
             <div class="tab-content" id="nav-tabContent">
 
+                <!-- ============================================ -->
+                <!-- TAB 1: MI NEGOCIO (REDISEÑADO) -->
+                <!-- ============================================ -->
                 <div class="tab-pane fade show active" id="list-negocio" role="tabpanel">
-                    
-                    <form method="POST" action="{{ url_for('configuracion.actualizar_negocio') }}" enctype="multipart/form-data" class="form-silencioso">
+                    <form method="POST" action="{{ url_for('configuracion.actualizar_negocio') }}"
+                        enctype="multipart/form-data" class="form-silencioso">
                         <input type="hidden" name="current_logo" id="currentLogo" value="{{ config['logo_empresa'] }}">
-                        <input type="hidden" name="icono_empresa" id="inputIconoReal" value="{{ config['icono_empresa'] }}">
-                        <input type="hidden" name="tipo_identidad" id="tipoIdentidad" value="{% if config['logo_empresa'] %}logo{% else %}emoji{% endif %}">
+                        <input type="hidden" name="icono_empresa" id="inputIconoReal"
+                            value="{{ config['icono_empresa'] }}">
+                        <input type="hidden" name="tipo_identidad" id="tipoIdentidad"
+                            value="{% if config['logo_empresa'] %}logo{% else %}emoji{% endif %}">
 
-                        <div class="saas-card" id="tour-card-identidad">
-                            <div class="saas-card-header">
-                                <h5>Identidad del Negocio</h5>
-                                <button type="button" id="tour-btn-preview" class="btn btn-sm btn-outline-secondary rounded-pill px-3 fw-bold border-light" onclick="actualizarVistaPrevia()">
-                                    <i class="fas fa-eye me-1"></i> Preview Ticket
-                                </button> 
+                        <!-- CARD: Identidad del Negocio -->
+                        <div class="config-card" id="tour-card-identidad">
+                            <div class="card-header-modern">
+                                <div class="card-title-modern">
+                                    <div class="title-icon">
+                                        <i class="fas fa-palette"></i>
+                                    </div>
+                                    <div>
+                                        <h5>Identidad del Negocio</h5>
+                                        <small class="text-muted">Cómo te ven tus clientes</small>
+                                    </div>
+                                </div>
+                                <button type="button" class="btn-secondary-modern" id="tour-btn-preview"
+                                    onclick="actualizarVistaPrevia()">
+                                    <i class="fas fa-eye me-2"></i>Ticket Preview
+                                </button>
                             </div>
-                            
-                            <div class="saas-card-body">
-                                <div class="row g-4">
-                                    <div class="col-md-12">
-                                        <label class="saas-label">Marca Visual</label>
-                                        <ul class="nav nav-pills mb-3 bg-light p-1 rounded-pill d-inline-flex border-light" id="pills-tab-logo" role="tablist">
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link rounded-pill fw-bold px-4 {% if not config['logo_empresa'] %}active{% endif %}" 
-                                                    id="pills-emoji-tab" data-bs-toggle="pill" data-bs-target="#pills-emoji" type="button" role="tab"
-                                                    onclick="document.getElementById('tipoIdentidad').value='emoji'">Elegir Ícono</button>
-                                            </li>
-                                            <li class="nav-item" role="presentation">
-                                                <button class="nav-link rounded-pill fw-bold px-4 {% if config['logo_empresa'] %}active{% endif %}" 
-                                                    id="pills-logo-tab" data-bs-toggle="pill" data-bs-target="#pills-logo" type="button" role="tab"
-                                                    onclick="document.getElementById('tipoIdentidad').value='logo'">Subir mi Logo</button>
-                                            </li>
-                                        </ul>
 
-                                        <div class="tab-content mt-2" id="pills-tabContent-logo">
-                                            <div class="tab-pane fade {% if not config['logo_empresa'] %}show active{% endif %}" id="pills-emoji" role="tabpanel">
-                                                <div class="emoji-grid-inline">
-                                                    {% set emojis = ['🎨','🍔','🧵','👗','💻','📸','🪴','☕','💅','🔨','🚗','📱','🎮','📚','🛒'] %}
-                                                    {% for e in emojis %}
-                                                    <div class="emoji-item {% if config['icono_empresa'] == e %}selected{% endif %}" onclick="seleccionarEmoji(this, '{{ e }}')">
-                                                        {{ e }}
-                                                    </div>
-                                                    {% endfor %}
+                            <div class="card-body-modern">
+                                <!-- Marca Visual con Tabs Modernos -->
+                                <div class="form-group-modern">
+                                    <label class="form-label-modern">
+                                        Marca Visual
+                                        <i class="fas fa-info-circle label-tooltip"
+                                            title="Elige un ícono o sube tu logo"></i>
+                                    </label>
+
+                                    <div class="tabs-modern" id="pills-tab-logo" role="tablist">
+                                        <button class="tab-modern {% if not config['logo_empresa'] %}active{% endif %}"
+                                            id="pills-emoji-tab" data-bs-toggle="pill" data-bs-target="#pills-emoji"
+                                            type="button" role="tab"
+                                            onclick="document.getElementById('tipoIdentidad').value='emoji'">
+                                            🎨 Elegir Ícono
+                                        </button>
+                                        <button class="tab-modern {% if config['logo_empresa'] %}active{% endif %}"
+                                            id="pills-logo-tab" data-bs-toggle="pill" data-bs-target="#pills-logo"
+                                            type="button" role="tab"
+                                            onclick="document.getElementById('tipoIdentidad').value='logo'">
+                                            📸 Subir Logo
+                                        </button>
+                                    </div>
+
+                                    <div class="tab-content mt-3" id="pills-tabContent-logo">
+                                        <!-- Tab: Emojis -->
+                                        <div class="tab-pane fade {% if not config['logo_empresa'] %}show active{% endif %}"
+                                            id="pills-emoji" role="tabpanel">
+                                            <div class="emoji-grid-modern">
+                                                {% set emojis =
+                                                ['🎨','🍔','🧵','👗','💻','📸','🪴','☕','💅','🔨','🚗','📱','🎮','📚','🛒']
+                                                %}
+                                                {% for e in emojis %}
+                                                <div class="emoji-item-modern {% if config['icono_empresa'] == e %}selected{% endif %}"
+                                                    onclick="seleccionarEmoji(this, '{{ e }}')">
+                                                    {{ e }}
                                                 </div>
+                                                {% endfor %}
                                             </div>
+                                        </div>
 
-                                            <div class="tab-pane fade {% if config['logo_empresa'] %}show active{% endif %}" id="pills-logo" role="tabpanel">
-                                                <div class="logo-uploader bg-white border border-light rounded-4 p-3 mt-2">
-                                                    <div class="logo-circle shadow-sm border-light" id="logoPreviewContainer">
-                                                        {% if config['logo_empresa'] %}
-                                                            <img id="logoPreviewImg" src="{{ config['logo_empresa'] }}">
-                                                        {% else %}
-                                                            <i class="fas fa-cloud-upload-alt text-muted fs-3" id="logoPlaceholderIcon"></i>
-                                                            <img id="logoPreviewImg" src="" style="display:none;">
-                                                        {% endif %}
-                                                    </div>
-                                                    <div>
-                                                        <label for="logoInput" class="btn btn-sm btn-dark rounded-pill px-3 fw-bold mb-1" style="cursor: pointer;">Seleccionar Archivo</label>
-                                                        <input type="file" name="logo_file" id="logoInput" class="d-none" accept="image/png, image/jpeg, image/svg+xml, image/webp" onchange="previewLogo(event)">
-                                                        <div class="text-muted" style="font-size: 0.75rem;">Recomendado: 200x200px (PNG, JPG, SVG). <br>Si guardas y luego cambias a "Ícono", el logo se borrará.</div>
-                                                    </div>
+                                        <!-- Tab: Logo -->
+                                        <div class="tab-pane fade {% if config['logo_empresa'] %}show active{% endif %}"
+                                            id="pills-logo" role="tabpanel">
+                                            <div class="logo-upload-area">
+                                                <div class="logo-preview-circle" id="logoPreviewContainer">
+                                                    {% if config['logo_empresa'] %}
+                                                    <img id="logoPreviewImg" src="{{ config['logo_empresa'] }}">
+                                                    {% else %}
+                                                    <i class="fas fa-cloud-upload-alt text-muted fs-2"
+                                                        id="logoPlaceholderIcon"></i>
+                                                    <img id="logoPreviewImg" src="" style="display:none;">
+                                                    {% endif %}
+                                                </div>
+                                                <div class="logo-upload-info">
+                                                    <label for="logoInput" class="logo-upload-btn">
+                                                        Seleccionar Archivo
+                                                    </label>
+                                                    <input type="file" name="logo_file" id="logoInput" class="d-none"
+                                                        accept="image/png, image/jpeg, image/svg+xml, image/webp"
+                                                        onchange="previewLogo(event)">
+                                                    <p class="form-help-text mb-0">
+                                                        Recomendado: 200×200px (PNG, JPG, SVG)
+                                                    </p>
+                                                    <p class="form-help-text text-warning mb-0">
+                                                        ⚠️ Si cambias a "Ícono" después, el logo se borrará
+                                                    </p>
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
+                                </div>
 
+                                <!-- Información Básica -->
+                                <div class="row g-3 mt-3">
                                     <div class="col-md-6">
-                                        <label class="saas-label">Nombre de la Empresa</label>
-                                        <input type="text" name="nombre_empresa" id="inputEmpresa" class="form-control saas-input fs-5"
-                                            value="{{ config['nombre_empresa'] }}" required placeholder="Sian Effects">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">Nombre de la Empresa</label>
+                                            <input type="text" name="nombre_empresa" id="inputEmpresa"
+                                                class="form-input-modern" value="{{ config['nombre_empresa'] }}"
+                                                required placeholder="Sian Effects">
+                                        </div>
                                     </div>
-
                                     <div class="col-md-6">
-                                        <label class="saas-label">Slogan o Giro</label>
-                                        <input type="text" name="slogan" id="inputSlogan" class="form-control saas-input fs-5"
-                                            value="{{ config['slogan'] }}" placeholder="Soluciones creativas">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">Slogan o Giro</label>
+                                            <input type="text" name="slogan" id="inputSlogan" class="form-input-modern"
+                                                value="{{ config['slogan'] }}" placeholder="Soluciones creativas">
+                                        </div>
                                     </div>
-
                                     <div class="col-12">
-                                        <label class="saas-label">Sitio Web / Enlace</label>
-                                        <div class="input-group shadow-sm border border-light" style="border-radius: 8px;">
-                                            <span class="input-group-text bg-light border-0"><i class="fas fa-link text-muted"></i></span>
-                                            <input type="text" name="website" id="inputWeb" class="form-control border-0 bg-light text-dark"
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">
+                                                Sitio Web o Enlace
+                                                <i class="fas fa-info-circle label-tooltip"
+                                                    title="Puede ser tu web, Instagram, Facebook, etc."></i>
+                                            </label>
+                                            <input type="text" name="website" id="inputWeb" class="form-input-modern"
                                                 value="{{ config['website'] }}" placeholder="www.tuempresa.com">
                                         </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="saas-card" id="tour-card-sistema">
-                            <div class="saas-card-header">
-                                <h5>Ajustes del Sistema</h5>
-                            </div>
-                            <div class="saas-card-body">
-                                
-                                <div class="d-flex justify-content-between align-items-center mb-4">
-                                    <div>
-                                        <h6 class="fw-bold text-dark mb-1">Control de Inventario</h6>
-                                        <p class="text-muted small m-0" style="max-width: 450px;">Al vender, el sistema descontará las unidades de tus materiales. Requiere cargar stock previamente.</p>
-                                    </div>
-                                    <div class="form-check form-switch m-0">
-                                        <input class="form-check-input border-light" type="checkbox" id="checkInventario" name="inventario_activo" {% if config['inventario_activo'] %}checked{% endif %}>
-                                    </div>
-                                </div>
-
-                                <hr class="border-light my-4">
-
-                                <div class="d-flex justify-content-between align-items-center mb-4">
-                                    <div>
-                                        <h6 class="fw-bold text-dark mb-1">Ticket Térmico (Blanco y Negro)</h6>
-                                        <p class="text-muted small m-0" style="max-width: 450px;">Fuerza la visualización del recibo sin colores para mejor lectura en impresoras térmicas.</p>
-                                    </div>
-                                    <div class="form-check form-switch m-0">
-                                        <input class="form-check-input border-light" type="checkbox" id="checkTicketBW" name="ticket_bw" {% if config['ticket_bw'] %}checked{% endif %} onchange="actualizarVistaPrevia()">
-                                    </div>
-                                </div>
-
-                                <hr class="border-light my-4">
-
-                                <div class="d-flex justify-content-between align-items-center mb-4">
-                                    <div>
-                                        <h6 class="fw-bold text-dark mb-1">Mostrar Guías de Ayuda</h6>
-                                        <p class="text-muted small m-0" style="max-width: 450px;">Muestra u oculta los botones de "¿Cómo funciona?" en todas las secciones.</p>
-                                    </div>
-                                    <div class="form-check form-switch m-0">
-                                        <input class="form-check-input border-light" type="checkbox" name="mostrar_ayuda" {% if config['mostrar_ayuda'] %}checked{% endif %}>
-                                    </div>
-                                </div>
-
-                                <hr class="border-light my-4">
-
-                                <div class="d-flex justify-content-between align-items-center mb-4">
-                                    <div>
-                                        <h6 class="fw-bold text-dark mb-1">Modo Oscuro</h6>
-                                        <p class="text-muted small m-0">Cambia la interfaz a colores oscuros para descansar la vista.</p>
-                                    </div>
-                                    <div class="form-check form-switch m-0">
-                                        <input class="form-check-input border-light" type="checkbox" name="modo_oscuro" {% if config['modo_oscuro'] %}checked{% endif %}>
-                                    </div>
-                                </div>
-
-                                <hr class="border-light my-4">
-
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label class="saas-label text-success"><i class="fas fa-chart-line me-1"></i> Margen de Ganancia Base</label>
-                                        <div class="input-group shadow-sm border border-light" style="border-radius: 8px; overflow: hidden;">
-                                            <input type="number" name="margen" class="form-control border-0 bg-success bg-opacity-10 text-success fw-bold fs-5"
-                                                value="{{ config['margen_ganancia'] }}" required min="0" step="1">
-                                            <span class="input-group-text border-0 bg-success text-white fw-bold">%</span>
-                                        </div>
-                                        <div class="form-text small mt-1 text-muted">Multiplicador automático sugerido en el cotizador.</div>
-                                    </div>
-                                </div>
-
-                            </div>
-                            <div class="saas-card-footer">
-                                <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold">Guardar Negocio</button>
-                            </div>
-                        </div>
-                    </form>
-                </div> <div class="tab-pane fade" id="list-perfil" role="tabpanel">
-                    <div class="saas-card">
-                        <div class="saas-card-header">
-                            <h5>Información Personal</h5>
-                        </div>
-                        <form method="POST" action="{{ url_for('configuracion.actualizar_perfil') }}" class="form-silencioso">
-                            <div class="saas-card-body">
-                                <div class="row g-4">
-                                    <div class="col-md-6">
-                                        <label class="saas-label">Nombre de Usuario</label>
-                                        <input type="text" name="username" class="form-control saas-input" value="{{ usuario['username'] }}" required>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="saas-label">Correo Electrónico</label>
-                                        <input type="email" name="email" class="form-control saas-input text-muted" value="{{ usuario['email'] }}" required readonly>
-                                        <small class="form-text text-muted">El correo principal no puede cambiarse.</small>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="saas-label">País</label>
-                                        <select name="country_code" class="form-select saas-input">
-                                            <option value="MX" {% if usuario['country_code']=='MX' %}selected{% endif %}>🇲🇽 MX (+52)</option>
-                                            <option value="US" {% if usuario['country_code']=='US' %}selected{% endif %}>🇺🇸 US (+1)</option>
-                                            <option value="CA" {% if usuario['country_code']=='CA' %}selected{% endif %}>🇨🇦 CA (+1)</option>
-                                            
-                                            <option value="CO" {% if usuario['country_code']=='CO' %}selected{% endif %}>🇨🇴 CO (+57)</option>
-                                            <option value="AR" {% if usuario['country_code']=='AR' %}selected{% endif %}>🇦🇷 AR (+54)</option>
-                                            <option value="CL" {% if usuario['country_code']=='CL' %}selected{% endif %}>🇨🇱 CL (+56)</option>
-                                            <option value="PE" {% if usuario['country_code']=='PE' %}selected{% endif %}>🇵🇪 PE (+51)</option>
-                                            <option value="EC" {% if usuario['country_code']=='EC' %}selected{% endif %}>🇪🇨 EC (+593)</option>
-                                            <option value="VE" {% if usuario['country_code']=='VE' %}selected{% endif %}>🇻🇪 VE (+58)</option>
-                                            <option value="GT" {% if usuario['country_code']=='GT' %}selected{% endif %}>🇬🇹 GT (+502)</option>
-                                            <option value="CR" {% if usuario['country_code']=='CR' %}selected{% endif %}>🇨🇷 CR (+506)</option>
-                                            <option value="PA" {% if usuario['country_code']=='PA' %}selected{% endif %}>🇵🇦 PA (+507)</option>
-                                            <option value="UY" {% if usuario['country_code']=='UY' %}selected{% endif %}>🇺🇾 UY (+598)</option>
-                                            <option value="PY" {% if usuario['country_code']=='PY' %}selected{% endif %}>🇺🇾 PY (+595)</option>
-                                            
-                                            <option value="ES" {% if usuario['country_code']=='ES' %}selected{% endif %}>🇪🇸 ES (+34)</option>
-                                        </select>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <label class="saas-label">WhatsApp / Teléfono</label>
-                                        <input type="tel" name="telefono" class="form-control saas-input" value="{{ usuario['telefono'] }}">
-                                    </div>
-                                    <div class="col-12 mt-4">
-                                        <div class="d-flex align-items-center p-3 bg-light rounded-3 border border-light">
-                                            <div class="me-3 fs-3 text-secondary"><i class="fas fa-id-badge"></i></div>
-                                            <div>
-                                                <div class="small text-muted mb-1">ID Único: <strong class="text-dark">{{ usuario['id'] }}</strong></div>
-                                                <div class="small text-muted">Miembro desde: <strong class="text-dark">{{ usuario['created_at'] }}</strong></div>
+                                    <div class="col-12">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">
+                                                Notas del Ticket / Políticas
+                                                <i class="fas fa-info-circle label-tooltip"
+                                                    title="Aparece en el footer de tus recibos"></i>
+                                            </label>
+                                            <textarea name="notas_ticket" id="inputNotasTicket"
+                                                class="form-input-modern" rows="2" maxlength="150"
+                                                style="resize: vertical;"
+                                                placeholder="Ej. No hay cambios ni devoluciones. Gracias por tu compra.">{{ config.get('notas_ticket', '') }}</textarea>
+                                            <div class="d-flex justify-content-between mt-1">
+                                                <span class="form-help-text">Footer en todos tus tickets</span>
+                                                <span class="form-help-text"><span id="charCount">0</span>/150</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="saas-card-footer">
-                                <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold">Actualizar Perfil</button>
-                            </div>
-                        </form>
-                    </div>
-                </div> <div class="tab-pane fade" id="list-seguridad" role="tabpanel">
-                    <div class="saas-card">
-                        <div class="saas-card-header">
-                            <h5>Seguridad y Acceso</h5>
                         </div>
-                        <form id="form-password" method="POST" action="{{ url_for('configuracion.actualizar_password') }}" class="form-silencioso">
-                            
-                            <div class="saas-card-body">
-                                <div class="alert alert-light border border-warning border-start border-start-4 d-flex align-items-center p-3 mb-4" role="alert">
-                                    <i class="fas fa-lock text-warning fs-3 me-3"></i>
+
+                        <!-- CARD: Ajustes del Sistema (con colapsables) -->
+                        <div class="config-card" id="tour-card-sistema">
+                            <div class="card-header-modern">
+                                <div class="card-title-modern">
+                                    <div class="title-icon">
+                                        <i class="fas fa-sliders-h"></i>
+                                    </div>
                                     <div>
-                                        <strong class="d-block text-dark">Protege tu cuenta</strong>
-                                        <span class="small text-muted">Al cambiar la contraseña, se cerrarán tus sesiones activas y tendrás que volver a ingresar.</span>
-                                    </div>
-                                </div>
-
-                                <div class="row g-4">
-                                    <div class="col-md-6">
-                                        <label class="saas-label">Nueva Contraseña</label>
-                                        <input type="password" id="pass1" name="password" class="form-control saas-input" required minlength="6">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label class="saas-label">Confirmar Contraseña</label>
-                                        <input type="password" id="pass2" class="form-control saas-input" required minlength="6">
+                                        <h5>Ajustes del Sistema</h5>
+                                        <small class="text-muted">Controles y preferencias</small>
                                     </div>
                                 </div>
                             </div>
-                            <div class="saas-card-footer bg-white border-top-0 pt-0">
-                                <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">Cambiar Contraseña</button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
 
-                <div class="tab-pane fade" id="list-envios" role="tabpanel">
-                    
-                    <div class="saas-card">
-                        <div class="saas-card-header">
-                            <h5>Origen y Tarifas Locales</h5>
-                        </div>
-                        <form method="POST" action="{{ url_for('configuracion.actualizar_logistica_base') }}" class="form-silencioso">
-                            <div class="saas-card-body">
-                                
-                                <h6 class="fw-bold text-dark mb-3 fs-6">📍 Punto de Despacho</h6>
-                                <div class="input-group shadow-sm mb-4 border border-light" style="border-radius: 8px;">
-                                    <span class="input-group-text bg-white border-0 text-danger"><i class="fas fa-map-marker-alt"></i></span>
-                                    <input type="text" name="origin_address" id="inputMapsConfig" class="form-control border-0 bg-white text-dark py-2" 
-                                        placeholder="Pega el link de Google Maps (corto o largo) aquí..."
-                                        value="{{ shipping_config['origin_address'] if shipping_config else '' }}"
-                                        onchange="extraerCoordenadasConfig(this)">
-                                </div>
-                                <div id="geo-status" class="mt-1 small fw-bold text-success" style="display: none;">
-                                    <i class="fas fa-check-circle"></i> Ubicación detectada correctamente
-                                </div>
-                                <div class="row g-3 mb-4" style="display: none;">
-                                    <div class="col-6">
-                                        <label class="saas-label">Latitud</label>
-                                        <input type="text" name="origin_lat" id="latConfig" class="form-control saas-input bg-light text-muted" readonly
-                                            value="{{ shipping_config['origin_lat'] if shipping_config else '' }}">
+                            <div class="card-body-modern">
+                                <!-- Toggle: Control de Inventario -->
+                                <div class="toggle-row">
+                                    <div class="toggle-info">
+                                        <div class="toggle-title">
+                                            <i class="fas fa-boxes me-2 text-primary"></i>
+                                            Control de Inventario
+                                        </div>
+                                        <div class="toggle-description">
+                                            Al vender, descuenta automáticamente los materiales de tu stock
+                                        </div>
                                     </div>
-                                    <div class="col-6" style="display: none;">
-                                        <label class="saas-label">Longitud</label>
-                                        <input type="text" name="origin_lng" id="lngConfig" class="form-control saas-input bg-light text-muted" readonly
-                                            value="{{ shipping_config['origin_lng'] if shipping_config else '' }}">
+                                    <div class="toggle-switch">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="checkInventario"
+                                                name="inventario_activo" {% if config['inventario_activo'] %}checked{%
+                                                endif %}>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <hr class="border-light my-4">
+                                <!-- Toggle: Ticket Térmico -->
+                                <div class="toggle-row">
+                                    <div class="toggle-info">
+                                        <div class="toggle-title">
+                                            <i class="fas fa-print me-2 text-secondary"></i>
+                                            Ticket Térmico (B/N)
+                                        </div>
+                                        <div class="toggle-description">
+                                            Fuerza visualización sin colores para impresoras térmicas
+                                        </div>
+                                    </div>
+                                    <div class="toggle-switch">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" id="checkTicketBW"
+                                                name="ticket_bw" {% if config['ticket_bw'] %}checked{% endif %}
+                                                onchange="actualizarVistaPrevia()">
+                                        </div>
+                                    </div>
+                                </div>
 
-                                <h6 class="fw-bold text-dark mb-3 fs-6">🛵 Calculadora de Ciudad</h6>
+                                <!-- Toggle: Mostrar Guías -->
+                                <div class="toggle-row">
+                                    <div class="toggle-info">
+                                        <div class="toggle-title">
+                                            <i class="fas fa-question-circle me-2 text-info"></i>
+                                            Mostrar Guías de Ayuda
+                                        </div>
+                                        <div class="toggle-description">
+                                            Muestra botones "¿Cómo funciona?" en todas las secciones
+                                        </div>
+                                    </div>
+                                    <div class="toggle-switch">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="mostrar_ayuda" {% if
+                                                config['mostrar_ayuda'] %}checked{% endif %}>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Toggle: Modo Oscuro -->
+                                <div class="toggle-row">
+                                    <div class="toggle-info">
+                                        <div class="toggle-title">
+                                            <i class="fas fa-moon me-2 text-dark"></i>
+                                            Modo Oscuro
+                                        </div>
+                                        <div class="toggle-description">
+                                            Interfaz oscura para descansar la vista
+                                        </div>
+                                    </div>
+                                    <div class="toggle-switch">
+                                        <div class="form-check form-switch">
+                                            <input class="form-check-input" type="checkbox" name="modo_oscuro" {% if
+                                                config['modo_oscuro'] %}checked{% endif %}>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <hr class="my-4">
+
+                                <!-- Margen y Factor Operativo -->
                                 <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <label class="saas-label">Banderazo (Fijo)</label>
-                                        <div class="input-group border border-light rounded-3">
-                                            <span class="input-group-text bg-light border-0">$</span>
-                                            <input type="number" step="0.50" name="local_base_rate" class="form-control saas-input border-0"
-                                                value="{{ shipping_config['local_base_rate'] if shipping_config else '35.00' }}" required>
+                                    <div class="col-md-6">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern text-success">
+                                                <i class="fas fa-chart-line me-1"></i>
+                                                Margen de Ganancia Base
+                                            </label>
+                                            <div class="input-group">
+                                                <input type="number" name="margen"
+                                                    class="form-input-modern text-success fw-bold"
+                                                    value="{{ config['margen_ganancia'] }}" required min="0" step="1">
+                                                <span class="input-group-text bg-success text-white fw-bold">%</span>
+                                            </div>
+                                            <div class="form-help-text">
+                                                Multiplicador sugerido en el cotizador
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="saas-label">Costo x KM</label>
-                                        <div class="input-group border border-light rounded-3">
-                                            <span class="input-group-text bg-light border-0">$</span>
-                                            <input type="number" step="0.50" name="local_km_rate" class="form-control saas-input border-0"
-                                                value="{{ shipping_config['local_km_rate'] if shipping_config else '8.00' }}" required>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group-modern">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <label class="form-label-modern text-primary m-0">
+                                                    <i class="fas fa-percentage me-1"></i>
+                                                    Factor Operativo
+                                                </label>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox" id="switchFactor"
+                                                        checked onchange="toggleFactor(this)">
+                                                </div>
+                                            </div>
+                                            <div class="input-group" id="boxFactorInput">
+                                                <input type="number" name="porcentaje_gastos_operativos"
+                                                    id="inputFactor" class="form-input-modern text-primary fw-bold"
+                                                    value="{{ config.get('porcentaje_gastos_operativos', 10) }}"
+                                                    required min="0" step="0.1" max="100">
+                                                <span class="input-group-text bg-primary text-white fw-bold"
+                                                    id="spanFactor">%</span>
+                                            </div>
+                                            <div class="form-help-text" id="helpFactor">
+                                                % extra para cubrir renta, luz, etc.
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="col-md-4">
-                                        <label class="saas-label">Margen Error</label>
-                                        <div class="input-group border border-light rounded-3">
-                                            <input type="number" name="safety_margin" class="form-control saas-input border-0 text-end"
-                                                value="{{ shipping_config['safety_margin_percent'] if shipping_config else '10' }}">
-                                            <span class="input-group-text bg-light border-0">%</span>
+                                </div>
+
+                                <!-- Sección Colapsable: Mano de Obra -->
+                                <div class="collapsible-section mt-4" id="tour-card-labor">
+                                    <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                                        <div class="collapsible-title">
+                                            <div class="collapsible-icon">
+                                                <i class="fas fa-clock text-warning"></i>
+                                            </div>
+                                            <div>
+                                                <div class="fw-bold">El Valor de tu Tiempo (Mano de Obra)</div>
+                                                <small class="text-muted">Cobra por el tiempo que inviertes</small>
+                                            </div>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="form-check form-switch">
+                                                <input class="form-check-input" type="checkbox" id="switchLabor"
+                                                    name="labor_activa" {% if config.get('labor_activa') %}checked{%
+                                                    endif %} onchange="toggleLabor(this)">
+                                            </div>
+                                            <i class="fas fa-chevron-down collapsible-arrow"></i>
+                                        </div>
+                                    </div>
+
+                                    <div class="collapsible-body">
+                                        <div class="alert alert-warning border-warning border-start border-4 mb-4">
+                                            <div class="d-flex align-items-start">
+                                                <i class="fas fa-lightbulb me-3 mt-1"></i>
+                                                <div>
+                                                    <strong class="d-block mb-1">¿Por qué cobrar mano de obra?</strong>
+                                                    <span class="small">
+                                                        Para que tu negocio sea escalable, debes cobrar por el tiempo
+                                                        que dedicas a fabricar. Si no lo haces, solo estás "comprando
+                                                        un trabajo" en lugar de construir una empresa.
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div id="contenedorLabor"
+                                            class="{% if not config.get('labor_activa') %}d-none{% endif %}">
+                                            <div class="row g-3 align-items-end">
+                                                <div class="col-md-4">
+                                                    <div class="form-group-modern">
+                                                        <label class="form-label-modern">Sueldo Mensual Deseado</label>
+                                                        <div class="input-group">
+                                                            <span class="input-group-text">$</span>
+                                                            <input type="number" name="salario_deseado"
+                                                                id="inputSalario" class="form-input-modern fw-bold"
+                                                                value="{{ config.get('salario_deseado', 15000) }}"
+                                                                oninput="calcularCostoTiempo()">
+                                                        </div>
+                                                        <div class="form-help-text">Lo que quieres ganar al mes</div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-4">
+                                                    <div class="form-group-modern">
+                                                        <label class="form-label-modern">Horas / Semana</label>
+                                                        <div class="input-group">
+                                                            <input type="number" name="horas_semanales" id="inputHoras"
+                                                                class="form-input-modern fw-bold"
+                                                                value="{{ config.get('horas_semanales', 20) }}"
+                                                                oninput="calcularCostoTiempo()">
+                                                            <span class="input-group-text">hrs</span>
+                                                        </div>
+                                                        <div class="form-help-text">Tiempo de producción</div>
+                                                    </div>
+                                                </div>
+
+                                                <div class="col-md-4">
+                                                    <div
+                                                        class="p-3 rounded-3 bg-warning bg-opacity-10 border border-warning text-center">
+                                                        <small class="text-muted fw-bold text-uppercase d-block mb-1"
+                                                            style="font-size: 0.7rem;">
+                                                            Tu hora vale:
+                                                        </small>
+                                                        <div class="fw-bold fs-4" id="displayCostoHora">$0.00</div>
+                                                        <div class="text-warning fw-bold small" id="displayCostoMinuto">
+                                                            $0.00/min
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            <div class="text-center mt-4">
+                                                <button type="button" class="btn-secondary-modern"
+                                                    onclick="abrirCoachSian()">
+                                                    <i class="fas fa-robot me-2"></i>
+                                                    Ayúdame a calcular
+                                                </button>
+                                            </div>
+                                        </div>
+
+                                        <div id="mensajeLaborApagado"
+                                            class="text-center py-4 {% if config.get('labor_activa') %}d-none{% endif %}">
+                                            <p class="text-muted mb-0">
+                                                <i class="fas fa-power-off me-2"></i>
+                                                Mano de obra desactivada
+                                            </p>
                                         </div>
                                     </div>
                                 </div>
                             </div>
-                            <div class="saas-card-footer">
-                                <button type="submit" class="btn btn-dark rounded-pill px-4 fw-bold">Guardar Logística</button>
-                            </div>
-                        </form>
-                    </div>
-
-                    <div class="d-flex justify-content-between align-items-center mb-3 mt-5">
-                        <h5 class="fw-bold text-dark m-0">Paquetería Nacional</h5>
-                        <button type="button" class="btn btn-sm btn-primary rounded-pill px-3 fw-bold border-light" data-bs-toggle="modal" data-bs-target="#modalNuevaZona">
-                            <i class="fas fa-plus me-1"></i> Nueva Zona
-                        </button>
-                    </div>
-
-                    {% if not zones %}
-                    <div class="saas-card bg-light border-dashed">
-                        <div class="saas-card-body text-center py-5 text-muted">
-                            <i class="fas fa-map-marked-alt fa-2x mb-2 opacity-50"></i>
-                            <h6 class="fw-bold mb-1 text-dark">Sin zonas configuradas</h6>
-                            <small>Crea una zona (Ej: Nacional) para cobrar envíos foráneos por peso.</small>
                         </div>
-                    </div>
-                    {% else %}
-                    <div class="row g-4">
-                        {% for zone in zones %}
-                        <div class="col-md-6">
-                            <div class="saas-card h-100 mb-0 border-light">
-                                <div class="saas-card-header py-3 bg-light d-flex justify-content-between align-items-center border-light">
+
+                        <!-- CARD: Costos Operativos (Colapsable) -->
+                        <div class="collapsible-section" id="tour-card-gastos-fijos">
+                            <div class="collapsible-header" onclick="toggleCollapsible(this)">
+                                <div class="collapsible-title">
+                                    <div class="collapsible-icon">
+                                        <i class="fas fa-receipt text-info"></i>
+                                    </div>
                                     <div>
-                                        <strong class="text-dark">{{ zone['zone_name'] }}</strong>
-                                        <div class="small text-muted" style="font-size: 0.7rem; text-transform: uppercase;">
-                                            Destinos: {{ zone['states_str'] }}
+                                        <div class="fw-bold">Costos Operativos del Negocio</div>
+                                        <small class="text-muted">
+                                            {% if gastos_fijos %}
+                                            Total: ${{ "{:,.2f}".format(gastos_fijos|sum(attribute='monto_mensual')) }}
+                                            {% else %}
+                                            Sin gastos registrados
+                                            {% endif %}
+                                        </small>
+                                    </div>
+                                </div>
+                                <div class="d-flex align-items-center gap-3">
+                                    <button type="button" class="btn-secondary-modern btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#modalNuevoGasto" onclick="event.stopPropagation()">
+                                        <i class="fas fa-plus me-1"></i>Agregar
+                                    </button>
+                                    <i class="fas fa-chevron-down collapsible-arrow"></i>
+                                </div>
+                            </div>
+
+                            <div class="collapsible-body">
+                                <div class="alert alert-info border-info border-start border-4 mb-4">
+                                    <div class="d-flex align-items-start">
+                                        <i class="fas fa-lightbulb me-3 mt-1"></i>
+                                        <div>
+                                            <strong class="d-block mb-1">¿Para qué sirve esta lista?</strong>
+                                            <span class="small">
+                                                Lleva control de lo que tu negocio necesita (renta, luz, internet).
+                                                El sistema usará tu <strong>Factor Operativo</strong> para distribuir
+                                                estos gastos proporcionalmente en cada venta.
+                                            </span>
                                         </div>
                                     </div>
-                                    <button type="button" class="btn btn-sm text-danger opacity-50 hover-opacity-100 border-0" 
-                                        onclick="confirmarEliminarZona('{{ zone['id'] }}', '{{ zone['zone_name'] }}')">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
                                 </div>
-                                <div class="card-body p-0 bg-white">
-                                    <table class="table table-sm table-borderless m-0" style="font-size: 0.85rem;">
-                                        <thead class="border-bottom border-light">
+
+                                {% if gastos_fijos %}
+                                <div class="table-responsive">
+                                    <table class="table-modern">
+                                        <thead>
                                             <tr>
-                                                <th class="ps-4 py-2 text-muted fw-semibold">Límite (Kg)</th>
-                                                <th class="py-2 text-muted fw-semibold">Costo</th>
-                                                <th></th>
+                                                <th>Concepto</th>
+                                                <th class="text-end">Monto Mensual</th>
+                                                <th class="text-center">Estado</th>
+                                                <th class="text-end"></th>
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {% for rate in zone['rates'] %}
-                                            <tr class="border-bottom border-light">
-                                                <td class="ps-4 py-2 fw-bold text-dark">{{ rate['max_weight_kg'] }} kg</td>
-                                                <td class="py-2 text-success fw-bold">${{ "{:.2f}".format(rate['price']) }}</td>
-                                                <td class="text-end pe-3 py-2">
-                                                    <button type="button" class="btn btn-link p-0 text-muted text-decoration-none"
-                                                        onclick="confirmarEliminarTarifa('{{ rate['id'] }}')"><i class="fas fa-times"></i></button>
+                                            {% for gasto in gastos_fijos %}
+                                            <tr class="gasto-row" data-monto="{{ gasto['monto_mensual'] }}">
+                                                <td>
+                                                    <div class="d-flex align-items-center">
+                                                        <i class="fas fa-receipt text-muted me-2"></i>
+                                                        <span class="fw-semibold">{{ gasto['nombre'] }}</span>
+                                                    </div>
+                                                </td>
+                                                <td class="text-end">
+                                                    <span class="fw-bold text-danger">
+                                                        ${{ "{:,.2f}".format(gasto['monto_mensual']) }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    {% if gasto['activo'] %}
+                                                    <span class="card-badge badge-active">
+                                                        <i class="fas fa-check-circle me-1"></i>Activo
+                                                    </span>
+                                                    {% else %}
+                                                    <span class="card-badge badge-inactive">Inactivo</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="text-end">
+                                                    <button type="button" class="btn btn-link text-danger p-2"
+                                                        onclick="confirmarEliminarGasto('{{ gasto['id'] }}', '{{ gasto['nombre'] }}')">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
                                                 </td>
                                             </tr>
-                                            {% else %}
-                                            <tr>
-                                                <td colspan="3" class="text-center text-muted py-4 small">Agrega tarifas de peso aquí abajo.</td>
-                                            </tr>
                                             {% endfor %}
+                                            <tr class="border-top border-2">
+                                                <td class="fw-bold">TOTAL MENSUAL</td>
+                                                <td class="text-end fw-bold fs-5" id="totalGastosFijos">
+                                                    ${{ "{:,.2f}".format(gastos_fijos|sum(attribute='monto_mensual')) }}
+                                                </td>
+                                                <td colspan="2"></td>
+                                            </tr>
                                         </tbody>
                                     </table>
                                 </div>
-                                <div class="saas-card-footer bg-white p-3 border-top border-light">
-                                    <form method="POST" action="{{ url_for('configuracion.crear_tarifa') }}" class="row g-2 align-items-center form-silencioso" data-recargar="true">
-                                        <input type="hidden" name="zone_id" value="{{ zone['id'] }}">
-                                        <div class="col-4">
-                                            <input type="number" step="0.1" name="max_weight" class="form-control form-control-sm saas-input" placeholder="Kg Max" required>
-                                        </div>
-                                        <div class="col-5">
-                                            <div class="input-group input-group-sm border border-light rounded-3">
-                                                <span class="input-group-text bg-light border-0">$</span>
-                                                <input type="number" step="1" name="price" class="form-control saas-input border-0" placeholder="Precio" required>
-                                            </div>
-                                        </div>
-                                        <div class="col-3">
-                                            <button type="submit" class="btn btn-sm btn-dark w-100 rounded-pill fw-bold">Añadir</button>
-                                        </div>
-                                    </form>
+                                {% else %}
+                                <div class="text-center py-5">
+                                    <i class="fas fa-inbox fa-3x text-muted opacity-25 mb-3"></i>
+                                    <h6 class="fw-bold">Sin gastos registrados</h6>
+                                    <p class="text-muted small mb-3">Agrega tu primer gasto operativo</p>
+                                    <button type="button" class="btn-primary-modern btn-sm" data-bs-toggle="modal"
+                                        data-bs-target="#modalNuevoGasto">
+                                        <i class="fas fa-plus me-2"></i>Agregar Gasto
+                                    </button>
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Botón de Guardar -->
+                        <div class="text-end mt-4">
+                            <button type="submit" class="btn-primary-modern">
+                                <i class="fas fa-save me-2"></i>
+                                Guardar Configuración
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TAB 2: MI PERFIL (REDISEÑADO) -->
+                <!-- ============================================ -->
+                <div class="tab-pane fade" id="list-perfil" role="tabpanel">
+                    <div class="config-card">
+                        <div class="card-header-modern">
+                            <div class="card-title-modern">
+                                <div class="title-icon">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <div>
+                                    <h5>Información Personal</h5>
+                                    <small class="text-muted">Tus datos de cuenta</small>
                                 </div>
                             </div>
                         </div>
-                        {% endfor %}
+
+                        <div class="card-body-modern">
+                            <form method="POST" action="{{ url_for('configuracion.actualizar_perfil') }}"
+                                class="form-silencioso">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">Nombre de Usuario</label>
+                                            <input type="text" name="username" class="form-input-modern"
+                                                value="{{ usuario['username'] }}" required>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-6">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">Correo Electrónico</label>
+                                            <input type="email" name="email" class="form-input-modern"
+                                                value="{{ usuario['email'] }}" required readonly>
+                                            <div class="form-help-text">El correo no puede cambiarse</div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">País</label>
+                                            <select name="country_code" class="form-input-modern">
+                                                <option value="MX" {% if usuario['country_code']=='MX' %}selected{%
+                                                    endif %}>🇲🇽 MX (+52)</option>
+                                                <option value="US" {% if usuario['country_code']=='US' %}selected{%
+                                                    endif %}>🇺🇸 US (+1)</option>
+                                                <option value="CA" {% if usuario['country_code']=='CA' %}selected{%
+                                                    endif %}>🇨🇦 CA (+1)</option>
+                                                <option value="CO" {% if usuario['country_code']=='CO' %}selected{%
+                                                    endif %}>🇨🇴 CO (+57)</option>
+                                                <option value="AR" {% if usuario['country_code']=='AR' %}selected{%
+                                                    endif %}>🇦🇷 AR (+54)</option>
+                                                <option value="CL" {% if usuario['country_code']=='CL' %}selected{%
+                                                    endif %}>🇨🇱 CL (+56)</option>
+                                                <option value="PE" {% if usuario['country_code']=='PE' %}selected{%
+                                                    endif %}>🇵🇪 PE (+51)</option>
+                                                <option value="EC" {% if usuario['country_code']=='EC' %}selected{%
+                                                    endif %}>🇪🇨 EC (+593)</option>
+                                                <option value="VE" {% if usuario['country_code']=='VE' %}selected{%
+                                                    endif %}>🇻🇪 VE (+58)</option>
+                                                <option value="GT" {% if usuario['country_code']=='GT' %}selected{%
+                                                    endif %}>🇬🇹 GT (+502)</option>
+                                                <option value="CR" {% if usuario['country_code']=='CR' %}selected{%
+                                                    endif %}>🇨🇷 CR (+506)</option>
+                                                <option value="PA" {% if usuario['country_code']=='PA' %}selected{%
+                                                    endif %}>🇵🇦 PA (+507)</option>
+                                                <option value="UY" {% if usuario['country_code']=='UY' %}selected{%
+                                                    endif %}>🇺🇾 UY (+598)</option>
+                                                <option value="PY" {% if usuario['country_code']=='PY' %}selected{%
+                                                    endif %}>🇵🇾 PY (+595)</option>
+                                                <option value="ES" {% if usuario['country_code']=='ES' %}selected{%
+                                                    endif %}>🇪🇸 ES (+34)</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-8">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">WhatsApp / Teléfono</label>
+                                            <input type="tel" name="telefono" class="form-input-modern"
+                                                value="{{ usuario['telefono'] }}">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-12 mt-4">
+                                        <div class="p-3 bg-light rounded-3 border">
+                                            <div class="d-flex align-items-center">
+                                                <i class="fas fa-id-badge fs-3 text-secondary me-3"></i>
+                                                <div>
+                                                    <div class="small text-muted">
+                                                        ID Único: <strong class="text-dark">{{ usuario['id'] }}</strong>
+                                                    </div>
+                                                    <div class="small text-muted">
+                                                        Miembro desde: <strong class="text-dark">{{
+                                                            usuario['created_at'] }}</strong>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-end mt-4">
+                                    <button type="submit" class="btn-primary-modern">
+                                        <i class="fas fa-save me-2"></i>Actualizar Perfil
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
                     </div>
-                    {% endif %}
                 </div>
 
+                <!-- ============================================ -->
+                <!-- TAB 3: SEGURIDAD (REDISEÑADO) -->
+                <!-- ============================================ -->
+                <div class="tab-pane fade" id="list-seguridad" role="tabpanel">
+                    <div class="config-card">
+                        <div class="card-header-modern">
+                            <div class="card-title-modern">
+                                <div class="title-icon">
+                                    <i class="fas fa-lock"></i>
+                                </div>
+                                <div>
+                                    <h5>Seguridad y Acceso</h5>
+                                    <small class="text-muted">Protege tu cuenta</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body-modern">
+                            <div class="alert alert-warning border-warning border-start border-4 mb-4">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-exclamation-triangle me-3 mt-1"></i>
+                                    <div>
+                                        <strong class="d-block mb-1">Protege tu cuenta</strong>
+                                        <span class="small">
+                                            Al cambiar la contraseña, se cerrarán tus sesiones activas y
+                                            tendrás que volver a ingresar.
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <form id="form-password" method="POST"
+                                action="{{ url_for('configuracion.actualizar_password') }}" class="form-silencioso">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">Nueva Contraseña</label>
+                                            <input type="password" id="pass1" name="password" class="form-input-modern"
+                                                required minlength="6">
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">Confirmar Contraseña</label>
+                                            <input type="password" id="pass2" class="form-input-modern" required
+                                                minlength="6">
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-end mt-4">
+                                    <button type="submit" class="btn btn-danger rounded-pill px-4 fw-bold">
+                                        <i class="fas fa-key me-2"></i>Cambiar Contraseña
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TAB 4: LOGÍSTICA (REDISEÑADO) -->
+                <!-- ============================================ -->
+                <div class="tab-pane fade" id="list-envios" role="tabpanel">
+                    <!-- Card: Origen y Tarifas Locales -->
+                    <div class="config-card">
+                        <div class="card-header-modern">
+                            <div class="card-title-modern">
+                                <div class="title-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div>
+                                    <h5>Logística Local</h5>
+                                    <small class="text-muted">Envíos en tu ciudad</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body-modern">
+                            <form method="POST" action="{{ url_for('configuracion.actualizar_logistica_base') }}"
+                                class="form-silencioso">
+                                <div class="form-group-modern">
+                                    <label class="form-label-modern">
+                                        <i class="fas fa-map-marker-alt me-2 text-danger"></i>
+                                        Punto de Despacho
+                                        <i class="fas fa-info-circle label-tooltip"
+                                            title="Pega un link de Google Maps de tu negocio"></i>
+                                    </label>
+                                    <input type="text" name="origin_address" id="inputMapsConfig"
+                                        class="form-input-modern" placeholder="Pega el link de Google Maps aquí..."
+                                        value="{{ shipping_config['origin_address'] if shipping_config else '' }}"
+                                        onchange="extraerCoordenadasConfig(this)">
+                                    <div id="geo-status" class="mt-2 small fw-bold text-success" style="display: none;">
+                                        <i class="fas fa-check-circle me-1"></i>Ubicación detectada
+                                    </div>
+                                </div>
+
+                                <input type="hidden" name="origin_lat" id="latConfig"
+                                    value="{{ shipping_config['origin_lat'] if shipping_config else '' }}">
+                                <input type="hidden" name="origin_lng" id="lngConfig"
+                                    value="{{ shipping_config['origin_lng'] if shipping_config else '' }}">
+
+                                <hr class="my-4">
+
+                                <h6 class="fw-bold mb-3">
+                                    <i class="fas fa-calculator me-2 text-primary"></i>
+                                    Calculadora de Ciudad
+                                </h6>
+
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">Banderazo (Fijo)</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" step="0.50" name="local_base_rate"
+                                                    class="form-input-modern"
+                                                    value="{{ shipping_config['local_base_rate'] if shipping_config else '35.00' }}"
+                                                    required>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">Costo x KM</label>
+                                            <div class="input-group">
+                                                <span class="input-group-text">$</span>
+                                                <input type="number" step="0.50" name="local_km_rate"
+                                                    class="form-input-modern"
+                                                    value="{{ shipping_config['local_km_rate'] if shipping_config else '8.00' }}"
+                                                    required>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="col-md-4">
+                                        <div class="form-group-modern">
+                                            <label class="form-label-modern">Margen Error</label>
+                                            <div class="input-group">
+                                                <input type="number" name="safety_margin"
+                                                    class="form-input-modern text-end"
+                                                    value="{{ shipping_config['safety_margin_percent'] if shipping_config else '10' }}">
+                                                <span class="input-group-text">%</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="text-end mt-4">
+                                    <button type="submit" class="btn-primary-modern">
+                                        <i class="fas fa-save me-2"></i>Guardar Logística
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Sección: Paquetería Nacional -->
+                    <div class="config-card">
+                        <div class="card-header-modern">
+                            <div class="card-title-modern">
+                                <div class="title-icon">
+                                    <i class="fas fa-box"></i>
+                                </div>
+                                <div>
+                                    <h5>Paquetería Nacional</h5>
+                                    <small class="text-muted">Envíos por peso y zona</small>
+                                </div>
+                            </div>
+                            <button type="button" class="btn-primary-modern btn-sm" data-bs-toggle="modal"
+                                data-bs-target="#modalNuevaZona">
+                                <i class="fas fa-plus me-1"></i>Nueva Zona
+                            </button>
+                        </div>
+
+                        <div class="card-body-modern">
+                            {% if not zones %}
+                            <div class="text-center py-5">
+                                <i class="fas fa-map-marked-alt fa-3x text-muted opacity-25 mb-3"></i>
+                                <h6 class="fw-bold">Sin zonas configuradas</h6>
+                                <p class="text-muted small mb-3">
+                                    Crea una zona (Ej: Nacional) para cobrar envíos foráneos por peso
+                                </p>
+                                <button type="button" class="btn-primary-modern btn-sm" data-bs-toggle="modal"
+                                    data-bs-target="#modalNuevaZona">
+                                    <i class="fas fa-plus me-2"></i>Crear Primera Zona
+                                </button>
+                            </div>
+                            {% else %}
+                            <div class="row g-3">
+                                {% for zone in zones %}
+                                <div class="col-md-6">
+                                    <div class="border rounded-3 overflow-hidden">
+                                        <div
+                                            class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                                            <div>
+                                                <div class="fw-bold">{{ zone['zone_name'] }}</div>
+                                                <small class="text-muted text-uppercase" style="font-size: 0.7rem;">
+                                                    {{ zone['states_str'] }}
+                                                </small>
+                                            </div>
+                                            <button type="button" class="btn btn-link text-danger p-2"
+                                                onclick="confirmarEliminarZona('{{ zone['id'] }}', '{{ zone['zone_name'] }}')">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+
+                                        <table class="table table-sm m-0" style="font-size: 0.85rem;">
+                                            <thead>
+                                                <tr>
+                                                    <th class="ps-3">Límite (Kg)</th>
+                                                    <th>Costo</th>
+                                                    <th></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for rate in zone['rates'] %}
+                                                <tr>
+                                                    <td class="ps-3 fw-bold">{{ rate['max_weight_kg'] }} kg</td>
+                                                    <td class="text-success fw-bold">${{ "{:.2f}".format(rate['price'])
+                                                        }}</td>
+                                                    <td class="text-end">
+                                                        <button type="button" class="btn btn-link text-muted p-1"
+                                                            onclick="confirmarEliminarTarifa('{{ rate['id'] }}')">
+                                                            <i class="fas fa-times"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                                {% else %}
+                                                <tr>
+                                                    <td colspan="3" class="text-center text-muted py-3 small">
+                                                        Agrega tarifas de peso
+                                                    </td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+
+                                        <div class="p-2 border-top">
+                                            <form method="POST" action="{{ url_for('configuracion.crear_tarifa') }}"
+                                                class="row g-2 align-items-center form-silencioso" data-recargar="true">
+                                                <input type="hidden" name="zone_id" value="{{ zone['id'] }}">
+                                                <div class="col-4">
+                                                    <input type="number" step="0.1" name="max_weight"
+                                                        class="form-control form-control-sm" placeholder="Kg Max"
+                                                        required>
+                                                </div>
+                                                <div class="col-5">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text">$</span>
+                                                        <input type="number" step="1" name="price" class="form-control"
+                                                            placeholder="Precio" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-3">
+                                                    <button type="submit" class="btn btn-dark btn-sm w-100">
+                                                        <i class="fas fa-plus"></i>
+                                                    </button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
+                <!-- TAB 5: SUSCRIPCIÓN (REDISEÑADO) -->
+                <!-- ============================================ -->
                 <div class="tab-pane fade" id="list-suscripcion" role="tabpanel">
-                    <div class="saas-card border-0" style="background: linear-gradient(145deg, #111827, #1f2937); color: white;">
-                        <div class="card-body p-5 text-center">
+                    <div class="config-card border-0"
+                        style="background: linear-gradient(145deg, #1a1f2e, #2a3142); color: white;">
+                        <div class="card-body-modern p-5 text-center">
                             <div class="mb-4">
                                 <div class="mx-auto mb-3 d-flex align-items-center justify-content-center"
                                     style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;">
                                     <i class="fas fa-gem fa-2x text-warning"></i>
                                 </div>
                                 <h3 class="fw-bold text-white mb-1">Plan Sianeffects PRO</h3>
-                                <p class="text-light opacity-75">Acceso ilimitado a todas las herramientas.</p>
+                                <p class="text-light opacity-75">Acceso ilimitado a todas las herramientas</p>
                             </div>
 
-                            <div class="p-4 mb-4 mx-auto rounded-4" style="max-width: 400px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
-                                <h6 class="opacity-50 small text-uppercase fw-bold mb-2 letter-spacing-1" style="color: #fff !important;">Vencimiento de Licencia</h6>
+                           <div class="p-4 mb-4 mx-auto rounded-4"
+                                style="max-width: 400px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
+                                
+                                <h6 class="opacity-50 small text-uppercase fw-bold mb-2" style="color: #fff;">
+                                    {% if usuario['role'] >= 1 or session.get('is_pro_active') %}
+                                        Vencimiento de Licencia
+                                    {% else %}
+                                        Estado de Licencia
+                                    {% endif %}
+                                </h6>
+                                
                                 <h2 class="fw-bold text-white m-0">
                                     {% if usuario['role'] >= 1 %}
-                                    <span class="text-warning"><i class="fas fa-infinity me-2"></i>Permanente (Admin)</span>
+                                    <span class="text-warning">
+                                        <i class="fas fa-infinity me-2"></i>Permanente (Admin)
+                                    </span>
+
+                                    {% elif not session.get('is_pro_active') %}
+                                    <span class="text-danger">
+                                        <i class="fas fa-times-circle me-2"></i>Inactiva / Cancelada
+                                    </span>
+
                                     {% elif usuario['subscription_end'] %}
-                                        {% set fecha_str = usuario['subscription_end']|string %}
-                                        {% set anio = fecha_str[0:4] %}
-                                        {% set mes = fecha_str[5:7] %}
-                                        {% set dia = fecha_str[8:10]|int %}
-                                        {% set nombres_meses = {'01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr', '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago', '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic'} %}
-                                        <span style="color: #fff !important;">{{ dia }} {{ nombres_meses[mes] }}, {{ anio }}</span>
+                                    {% set fecha_str = usuario['subscription_end']|string %}
+                                    {% set anio = fecha_str[0:4] %}
+                                    {% set mes = fecha_str[5:7] %}
+                                    {% set dia = fecha_str[8:10]|int %}
+                                    {% set nombres_meses = {
+                                    '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr',
+                                    '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago',
+                                    '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic'
+                                    } %}
+                                    <span style="color: #fff;">{{ dia }} {{ nombres_meses[mes] }}, {{ anio }}</span>
+                                    
                                     {% else %}
                                     <span class="text-warning">Ilimitada</span>
                                     {% endif %}
                                 </h2>
                             </div>
+
+                            <form action="{{ url_for('payments.billing_portal') }}" method="POST">
+                                <button type="submit" class="btn btn-outline-light rounded-pill px-4 btn-sm opacity-75">
+                                    <i class="fas fa-credit-card me-2"></i> Gestionar suscripción o Cancelar
+                                </button>
+                            </form>
+                            <p class="text-muted small mt-3">Podrás descargar tus facturas y actualizar tu método de
+                                pago.</p>
                         </div>
                     </div>
                 </div>
@@ -803,15 +2212,54 @@
     </div>
 </div>
 
+<!-- CHATBOT FLOTANTE (MANTENIDO) -->
+<div id="chatbot-container" class="chatbot-widget">
+    <button id="chatbot-toggle" class="chatbot-fab">
+        <i class="fas fa-robot"></i>
+    </button>
+
+    <div id="chatbot-panel" class="chatbot-panel d-none">
+        <div class="chatbot-header">
+            <h6 class="mb-0 fw-bold">
+                <i class="fas fa-magic-wand-sparkles me-2"></i>SianBot
+            </h6>
+            <button id="chatbot-close" class="btn-close btn-close-white"></button>
+        </div>
+
+        <div id="chatbot-messages" class="chatbot-messages">
+            <div class="message bot-message">
+                <div class="message-content">
+                    👋 ¡Hola! Soy el SianBot, tu asesor financiero.<br><br>
+                    Dime cuánto te gustaría ganar al mes y cuánto tiempo libre tienes
+                    (ej: <i>"Quiero ganar 15 mil pero trabajo en oficina y solo le dedico
+                        3 horas al día al negocio"</i>). Te ayudaré a calcular qué números
+                    poner en tu configuración.
+                </div>
+            </div>
+        </div>
+
+        <div class="chatbot-input-area">
+            <input type="text" id="chatbot-input" placeholder="Ej: Quiero ganar 15,000...">
+            <button id="chatbot-send">
+                <i class="fas fa-paper-plane"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- MODALES (MANTENIDOS) -->
+<!-- Modal: Preview del Ticket -->
 <div class="modal fade" id="modalPreview" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 bg-transparent shadow-none" style="background-color: transparent !important;">
+        <div class="modal-content border-0 bg-transparent shadow-none">
             <div class="ticket-preview position-relative" id="ticketVisual">
-                <button type="button" class="btn-close position-absolute top-0 end-0 m-2" data-bs-dismiss="modal"></button>
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-2"
+                    data-bs-dismiss="modal"></button>
 
                 <div class="tp-brand">
                     <div id="prevLogoContainer" style="display: none; margin-bottom: 10px;">
-                        <img id="prevLogoImg" src="" style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover; display: inline-block;">
+                        <img id="prevLogoImg" src=""
+                            style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
                     </div>
                     <h4 id="prevEmpresa">Empresa</h4>
                     <p id="prevSlogan">Slogan</p>
@@ -826,10 +2274,24 @@
                 </div>
 
                 <table class="tp-table">
-                    <thead><tr><th>Cant.</th><th>Concepto</th><th class="text-end">Total</th></tr></thead>
+                    <thead>
+                        <tr>
+                            <th>Cant.</th>
+                            <th>Concepto</th>
+                            <th class="text-end">Total</th>
+                        </tr>
+                    </thead>
                     <tbody>
-                        <tr><td>1</td><td>Producto Estrella</td><td class="text-end">$1,500.00</td></tr>
-                        <tr><td>2</td><td>Envío (Ejemplo)</td><td class="text-end">$150.00</td></tr>
+                        <tr>
+                            <td>1</td>
+                            <td>Producto Estrella</td>
+                            <td class="text-end">$1,500.00</td>
+                        </tr>
+                        <tr>
+                            <td>2</td>
+                            <td>Envío (Ejemplo)</td>
+                            <td class="text-end">$150.00</td>
+                        </tr>
                     </tbody>
                 </table>
 
@@ -838,8 +2300,13 @@
                     <div class="tp-total-amount">$1,650.00</div>
                 </div>
 
+                <div class="tp-info mt-3" style="border-top: 1px dashed #ccc; border-bottom: none; padding-top: 10px;">
+                    <p id="prevNotas" style="font-size: 0.7rem; color: #555; text-align: center; margin: 0;">
+                        Tus notas y políticas aparecerán aquí.
+                    </p>
+                </div>
+
                 <div class="tp-footer">
-                    <p>¡Gracias por tu preferencia!</p>
                     <p class="fw-bold" style="color:#2ec4b6" id="prevWeb">www.tusitio.com</p>
                 </div>
             </div>
@@ -847,27 +2314,77 @@
     </div>
 </div>
 
+<!-- Modal: Nueva Zona -->
 <div class="modal fade" id="modalNuevaZona" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 rounded-4 shadow-lg">
-            <div class="modal-header border-bottom border-light px-4 py-3">
-                <h6 class="modal-title fw-bold text-dark">Nueva Zona de Envío</h6>
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-bottom px-4">
+                <h6 class="modal-title fw-bold">
+                    <i class="fas fa-map-marked-alt me-2 text-primary"></i>
+                    Nueva Zona de Envío
+                </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
-                <form method="POST" action="{{ url_for('configuracion.crear_zona') }}" class="form-silencioso" data-recargar="true">
-                    <div class="mb-4">
-                        <label class="saas-label">Nombre Identificador</label>
-                        <input type="text" name="zone_name" class="form-control saas-input text-dark" placeholder="Ej. Pacífico, Norte, Todo México..." required>
+                <form method="POST" action="{{ url_for('configuracion.crear_zona') }}" class="form-silencioso"
+                    data-recargar="true">
+                    <div class="form-group-modern">
+                        <label class="form-label-modern">Nombre Identificador</label>
+                        <input type="text" name="zone_name" class="form-input-modern"
+                            placeholder="Ej. Pacífico, Norte, Todo México..." required>
                     </div>
-                    <div class="mb-4">
-                        <label class="saas-label">Códigos de Estado (Cobertura)</label>
-                        <input type="text" name="zone_states" class="form-control saas-input text-dark" placeholder="Ej. JAL, NAY, COL (o escribe TODOS)" required>
-                        <div class="form-text small mt-2 text-muted">Separa los estados por comas. Usa la palabra <strong>TODOS</strong> para cubrir el resto del territorio.</div>
+
+                    <div class="form-group-modern">
+                        <label class="form-label-modern">Códigos de Estado (Cobertura)</label>
+                        <input type="text" name="zone_states" class="form-input-modern"
+                            placeholder="Ej. JAL, NAY, COL (o escribe TODOS)" required>
+                        <div class="form-help-text">
+                            Separa los estados por comas. Usa <strong>TODOS</strong> para el resto del territorio.
+                        </div>
                     </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-dark rounded-pill fw-bold py-2">Crear Zona Logística</button>
+
+                    <button type="submit" class="btn-primary-modern w-100 mt-3">
+                        <i class="fas fa-save me-2"></i>Crear Zona
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Nuevo Gasto Fijo -->
+<div class="modal fade" id="modalNuevoGasto" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-bottom px-4">
+                <h6 class="modal-title fw-bold">
+                    <i class="fas fa-plus-circle me-2 text-primary"></i>
+                    Nuevo Gasto Fijo
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form method="POST" action="{{ url_for('configuracion.crear_gasto_fijo') }}" class="form-silencioso"
+                    data-recargar="true">
+                    <div class="form-group-modern">
+                        <label class="form-label-modern">Concepto del Gasto</label>
+                        <input type="text" name="nombre_gasto" class="form-input-modern"
+                            placeholder="Ej. Renta del Local, Luz, Internet..." required>
                     </div>
+
+                    <div class="form-group-modern">
+                        <label class="form-label-modern">Monto Mensual</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-light">$</span>
+                            <input type="number" step="0.01" name="monto_mensual"
+                                class="form-input-modern text-danger fw-bold" placeholder="5000.00" required min="0">
+                        </div>
+                        <div class="form-help-text">¿Cuánto pagas al mes por este concepto?</div>
+                    </div>
+
+                    <button type="submit" class="btn-primary-modern w-100 mt-3">
+                        <i class="fas fa-save me-2"></i>Guardar Gasto
+                    </button>
                 </form>
             </div>
         </div>
@@ -876,9 +2393,23 @@
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
+    // ============================================
+    // FUNCIONES DE TOGGLE COLAPSABLES
+    // ============================================
+    function toggleCollapsible(header) {
+        const body = header.nextElementSibling;
+        const arrow = header.querySelector('.collapsible-arrow');
+
+        header.classList.toggle('active');
+        arrow.classList.toggle('active');
+        body.classList.toggle('active');
+    }
+
+    // ============================================
+    // TUTORIAL INTERACTIVO
+    // ============================================
     function repetirTutorialConfiguracion() {
-        if(typeof window.driver === 'undefined') {
+        if (typeof window.driver === 'undefined') {
             console.error("Driver.js no está cargado.");
             return;
         }
@@ -889,81 +2420,68 @@
             nextBtnText: 'Siguiente &rarr;',
             prevBtnText: '&larr; Atrás',
             allowClose: true,
-            
-            // CONEXIÓN A BASE DE DATOS
             onDestroyed: () => {
                 {% if mostrar_tour %}
                 fetch('/api/tutorial/completado', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         modulo: 'configuracion',
-                        version: {{ version_tour | default(1) }}
-                    })
-                }).catch(e => console.error("Error guardando tutorial:", e));
-                {% endif %}
-            },
-            
-            steps: [
-                {
-                    popover: {
-                        title: 'Centro de Control ⚙️',
-                        description: 'Aquí puedes personalizar Sianeffects para que hable y luzca exactamente como tu negocio. Vamos a dar un paseo.',
-                        align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-sidebar-config',
-                    popover: {
-                        title: '1. El Menú Lateral',
-                        description: 'Usa estas pestañas para navegar entre las opciones de tu Negocio, tu Perfil Personal, Seguridad y las tarifas de Envío.',
-                        side: "right", align: 'start'
-                    }
-                },
-                {
-                    element: '#tour-card-identidad',
-                    popover: {
-                        title: '2. Tu Identidad',
-                        description: 'Elige un Emoji representativo o sube tu logotipo. Luego rellena los campos públicos: este será el nombre y link que aparecerá en los tickets de tus clientes.',
-                        side: "top", align: 'start'
-                    }
-                },
-                {
-                    element: '#tour-btn-preview',
-                    popover: {
-                        title: '3. Preview Ticket',
-                        description: '¡No tienes que adivinar! Mientras escribes tu slogan o subes tu logo, pícale a este botón para ver exactamente cómo quedará tu recibo final.',
-                        side: "bottom", align: 'end'
-                    }
-                },
-                {
-                    element: '#tour-card-sistema',
-                    popover: {
-                        title: '4. Ajustes Clave',
-                        description: 'Aquí abajo debes definir tu "Margen de Ganancia Base" (cuánto quieres ganar sobre tus costos) y, si lo deseas, activar el Control Automático de Inventario.',
-                        side: "top", align: 'center'
-                    }
-                }
-            ]
-        });
-        driverObj.drive();
-    }
+                        version: {{ version_tour | default(1)
+                }}
+        })
+    }).catch (e => console.error("Error guardando tutorial:", e));
+    {% endif %}
+        },
+    steps: [
+        {
+            popover: {
+                title: 'Centro de Control ⚙️',
+                description: 'Aquí puedes personalizar Sianeffects para que hable y luzca exactamente como tu negocio.',
+                align: 'center'
+            }
+        },
+        {
+            element: '#tour-card-identidad',
+            popover: {
+                title: 'Tu Identidad',
+                description: 'Elige un Emoji o sube tu logo. Este será el nombre y enlace en los tickets de tus clientes.',
+                side: "top"
+            }
+        },
+        {
+            element: '#tour-btn-preview',
+            popover: {
+                title: 'Preview Ticket',
+                description: 'Mientras configuras, pica aquí para ver cómo quedará tu recibo.',
+                side: "bottom"
+            }
+        },
+        {
+            element: '#tour-card-sistema',
+            popover: {
+                title: 'Ajustes Clave',
+                description: 'Define tu Margen de Ganancia Base y activa controles como Inventario.',
+                side: "top"
+            }
+        }
+    ]
+    });
+    driverObj.drive();
+}
 
-    // MAGIA DE JINJA: Solo arranca si Python dice que es su primera vez
     {% if mostrar_tour %}
-    document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.driver !== 'undefined') {
-            setTimeout(() => {
-                repetirTutorialConfiguracion();
-            }, 800); 
+            setTimeout(() => repetirTutorialConfiguracion(), 800);
         }
     });
     {% endif %}
 
-
-    // --- 1. PERSISTENCIA Y CARGA INICIAL ---
-    document.addEventListener('DOMContentLoaded', function() {
-        // Restaurar pestaña activa
+    // ============================================
+    // PERSISTENCIA DE TABS
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function () {
         let hash = window.location.hash;
         if (hash) {
             let activeTab = document.querySelector(`a[href="${hash}"]`);
@@ -971,7 +2489,7 @@
                 bootstrap.ListGroup.getOrCreateInstance(activeTab).show();
             }
         }
-        // Guardar pestaña en hash
+
         const triggerTabList = document.querySelectorAll('#list-tab a');
         triggerTabList.forEach(triggerEl => {
             triggerEl.addEventListener('click', function (event) {
@@ -979,63 +2497,67 @@
             });
         });
 
-        // Extraer coords silencioso si hay link
         const inputMaps = document.getElementById('inputMapsConfig');
         if (inputMaps && inputMaps.value.trim() !== "") {
-            extraerCoordenadasConfig(inputMaps, true); 
+            extraerCoordenadasConfig(inputMaps, true);
         }
+
+        calcularCostoTiempo();
     });
 
-    // --- 2. LÓGICA DE UPLOAD VISUAL DE LOGO ---
+    // ============================================
+    // LOGO PREVIEW
+    // ============================================
     function previewLogo(event) {
         const input = event.target;
         if (input.files && input.files[0]) {
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = function (e) {
                 const img = document.getElementById('logoPreviewImg');
                 const icon = document.getElementById('logoPlaceholderIcon');
-                
                 img.src = e.target.result;
                 img.style.display = 'block';
-                if(icon) icon.style.display = 'none';
+                if (icon) icon.style.display = 'none';
             }
             reader.readAsDataURL(input.files[0]);
         }
     }
 
-    // --- LÓGICA DE EMOJIS INLINE ---
+    // ============================================
+    // SELECTOR DE EMOJIS
+    // ============================================
     function seleccionarEmoji(elemento, emoji) {
-        // Quitamos la clase 'selected' de todos
-        document.querySelectorAll('.emoji-item').forEach(el => el.classList.remove('selected'));
-        // Se la ponemos al que clickeó
+        document.querySelectorAll('.emoji-item-modern').forEach(el => el.classList.remove('selected'));
         elemento.classList.add('selected');
-        // Guardamos el valor en el input oculto
         document.getElementById('inputIconoReal').value = emoji;
     }
 
-    // --- VISTA PREVIA DEL TICKET HÍBRIDO ---
+    // ============================================
+    // VISTA PREVIA TICKET
+    // ============================================
     function actualizarVistaPrevia() {
         const empresa = document.getElementById('inputEmpresa').value || "Nombre Empresa";
-        const slogan = document.getElementById('inputSlogan').value || "Tu Slogan va aquí";
+        const slogan = document.getElementById('inputSlogan').value || "Tu Slogan";
         const web = document.getElementById('inputWeb').value || "";
         const tipoActual = document.getElementById('tipoIdentidad').value;
-        
+        const notas = document.getElementById('inputNotasTicket').value || "¡Gracias por su compra!";
+
         document.getElementById('prevSlogan').innerText = slogan;
         document.getElementById('prevWeb').innerText = web;
         document.getElementById('prevFecha').innerText = new Date().toLocaleDateString();
+        document.getElementById('prevNotas').innerText = notas;
 
         const prevLogoImg = document.getElementById('prevLogoImg');
         const prevLogoCont = document.getElementById('prevLogoContainer');
 
         if (tipoActual === 'logo') {
             const imgInput = document.getElementById('logoPreviewImg');
-            if(imgInput.src && imgInput.style.display !== 'none' && !imgInput.src.endsWith(window.location.host + "/")) {
+            if (imgInput.src && imgInput.style.display !== 'none' && !imgInput.src.endsWith(window.location.host + "/")) {
                 prevLogoImg.src = imgInput.src;
                 prevLogoCont.style.display = 'block';
                 document.getElementById('prevEmpresa').innerHTML = empresa;
             }
         } else {
-            // Modo Emoji
             prevLogoCont.style.display = 'none';
             const emojiSeleccionado = document.getElementById('inputIconoReal').value;
             document.getElementById('prevEmpresa').innerHTML = `<span style="font-size:1.5rem; margin-right:5px;">${emojiSeleccionado}</span>${empresa}`;
@@ -1045,78 +2567,124 @@
         const previewEl = document.getElementById('ticketVisual');
         if (isBW) previewEl.classList.add('ticket-bw');
         else previewEl.classList.remove('ticket-bw');
-        
+
         new bootstrap.Modal(document.getElementById('modalPreview')).show();
     }
 
-    // --- 4. VALIDACIONES Y UTILIDADES EXISTENTES ---
-    function validarPassword() {
-        var p1 = document.getElementById("pass1").value;
-        var p2 = document.getElementById("pass2").value;
-        if (p1 !== p2) {
-            Swal.fire({ icon: 'error', title: 'Error', text: 'Las contraseñas no coinciden.', borderRadius: '15px' });
-            return false;
-        }
-        return true;
-    }
+    // ============================================
+    // EXTRACCIÓN DE COORDENADAS
+    // ============================================
+    function extraerCoordenadasConfig(input, silencioso = false) {
+        const url = input.value.trim();
+        if (!url) return;
 
-function extraerCoordenadasConfig(input, silencioso = false) {
-    const url = input.value.trim();
-    if (!url) return;
+        const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+        const match = url.match(regex);
+        const matchBusqueda = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+        const matchFinal = match || matchBusqueda;
 
-    // 1. Intentamos extraer coordenadas si vienen claras de una vez
-    const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-    const match = url.match(regex);
-    const matchBusqueda = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-    const matchFinal = match || matchBusqueda;
-
-    if (matchFinal) {
-        document.getElementById('latConfig').value = matchFinal[1];
-        document.getElementById('lngConfig').value = matchFinal[2];
-        input.classList.remove('is-invalid');
-        input.classList.add('is-valid');
-        document.getElementById('geo-status').style.display = 'block';
-    } else {
-        // 2. Si no vienen claras, comprobamos si al menos es un link de Google
-        const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());
-        
-        if (esGoogle) {
+        if (matchFinal) {
+            document.getElementById('latConfig').value = matchFinal[1];
+            document.getElementById('lngConfig').value = matchFinal[2];
             input.classList.remove('is-invalid');
-            // El link es de Google. Lo dejamos pasar en silencio 
-            // para que nuestro Python (Plan B) hackee el HTML en el servidor.
-        } else if (!silencioso) {
-            // 3. Solo si no es Google en absoluto, mandamos la alerta
-            Swal.fire({ 
-                icon: 'warning', 
-                title: 'Link no reconocido', 
-                text: 'Asegúrate de que sea un enlace de Google Maps.' 
-            });
-            input.classList.add('is-invalid');
+            input.classList.add('is-valid');
+            document.getElementById('geo-status').style.display = 'block';
+        } else {
+            const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());
+            if (esGoogle) {
+                input.classList.remove('is-invalid');
+            } else if (!silencioso) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Link no reconocido',
+                    text: 'Asegúrate de que sea un enlace de Google Maps.'
+                });
+                input.classList.add('is-invalid');
+            }
         }
     }
-}
 
-    async function pegarDelPortapapeles() {
-        try {
-            const text = await navigator.clipboard.readText();
-            document.getElementById('inputMapsLink').value = text;
-            extraerCoordenadasConfig(document.getElementById('inputMapsLink'));
-        } catch (err) { }
+    // ============================================
+    // CONTADOR DE CARACTERES
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function () {
+        const inputNotas = document.getElementById('inputNotasTicket');
+        const charCount = document.getElementById('charCount');
+
+        if (inputNotas && charCount) {
+            charCount.textContent = inputNotas.value.length;
+            inputNotas.addEventListener('input', function () {
+                charCount.textContent = this.value.length;
+                charCount.classList.toggle('text-danger', this.value.length >= 150);
+            });
+        }
+    });
+
+    // ============================================
+    // GASTOS FIJOS - SUMA VISUAL
+    // ============================================
+    function actualizarTotalGastos() {
+        let totalGastos = 0;
+        document.querySelectorAll('.gasto-row').forEach(row => {
+            const monto = parseFloat(row.dataset.monto || 0);
+            totalGastos += monto;
+        });
+
+        const totalElement = document.getElementById('totalGastosFijos');
+        if (totalElement) {
+            totalElement.textContent = `$${totalGastos.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        }
     }
 
-    // --- 5. ELIMINACIONES SEGURAS (RUTEADAS A BLUEPRINT) ---
-    function confirmarEliminarZona(idZona, nombreZona) {
+    document.addEventListener('DOMContentLoaded', function () {
+        actualizarTotalGastos();
+    });
+
+    function confirmarEliminarGasto(idGasto, nombreGasto) {
         Swal.fire({
-            title: '¿Eliminar zona?', text: `Borrarás "${nombreZona}". Se perderán sus tarifas.`,
-            icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545',
-            confirmButtonText: 'Sí, eliminar', borderRadius: '15px'
+            title: '¿Eliminar gasto fijo?',
+            text: `Se eliminará permanentemente "${nombreGasto}"`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ url_for('configuracion.eliminar_zona') }}"; // NUEVA RUTA
+                form.action = "{{ url_for('configuracion.eliminar_gasto_fijo') }}";
                 const idInput = document.createElement('input');
-                idInput.type = 'hidden'; idInput.name = 'zone_id'; idInput.value = idZona;
+                idInput.type = 'hidden';
+                idInput.name = 'gasto_id';
+                idInput.value = idGasto;
+                form.appendChild(idInput);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        });
+    }
+
+    // ============================================
+    // ELIMINACIONES DE ZONAS Y TARIFAS
+    // ============================================
+    function confirmarEliminarZona(idZona, nombreZona) {
+        Swal.fire({
+            title: '¿Eliminar zona?',
+            text: `Borrarás "${nombreZona}". Se perderán sus tarifas.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Sí, eliminar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = "{{ url_for('configuracion.eliminar_zona') }}";
+                const idInput = document.createElement('input');
+                idInput.type = 'hidden';
+                idInput.name = 'zone_id';
+                idInput.value = idZona;
                 form.appendChild(idInput);
                 document.body.appendChild(form);
                 form.submit();
@@ -1126,15 +2694,20 @@ function extraerCoordenadasConfig(input, silencioso = false) {
 
     function confirmarEliminarTarifa(idTarifa) {
         Swal.fire({
-            title: '¿Eliminar tarifa?', icon: 'warning', showCancelButton: true,
-            confirmButtonColor: '#dc3545', confirmButtonText: 'Sí, eliminar', borderRadius: '15px'
+            title: '¿Eliminar tarifa?',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            confirmButtonText: 'Sí, eliminar'
         }).then((result) => {
             if (result.isConfirmed) {
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = "{{ url_for('configuracion.eliminar_tarifa') }}"; // NUEVA RUTA
+                form.action = "{{ url_for('configuracion.eliminar_tarifa') }}";
                 const idInput = document.createElement('input');
-                idInput.type = 'hidden'; idInput.name = 'rate_id'; idInput.value = idTarifa;
+                idInput.type = 'hidden';
+                idInput.name = 'rate_id';
+                idInput.value = idTarifa;
                 form.appendChild(idInput);
                 document.body.appendChild(form);
                 form.submit();
@@ -1142,95 +2715,242 @@ function extraerCoordenadasConfig(input, silencioso = false) {
         });
     }
 
-    // --- INTERCEPTOR DE FORMULARIOS SILENCIOSOS (CORREGIDO Y BLINDADO) ---
-// --- INTERCEPTOR DE FORMULARIOS SILENCIOSOS (CORREGIDO Y BLINDADO) ---
-document.addEventListener('DOMContentLoaded', function() {
-    const formsSilenciosos = document.querySelectorAll('.form-silencioso');
-    
-    formsSilenciosos.forEach(form => {
-        form.addEventListener('submit', async function(e) {
-            e.preventDefault(); // Detiene la recarga
+    // ============================================
+    // INTERCEPTOR DE FORMULARIOS
+    // ============================================
+    document.addEventListener('DOMContentLoaded', function () {
+        const formsSilenciosos = document.querySelectorAll('.form-silencioso');
 
-            // 1. BLINDAJE PARA CONTRASEÑAS (Reemplaza el onsubmit inline)
-            if (form.id === 'form-password') {
-                var p1 = document.getElementById("pass1").value;
-                var p2 = document.getElementById("pass2").value;
-                if (p1 !== p2) {
-                    Swal.fire({ icon: 'error', title: 'Error', text: 'Las contraseñas no coinciden.', borderRadius: '15px' });
-                    return; // Detenemos la ejecución si no coinciden
-                }
-            }
+        formsSilenciosos.forEach(form => {
+            form.addEventListener('submit', async function (e) {
+                e.preventDefault();
 
-            // 2. CAMBIO DE BOTÓN SEGURO
-            const btn = form.querySelector('button[type="submit"]');
-            const btnOriginalText = btn ? btn.innerHTML : 'Guardar';
-            if (btn) {
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando...';
-                btn.disabled = true;
-            }
-
-            const formData = new FormData(form);
-
-            try {
-                // 3. ENVÍO CON HEADERS MÁGICOS PARA PYTHON
-                // Usamos getAttribute para evitar que inputs con name="action" rompan la URL
-                const actionUrl = form.getAttribute('action'); 
-                
-                const response = await fetch(actionUrl, {
-                    method: form.getAttribute('method') || 'POST',
-                    body: formData,
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                if (form.id === 'form-password') {
+                    var p1 = document.getElementById("pass1").value;
+                    var p2 = document.getElementById("pass2").value;
+                    if (p1 !== p2) {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Las contraseñas no coinciden.'
+                        });
+                        return;
                     }
-                });
+                }
 
-                if (response.ok) {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '¡Guardado Exitosamente!',
-                        text: 'Tus cambios han sido aplicados en el sistema.',
-                        confirmButtonColor: '#212529',
-                        confirmButtonText: '<i class="fas fa-check"></i> Entendido',
-                        allowOutsideClick: false
-                    }).then((result) => {
-                        if (form.hasAttribute('data-recargar') && result.isConfirmed) {
-                            window.location.reload();
+                const btn = form.querySelector('button[type="submit"]');
+                const btnOriginalText = btn ? btn.innerHTML : 'Guardar';
+                if (btn) {
+                    btn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Guardando...';
+                    btn.disabled = true;
+                }
+
+                const formData = new FormData(form);
+
+                try {
+                    const actionUrl = form.getAttribute('action');
+                    const response = await fetch(actionUrl, {
+                        method: form.getAttribute('method') || 'POST',
+                        body: formData,
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
                     });
-                    
-                    // 4. BLINDAJE DE MODAL
-                    const modalEl = form.closest('.modal');
-                    if(modalEl) {
-                        const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
-                        if(modalInstance) modalInstance.hide();
-                        form.reset();
-                    }
 
-                } else {
-                    // 5. MANEJO DE ERRORES REALES DEL SERVIDOR
-                    let mensajeError = "Error interno del servidor.";
-                    try {
-                        const dataError = await response.json();
-                        if (dataError.error) mensajeError = dataError.error;
-                        else if (dataError.message) mensajeError = dataError.message;
-                    } catch(e) {
-                        mensajeError = `El servidor falló con código de estado: ${response.status}`;
+                    if (response.ok) {
+                        Swal.fire({
+                            icon: 'success',
+                            title: '¡Guardado Exitosamente!',
+                            text: 'Tus cambios han sido aplicados',
+                            confirmButtonText: 'Entendido',
+                            allowOutsideClick: false
+                        }).then((result) => {
+                            if (form.hasAttribute('data-recargar') && result.isConfirmed) {
+                                window.location.reload();
+                            }
+                        });
+
+                        const modalEl = form.closest('.modal');
+                        if (modalEl) {
+                            const modalInstance = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                            if (modalInstance) modalInstance.hide();
+                            form.reset();
+                        }
+                    } else {
+                        let mensajeError = "Error interno del servidor.";
+                        try {
+                            const dataError = await response.json();
+                            if (dataError.error) mensajeError = dataError.error;
+                            else if (dataError.message) mensajeError = dataError.message;
+                        } catch (e) {
+                            mensajeError = `Error ${response.status}`;
+                        }
+                        Swal.fire('Error', mensajeError, 'error');
                     }
-                    Swal.fire('Error de Servidor', mensajeError, 'error');
+                } catch (error) {
+                    console.error("Error:", error);
+                    Swal.fire('Error', 'Fallo de conexión. Verifica tu internet.', 'error');
+                } finally {
+                    if (btn) {
+                        btn.innerHTML = btnOriginalText;
+                        btn.disabled = false;
+                    }
                 }
-            } catch (error) {
-                console.error("Error:", error);
-                Swal.fire('Error', 'Fallo de conexión. Verifica tu internet.', 'error');
-            } finally {
-                // 6. RESTAURACIÓN DEL BOTÓN
-                if (btn) {
-                    btn.innerHTML = btnOriginalText;
-                    btn.disabled = false;
-                }
-            }
+            });
         });
     });
-});
+
+    // ============================================
+    // FACTOR OPERATIVO
+    // ============================================
+    function toggleFactor(switchElement) {
+        const input = document.getElementById('inputFactor');
+        const box = document.getElementById('boxFactorInput');
+        const help = document.getElementById('helpFactor');
+        const span = document.getElementById('spanFactor');
+        const cardCostos = document.getElementById('tour-card-gastos-fijos');
+
+        if (switchElement.checked) {
+            if (parseFloat(input.value) === 0) input.value = '10';
+            box.style.opacity = '1';
+            input.readOnly = false;
+            help.innerHTML = '% extra para cubrir renta, luz, etc.';
+            help.classList.replace('text-danger', 'text-muted');
+            if (cardCostos) cardCostos.classList.remove('d-none');
+        } else {
+            input.value = '0';
+            box.style.opacity = '0.6';
+            input.readOnly = true;
+            help.innerHTML = '<i class="fas fa-power-off me-1"></i> <strong>Desactivado.</strong>';
+            help.classList.replace('text-muted', 'text-danger');
+            if (cardCostos) cardCostos.classList.add('d-none');
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        const input = document.getElementById('inputFactor');
+        const switchEl = document.getElementById('switchFactor');
+        if (input && switchEl && parseFloat(input.value) === 0) {
+            switchEl.checked = false;
+            toggleFactor(switchEl);
+        }
+    });
+
+    // ============================================
+    // MANO DE OBRA
+    // ============================================
+    function toggleLabor(switchElement) {
+        const contenedor = document.getElementById('contenedorLabor');
+        const mensaje = document.getElementById('mensajeLaborApagado');
+
+        if (switchElement.checked) {
+            contenedor.classList.remove('d-none');
+            mensaje.classList.add('d-none');
+            calcularCostoTiempo();
+        } else {
+            contenedor.classList.add('d-none');
+            mensaje.classList.remove('d-none');
+        }
+    }
+
+    function calcularCostoTiempo() {
+        const salario = parseFloat(document.getElementById('inputSalario').value) || 0;
+        const horasSemana = parseFloat(document.getElementById('inputHoras').value) || 0;
+
+        const horasMes = horasSemana * 4.33;
+        const costoHora = horasMes > 0 ? (salario / horasMes) : 0;
+        const costoMinuto = costoHora / 60;
+
+        document.getElementById('displayCostoHora').textContent =
+            `$${costoHora.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        document.getElementById('displayCostoMinuto').textContent =
+            `$${costoMinuto.toFixed(2)}/min`;
+    }
+
+    function abrirCoachSian() {
+        const chatToggle = document.getElementById('chatbot-toggle');
+        if (chatToggle) {
+            chatToggle.click();
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        calcularCostoTiempo();
+    });
+
+    // ============================================
+    // CHATBOT
+    // ============================================
+    const chatToggle = document.getElementById('chatbot-toggle');
+    const chatPanel = document.getElementById('chatbot-panel');
+    const chatClose = document.getElementById('chatbot-close');
+    const chatInput = document.getElementById('chatbot-input');
+    const chatSend = document.getElementById('chatbot-send');
+    const chatMessages = document.getElementById('chatbot-messages');
+
+    let chatAbierto = false;
+
+    chatToggle.addEventListener('click', () => {
+        chatPanel.classList.toggle('d-none');
+        chatAbierto = !chatAbierto;
+        if (chatAbierto) chatInput.focus();
+    });
+
+    chatClose.addEventListener('click', () => {
+        chatPanel.classList.add('d-none');
+        chatAbierto = false;
+    });
+
+    chatSend.addEventListener('click', enviarMensajeCoach);
+    chatInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') enviarMensajeCoach();
+    });
+
+    function enviarMensajeCoach() {
+        const mensaje = chatInput.value.trim();
+        if (!mensaje) return;
+
+        agregarMensajeCoach(mensaje, 'user');
+        chatInput.value = '';
+
+        const loadingId = agregarMensajeCoach('Analizando...', 'bot', true);
+
+        fetch('/api/chat-configuracion', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message: mensaje })
+        })
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById(loadingId).remove();
+                if (data.reply) {
+                    agregarMensajeCoach(data.reply, 'bot');
+                } else {
+                    agregarMensajeCoach('❌ Error procesando datos', 'bot');
+                }
+            })
+            .catch(() => {
+                document.getElementById(loadingId).remove();
+                agregarMensajeCoach('❌ No pude conectar con el servidor', 'bot');
+            });
+    }
+
+    function agregarMensajeCoach(texto, tipo) {
+        const msgDiv = document.createElement('div');
+
+        // FIX: Agregamos un número aleatorio para evitar colisiones de milisegundos
+        const randomStr = Math.floor(Math.random() * 10000);
+        const msgId = 'msg-' + Date.now() + '-' + randomStr;
+
+        msgDiv.id = msgId;
+        msgDiv.className = `message ${tipo === 'user' ? 'user-message' : 'bot-message'}`;
+        msgDiv.innerHTML = `<div class="message-content">${texto}</div>`;
+
+        chatMessages.appendChild(msgDiv);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+        return msgId;
+    }
 </script>
 {% endblock %}

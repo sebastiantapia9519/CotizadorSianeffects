@@ -495,6 +495,7 @@
 {% endblock %}
 
 {% block content %}
+{% set is_pro = session.get('is_pro_active') or session.get('role', 0) >= 1 %}
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
     <div>
         <h3 class="fw-bold m-0 text-dark" style="letter-spacing: -0.5px;">Bitácora de Ventas</h3>
@@ -648,10 +649,17 @@
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li>
+                                    {% if is_pro %}
                                     <button class="dropdown-item d-flex align-items-center gap-2" type="button"
                                         onclick="recargarCotizacion({{ v['id'] }})">
                                         <i class="fas fa-edit text-info w-20px text-center"></i> Editar
                                     </button>
+                                    {% else %}
+                                    <button class="dropdown-item d-flex align-items-center gap-2 text-muted opacity-75"
+                                        type="button" data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+                                        <i class="fas fa-lock w-20px text-center"></i> Editar
+                                    </button>
+                                    {% endif %}
                                 </li>
                                 <li>
                                     <a class="dropdown-item d-flex align-items-center gap-2"
@@ -662,21 +670,35 @@
 
                                 {% if v['saldo_pendiente'] > 0.5 %}
                                 <li>
+                                    {% if is_pro %}
                                     <button class="dropdown-item d-flex align-items-center gap-2" type="button"
                                         onclick="abonar({{v['id']}}, {{v['saldo_pendiente']}}, '{{v['estado']}}')">
                                         <i class="fas fa-dollar-sign text-success w-20px text-center"></i> Registrar
                                         Abono
                                     </button>
+                                    {% else %}
+                                    <button class="dropdown-item d-flex align-items-center gap-2 text-muted opacity-75"
+                                        type="button" data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+                                        <i class="fas fa-lock w-20px text-center"></i> Registrar Abono
+                                    </button>
+                                    {% endif %}
                                 </li>
                                 {% endif %}
 
                                 {% if v['estado'] == 'cotizacion' %}
                                 <li>
+                                    {% if is_pro %}
                                     <button class="dropdown-item d-flex align-items-center gap-2" type="button"
                                         onclick="extenderExpiracion({{ v['id'] }}, '{{ (v['fecha_vencimiento'] | string)[:10] if v['fecha_vencimiento'] else '' }}')">
                                         <i class="fas fa-calendar-plus text-warning w-20px text-center"></i> Extender
                                         Vigencia
                                     </button>
+                                    {% else %}
+                                    <button class="dropdown-item d-flex align-items-center gap-2 text-muted opacity-75"
+                                        type="button" data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+                                        <i class="fas fa-lock w-20px text-center"></i> Extender Vigencia
+                                    </button>
+                                    {% endif %}
                                 </li>
                                 {% endif %}
 
@@ -684,10 +706,17 @@
                                     <hr class="dropdown-divider">
                                 </li>
                                 <li>
+                                    {% if is_pro %}
                                     <button class="dropdown-item d-flex align-items-center gap-2 text-danger"
                                         type="button" onclick="cancelarVenta({{v['id']}})">
                                         <i class="fas fa-trash-alt w-20px text-center"></i> Anular Venta
                                     </button>
+                                    {% else %}
+                                    <button class="dropdown-item d-flex align-items-center gap-2 text-muted opacity-75"
+                                        type="button" data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+                                        <i class="fas fa-lock w-20px text-center"></i> Anular Venta
+                                    </button>
+                                    {% endif %}
                                 </li>
                                 {% endif %}
                             </ul>

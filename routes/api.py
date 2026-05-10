@@ -4,7 +4,7 @@ from dateutil.relativedelta import relativedelta
 from utils.datetime_utils import ahora_sql, now_utc, utc_to_local
 from flask import Blueprint, jsonify, session, request, current_app
 from db import get_db_connection as get_db
-from helpers import login_required
+from helpers import login_required, subscription_required
 
 api_bp = Blueprint('api', __name__)
 
@@ -150,7 +150,7 @@ def obtener_detalles_venta(id):
 
 
 @api_bp.route('/actualizar_venta', methods=['POST'])
-@login_required 
+@subscription_required
 def actualizar_venta():
     data = request.get_json()
     venta_id = data.get('id')
@@ -223,7 +223,7 @@ def actualizar_venta():
         conn.close()
 
 @api_bp.route('/actualizar_expiracion_cotizacion', methods=['POST'])
-@login_required
+@subscription_required
 def actualizar_expiracion_cotizacion():
     data = request.get_json()
     cotizacion_id = data.get('id')
@@ -311,7 +311,7 @@ def actualizar_expiracion_cotizacion():
             conn.close()
 
 @api_bp.route('/cancelar_venta', methods=['POST'])
-@login_required
+@subscription_required
 def cancelar_venta():
     data = request.get_json()
     venta_id = data.get('id')

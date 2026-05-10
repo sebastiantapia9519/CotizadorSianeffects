@@ -121,6 +121,25 @@ def login():
                 session['username'] = user['username']
                 session['role'] = user['role']
 
+                sub_end = user['subscription_end']
+                estado = user['estado_suscripcion']
+                
+                try:
+                    # Nivelamos ambas fechas quitándoles la zona horaria solo para compararlas
+                    ahora = now_utc().replace(tzinfo=None) if now_utc().tzinfo else now_utc()
+                    if sub_end:
+                        sub_end_clean = sub_end.replace(tzinfo=None) if sub_end.tzinfo else sub_end
+                    
+                    # Verificamos si es PRO
+                    if sub_end and sub_end_clean > ahora and estado == 'Activo':
+                        session['is_pro_active'] = True
+                        session.pop('grace_period', None)
+                    else:
+                        session['is_pro_active'] = False
+                except Exception as e:
+                    current_app.logger.error(f"Error comparando fechas en login: {e}")
+                    session['is_pro_active'] = False
+
                 # Registramos el login exitoso en la bitácora de actividad
                 cursor.execute("""
                     INSERT INTO logs_actividad (user_id, accion, modulo, detalle)

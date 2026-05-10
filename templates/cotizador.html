@@ -12,12 +12,14 @@
         border-radius: 20px;
         box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
     }
+
     .card-header-sian {
         background-color: #ffffff;
         border-bottom: 2px solid var(--sian-pink-light);
         padding: 15px;
         border-radius: 20px 20px 0 0;
     }
+
     .nav-tabs .nav-link {
         color: #6c757d;
         border: none;
@@ -29,22 +31,31 @@
         display: flex;
         align-items: center;
     }
+
     .nav-tabs .nav-link.active {
         background-color: var(--sian-pink);
         color: white;
         font-weight: 800;
         box-shadow: 0 4px 10px rgba(255, 107, 129, 0.3);
     }
-    .nav-tabs { border-bottom: none; }
-    .form-control, .form-select {
+
+    .nav-tabs {
+        border-bottom: none;
+    }
+
+    .form-control,
+    .form-select {
         border-radius: 10px;
         border: 2px solid #eee;
         font-weight: 600;
     }
-    .form-control:focus, .form-select:focus {
+
+    .form-control:focus,
+    .form-select:focus {
         border-color: var(--sian-pink);
         box-shadow: none;
     }
+
     .btn-primary {
         background-color: var(--sian-pink);
         border: none;
@@ -52,10 +63,12 @@
         font-weight: 800;
         padding: 12px;
     }
+
     .btn-primary:hover {
         background-color: #ff4765;
         transform: translateY(-2px);
     }
+
     .btn-add-cart {
         background-color: var(--sian-teal);
         color: white;
@@ -65,20 +78,24 @@
         padding: 12px;
         width: 100%;
     }
+
     .btn-add-cart:hover {
         background-color: var(--sian-teal-dark);
         color: white;
     }
+
     .text-price-main {
         color: var(--sian-teal);
         font-size: 1.2rem;
         font-weight: 900;
     }
+
     .total-ticket {
         font-size: 2rem;
         font-weight: 900;
         color: var(--sian-pink);
     }
+
     .check-maquinaria-label {
         cursor: pointer;
         user-select: none;
@@ -87,61 +104,89 @@
         color: #555;
         transition: all 0.2s;
     }
-    .check-maquinaria-label:hover { background-color: #f8f9fa; }
+
+    .check-maquinaria-label:hover {
+        background-color: #f8f9fa;
+    }
+
     .check-maquinaria-input:checked+span {
         color: var(--sian-teal-dark);
         font-weight: 800;
     }
+
     .no-arrow::-webkit-outer-spin-button,
     .no-arrow::-webkit-inner-spin-button {
         -webkit-appearance: none;
         margin: 0;
     }
-    .driver-popover { border-radius: 12px !important; }
-    .driver-popover-title { font-weight: bold !important; color: var(--sian-pink) !important; }
-    .driver-popover-next-btn { background-color: var(--sian-pink) !important; text-shadow: none !important; border: none !important;}
+
+    .driver-popover {
+        border-radius: 12px !important;
+    }
+
+    .driver-popover-title {
+        font-weight: bold !important;
+        color: var(--sian-pink) !important;
+    }
+
+    .driver-popover-next-btn {
+        background-color: var(--sian-pink) !important;
+        text-shadow: none !important;
+        border: none !important;
+    }
 
     /* ===================================================
        2. MODO OSCURO (OVERRIDE AUTOMÁTICO)
        =================================================== */
-    [data-bs-theme="dark"] .card, 
-    [data-bs-theme="dark"] .card-header-sian, 
+    [data-bs-theme="dark"] .card,
+    [data-bs-theme="dark"] .card-header-sian,
     [data-bs-theme="dark"] .modal-content {
         background-color: #1e293b !important;
         border-color: #334155 !important;
     }
-    [data-bs-theme="dark"] .bg-light, 
+
+    [data-bs-theme="dark"] .bg-light,
     [data-bs-theme="dark"] .bg-white {
-        background-color: #0f172a !important; /* Azul marino profundo */
+        background-color: #0f172a !important;
+        /* Azul marino profundo */
         color: #f8fafc !important;
     }
+
     [data-bs-theme="dark"] .text-dark {
-        color: #f8fafc !important; /* Vuelve el texto negro a blanco */
+        color: #f8fafc !important;
+        /* Vuelve el texto negro a blanco */
     }
+
     [data-bs-theme="dark"] .text-muted {
         color: #94a3b8 !important;
     }
+
     [data-bs-theme="dark"] .border {
         border-color: #334155 !important;
     }
-    [data-bs-theme="dark"] .form-control, 
-    [data-bs-theme="dark"] .form-select, 
+
+    [data-bs-theme="dark"] .form-control,
+    [data-bs-theme="dark"] .form-select,
     [data-bs-theme="dark"] .input-group-text {
         background-color: #0f172a !important;
         border-color: #334155 !important;
         color: #f8fafc !important;
     }
+
     [data-bs-theme="dark"] .check-maquinaria-label {
         color: #f8fafc;
     }
+
     [data-bs-theme="dark"] .check-maquinaria-label:hover {
         background-color: #334155 !important;
     }
+
     /* Protegemos los headers originales de los modales */
     [data-bs-theme="dark"] .modal-header.bg-dark {
         background-color: #0f172a !important;
         border-bottom: 1px solid #334155;
     }
+
     [data-bs-theme="dark"] .modal-header.bg-primary {
         background-color: var(--sian-pink) !important;
     }
@@ -149,7 +194,13 @@
 {% endblock %}
 
 {% block content %}
+{% set is_pro = session.get('is_pro_active') or session.get('role', 0) >= 1 %}
+
 <input type="hidden" id="datoMargen" value="{{ config['margen_ganancia'] }}">
+<input type="hidden" id="datoFactorOperativo" value="{{ config.get('porcentaje_gastos_operativos', 10) }}">
+<input type="hidden" id="datoLaborActiva" value="{{ 'true' if config.get('labor_activa') else 'false' }}">
+<input type="hidden" id="datoSalario" value="{{ config.get('salario_deseado', 15000) }}">
+<input type="hidden" id="datoHoras" value="{{ config.get('horas_semanales', 20) }}">
 <input type="hidden" id="ventaIdEdicion" value="">
 
 <select id="masterSelect" class="d-none">
@@ -161,9 +212,10 @@
 </select>
 
 <div class="d-flex justify-content-between align-items-center mb-3">
-    <div></div> 
+    <div></div>
     {% if config['mostrar_ayuda'] %}
-    <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm border border-light" onclick="repetirTutorialCotizador()">
+    <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm border border-light"
+        onclick="repetirTutorialCotizador()">
         <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
     </button>
     {% endif %}
@@ -200,7 +252,8 @@
                             </button>
                         </div>
 
-                        <div id="tour-cargar-receta" class="mt-2 d-flex flex-column flex-md-row gap-2 mb-4 p-2 rounded" style="background: rgba(0,0,0,0.01);">
+                        <div id="tour-cargar-receta" class="mt-2 d-flex flex-column flex-md-row gap-2 mb-4 p-2 rounded"
+                            style="background: rgba(0,0,0,0.01);">
                             <select class="form-select form-select-sm" id="selectCargarProducto"
                                 onchange="cargarProductoDB()">
                                 <option value="">📂 Cargar Receta Guardada...</option>
@@ -243,22 +296,64 @@
                             </div>
                         </div>
 
-                        <div
-                            class="p-3 bg-light rounded-4 mt-3 d-flex align-items-center justify-content-between border">
-                            <label class="fw-bold small text-muted m-0">Extras (Mano de Obra)</label>
-                            <div class="input-group w-50">
-                                <span class="input-group-text border-0">$</span>
-                                <input type="number" class="form-control border-0" id="costosExtra" value="0"
-                                    onfocus="if(this.value=='0') this.value=''"
-                                    onblur="if(this.value=='') { this.value='0'; } calcularTotal()"
-                                    oninput="calcularTotal()">
+                        <div class="p-3 bg-light rounded-4 mt-3 border">
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <label class="fw-bold small text-muted m-0" id="labelManoObra">
+                                    {% if config.get('labor_activa') %}
+                                        <i class="fas fa-stopwatch text-warning me-1"></i> Tiempo de Fabricación
+                                    {% else %}
+                                        <i class="fas fa-plus-circle text-muted me-1"></i> Costo Extra (Fijo)
+                                    {% endif %}
+                                </label>
+                                <div class="input-group w-50 shadow-sm rounded-3 overflow-hidden border border-light">
+                                    <span class="input-group-text border-0 bg-white" id="prefixManoObra">
+                                        {% if config.get('labor_activa') %}<i class="fas fa-clock text-warning"></i>{% else %}${% endif %}
+                                    </span>
+                                    
+                                    <input type="number" class="form-control border-0 fw-bold" id="inputManoObra" value="0" min="0"
+                                        onfocus="if(this.value=='0') this.value=''"
+                                        onblur="if(this.value=='') { this.value='0'; } calcularTotal()"
+                                        oninput="calcularTotal()">
+                                        
+                                    <span class="input-group-text border-0 bg-white small text-muted" id="suffixManoObra" style="font-size: 0.75rem;">
+                                        {% if config.get('labor_activa') %}min{% else %}.00{% endif %}
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {% if config.get('labor_activa') %}
+                            <div class="text-end text-warning fw-bold small" id="displayCostoTiempoCalculado">
+                                +$0.00 de tu tiempo
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Indicador de Costos Operativos -->
+                        <div id="indicadorCostosOperativos" class="p-3 bg-light rounded-4 mt-3 border shadow-sm d-none">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <i class="fas fa-receipt text-primary me-2"></i>
+                                    <span class="fw-bold small text-dark">Costos Operativos ({{ config.get('porcentaje_gastos_operativos', 10) }}%)</span>
+                                    <br>
+                                    <small class="text-muted" style="font-size: 0.75rem;">
+                                        Calculado sobre el costo base de esta receta.
+                                    </small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="text-primary fw-bold fs-5 monto-costo-operativo">$0.00</div>
+                                    <small class="text-muted" style="font-size: 0.7rem;">
+                                        <a href="/configuracion#list-negocio" class="text-decoration-none" target="_blank">
+                                            <i class="fas fa-cog"></i> Ajustar %
+                                        </a>
+                                    </small>
+                                </div>
                             </div>
                         </div>
 
                         <div id="tour-resultados" class="mt-4 p-3 border rounded-4 bg-light shadow-sm">
                             <label class="small fw-bold text-muted mb-1">Nombre del Producto Final</label>
-                            <input type="text" id="nombreProductoActual"
-                                class="form-control fw-bold mb-3 border-0" placeholder="Ej. Termo Mágico">
+                            <input type="text" id="nombreProductoActual" class="form-control fw-bold mb-3 border-0"
+                                placeholder="Ej. Termo Mágico">
 
                             <div class="row align-items-end g-3">
                                 <div class="col-4">
@@ -276,18 +371,33 @@
                                 </div>
                             </div>
 
+                            {% if is_pro %}
                             <button class="btn btn-add-cart mt-3 shadow" onclick="agregarAlCarrito()">
                                 <i class="fas fa-cart-plus me-2"></i> AGREGAR AL CARRITO
                             </button>
+                            {% else %}
+                            <button class="btn btn-secondary mt-3 shadow w-100 opacity-75 fw-bold"
+                                data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+                                <i class="fas fa-lock me-2"></i> AGREGAR AL CARRITO
+                            </button>
+                            {% endif %}
 
                             <div class="text-end mt-2">
+                                {% if is_pro %}
                                 <a href="javascript:void(0)" class="small text-muted text-decoration-none"
                                     onclick="mostrarGuardar()">
                                     <i class="fas fa-save me-1"></i> Guardar esta receta
                                 </a>
+                                {% else %}
+                                <a href="#" class="small text-muted text-decoration-none" data-bs-toggle="modal"
+                                    data-bs-target="#modalRenovacion">
+                                    <i class="fas fa-lock me-1"></i> Guardar esta receta
+                                </a>
+                                {% endif %}
                             </div>
 
-                            <div class="mt-2 p-3 border rounded d-none" id="boxGuardar" style="background-color: var(--bs-body-bg);">
+                            <div class="mt-2 p-3 border rounded d-none" id="boxGuardar"
+                                style="background-color: var(--bs-body-bg);">
                                 <div class="input-group">
                                     <input type="text" id="nombreNuevoProducto" class="form-control"
                                         placeholder="Nombre para guardar">
@@ -334,7 +444,8 @@
                                     <button
                                         class="accordion-button collapsed py-2 px-0 bg-transparent shadow-none small text-muted"
                                         type="button" data-bs-toggle="collapse" data-bs-target="#collapseCosto">
-                                        <i class="fas fa-plus-circle me-2"></i> Registrar Costo / Personalizar Fecha (Opcional)
+                                        <i class="fas fa-plus-circle me-2"></i> Registrar Costo / Personalizar Fecha
+                                        (Opcional)
                                     </button>
                                 </h2>
                                 <div id="collapseCosto" class="accordion-collapse collapse"
@@ -343,22 +454,31 @@
                                         <div class="input-group">
                                             <span class="input-group-text border-0 small text-muted">Costo Real
                                                 $</span>
-                                            <input type="number" class="form-control border-0"
-                                                id="expressCosto" placeholder="0.00">
+                                            <input type="number" class="form-control border-0" id="expressCosto"
+                                                placeholder="0.00">
                                         </div>
                                     </div>
                                     <div class="mb-4">
                                         <label class="fw-bold small text-muted">Fecha de la Venta (Opcional)</label>
-                                        <input type="date" id="expressFecha" class="form-control form-control-lg border-2">
+                                        <input type="date" id="expressFecha"
+                                            class="form-control form-control-lg border-2">
                                     </div>
                                 </div>
                             </div>
                         </div>
 
+                        {% if is_pro %}
                         <button class="btn btn-warning w-100 py-3 rounded-4 fw-bold shadow text-dark"
                             onclick="agregarExpressAlCarrito()">
                             <i class="fas fa-check-circle me-2"></i> AGREGAR VENTA RÁPIDA
                         </button>
+                        {% else %}
+                        <button type="button"
+                            class="btn btn-secondary w-100 py-3 rounded-4 fw-bold shadow text-white opacity-75"
+                            data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+                            <i class="fas fa-lock me-2"></i> AGREGAR VENTA RÁPIDA
+                        </button>
+                        {% endif %}
                     </div>
 
                 </div>
@@ -400,8 +520,8 @@
                                 <div class="input-group flex-shrink-0 shadow-sm rounded-pill overflow-hidden"
                                     style="width: 85px;">
                                     <input type="number" id="inputDescuento"
-                                        class="form-control text-center fw-bold border-0 no-arrow" value="0"
-                                        min="0" max="100" oninput="actualizarDescuento(this.value)">
+                                        class="form-control text-center fw-bold border-0 no-arrow" value="0" min="0"
+                                        max="100" oninput="actualizarDescuento(this.value)">
                                     <span class="input-group-text border-0 px-1 text-muted small">%</span>
                                 </div>
                             </div>
@@ -409,7 +529,8 @@
 
                         <div class="d-flex align-items-center justify-content-between mb-2">
                             <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="taxSwitch" onchange="calcularTotal()">
+                                <input class="form-check-input" type="checkbox" id="taxSwitch"
+                                    onchange="calcularTotal()">
                                 <label class="form-check-label small fw-bold text-muted" for="taxSwitch">Más Impuestos
                                     (IVA)</label>
                             </div>
@@ -438,7 +559,8 @@
                                     <span id="btnTextoEnvio">Cotizar</span>
                                 </button>
                             </div>
-                            <div id="resumenEnvio" class="mt-2 p-2 rounded border d-none" style="background-color: var(--bs-body-bg);">
+                            <div id="resumenEnvio" class="mt-2 p-2 rounded border d-none"
+                                style="background-color: var(--bs-body-bg);">
                                 <div class="d-flex justify-content-between align-items-center">
                                     <small class="text-muted" id="descEnvio">Local (12km)</small>
                                     <span class="fw-bold text-dark" id="montoEnvioDisplay">$0.00</span>
@@ -453,7 +575,9 @@
                             <span class="fw-bold" id="taxAmountDisplay">+$0.00</span>
                         </div>
 
-                        <div id="tour-total-magico" class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top position-relative p-2 rounded" style="background-color: var(--bs-card-bg);">
+                        <div id="tour-total-magico"
+                            class="d-flex justify-content-between align-items-center mb-3 pt-3 border-top position-relative p-2 rounded"
+                            style="background-color: var(--bs-card-bg);">
                             <span class="h5 fw-bold text-dark mb-0">Total:</span>
 
                             <div id="boxTotalInteractuable" class="text-end" style="cursor: pointer;"
@@ -467,8 +591,8 @@
                                         class="fas fa-magic me-1"></i>Clic para ajustar o redondear</small>
                             </div>
                         </div>
-                    </div> 
-                    
+                    </div>
+
                     <div id="tour-botones-finales">
                         <div class="mb-3">
                             <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
@@ -477,19 +601,35 @@
 
                         <div class="row g-2">
                             <div class="col-6">
+                                {% if is_pro %}
                                 <button class="btn btn-outline-dark w-100 py-3 fw-bold rounded-3"
-                                    onclick="finalizarCompra('cotizacion')" style="color: var(--bs-body-color); border-color: var(--bs-border-color);">
+                                    onclick="finalizarCompra('cotizacion')"
+                                    style="color: var(--bs-body-color); border-color: var(--bs-border-color);">
                                     <i class="fas fa-file-invoice me-1"></i> Solo Cotizar
                                 </button>
+                                {% else %}
+                                <button type="button" class="btn btn-secondary w-100 py-3 fw-bold rounded-3 opacity-75"
+                                    data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+                                    <i class="fas fa-lock me-1"></i> Solo Cotizar
+                                </button>
+                                {% endif %}
                             </div>
                             <div class="col-6">
-                                <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow" data-bs-toggle="modal"
-                                    data-bs-target="#modalCobro">
+                                {% if is_pro %}
+                                <button class="btn btn-primary w-100 py-3 fw-bold rounded-3 shadow"
+                                    data-bs-toggle="modal" data-bs-target="#modalCobro">
                                     <i class="fas fa-dollar-sign me-1"></i> Cobrar
                                 </button>
+                                {% else %}
+                                <button type="button"
+                                    class="btn btn-secondary text-white w-100 py-3 fw-bold rounded-3 shadow opacity-75"
+                                    data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+                                    <i class="fas fa-lock me-1"></i> Cobrar
+                                </button>
+                                {% endif %}
                             </div>
                         </div>
-                    </div> 
+                    </div>
                 </div>
             </div>
         </div>
@@ -537,17 +677,31 @@
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-4">
+                <!-- PESTAÑAS: Local | Nacional | Manual -->
                 <ul class="nav nav-pills nav-fill mb-4 gap-2" id="pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active fw-bold border rounded-pill" id="pills-local-tab"
-                            data-bs-toggle="pill" data-bs-target="#pills-local" type="button">🛵 Local</button>
+                        <button class="nav-link active fw-bold border rounded-pill" 
+                            id="pills-local-tab" data-bs-toggle="pill" data-bs-target="#pills-local" type="button">
+                            🛵 Local
+                        </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold border rounded-pill" id="pills-nacional-tab"
-                            data-bs-toggle="pill" data-bs-target="#pills-nacional" type="button">📦 Nacional</button>
+                        <button class="nav-link fw-bold border rounded-pill" 
+                            id="pills-nacional-tab" data-bs-toggle="pill" data-bs-target="#pills-nacional" type="button">
+                            📦 Nacional
+                        </button>
+                    </li>
+                    <!-- 🆕 NUEVA PESTAÑA: Manual -->
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold border rounded-pill" 
+                            id="pills-manual-tab" data-bs-toggle="pill" data-bs-target="#pills-manual" type="button">
+                            ✏️ Manual
+                        </button>
                     </li>
                 </ul>
+
                 <div class="tab-content" id="pills-tabContent">
+                    <!-- TAB 1: LOCAL -->
                     <div class="tab-pane fade show active" id="pills-local">
                         <div class="alert alert-light border small text-muted">
                             <i class="fas fa-info-circle text-primary"></i>
@@ -555,22 +709,24 @@
                         </div>
                         <label class="small fw-bold mb-1">Link de Ubicación Google Maps</label>
                         <div class="input-group mb-3">
-                            <input type="text" id="inputMapsLink" class="form-control"
-                                placeholder="http://maps.google.com/...@25.67,-100.30" onchange="extraerCoordenadas(this)">
-                            <button class="btn btn-outline-secondary" type="button" onclick="pegarDelPortapapeles()"><i
-                                    class="fas fa-paste"></i></button>
+                            <input type="text" id="inputMapsLink" class="form-control" 
+                                placeholder="http://maps.google.com/...@25.67,-100.30" 
+                                onchange="extraerCoordenadas(this)">
+                            <button class="btn btn-outline-secondary" type="button" onclick="pegarDelPortapapeles()">
+                                <i class="fas fa-paste"></i>
+                            </button>
                         </div>
-                        <div class="row g-2 mb-3" style="display: none;"> 
-                            <div class="col-6"><input type="text" id="latDestino"
-                                    class="form-control form-control-sm text-muted bg-light" placeholder="Latitud"
-                                    readonly></div>
-                            <div class="row g-2 mb-3 d-none"> <div class="col-6"><input type="hidden" id="latDestino"></div>
-                                <div class="col-6"><input type="hidden" id="lngDestino"></div>
-                            </div>
+                        <div class="row g-2 mb-3 d-none">
+                            <div class="col-6"><input type="hidden" id="latDestino"></div>
+                            <div class="col-6"><input type="hidden" id="lngDestino"></div>
                         </div>
-                        <button class="btn btn-primary w-100 fw-bold rounded-pill"
-                            onclick="solicitarCotizacion('local')">Calcular Tarifa Local</button>
+                        <button class="btn btn-primary w-100 fw-bold rounded-pill" 
+                            onclick="solicitarCotizacion('local')">
+                            Calcular Tarifa Local
+                        </button>
                     </div>
+
+                    <!-- TAB 2: NACIONAL -->
                     <div class="tab-pane fade" id="pills-nacional">
                         <div class="row g-3">
                             <div class="col-12">
@@ -597,10 +753,48 @@
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-primary w-100 fw-bold rounded-pill mt-4"
-                            onclick="solicitarCotizacion('nacional')">Cotizar Paquetería</button>
+                        <button class="btn btn-primary w-100 fw-bold rounded-pill mt-4" 
+                            onclick="solicitarCotizacion('nacional')">
+                            Cotizar Paquetería
+                        </button>
+                    </div>
+
+                    <!-- 🆕 TAB 3: MANUAL (NUEVO) -->
+                    <div class="tab-pane fade" id="pills-manual">
+                        <div class="text-center py-3">
+                            <div class="avatar bg-info bg-opacity-10 text-info rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                                style="width: 70px; height: 70px;">
+                                <i class="fas fa-pen-to-square fa-2x"></i>
+                            </div>
+                            <h6 class="fw-bold text-dark">Ingreso Manual de Costo</h6>
+                            <p class="text-muted small px-4 mb-4">
+                                Si ya acordaste el precio del envío con el cliente o proveedor, ingrésalo aquí directamente.
+                            </p>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="small fw-bold text-muted">Descripción del Envío (Opcional)</label>
+                            <input type="text" id="envioDescripcionManual" class="form-control" 
+                                placeholder="Ej. DHL Express, Local con X">
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="small fw-bold text-primary">Costo del Envío</label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-light border-0">$</span>
+                                <input type="number" id="envioCostoManual" class="form-control text-center fw-bold bg-light border-0" 
+                                    placeholder="0.00" step="0.01">
+                            </div>
+                        </div>
+
+                        <button class="btn btn-success w-100 fw-bold rounded-pill py-3" 
+                            onclick="aplicarEnvioManual()">
+                            <i class="fas fa-check-circle me-2"></i> Aplicar Envío Manual
+                        </button>
                     </div>
                 </div>
+
+                <!-- Loader de carga -->
                 <div id="loaderEnvio" class="text-center py-3 d-none">
                     <div class="spinner-border text-primary" role="status"></div>
                 </div>
@@ -608,14 +802,73 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    // --- LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
+    // ============================================================================
+    // VARIABLES GLOBALES
+    // ============================================================================
+    let precioVentaCalculado = 0;
+    let costoProduccionCalculado = 0;
+    let carrito = [];
+    let costoEnvio = 0;
+    let infoEnvio = null;
+  
+
+    // ============================================================================
+    // INICIALIZACIÓN PRINCIPAL (Eventos de Carga de Página)
+    // ============================================================================
+    document.addEventListener('DOMContentLoaded', async function() {
+        
+
+        // 2. Configurar la fecha actual por defecto en el panel Express
+        const ahora = new Date();
+        const hoy = ahora.getFullYear() + '-' +
+            String(ahora.getMonth() + 1).padStart(2, '0') + '-' +
+            String(ahora.getDate()).padStart(2, '0');
+        const inputFecha = document.getElementById('expressFecha');
+        if (inputFecha) inputFecha.value = hoy;
+
+        // 3. Revisar parámetros de la URL para cargar datos previos
+        const urlParams = new URLSearchParams(window.location.search);
+        const idCotizacion = urlParams.get('cargar_cotizacion');
+        const idReceta = urlParams.get('cargar_receta');
+
+        if (idCotizacion) {
+            // Venimos del Historial de Ventas
+            cargarCotizacion(idCotizacion);
+        } else if (idReceta) {
+            // Venimos del Catálogo de Recetas
+            cargarProductoDB(idReceta);
+        } else {
+            // Si no traemos nada, agregamos la fila vacía inicial
+            if (document.querySelectorAll('.item-row').length === 0) {
+                agregarFila();
+            }
+        }
+
+        // 4. Revisar si hay una cotización en SessionStorage (Recargas o Ediciones)
+        recuperarSesionCotizacion();
+    });
+
+    // ============================================================================
+    // TUTORIAL INTERACTIVO (Driver.js)
+    // ============================================================================
+    {% if mostrar_tour %}
+    document.addEventListener('DOMContentLoaded', function () {
+        if (typeof window.driver !== 'undefined') {
+            setTimeout(() => {
+                repetirTutorialCotizador();
+            }, 800); // 800ms de retraso para que cargue la interfaz bonita antes del tour
+        }
+    });
+    {% endif %}
+
     function repetirTutorialCotizador() {
-        if(typeof window.driver === 'undefined') {
+        if (typeof window.driver === 'undefined') {
             console.error("Driver.js no está cargado.");
             return;
         }
@@ -626,19 +879,18 @@
             nextBtnText: 'Siguiente &rarr;',
             prevBtnText: '&larr; Atrás',
             allowClose: true,
-            
-            // CONECTAMOS CON LA BASE DE DATOS CUANDO EL TOUR TERMINA O SE CIERRA
+
+            // Conectamos con la base de datos cuando el tour termina o se cierra
             onDestroyed: () => {
                 {% if mostrar_tour %}
-                // Solo le avisamos a Python si fue un tour automático (no si le picó al botón de ayuda)
                 fetch('/api/tutorial/completado', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                         modulo: 'cotizador',
                         version: {{ version_tour | default(1) }}
                     })
-                }).catch(e => console.error("Error guardando tutorial:", e));
+                }).catch (e => console.error("Error guardando tutorial:", e));
                 {% endif %}
             },
 
@@ -695,26 +947,9 @@
         driverObj.drive();
     }
 
-    // Solo arranca si Python dice que es su primera vez
-    {% if mostrar_tour %}
-    document.addEventListener('DOMContentLoaded', function() {
-        if (typeof window.driver !== 'undefined') {
-            setTimeout(() => {
-                repetirTutorialCotizador();
-            }, 800); // 800ms de retraso para que cargue la interfaz bonita antes del tour
-        }
-    });
-    {% endif %}
-
-
-    // --- AQUÍ EMPIEZA TU LÓGICA EXISTENTE ---
-    let precioVentaCalculado = 0;
-    let costoProduccionCalculado = 0;
-    let carrito = [];
-
-    function obtenerOpciones() { return document.getElementById('masterSelect').innerHTML }
-
-    // --- AGREGAR VENTA EXPRESS AL CARRITO ---
+    // ============================================================================
+    // VENTA RÁPIDA (EXPRESS)
+    // ============================================================================
     function agregarExpressAlCarrito() {
         const concepto = document.getElementById('expressConcepto').value.trim();
         const precio = parseFloat(document.getElementById('expressPrecio').value);
@@ -762,7 +997,13 @@
         }
     }
 
-    // --- FUNCIONES ESTABLES (MATERIALES) ---
+    // ============================================================================
+    // RECETAS Y MATERIALES (LÓGICA ESTABLE)
+    // ============================================================================
+    function obtenerOpciones() { 
+        return document.getElementById('masterSelect').innerHTML; 
+    }
+
     function agregarFila(idMat = 0, cantidad = 1) {
         if (idMat > 0) {
             const masterSelect = document.getElementById('masterSelect');
@@ -828,14 +1069,13 @@
         const row = sel.closest('.item-row');
         const opcion = sel.options[sel.selectedIndex];
         const precio = parseFloat(opcion.getAttribute('data-precio')) || 0;
-        const unidad = opcion.getAttribute('data-unidad') || 'pieza'; // <-- Leemos la unidad de BD
+        const unidad = opcion.getAttribute('data-unidad') || 'pieza'; 
 
         row.querySelector('.input-precio').value = precio.toFixed(2);
 
-        // Actualizamos el textito al lado del input de cantidad
+        // Actualizamos el texto al lado del input de cantidad
         const labelUnidad = row.querySelector('.label-unidad');
         if (labelUnidad) {
-            // Si es 'pieza', lo abreviamos a 'pza' para que no estorbe visualmente
             labelUnidad.innerText = unidad === 'pieza' ? 'pza' : unidad;
         }
 
@@ -855,31 +1095,93 @@
         calcularTotal();
     }
 
+    // ============================================================================
+    // CÁLCULO PRINCIPAL Y MAGIA MATEMÁTICA
+    // ============================================================================
+    /**
+     * Calcula el costo y precio de venta
+     * Incluye el prorrateo de gastos fijos mensuales
+     */
     function calcularTotal() {
+        // 1. COSTOS DE MATERIALES
         let totalCostosMat = 0;
         document.querySelectorAll('.item-row').forEach(row => {
             const sub = parseFloat(row.querySelector('.subtotal').innerText.replace('$', '')) || 0;
             totalCostosMat += sub;
         });
 
+        // 2. COSTOS DE MAQUINARIA
         let totalMaquinaria = 0;
         document.querySelectorAll('.check-maquinaria-input:checked').forEach(c => {
             totalMaquinaria += parseFloat(c.value) || 0;
         });
 
-        let extra = parseFloat(document.getElementById('costosExtra').value) || 0;
+        // 3. MANO DE OBRA (Híbrido: Tiempo o Fijo)
+        let extra = 0;
+        const inputMano = parseFloat(document.getElementById('inputManoObra').value) || 0;
+        const laborActiva = document.getElementById('datoLaborActiva').value === 'true';
+        
+        if (laborActiva) {
+            // El input son MINUTOS. Calculamos cuánto vale el minuto.
+            const salario = parseFloat(document.getElementById('datoSalario').value) || 0;
+            const horasSemana = parseFloat(document.getElementById('datoHoras').value) || 0;
+            const horasMes = horasSemana * 4.33;
+            const costoMinuto = horasMes > 0 ? (salario / horasMes) / 60 : 0;
+            
+            extra = inputMano * costoMinuto;
+            
+            const displayTiempo = document.getElementById('displayCostoTiempoCalculado');
+            if(displayTiempo) {
+                displayTiempo.innerText = `+$${extra.toFixed(2)} de tu tiempo`;
+            }
+        } else {
+            // El input es DINERO directo
+            extra = inputMano;
+        }
 
-        const costoTotal = totalCostosMat + totalMaquinaria + extra;
+        // 4. COSTOS OPERATIVOS (PORCENTAJE)
+        const costoBase = totalCostosMat + totalMaquinaria + extra;
+        const factorOperativo = parseFloat(document.getElementById('datoFactorOperativo').value) || 0;
+        const costoOperativoCalculado = costoBase * (factorOperativo / 100);
+
+        // Control visual del contenedor (UX)
+        const contenedorOperativo = document.getElementById('indicadorCostosOperativos');
+        if (contenedorOperativo) {
+            if (factorOperativo > 0) {
+                // Si hay porcentaje, mostramos el cuadro y actualizamos el número
+                contenedorOperativo.classList.remove('d-none');
+                const displayOperativo = document.querySelector('.monto-costo-operativo');
+                if (displayOperativo) {
+                    displayOperativo.innerText = '$' + costoOperativoCalculado.toFixed(2);
+                }
+            } else {
+                // Si el factor es 0, ocultamos el cuadro para no hacer ruido
+                contenedorOperativo.classList.add('d-none');
+            }
+        }
+
+        // 5. COSTO TOTAL REAL (Lo que te cuesta producirlo, incluyendo tu pago)
+        const costoTotal = costoBase + costoOperativoCalculado;
+
+        // 6. PRECIO SUGERIDO (Margen inteligente)
         const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
-        const precioSugerido = costoTotal * (1 + (margen / 100));
+        
+        // Separamos tu sueldo para que la ganancia SOLO multiplique los materiales y operaciones
+        const baseParaGanancia = totalCostosMat + totalMaquinaria + costoOperativoCalculado;
+        const montoGanancia = baseParaGanancia * (margen / 100);
+        
+        // El precio sugerido es: Materiales + Ganancia del negocio + Tu Sueldo limpio
+        const precioSugerido = baseParaGanancia + montoGanancia + extra;
 
-        document.getElementById('resultadoCosto').innerText = '$' + costoTotal.toFixed(2);
-        document.getElementById('resultadoPrecio').innerText = '$' + precioSugerido.toFixed(2);
-
+        // 7. ACTUALIZAMOS VARIABLES GLOBALES
         costoProduccionCalculado = costoTotal;
         precioVentaCalculado = precioSugerido;
 
-        // CARRITO
+        // 8. MOSTRAMOS EN PANTALLA
+        document.getElementById('resultadoCosto').innerText = '$' + costoTotal.toFixed(2);
+        document.getElementById('resultadoPrecio').innerText = '$' + precioSugerido.toFixed(2);
+
+        // 9. CÁLCULO DEL CARRITO
         let subtotalCarrito = 0;
         carrito.forEach(item => { subtotalCarrito += item.subtotal; });
 
@@ -890,6 +1192,7 @@
         const envio = typeof costoEnvio !== 'undefined' ? costoEnvio : 0;
         const baseImponible = (subtotalConDescuento + envio);
 
+        // 10. IMPUESTOS
         let impuestosMonto = 0;
         const taxSwitch = document.getElementById('taxSwitch');
         const taxInputContainer = document.getElementById('taxInputContainer');
@@ -906,21 +1209,17 @@
             taxRow.style.display = 'none';
         }
 
-        // Sumamos el subtotal limpio y los impuestos
+        // 11. TOTAL FINAL
         const totalFinalBruto = baseImponible + impuestosMonto;
-
-        // Limpiamos la basura de los micro-decimales dejándolo a 2 decimales exactos
         const totalLimpio = Math.round(totalFinalBruto * 100) / 100;
-
-        // Ahora sí, si hay centavos reales (ej. 98.30), lo sube. Si es 720.00, lo respeta.
         const totalFinal = Math.ceil(totalLimpio);
 
+        // 12. MOSTRAMOS TOTALES DEL CARRITO
         document.getElementById('labelSubtotal').innerText = formatMoney(subtotalCarrito);
         document.getElementById('labelDescuento').innerText = '-' + formatMoney(descuentoMonto);
         document.getElementById('taxAmountDisplay').innerText = '+' + formatMoney(impuestosMonto);
         document.getElementById('totalTicket').innerText = formatMoney(totalFinal);
 
-        // Actualizamos también el total en el modal de cobro si existe
         const modalTotal = document.getElementById('modalTotalPago');
         if (modalTotal) modalTotal.innerText = formatMoney(totalFinal);
     }
@@ -983,7 +1282,6 @@
         const factorProrrateo = subtotalObjetivo / subtotalActualCarrito;
 
         carrito.forEach(item => {
-            // TRUCO: Usamos 6 decimales para que la multiplicación en Python sea perfecta
             item.precio_unitario = parseFloat((item.precio_unitario * factorProrrateo).toFixed(6));
             item.subtotal = parseFloat((item.precio_unitario * item.cantidad).toFixed(6));
         });
@@ -997,6 +1295,9 @@
         });
     }
 
+    // ============================================================================
+    // CARRITO Y VENTA FINAL
+    // ============================================================================
     function confirmarLimpiarTodo() {
         Swal.fire({
             title: '¿Limpiar todo?',
@@ -1015,26 +1316,21 @@
     }
 
     function limpiarCalculadora() {
-        // Reiniciamos el select de cargar recetas si existe
         const selectCargar = document.getElementById('selectCargarProducto');
         if (selectCargar) selectCargar.value = "";
 
-        // Limpiamos la zona de armado
         document.getElementById('listaMateriales').innerHTML = '';
         document.getElementById('nombreProductoActual').value = '';
         document.getElementById('cantidadParaCarrito').value = 1;
-        document.getElementById('costosExtra').value = 0;
+        document.getElementById('inputManoObra').value = 0;
 
-        // Desmarcamos máquinas
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
-        // Reiniciamos variables y visuales de costo
         precioVentaCalculado = 0;
         costoProduccionCalculado = 0;
         document.getElementById('resultadoCosto').innerText = '$0.00';
         document.getElementById('resultadoPrecio').innerText = '$0.00';
 
-        // Agregamos una fila en blanco lista para usarse y recalculamos (sin afectar el carrito)
         agregarFila();
         calcularTotal();
     }
@@ -1087,11 +1383,8 @@
         });
 
         renderizarCarrito();
-
-        // --- NUEVO: Limpiamos la interfaz tras agregar ---
         limpiarCalculadora();
 
-        // Opcional: Una pequeña alerta visual para confirmar
         Swal.fire({
             toast: true, position: 'top-end', icon: 'success',
             title: 'Agregado al carrito', showConfirmButton: false, timer: 1500
@@ -1153,7 +1446,6 @@
     }
 
     function finalizarCompra(tipo) {
-        // 1. Validaciones iniciales
         if (carrito.length === 0) {
             Swal.fire({ icon: 'info', title: 'Carrito vacío', text: 'Agrega productos antes de finalizar.', borderRadius: '15px' });
             return;
@@ -1161,7 +1453,7 @@
 
         const cli = document.getElementById('nombreCliente').value || "Cliente General";
 
-        // --- 2. MAGIA INVISIBLE: SINCRONIZAR UI CON BACKEND ---
+        // --- MAGIA INVISIBLE: SINCRONIZAR UI CON BACKEND ---
         const totalVisualTexto = document.getElementById('totalTicket').innerText.replace(/[$,]/g, '');
         const totalVisual = parseFloat(totalVisualTexto) || 0;
 
@@ -1188,7 +1480,6 @@
         }
         // --- FIN MAGIA INVISIBLE ---
 
-        // 3. Recalcular las variables finales
         let subtotal = 0;
         let costo_total = 0;
         carrito.forEach(i => {
@@ -1202,7 +1493,6 @@
 
         const totalFinalCalculado = Math.round(((subtotal_con_descuento + costoEnvioActual) + tax_amount) * 100) / 100;
 
-        // 4. Gestión de Estados y Pagos
         let estado = 'pagado';
         let pago_inicial = totalFinalCalculado;
 
@@ -1221,13 +1511,23 @@
             if (pago_inicial >= totalFinalCalculado) estado = 'pagado';
         }
 
-        // 5. Preparar experiencia de usuario (Ventana emergente)
         const ventanaTicket = window.open('', '_blank');
         if (ventanaTicket) {
             ventanaTicket.document.write('<h2 style="text-align:center;font-family:sans-serif;margin-top:50px">Generando Ticket... 🧾</h2>');
         }
 
-        // 6. Envío de datos al Backend
+        // --- PANTALLA DE CARGA ---
+        Swal.fire({
+            title: 'Procesando Venta...',
+            html: 'Guardando en la base de datos, por favor espera.<br><br><i class="fas fa-box-open fa-2x text-primary opacity-50"></i>',
+            allowOutsideClick: false,
+            allowEscapeKey: false,
+            showConfirmButton: false,
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
         fetch('/guardar_venta', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1287,6 +1587,9 @@
             });
     }
 
+    // ============================================================================
+    // RECETAS Y BASE DE DATOS
+    // ============================================================================
     function mostrarGuardar() {
         event.preventDefault();
         document.getElementById('boxGuardar').classList.remove('d-none');
@@ -1307,9 +1610,8 @@
         const maquinaria = [];
 
         document.querySelectorAll('.item-row').forEach(row => {
-            const s = row.querySelector('.material-select'); // Ojo aqui selector
+            const s = row.querySelector('.material-select');
             const c = row.querySelector('.input-cantidad');
-            // Nota: En la version estable, material-select es clase
             if (s && s.value > 0) materiales.push({ id: parseInt(s.value), cantidad: parseFloat(c.value) });
         });
 
@@ -1337,11 +1639,9 @@
     }
 
     function cargarProductoDB(idOpcional = null) {
-        // Toma el ID que pasamos por la URL, o si no hay, toma el del Select
         const id = idOpcional || document.getElementById('selectCargarProducto').value;
         if (!id) return;
 
-        // Si venimos de la URL, actualizamos el Select visualmente para que coincida
         if (idOpcional) {
             document.getElementById('selectCargarProducto').value = idOpcional;
         }
@@ -1349,17 +1649,12 @@
         limpiarMateriales();
         document.getElementById('nombreProductoActual').value = '';
         document.getElementById('cantidadParaCarrito').value = 1;
-        document.getElementById('costosExtra').value = 0;
+        document.getElementById('inputManoObra').value = 0;
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
         fetch('/api/receta/' + id).then(r => r.json()).then(d => {
             if (d.error) {
-                Swal.fire({
-                    icon: 'error',
-                    title: '¡Oops!',
-                    text: d.error,
-                    confirmButtonColor: '#ff4757'
-                });
+                Swal.fire({ icon: 'error', title: '¡Oops!', text: d.error, confirmButtonColor: '#ff4757' });
                 return;
             }
             document.getElementById('nombreProductoActual').value = d.nombre;
@@ -1378,13 +1673,17 @@
         });
     }
 
-    function limpiarMateriales() { document.getElementById('listaMateriales').innerHTML = ''; }
+    function limpiarMateriales() { 
+        document.getElementById('listaMateriales').innerHTML = ''; 
+    }
 
-    // --- VARIABLES ENVIO ---
-    let costoEnvio = 0;
-    let infoEnvio = null;
-
-    function abrirModalEnvios() { new bootstrap.Modal(document.getElementById('modalEnvios')).show(); }
+    // ============================================================================
+    // ENVÍOS
+    // ============================================================================
+    function abrirModalEnvios() { 
+        new bootstrap.Modal(document.getElementById('modalEnvios')).show(); 
+    }
+    
     function limpiarEnvio() {
         costoEnvio = 0;
         infoEnvio = null;
@@ -1394,41 +1693,29 @@
     }
 
     function extraerCoordenadas(input) {
-    const url = input.value.trim();
-    if (!url) return;
+        const url = input.value.trim();
+        if (!url) return;
 
-    // 1. Intentamos extraer coordenadas si vienen claras de una vez
-    const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-    const match = url.match(regex);
-    const matchBusqueda = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-    const matchFinal = match || matchBusqueda;
+        const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
+        const match = url.match(regex);
+        const matchBusqueda = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+        const matchFinal = match || matchBusqueda;
 
-    if (matchFinal) {
-        // En configuración recuerda que los IDs se llaman 'latConfig' y 'lngConfig'
-        document.getElementById('latDestino').value = matchFinal[1];
-        document.getElementById('lngDestino').value = matchFinal[2];
-        input.classList.remove('is-invalid');
-        input.classList.add('is-valid');
-        
-        // Si estás en configuracion.html, aquí va: document.getElementById('geo-status').style.display = 'block';
-    } else {
-        // 2. Si no vienen claras, comprobamos si al menos es un link de Google
-        const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());
-        if (esGoogle) {
+        if (matchFinal) {
+            document.getElementById('latDestino').value = matchFinal[1];
+            document.getElementById('lngDestino').value = matchFinal[2];
             input.classList.remove('is-invalid');
-            // El link es raro, pero es de Google. Lo dejamos pasar en silencio 
-            // para que nuestro Python (Plan B) haga la magia en el servidor.
+            input.classList.add('is-valid');
         } else {
-            Swal.fire({
-                icon: 'warning',
-                title: 'Link no reconocido',
-                text: 'Asegúrate de copiar un enlace de Google Maps para que el cálculo sea exacto.',
-                confirmButtonColor: '#ff4757'
-            });
-            input.classList.add('is-invalid');
+            const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());
+            if (esGoogle) {
+                input.classList.remove('is-invalid');
+            } else {
+                Swal.fire({ icon: 'warning', title: 'Link no reconocido', text: 'Asegúrate de copiar un enlace de Google Maps para que el cálculo sea exacto.', confirmButtonColor: '#ff4757' });
+                input.classList.add('is-invalid');
+            }
         }
     }
-}
 
     async function pegarDelPortapapeles() {
         try {
@@ -1438,32 +1725,102 @@
         } catch (err) { }
     }
 
-    // --- FUNCION PARA CARGAR UNA VENTA ANTERIOR AL CARRITO ---
+    function solicitarCotizacion(tipo) {
+        const loader = document.getElementById('loaderEnvio');
+        loader.classList.remove('d-none');
+
+        const lat = document.getElementById('latDestino').value;
+        const lng = document.getElementById('lngDestino').value;
+        const link = document.getElementById('inputMapsLink').value;
+
+        let payload = { tipo: tipo };
+
+        if (tipo === 'local') {
+            payload.lat = lat;
+            payload.lng = lng;
+            payload.direccion = link;
+        } else {
+            payload.peso = document.getElementById('envioPeso').value;
+            payload.largo = document.getElementById('envioLargo').value || 10;
+            payload.ancho = document.getElementById('envioAncho').value || 10;
+            payload.alto = document.getElementById('envioAlto').value || 10;
+            payload.estado = document.getElementById('estadoDestino').value;
+        }
+
+        fetch('/api/cotizar-envio', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+            .then(r => r.json())
+            .then(data => {
+                loader.classList.add('d-none');
+                if (data.error) {
+                    Swal.fire({ icon: 'error', title: 'Aviso de Cotización', text: data.error });
+                } else {
+                    const modalEl = document.getElementById('modalEnvios');
+                    bootstrap.Modal.getInstance(modalEl).hide();
+
+                    costoEnvio = parseFloat(data.costo_sugerido);
+                    document.getElementById('resumenEnvio').classList.remove('d-none');
+                    document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
+                    calcularTotal();
+                }
+            })
+            .catch(e => {
+                loader.classList.add('d-none');
+                Swal.fire({ icon: 'error', title: 'Error', text: 'Error de red.' });
+            });
+    }
+
+    function aplicarEnvioManual() {
+        const costoInput = document.getElementById('envioCostoManual');
+        const descripcionInput = document.getElementById('envioDescripcionManual');
+        
+        const costo = parseFloat(costoInput.value);
+        
+        if (isNaN(costo) || costo < 0) {
+            Swal.fire({ icon: 'warning', title: 'Costo inválido', text: 'Ingresa un monto válido para el envío.', borderRadius: '15px' });
+            return;
+        }
+        
+        costoEnvio = costo;
+        const descripcion = descripcionInput.value.trim() || 'Envío Manual';
+        
+        document.getElementById('resumenEnvio').classList.remove('d-none');
+        document.getElementById('descEnvio').textContent = descripcion;
+        document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
+        document.getElementById('btnTextoEnvio').innerText = 'Cambiar';
+        
+        const modalEl = document.getElementById('modalEnvios');
+        bootstrap.Modal.getInstance(modalEl).hide();
+        
+        calcularTotal();
+        
+        costoInput.value = '';
+        descripcionInput.value = '';
+        
+        Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Envío manual aplicado', showConfirmButton: false, timer: 1500 });
+    }
+
+    // ============================================================================
+    // UTILIDADES DE SESIÓN E HISTORIAL
+    // ============================================================================
     function cargarCotizacion(id) {
-        console.log("Iniciando carga de cotización ID:", id); // Esto nos dirá que sí despertó
+        console.log("Iniciando carga de cotización ID:", id); 
         fetch('/api/get_cotizacion/' + id)
             .then(r => r.json())
             .then(data => {
                 if (data.error) {
                     console.error("Error del servidor:", data.error);
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error al cargar',
-                        text: data.error,
-                        confirmButtonColor: '#ff4757'
-                    });
+                    Swal.fire({ icon: 'error', title: 'Error al cargar', text: data.error, confirmButtonColor: '#ff4757' });
                     return;
                 }
 
-                // 1. Limpiamos el carrito actual
                 carrito = [];
-
-                // 2. Cargamos los datos generales en el panel derecho
                 document.getElementById('ventaIdEdicion').value = data.id;
-                // ACTIVAMOS MODO EDICIÓN
                 sessionStorage.setItem('recarga_id', data.id);
 
-                // Cambiamos el texto del botón para que el usuario sepa
                 document.querySelectorAll("button[onclick^='finalizarCompra']").forEach(btn => {
                     btn.innerHTML = btn.innerHTML.replace('Solo Cotizar', 'Actualizar Cotización');
                 });
@@ -1471,7 +1828,6 @@
                 document.getElementById('inputDescuento').value = data.descuento;
                 document.getElementById('sliderDescuento').value = data.descuento;
 
-                // 3. Reconstruimos el carrito con los productos guardados
                 data.items.forEach(item => {
                     carrito.push({
                         concepto: item.concepto,
@@ -1483,149 +1839,52 @@
                     });
                 });
 
-                // 4. Renderizamos y recalculamos totales
                 renderizarCarrito();
                 console.log("Cotización cargada exitosamente");
             })
             .catch(e => {
                 console.error("Error de conexión:", e);
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error de conexión',
-                    text: 'Hubo un problema de conexión al intentar cargar los datos.',
-                    confirmButtonColor: '#ff4757'
-                });
+                Swal.fire({ icon: 'error', title: 'Error de conexión', text: 'Hubo un problema de conexión al intentar cargar los datos.', confirmButtonColor: '#ff4757' });
             });
     }
 
-   function solicitarCotizacion(tipo) {
-    const loader = document.getElementById('loaderEnvio');
-    loader.classList.remove('d-none');
-    
-    // Obtenemos los valores de los inputs
-    const lat = document.getElementById('latDestino').value;
-    const lng = document.getElementById('lngDestino').value;
-    const link = document.getElementById('inputMapsLink').value;
-
-    let payload = { tipo: tipo };
-
-    if (tipo === 'local') {
-        // Enviamos todo lo que tengamos: lat, lng y el link (direccion)
-        payload.lat = lat;
-        payload.lng = lng;
-        payload.direccion = link; // El backend decidirá cuál usar
-    } else {
-            payload.peso = document.getElementById('envioPeso').value;
-            payload.largo = document.getElementById('envioLargo').value || 10;
-            payload.ancho = document.getElementById('envioAncho').value || 10;
-            payload.alto = document.getElementById('envioAlto').value || 10;
-            payload.estado = document.getElementById('estadoDestino').value;
-        }
-
-        fetch('/api/cotizar-envio', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(r => r.json())
-    .then(data => {
-        loader.classList.add('d-none');
-        if (data.error) {
-            Swal.fire({ icon: 'error', title: 'Aviso de Cotización', text: data.error });
-        } else {
-            // Éxito: cerrar modal y aplicar costo (tu lógica actual)
-            const modalEl = document.getElementById('modalEnvios');
-            bootstrap.Modal.getInstance(modalEl).hide();
-            
-            costoEnvio = parseFloat(data.costo_sugerido);
-            document.getElementById('resumenEnvio').classList.remove('d-none');
-            document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
-            calcularTotal();
-        }
-    })
-    .catch(e => {
-        loader.classList.add('d-none');
-        Swal.fire({ icon: 'error', title: 'Error', text: 'Error de red.' });
-    });
-}
-
-    document.addEventListener('DOMContentLoaded', () => agregarFila());
-
-    // Detectar si venimos del historial para cargar una cotización o receta
-    document.addEventListener('DOMContentLoaded', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-
-        const idCotizacion = urlParams.get('cargar_cotizacion');
-        const idReceta = urlParams.get('cargar_receta');
-
-        // Pone la fecha de hoy por default en el input express
-        const ahora = new Date();
-        const hoy = ahora.getFullYear() + '-' + 
-            String(ahora.getMonth() + 1).padStart(2, '0') + '-' + 
-            String(ahora.getDate()).padStart(2, '0');
-
-        const inputFecha = document.getElementById('expressFecha');
-        if(inputFecha) inputFecha.value = hoy;
-
-        if (idCotizacion) {
-            // Venimos del Historial de Ventas
-            cargarCotizacion(idCotizacion);
-        } else if (idReceta) {
-            // Venimos del Catálogo de Recetas ¡Aquí lo procesamos!
-            cargarProductoDB(idReceta);
-        } else {
-            // No traemos nada en la URL, agregamos la fila vacía por defecto
-            if (document.querySelectorAll('.item-row').length === 0) {
-                agregarFila();
-            }
-        }
-    });
-
-
-function cargarRecetaDesdeCarrito(index) {
+    function cargarRecetaDesdeCarrito(index) {
         const item = carrito[index];
         if (!item || !item.composicion) return;
 
-        // 1. Convertimos la composición a arreglo (porque cuando viene de la base de datos es texto)
         let compArray = [];
         try {
             compArray = typeof item.composicion === 'string' ? JSON.parse(item.composicion) : item.composicion;
-        } catch(e) {
+        } catch (e) {
             compArray = [];
         }
 
-        // 2. ¿ES UNA VENTA RÁPIDA? -> La mandamos al panel Express
         if (compArray.length > 0 && compArray[0].tipo === 'manual') {
-            document.getElementById('express-tab').click(); // Cambiamos de pestaña
+            document.getElementById('express-tab').click(); 
             document.getElementById('expressConcepto').value = item.concepto;
             document.getElementById('expressPrecio').value = item.precio_unitario;
             document.getElementById('expressCantidad').value = item.cantidad;
             document.getElementById('expressCosto').value = item.costo_unitario;
-            
-            // Lo quitamos del carrito silenciosamente
+
             carrito.splice(index, 1);
             renderizarCarrito();
             return;
         }
 
-        // 3. ¿ES UNA RECETA NORMAL? -> La mandamos al panel de Armar Receta
         if (compArray.length === 0) {
-             Swal.fire({icon: 'info', title: 'Sin receta', text: 'No hay receta guardada para editar.'});
-             return;
+            Swal.fire({ icon: 'info', title: 'Sin receta', text: 'No hay receta guardada para editar.' });
+            return;
         }
 
-        document.getElementById('receta-tab').click(); // Nos aseguramos de estar en la pestaña correcta
+        document.getElementById('receta-tab').click(); 
 
-        // Limpiamos el panel izquierdo para evitar que se mezclen cosas
         limpiarMateriales();
-        document.getElementById('costosExtra').value = 0;
+        document.getElementById('inputManoObra').value = 0;
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
-        // Cargamos los valores generales
         document.getElementById('nombreProductoActual').value = item.concepto;
         document.getElementById('cantidadParaCarrito').value = item.cantidad;
 
-        // Llenamos la fila de materiales y activamos las máquinas
         compArray.forEach(c => {
             if (c.tipo === 'material') agregarFila(c.id, c.cantidad);
             if (c.tipo === 'maquinaria') {
@@ -1634,65 +1893,52 @@ function cargarRecetaDesdeCarrito(index) {
             }
         });
 
-        // 4. Lo quitamos del carrito silenciosamente (Hacemos el "Pop")
         carrito.splice(index, 1);
         renderizarCarrito();
 
-        // 5. Truco Pro: Calculamos el total y recuperamos la Mano de Obra (Extras)
         setTimeout(() => {
             calcularTotal();
             let costoCalculadoSinExtra = costoProduccionCalculado;
             let diferenciaExtra = item.costo_unitario - costoCalculadoSinExtra;
-            
-            // Si el costo original era mayor al de los puros materiales, la diferencia es la mano de obra
-            if (diferenciaExtra > 0.05) { 
-                document.getElementById('costosExtra').value = diferenciaExtra.toFixed(2);
-                calcularTotal(); // Recalculamos con el extra ya puesto
+
+            if (diferenciaExtra > 0.05) {
+                document.getElementById('inputManoObra').value = diferenciaExtra.toFixed(2);
+                calcularTotal(); 
             }
-        }, 200); // Le damos 200ms al navegador para renderizar los selects antes de calcular
+        }, 200); 
     }
 
-
-    document.addEventListener("DOMContentLoaded", () => {
+    function recuperarSesionCotizacion() {
         const items = sessionStorage.getItem('recarga_cotizacion');
-
         if (!items) return;
 
         try {
             const data = JSON.parse(items);
-
             carrito = [];
             data.forEach(i => carrito.push(i));
-
             renderizarCarrito();
 
-            // 1. SOLUCIÓN: Asignar el ID de edición para que Python sepa que es UPDATE
             const recargaId = sessionStorage.getItem('recarga_id');
             if (recargaId) {
                 document.getElementById('ventaIdEdicion').value = recargaId;
-
-                // Opcional: Cambiar visualmente los botones para confirmar que estás editando
                 document.querySelectorAll("button[onclick^='finalizarCompra']").forEach(btn => {
                     btn.innerHTML = btn.innerHTML.replace('Solo Cotizar', 'Actualizar Cotización');
                 });
             }
 
-            // 2. SOLUCIÓN: El ID correcto del input es 'nombreCliente'
             const cliente = sessionStorage.getItem('recarga_cliente');
             if (cliente) {
                 document.getElementById('nombreCliente').value = cliente;
             }
 
-            // Impuestos
             if (sessionStorage.getItem('recarga_tax_active') === 'true') {
                 document.getElementById('taxSwitch').checked = true;
-                document.getElementById('taxPercent').value =
-                    sessionStorage.getItem('recarga_tax_percent') || 0;
+                document.getElementById('taxPercent').value = sessionStorage.getItem('recarga_tax_percent') || 0;
             }
 
             calcularTotal();
 
-            // Limpieza (MUY importante para no tener cotizaciones atoradas)
+            // Limpieza
             sessionStorage.removeItem('recarga_cotizacion');
             sessionStorage.removeItem('recarga_cliente');
             sessionStorage.removeItem('recarga_id');
@@ -1702,7 +1948,7 @@ function cargarRecetaDesdeCarrito(index) {
         } catch (e) {
             console.error("Error cargando recarga:", e);
         }
-    });
+    }
 
 </script>
 {% endblock %}

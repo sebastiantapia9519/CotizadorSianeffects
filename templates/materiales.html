@@ -3,6 +3,7 @@
 {% block title %}Materiales | Sianeffects{% endblock %}
 
 {% block content %}
+{% set is_pro = session.get('is_pro_active') or session.get('role', 0) >= 1 %}
 <style>
     /* ===================================================
        1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
@@ -99,12 +100,16 @@
         padding: 6px 10px;
         transition: all 0.2s;
     }
-    .action-icon:active, .action-icon:hover {
+
+    .action-icon:active,
+    .action-icon:hover {
         background: #e9ecef;
         color: #0d6efd;
         border-color: #dee2e6;
     }
-    .action-icon.danger:active, .action-icon.danger:hover {
+
+    .action-icon.danger:active,
+    .action-icon.danger:hover {
         background: #fff5f5;
         color: #dc3545;
         border-color: #ffccd1;
@@ -119,22 +124,36 @@
         border-radius: 8px;
     }
 
-    .driver-popover { border-radius: 12px !important; }
-    .driver-popover-title { font-weight: bold !important; color: var(--sian-primary) !important; }
-    .driver-popover-next-btn { background-color: var(--sian-primary) !important; text-shadow: none !important; border: none !important;}
+    .driver-popover {
+        border-radius: 12px !important;
+    }
+
+    .driver-popover-title {
+        font-weight: bold !important;
+        color: var(--sian-primary) !important;
+    }
+
+    .driver-popover-next-btn {
+        background-color: var(--sian-primary) !important;
+        text-shadow: none !important;
+        border: none !important;
+    }
 
 
     /* ===================================================
        2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
        =================================================== */
-    [data-bs-theme="dark"] body { background-color: #0f172a !important; }
-    
+    [data-bs-theme="dark"] body {
+        background-color: #0f172a !important;
+    }
+
     [data-bs-theme="dark"] .sian-card,
     [data-bs-theme="dark"] .modal-content,
     [data-bs-theme="dark"] .modal-header,
     [data-bs-theme="dark"] .modal-body,
     [data-bs-theme="dark"] .modal-footer {
-        background-color: #1e293b !important; /* Azul pizarra oscuro */
+        background-color: #1e293b !important;
+        /* Azul pizarra oscuro */
         border-color: #334155 !important;
     }
 
@@ -170,7 +189,7 @@
         border-color: #334155 !important;
         color: #94a3b8 !important;
     }
-    
+
     [data-bs-theme="dark"] .action-icon:hover {
         background-color: #334155 !important;
         color: #f8fafc !important;
@@ -188,14 +207,19 @@
         background-color: #0f172a !important;
     }
 
-    [data-bs-theme="dark"] .text-dark { color: #f8fafc !important; }
-    [data-bs-theme="dark"] .text-muted { color: #94a3b8 !important; }
-    
+    [data-bs-theme="dark"] .text-dark {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .text-muted {
+        color: #94a3b8 !important;
+    }
+
     [data-bs-theme="dark"] .border,
     [data-bs-theme="dark"] .border-light,
     [data-bs-theme="dark"] .border-bottom,
-    [data-bs-theme="dark"] .border-top { 
-        border-color: #334155 !important; 
+    [data-bs-theme="dark"] .border-top {
+        border-color: #334155 !important;
     }
 
     /* Forzar limpieza de estilos en línea en Modales (Colores pastel) */
@@ -210,15 +234,22 @@
         background-color: #1e293b !important;
         border-color: #334155 !important;
     }
-    
+
     [data-bs-theme="dark"] .list-group-item .bg-white {
         background-color: transparent !important;
     }
-    
+
     /* Botones de Stock (+ y -) */
-    [data-bs-theme="dark"] .btn-stock-action.minus { background-color: rgba(220, 53, 69, 0.15) !important; color: #ff6b81 !important; }
-    [data-bs-theme="dark"] .btn-stock-action.plus { background-color: rgba(25, 135, 84, 0.15) !important; color: #2ec4b6 !important; }
-    
+    [data-bs-theme="dark"] .btn-stock-action.minus {
+        background-color: rgba(220, 53, 69, 0.15) !important;
+        color: #ff6b81 !important;
+    }
+
+    [data-bs-theme="dark"] .btn-stock-action.plus {
+        background-color: rgba(25, 135, 84, 0.15) !important;
+        color: #2ec4b6 !important;
+    }
+
     /* Botón Historial Principal */
     [data-bs-theme="dark"] .btn-white {
         background-color: #1e293b !important;
@@ -239,21 +270,30 @@
         </h3>
         <p class="text-muted small m-0 mt-1">Gestiona tus insumos y existencias.</p>
     </div>
-    
+
     <div class="col-md-7 d-flex justify-content-center justify-content-md-end gap-2 flex-wrap">
         {% if config['mostrar_ayuda'] %}
-        <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm" onclick="repetirTutorialMateriales()">
+        <button class="btn btn-sm btn-light text-muted fw-bold rounded-pill shadow-sm"
+            onclick="repetirTutorialMateriales()">
             <i class="fas fa-question-circle me-1 text-primary"></i> ¿Cómo funciona?
         </button>
         {% endif %}
         <button class="btn btn-white rounded-3 px-3 border shadow-sm fw-bold text-secondary" style="background: #fff;"
-            type="button" data-bs-toggle="modal" data-bs-target="#modalHistorial" onclick="abrirHistorial()" id="tour-historial">
+            type="button" data-bs-toggle="modal" data-bs-target="#modalHistorial" onclick="abrirHistorial()"
+            id="tour-historial">
             <i class="fas fa-history me-1 text-muted"></i> Historial
         </button>
+        {% if is_pro %}
         <button class="btn btn-sian rounded-3 px-4 fw-bold shadow-sm" data-bs-toggle="modal"
             data-bs-target="#modalMaterial" onclick="limpiarModal()" id="tour-nuevo-material">
             <i class="fas fa-plus me-1"></i> Nuevo Material
         </button>
+        {% else %}
+        <button class="btn btn-secondary rounded-3 px-4 fw-bold shadow-sm opacity-75" data-bs-toggle="modal"
+            data-bs-target="#modalRenovacion" id="tour-nuevo-material">
+            <i class="fas fa-lock me-1"></i> Nuevo Material
+        </button>
+        {% endif %}
     </div>
 </div>
 
@@ -271,7 +311,8 @@
 
 {% if config['inventario_activo'] %}
 <div class="d-flex flex-wrap gap-2 mt-3 mb-2 animate__animated animate__fadeIn" id="filtrosStock">
-    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 active filter-btn" onclick="setStockFilter('all', this)">
+    <button class="btn btn-sm btn-outline-secondary rounded-pill px-3 active filter-btn"
+        onclick="setStockFilter('all', this)">
         Todos
     </button>
     <button class="btn btn-sm btn-outline-warning rounded-pill px-3 filter-btn" onclick="setStockFilter('low', this)">
@@ -285,9 +326,8 @@
 
 <div class="row g-4" id="contenedorMateriales">
     {% for mat in materiales %}
-    <div class="col-12 col-md-6 col-lg-4 col-xl-3 item-material" 
-     data-stock="{{ mat['stock_actual'] }}" 
-     data-min="{{ mat['stock_minimo'] }}">
+    <div class="col-12 col-md-6 col-lg-4 col-xl-3 item-material" data-stock="{{ mat['stock_actual'] }}"
+        data-min="{{ mat['stock_minimo'] }}">
         <div class="card h-100 sian-card p-3 d-flex flex-column">
 
             <div class="d-flex justify-content-between align-items-start mb-2">
@@ -296,6 +336,7 @@
                     {{ mat['nombre'] }}
                 </h6>
                 <div class="d-flex gap-1">
+                    {% if is_pro %}
                     <button class="action-icon" onclick='editarMaterial({{ mat|tojson|safe }})' title="Editar">
                         <i class="fas fa-pen" style="font-size: 0.9rem;"></i>
                     </button>
@@ -304,6 +345,16 @@
                         title="Eliminar">
                         <i class="fas fa-trash-alt" style="font-size: 0.9rem;"></i>
                     </button>
+                    {% else %}
+                    <button class="action-icon opacity-75" data-bs-toggle="modal" data-bs-target="#modalRenovacion"
+                        title="Renueva para editar">
+                        <i class="fas fa-lock" style="font-size: 0.9rem;"></i>
+                    </button>
+                    <button class="action-icon danger opacity-75" data-bs-toggle="modal"
+                        data-bs-target="#modalRenovacion" title="Renueva para eliminar">
+                        <i class="fas fa-lock" style="font-size: 0.9rem;"></i>
+                    </button>
+                    {% endif %}
                 </div>
             </div>
 
@@ -315,56 +366,72 @@
             </div>
 
             <div class="row mt-4 align-items-end">
-    <div class="col-5">
-        <p class="text-muted mb-0" style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
-            Costo Unit.
-        </p>
-        <div class="h5 fw-bold text-dark mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
-    </div>
+                <div class="col-5">
+                    <p class="text-muted mb-0"
+                        style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+                        Costo Unit.
+                    </p>
+                    <div class="h5 fw-bold text-dark mb-0">${{ "%.2f"|format(mat['precio_unitario']) }}</div>
+                </div>
 
-    {% if config['inventario_activo'] %}
-    <div class="col-7 text-end">
-        <p class="text-muted mb-0" style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
-            En Stock
-        </p>
-        <div class="d-flex align-items-center justify-content-end gap-1 mb-2">
-            
-            {% if mat['stock_actual'] <= 0 %}
-                <i class="fas fa-circle text-danger border border-white rounded-circle animate__animated animate__pulse animate__infinite" 
-                   style="font-size: 0.7rem; box-shadow: 0 0 0 2px #fff;" title="Agotado"></i>
-                <span class="h4 fw-bold text-danger mb-0 lh-1" style="letter-spacing: -0.5px;">
-                    {{ mat['stock_actual']|float|round(2) }}
-                </span>
-            
-            {% elif mat['stock_actual'] <= mat['stock_minimo'] %}
-                <i class="fas fa-circle text-warning border border-white rounded-circle" 
-                   style="font-size: 0.7rem; box-shadow: 0 0 0 2px #fff;" title="Stock Bajo"></i>
-                <span class="h4 fw-bold text-dark mb-0 lh-1" style="letter-spacing: -0.5px;">
-                    {{ mat['stock_actual']|float|round(2) }}
-                </span>
-            
-            {% else %}
-                <span class="h4 fw-bold text-dark mb-0 lh-1" style="letter-spacing: -0.5px;">
-                    {{ mat['stock_actual']|float|round(2) }}
-                </span>
-            {% endif %}
+                {% if config['inventario_activo'] %}
+                <div class="col-7 text-end">
+                    <p class="text-muted mb-0"
+                        style="font-size: 0.65rem; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase;">
+                        En Stock
+                    </p>
+                    <div class="d-flex align-items-center justify-content-end gap-1 mb-2">
 
-            <small class="text-muted text-lowercase align-self-end pb-1" style="font-size: 0.75rem;">
-                {{ mat['unidad_medida']|default('pza') }}
-            </small>
-        </div>
+                        {% if mat['stock_actual'] <= 0 %} <i
+                            class="fas fa-circle text-danger border border-white rounded-circle animate__animated animate__pulse animate__infinite"
+                            style="font-size: 0.7rem; box-shadow: 0 0 0 2px #fff;" title="Agotado"></i>
+                            <span class="h4 fw-bold text-danger mb-0 lh-1" style="letter-spacing: -0.5px;">
+                                {{ mat['stock_actual']|float|round(2) }}
+                            </span>
 
-        <div class="d-flex justify-content-end gap-2 mt-1">
-            <button class="btn-stock-action minus" onclick='abrirModalMerma({{ mat|tojson|safe }})' title="Registrar Merma">
-                <i class="fas fa-minus" style="font-size: 0.9rem;"></i>
-            </button>
-            <button class="btn-stock-action plus" onclick='abrirModalStock({{ mat|tojson|safe }})' title="Registrar Compra">
-                <i class="fas fa-plus" style="font-size: 0.9rem;"></i>
-            </button>
-        </div>
-    </div>
-    {% endif %}
-</div>
+                            {% elif mat['stock_actual'] <= mat['stock_minimo'] %} <i
+                                class="fas fa-circle text-warning border border-white rounded-circle"
+                                style="font-size: 0.7rem; box-shadow: 0 0 0 2px #fff;" title="Stock Bajo"></i>
+                                <span class="h4 fw-bold text-dark mb-0 lh-1" style="letter-spacing: -0.5px;">
+                                    {{ mat['stock_actual']|float|round(2) }}
+                                </span>
+
+                                {% else %}
+                                <span class="h4 fw-bold text-dark mb-0 lh-1" style="letter-spacing: -0.5px;">
+                                    {{ mat['stock_actual']|float|round(2) }}
+                                </span>
+                                {% endif %}
+
+                                <small class="text-muted text-lowercase align-self-end pb-1"
+                                    style="font-size: 0.75rem;">
+                                    {{ mat['unidad_medida']|default('pza') }}
+                                </small>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 mt-1">
+                        {% if is_pro %}
+                        <button class="btn-stock-action minus" onclick='abrirModalMerma({{ mat|tojson|safe }})'
+                            title="Registrar Merma">
+                            <i class="fas fa-minus" style="font-size: 0.9rem;"></i>
+                        </button>
+                        <button class="btn-stock-action plus" onclick='abrirModalStock({{ mat|tojson|safe }})'
+                            title="Registrar Compra">
+                            <i class="fas fa-plus" style="font-size: 0.9rem;"></i>
+                        </button>
+                        {% else %}
+                        <button class="btn-stock-action minus opacity-75" data-bs-toggle="modal"
+                            data-bs-target="#modalRenovacion" title="Renueva para ajustar stock">
+                            <i class="fas fa-lock" style="font-size: 0.9rem;"></i>
+                        </button>
+                        <button class="btn-stock-action plus opacity-75" data-bs-toggle="modal"
+                            data-bs-target="#modalRenovacion" title="Renueva para ajustar stock">
+                            <i class="fas fa-lock" style="font-size: 0.9rem;"></i>
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endif %}
+            </div>
 
         </div>
     </div>
@@ -441,8 +508,8 @@
                             <label class="form-label small fw-bold text-muted">¿Qué cantidad incluye?</label>
                             <div class="input-group shadow-sm rounded-3">
                                 <input type="number" step="any" name="cantidad_paquete" id="cantidad_paquete"
-                                    class="form-control border-light border-end-0 fw-bold sian-input" placeholder="Ej. 50"
-                                    required>
+                                    class="form-control border-light border-end-0 fw-bold sian-input"
+                                    placeholder="Ej. 50" required>
                                 <select name="unidad_medida" id="unidad_medida"
                                     class="form-select border-light bg-light text-muted fw-bold sian-input"
                                     style="max-width: 90px;" onchange="actualizarLabelStockMinimo()">
@@ -476,7 +543,8 @@
                     {% endif %}
 
                     <div class="d-grid mt-4">
-                        <button type="button" class="btn btn-sian fw-bold rounded-3 py-2" onclick="guardarMaterialFetch()">Guardar Material</button>
+                        <button type="button" class="btn btn-sian fw-bold rounded-3 py-2"
+                            onclick="guardarMaterialFetch()">Guardar Material</button>
                     </div>
                 </form>
             </div>
@@ -510,7 +578,8 @@
                         <input type="number" id="stock_cantidad"
                             class="form-control sian-input text-center fw-bold text-success" style="font-size: 1.1rem;"
                             value="1" min="0.01" step="any">
-                        <span class="input-group-text bg-white sian-input fw-bold border-light" id="stock_unidad_label">...</span>
+                        <span class="input-group-text bg-white sian-input fw-bold border-light"
+                            id="stock_unidad_label">...</span>
                     </div>
                     <div class="form-text mt-1 text-secondary" style="font-size: 0.7rem;" id="stock_ayuda">...</div>
                 </div>
@@ -550,7 +619,8 @@
                         <input type="number" id="merma_cantidad"
                             class="form-control sian-input text-center fw-bold text-danger" style="font-size: 1.1rem;"
                             value="1" min="0.01" step="any">
-                        <span class="input-group-text bg-white sian-input fw-bold border-light" id="merma_unidad_label">...</span>
+                        <span class="input-group-text bg-white sian-input fw-bold border-light"
+                            id="merma_unidad_label">...</span>
                     </div>
                     <div class="form-text mt-2 text-danger opacity-75" style="font-size: 0.75rem; line-height: 1.2;"><i
                             class="fas fa-info-circle me-1"></i>Esto se restará directamente de tu inventario.</div>
@@ -576,7 +646,7 @@
 
     // --- 2. LÓGICA DEL TUTORIAL (DRIVER.JS) ---
     function repetirTutorialMateriales() {
-        if(typeof window.driver === 'undefined') return;
+        if (typeof window.driver === 'undefined') return;
         const driverObj = window.driver.js.driver({
             showProgress: true,
             doneBtnText: '¡Entendido!',
@@ -587,19 +657,21 @@
                 {% if mostrar_tour %}
                 fetch('/api/tutorial/completado', {
                     method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({ modulo: 'materiales', version: {{ version_tour | default(1) }} })
-                }).catch(e => console.error("Error tutorial:", e));
-                {% endif %}
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ modulo: 'materiales', version: {{ version_tour | default(1)
+                }}
+        })
+    }).catch (e => console.error("Error tutorial:", e));
+    {% endif %}
             },
-            steps: [
-                { popover: { title: 'Tus Materiales 📦', description: 'Esta es tu bodega digital. Aquí registrarás todo lo que compras.', align: 'center' } },
-                { element: '#tour-nuevo-material', popover: { title: '1. Agregar Insumos', description: 'Registra materiales nuevos aquí.', side: "bottom", align: 'end' } },
-                { element: '#contenedorMateriales', popover: { title: '2. Control Rápido', description: 'Usa (+) para compras y (-) para mermas.', side: "top", align: 'center' } },
-                { element: '#tour-historial', popover: { title: '3. Auditoría', description: 'Revisa cada movimiento de stock.', side: "bottom", align: 'end' } }
-            ]
+    steps: [
+        { popover: { title: 'Tus Materiales 📦', description: 'Esta es tu bodega digital. Aquí registrarás todo lo que compras.', align: 'center' } },
+        { element: '#tour-nuevo-material', popover: { title: '1. Agregar Insumos', description: 'Registra materiales nuevos aquí.', side: "bottom", align: 'end' } },
+        { element: '#contenedorMateriales', popover: { title: '2. Control Rápido', description: 'Usa (+) para compras y (-) para mermas.', side: "top", align: 'center' } },
+        { element: '#tour-historial', popover: { title: '3. Auditoría', description: 'Revisa cada movimiento de stock.', side: "bottom", align: 'end' } }
+    ]
         });
-        driverObj.drive();
+    driverObj.drive();
     }
 
     {% if mostrar_tour %}
@@ -614,9 +686,9 @@
             b.classList.add('btn-outline-secondary');
         });
         btn.classList.remove('btn-outline-secondary');
-        if(filter === 'all') btn.classList.add('active', 'btn-secondary');
-        if(filter === 'low') btn.classList.add('active', 'btn-warning');
-        if(filter === 'empty') btn.classList.add('active', 'btn-danger');
+        if (filter === 'all') btn.classList.add('active', 'btn-secondary');
+        if (filter === 'low') btn.classList.add('active', 'btn-warning');
+        if (filter === 'empty') btn.classList.add('active', 'btn-danger');
         filtrarMateriales();
     }
 
@@ -736,17 +808,17 @@
 
     function confirmarEliminar(urlReal, nombre) {
         Swal.fire({ title: '¿Eliminar?', text: `Borrar "${nombre}".`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Sí, borrar' })
-        .then((result) => {
-            if (result.isConfirmed) {
-                Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                fetch(urlReal).then(r => r.json()).then(data => {
-                    if (data.status === 'blocked') {
-                        Swal.fire({ title: 'En uso', html: `Está en: <b>${data.recetas.join(', ')}</b>.`, icon: 'info', confirmButtonText: 'Ir a Recetas' })
-                        .then(res => { if (res.isConfirmed) window.location.href = "{{ url_for('inventory.recetas') }}"; });
-                    } else location.reload();
-                });
-            }
-        });
+            .then((result) => {
+                if (result.isConfirmed) {
+                    Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                    fetch(urlReal).then(r => r.json()).then(data => {
+                        if (data.status === 'blocked') {
+                            Swal.fire({ title: 'En uso', html: `Está en: <b>${data.recetas.join(', ')}</b>.`, icon: 'info', confirmButtonText: 'Ir a Recetas' })
+                                .then(res => { if (res.isConfirmed) window.location.href = "{{ url_for('inventory.recetas') }}"; });
+                        } else location.reload();
+                    });
+                }
+            });
     }
 
     function guardarCompra() {
@@ -754,7 +826,7 @@
         if (!payload.cantidad || payload.cantidad <= 0) return Swal.fire('Atención', 'Cantidad inválida.', 'warning');
         Swal.fire({ title: 'Actualizando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         fetch('/api/registrar_compra', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-        .then(r => r.json()).then(data => { if (data.success) location.reload(); else Swal.fire('Error', data.error, 'error'); });
+            .then(r => r.json()).then(data => { if (data.success) location.reload(); else Swal.fire('Error', data.error, 'error'); });
     }
 
     function guardarMerma() {
@@ -762,7 +834,7 @@
         if (!payload.cantidad || payload.cantidad <= 0) return Swal.fire('Atención', 'Cantidad inválida.', 'warning');
         Swal.fire({ title: 'Registrando merma...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
         fetch('/api/registrar_merma', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
-        .then(r => r.json()).then(data => { if (data.success) location.reload(); else Swal.fire('Error', data.error, 'error'); });
+            .then(r => r.json()).then(data => { if (data.success) location.reload(); else Swal.fire('Error', data.error, 'error'); });
     }
 
     // --- 6. HISTORIAL ---

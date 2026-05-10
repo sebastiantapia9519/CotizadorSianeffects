@@ -7,10 +7,10 @@ from urllib.parse import urlparse, parse_qs, unquote
 from geopy.geocoders import Nominatim
 import time
 
-# 🔥 Instancia GLOBAL (no crear cada vez)
+# Instancia GLOBAL (no crear cada vez)
 geolocator = Nominatim(user_agent="shipping_app")
 
-# 🔥 Cache simple en memoria
+# Cache simple en memoria
 cache_geo = {}
 
 class ShippingService:
@@ -109,14 +109,14 @@ class ShippingService:
         }
 
 
-# 🔥 Limpia la dirección
+# Limpia la dirección
 def limpiar_direccion(direccion):
     direccion = direccion.replace('+', ' ')
     direccion = direccion.replace('%20', ' ')
     return direccion.strip()
 
 
-# 🔥 Geocoding inteligente + cache
+#  Geocoding inteligente + cache
 def geocodificar(direccion):
     direccion = limpiar_direccion(direccion)
 
@@ -157,24 +157,31 @@ def obtener_coordenadas_universales(url_input):
     if not url_input:
         return None, None
 
+    # 1. Limpiar parámetros basura de apps móviles (iOS/Android)
+    if "maps.app.goo.gl" in url_input or "goo.gl" in url_input:
+        url_input = url_input.split('?')[0]
+
     url_final = url_input
     html_content = ""
 
-    # 🔥 1. Expandir links
+    # 2. Expandir links con User-Agent de Escritorio
     if any(d in url_input.lower() for d in ["goo.gl", "maps.app", "googleusercontent.com"]):
         try:
+            # CAMBIO CLAVE: Fingir ser una PC de escritorio, NO un iPhone
             headers = {
-                'User-Agent': 'Mozilla/5.0 (iPhone)',
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                 'Accept-Language': 'es-MX,es;q=0.9'
             }
-            res = requests.get(url_input, headers=headers, allow_redirects=True, timeout=8)
+            # Usar Session ayuda con múltiples redirecciones de Google
+            session = requests.Session()
+            res = session.get(url_input, headers=headers, allow_redirects=True, timeout=10)
             url_final = res.url
             html_content = res.text
         except Exception as e:
             logging.error(f"Error expandiendo URL: {e}")
             return None, None
 
-    # 🔥 2. Regex directo
+    # 3. Regex directo sobre la URL final
     patrones = [
         r'@(-?\d+\.\d+),(-?\d+\.\d+)',
         r'q=(-?\d+\.\d+),(-?\d+\.\d+)',
@@ -187,7 +194,7 @@ def obtener_coordenadas_universales(url_input):
         if match:
             return float(match.group(1)), float(match.group(2))
 
-    # 🔥 3. Extraer parámetros
+    # 4. Extraer parámetros de la URL
     try:
         parsed = urlparse(url_final)
         params = parse_qs(parsed.query)
@@ -199,7 +206,7 @@ def obtener_coordenadas_universales(url_input):
             if lat and lng:
                 return lat, lng
 
-        # q (🔥 ESTE ERA TU BUG)
+        # q 
         if 'q' in params:
             direccion = unquote(params['q'][0])
 
@@ -211,11 +218,22 @@ def obtener_coordenadas_universales(url_input):
     except Exception as e:
         logging.error(f"Error procesando URL: {e}")
 
-    # 🔥 4. Último intento HTML
+    # 5. Búsqueda profunda en el HTML (Google Maps a veces esconde las coordenadas aquí)
     if html_content:
-        match = re.search(r'center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)', html_content)
-        if match:
-            return float(match.group(1)), float(match.group(2))
+        # Busca el center= lat,lng típico de las imágenes estáticas meta
+        match_center = re.search(r'center=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)', html_content)
+        if match_center:
+            return float(match_center.group(1)), float(match_center.group(2))
+            
+        # Busca en los metadatos og:image de markers
+        match_markers = re.search(r'markers=(-?\d+\.\d+)(?:%2C|,)(-?\d+\.\d+)', html_content)
+        if match_markers:
+            return float(match_markers.group(1)), float(match_markers.group(2))
+
+        # Busca en el estado inicial de la app de Maps (JSON inyectado)
+        match_json = re.search(r'\[null,null,(-?\d+\.\d+),(-?\d+\.\d+)\]', html_content)
+        if match_json:
+            return float(match_json.group(1)), float(match_json.group(2))
 
     logging.warning(f"No se pudieron extraer coordenadas: {url_final}")
     return None, None

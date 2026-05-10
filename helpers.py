@@ -1,5 +1,5 @@
 from functools import wraps
-from flask import session, redirect, url_for, flash, current_app
+from flask import session, redirect, url_for, flash, current_app, request, jsonify
 from db import get_db_connection
 from datetime import datetime, timezone, timedelta
 import json
@@ -35,8 +35,6 @@ def subscription_required(f):
     def decorated_function(*args, **kwargs):
         # 1. Verificar sesión básica
         if 'user_id' not in session:
-            # Quitamos el session.clear() de aquí para no ser tan destructivos 
-            # si el navegador móvil tuvo un hipo con la cookie.
             flash('Por favor inicia sesión.', 'warning')
             return redirect(url_for('auth.login'))
         
@@ -44,10 +42,10 @@ def subscription_required(f):
         # BLINDAJE PARA DUEÑOS (NIVEL 2) Y ADMINS (NIVEL 1)
         # -----------------------------------------------------------
         if session.get('role', 0) >= 1:
+            session['is_pro_active'] = True  # <-- MAGIA 1: Sincroniza al Admin
             return f(*args, **kwargs)
-        # -----------------------------------------------------------
 
-        # 2. Si es un usuario mortal (Rol 0), entonces sí revisamos la BD
+        # 2. Si es un usuario mortal (Rol 0), revisamos la BD
         conn = get_db_connection()
         cursor = conn.cursor()
         cursor.execute('SELECT subscription_end, role FROM usuarios WHERE id = %s', (session['user_id'],))
@@ -56,43 +54,49 @@ def subscription_required(f):
         conn.close()
 
         if not user:
-            # Aquí SÍ es válido limpiar la sesión, porque significa que el ID existe en la cookie
-            # pero el usuario ya no existe en la Base de Datos (ej. fue borrado por inactividad).
             session.clear()
             flash('Tu cuenta ya no es válida o fue eliminada.', 'error')
             return redirect(url_for('auth.login'))
 
-        # (Doble verificación de seguridad por si la sesión falló pero en BD sí es admin)
+        # Doble verificación por si en BD sí es admin
         if user['role'] >= 1:
+            session['is_pro_active'] = True  # <-- MAGIA 2
             return f(*args, **kwargs)
 
-        # 3. Verificamos la fecha de suscripción para usuarios normales
+        def _rebotar_vencido(msg='Tu suscripción ha vencido. Contáctanos para renovar.'):
+            session['is_pro_active'] = False # <-- Apagamos el PRO
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+                return jsonify({'success': False, 'error': msg, 'code': 'SUBSCRIPTION_REQUIRED'}), 403
+            flash(msg, 'warning')
+            return redirect(url_for('main.plan_vencido'))
+
         if not user['subscription_end']:
-            flash('Tu periodo de prueba ha terminado. Por favor suscríbete.', 'warning')
-            return redirect(url_for('main.plan_vencido')) 
+            return _rebotar_vencido('Tu periodo de prueba ha terminado. Por favor suscríbete.')
             
         try:
-            # BLINDAJE SQLITE/POSTGRES
             f_end = user['subscription_end']
             if isinstance(f_end, str):
                 fecha_fin = datetime.strptime(f_end[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
             else:
                 fecha_fin = f_end if f_end.tzinfo else f_end.replace(tzinfo=timezone.utc)
             
-            if datetime.now(timezone.utc) > fecha_fin:
-                dias_vencido = (datetime.now(timezone.utc) - fecha_fin).days
+            ahora = datetime.now(timezone.utc)
+            session.pop('grace_period', None)
 
-                if dias_vencido == 0:
-                    # Venció hoy — dejamos pasar con banner de urgencia
+            if ahora > fecha_fin:
+                diferencia = ahora - fecha_fin
+                if diferencia.total_seconds() <= 86400:
                     session['grace_period'] = True
+                    session['is_pro_active'] = True # <-- MAGIA 3: Está vencido pero en Grace Period, lo dejamos operar
                     return f(*args, **kwargs)
                 else:
-                    # Ya pasó 1 día completo — bloqueamos
-                    session.pop('grace_period', None)
-                    flash('Tu suscripción ha vencido. Contáctanos para renovar.', 'error')
-                    return redirect(url_for('main.plan_vencido'))
+                    return _rebotar_vencido()
+            else:
+                session['is_pro_active'] = True
+
         except Exception as e:
             current_app.logger.error(f"AUTH_DATE_ERROR: Fallo al verificar fecha de suscripcion para user {session.get('user_id')} - {e}")
+            session['is_pro_active'] = False
             pass
 
         return f(*args, **kwargs)
@@ -225,7 +229,7 @@ def obtener_alertas(user_id):
 
             alertas.append({
                 'id_db': g['id'],
-                'es_global': True, # <-- IMPORTANTE para el layout
+                'es_global': True,
                 'tipo': g['tipo'],
                 'icono_completo': clase_icono,
                 'msg': f"<b>{g['titulo']}</b>: {g['mensaje']}",

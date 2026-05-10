@@ -78,7 +78,7 @@ def procesar_fila_fechas(fila_db):
 # 1. SERVICIO DE LECTURA (GET) - CARGA TODA LA VISTA DE CONFIGURACIÓN
 # ==============================================================================
 @config_bp.route('/configuracion', methods=['GET'])
-@subscription_required
+@login_required
 def configuracion():
     conn = get_db()
     cursor = conn.cursor()
@@ -97,11 +97,20 @@ def configuracion():
         
         if config_row:
             config = dict(config_row) 
+            # Valores por defecto para usuarios antiguos
+            config.setdefault('porcentaje_gastos_operativos', 10)
+            config.setdefault('labor_activa', False)
+            config.setdefault('salario_deseado', 15000.0)
+            config.setdefault('horas_semanales', 20.0)
         else:
             config = {
-                'margen_ganancia': 100, 
-                'slogan': '', 
-                'website': '', 
+                'margen_ganancia': 100,
+                'porcentaje_gastos_operativos': 10,
+                'labor_activa': False,
+                'salario_deseado': 15000.0,
+                'horas_semanales': 20.0,
+                'slogan': '',
+                'website': '',
                 'inventario_activo': False,
                 'ticket_bw': False,
                 'icono_empresa': '🎨',
@@ -129,6 +138,14 @@ def configuracion():
         cursor.execute("SELECT * FROM shipping_configs WHERE user_id = %s", (uid,))
         shipping_config_row = cursor.fetchone()
         shipping_config = dict(shipping_config_row) if shipping_config_row else None
+
+        # --- 5. Gastos Fijos ---
+        cursor.execute("""
+            SELECT * FROM gastos_fijos 
+            WHERE user_id=%s AND activo=TRUE 
+            ORDER BY nombre ASC
+        """, (uid,))
+        gastos_fijos = cursor.fetchall()
         
         # LOG DE ACCESO
         current_app.logger.info(f"DATA_ACCESS: Usuario '{u_name}' (ID: {uid}) consulto su configuracion general")
@@ -149,14 +166,15 @@ def configuracion():
                            usuario=user_display, 
                            shipping_config=shipping_config,
                            zones=zones,
+                           gastos_fijos=gastos_fijos,
                            mostrar_tour=mostrar_tour,  
-                           version_tour=version_tour)  
+                           version_tour=version_tour)
 
 # ==============================================================================
 # 2. SERVICIO: ACTUALIZAR PERFIL Y CONTACTO
 # ==============================================================================
 @config_bp.route('/configuracion/perfil', methods=['POST'])
-@subscription_required
+@login_required
 def actualizar_perfil():
     conn = get_db()
     cursor = conn.cursor()
@@ -257,14 +275,27 @@ def actualizar_negocio():
     es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
     
     try:
+        margen = float(request.form.get('margen') or 0)
         try:
-            margen = float(request.form.get('margen') or 0)
+            porcentaje_operativo = float(
+                request.form.get('porcentaje_gastos_operativos') or 10
+            )
         except ValueError:
-            margen = 0.0
+            porcentaje_operativo = 10.0
 
         empresa = request.form.get('nombre_empresa', '')
         slogan = request.form.get('slogan', '')
         website = request.form.get('website', '')
+        notas_ticket = request.form.get('notas_ticket', '')[:150] # Tope extra de seguridad
+
+        # CAMPOS DE MANO DE OBRA
+        labor_activa = True if request.form.get('labor_activa') else False
+        try:
+            salario_deseado = float(request.form.get('salario_deseado') or 15000)
+            horas_semanales = float(request.form.get('horas_semanales') or 20)
+        except ValueError:
+            salario_deseado = 15000.0
+            horas_semanales = 20.0
 
         modo_oscuro = True if request.form.get('modo_oscuro') else False
         inventario_activo = True if request.form.get('inventario_activo') else False
@@ -324,19 +355,31 @@ def actualizar_negocio():
         if config_existente:
             cursor.execute('''
                 UPDATE configuracion
-                SET margen_ganancia=%s, nombre_empresa=%s, slogan=%s, website=%s, 
-                    inventario_activo=%s, ticket_bw=%s, icono_empresa=%s, logo_empresa=%s,
-                    mostrar_ayuda=%s, modo_oscuro=%s 
+                SET margen_ganancia=%s, 
+                    porcentaje_gastos_operativos=%s, 
+                    nombre_empresa=%s, 
+                    slogan=%s, 
+                    website=%s, 
+                    inventario_activo=%s, 
+                    ticket_bw=%s, 
+                    icono_empresa=%s, 
+                    logo_empresa=%s,
+                    mostrar_ayuda=%s, 
+                    modo_oscuro=%s,
+                    notas_ticket=%s,
+                    labor_activa=%s,
+                    salario_deseado=%s,
+                    horas_semanales=%s
                 WHERE user_id=%s
-            ''', (margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, modo_oscuro, uid))
+            ''', (margen, porcentaje_operativo, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, modo_oscuro, notas_ticket, labor_activa, salario_deseado, horas_semanales, uid))
         else:
             cursor.execute('''
-                INSERT INTO configuracion (user_id, margen_ganancia, nombre_empresa, slogan, website, 
-                                           inventario_activo, ticket_bw, icono_empresa, logo_empresa, mostrar_ayuda, modo_oscuro)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            ''', (uid, margen, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, modo_oscuro))
+                INSERT INTO configuracion (user_id, margen_ganancia, porcentaje_gastos_operativos, nombre_empresa, slogan, website, 
+                                           inventario_activo, ticket_bw, icono_empresa, logo_empresa, mostrar_ayuda, modo_oscuro, notas_ticket, labor_activa, salario_deseado, horas_semanales)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            ''', (uid, margen, porcentaje_operativo, empresa, slogan, website, inventario_activo, ticket_bw, icono_empresa, logo_url_final, mostrar_ayuda, modo_oscuro, notas_ticket, labor_activa, salario_deseado, horas_semanales))
 
-        # --- NUEVO: REGISTRO ADMIN ---
+        # --- REGISTRO ADMIN ---
         cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)", 
                        (uid, "Actualizó las preferencias y diseño de su negocio", "Configuración"))
 
@@ -597,3 +640,83 @@ def eliminar_tarifa():
         cursor.close()
         conn.close()
     return redirect(url_for('configuracion.configuracion') + '#list-envios')
+
+# ==============================================================================
+# 7. SERVICIOS: GESTIÓN DE GASTOS FIJOS
+# ==============================================================================
+@config_bp.route('/configuracion/gastos_fijos/crear', methods=['POST'])
+@subscription_required
+def crear_gasto_fijo():
+    conn = get_db()
+    cursor = conn.cursor()
+    uid = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+    
+    try:
+        nombre = request.form.get('nombre_gasto', '').strip()
+        monto = float(request.form.get('monto_mensual', 0))
+        
+        if not nombre:
+            if es_ajax: return jsonify({"error": "El nombre del gasto es requerido"}), 400
+            flash('El nombre del gasto es requerido', 'danger')
+            return redirect(url_for('configuracion.configuracion') + '#list-negocio')
+        
+        cursor.execute("""
+            INSERT INTO gastos_fijos (user_id, nombre, monto_mensual, activo) 
+            VALUES (%s, %s, %s, TRUE)
+        """, (uid, nombre, monto))
+        
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo) 
+            VALUES (%s, %s, %s)
+        """, (uid, f"Agregó gasto fijo: {nombre} (${monto:,.2f}/mes)", "Configuración"))
+        
+        conn.commit()
+        current_app.logger.info(f"GASTO_FIJO_CREATE: Usuario '{u_name}' (ID: {uid}) creó gasto '{nombre}' por ${monto}")
+        
+        if es_ajax: return jsonify({"success": True, "message": "Gasto fijo agregado correctamente"})
+        flash('Gasto fijo agregado correctamente', 'success')
+    
+    except ValueError:
+        if es_ajax: return jsonify({"error": "El monto debe ser numérico"}), 400
+        flash('El monto debe ser numérico', 'danger')
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"GASTO_FIJO_ERROR: Usuario '{u_name}' (ID: {uid}) - {e}")
+        if es_ajax: return jsonify({"error": "Error al crear el gasto fijo"}), 500
+        flash('Error al crear el gasto fijo', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+    
+    return redirect(url_for('configuracion.configuracion') + '#list-negocio')
+
+
+@config_bp.route('/configuracion/gastos_fijos/eliminar', methods=['POST'])
+@subscription_required
+def eliminar_gasto_fijo():
+    conn = get_db()
+    cursor = conn.cursor()
+    uid = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    gasto_id = request.form.get('gasto_id')
+    es_ajax = request.headers.get('X-Requested-With') == 'XMLHttpRequest' or 'application/json' in request.headers.get('Accept', '')
+    
+    try:
+        cursor.execute("DELETE FROM gastos_fijos WHERE id=%s AND user_id=%s", (gasto_id, uid))
+        conn.commit()
+        current_app.logger.info(f"GASTO_FIJO_DELETE: Usuario '{u_name}' (ID: {uid}) eliminó gasto ID {gasto_id}")
+        
+        if es_ajax: return jsonify({"success": True, "message": "Gasto eliminado"})
+        flash('Gasto fijo eliminado', 'warning')
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"GASTO_FIJO_DELETE_ERROR: Usuario '{u_name}' (ID: {uid}) - {e}")
+        if es_ajax: return jsonify({"error": "Error al eliminar"}), 500
+        flash('Error al eliminar el gasto', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+    
+    return redirect(url_for('configuracion.configuracion') + '#list-negocio')

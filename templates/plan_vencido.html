@@ -114,6 +114,38 @@
         .btn-logout:hover {
             color: #ef4444;
         }
+        .btn-sian {
+            background-color: var(--sian-pink);
+            color: white;
+            font-weight: 800;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            width: 100%;
+            font-size: 1rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(255, 74, 90, 0.3);
+        }
+
+        .btn-sian:hover {
+            background-color: var(--sian-pink-hover);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(255, 74, 90, 0.4);
+        }
+        .btn-back {
+            background: transparent;
+            color: #64748b;
+            border: none;
+            font-weight: 700;
+            font-size: 0.9rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+
+        .btn-back:hover {
+            color: var(--sian-pink);
+        }
     </style>
 </head>
 <body>
@@ -184,16 +216,61 @@
                 </div>
             </div>
 
-            <div class="d-flex justify-content-center align-items-end gap-2 mb-4">
-                <span class="text-muted text-decoration-line-through small mb-1">$250</span>
-                <span class="display-5 fw-bold" style="color: var(--sian-pink); letter-spacing: -1px;">$149</span>
-                <span class="text-muted fw-bold mb-2">MXN / mes</span>
+            <div class="row g-3 mb-4 mt-2">
+                
+                <div class="col-6">
+                    <form action="{{ url_for('payments.create_checkout_session') }}" method="POST" class="h-100">
+                        <input type="hidden" name="user_id" value="{{ session.get('user_id') }}">
+                        <input type="hidden" name="price_id" value="{{ precio_mensual }}">
+
+                        
+                        <div class="border rounded-4 p-3 text-center h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <h6 class="fw-bold text-muted mb-1">Mensual</h6>
+                                <div class="mb-3">
+                                    <span class="fs-3 fw-bold text-dark">$149</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-outline-dark fw-bold rounded-3 w-100" style="font-size: 0.9rem; padding: 10px;">
+                                <i class="fas fa-credit-card me-1"></i> Pagar Mes
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="col-6">
+                    <form action="{{ url_for('payments.create_checkout_session') }}" method="POST" class="h-100">
+                        <input type="hidden" name="user_id" value="{{ session.get('user_id') }}">
+                        <input type="hidden" name="price_id" value="{{ precio_anual }}">
+                        
+                        
+                        <div class="border border-2 rounded-4 p-3 text-center h-100 position-relative d-flex flex-column justify-content-between" style="border-color: var(--sian-pink) !important; background-color: rgba(255, 74, 90, 0.03);">
+                            
+                            <div class="position-absolute top-0 start-50 translate-middle text-white px-2 py-1 rounded-pill fw-bold" style="font-size: 0.65rem; background-color: var(--sian-pink); white-space: nowrap;">
+                                AHORRAS 2 MESES
+                            </div>
+                            
+                            <div>
+                                <h6 class="fw-bold mb-1" style="color: var(--sian-pink);">Anual</h6>
+                                <div class="mb-3">
+                                    <span class="fs-3 fw-bold text-dark">$1,490</span>
+                                </div>
+                            </div>
+                            <button type="submit" class="btn btn-sian fw-bold rounded-3 w-100" style="font-size: 0.9rem; padding: 10px;">
+                                <i class="fas fa-bolt me-1"></i> Pagar Año
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
             </div>
 
-            <a href="https://wa.me/5218134939580?text=Hola%20Sianeffects,%20quiero%20reactivar%20todas%20las%20funciones%20de%20mi%20cotizador%20por%20$149/mes."
-                target="_blank" class="btn btn-whatsapp d-flex justify-content-center align-items-center gap-2 text-decoration-none mb-3">
-                <i class="fab fa-whatsapp fs-4"></i> Reactivar Ahora
-            </a>
+            <div class="text-center mb-4">
+                <a href="https://wa.me/5218134939580?text=Hola%20Sianeffects,%20tengo%20problemas%20para%20realizar%20mi%20pago%20con%20tarjeta."
+                    target="_blank" class="text-muted text-decoration-none small fw-bold hover-opacity">
+                    <i class="fab fa-whatsapp text-success fs-6 me-1"></i> ¿Prefieres transferencia o tienes dudas?
+                </a>
+            </div>
 
             <div class="text-center mb-1">
                 <p class="text-muted mb-0" style="font-size: 0.8rem; line-height: 1.5;">
@@ -203,9 +280,13 @@
                 </p>
             </div>
 
-            <div class="text-center mt-4 border-top pt-3">
+            <div class="d-flex justify-content-between align-items-center mt-4 border-top pt-3 px-1">
+                <a href="/" class="btn-back">
+                    <i class="fas fa-arrow-left me-1"></i> Ir al inicio
+                </a>
+                
                 <a href="{{ url_for('auth.logout') }}" class="btn-logout">
-                    <i class="fas fa-sign-out-alt me-1"></i> Cerrar sesión por ahora
+                    Cerrar sesión <i class="fas fa-sign-out-alt ms-1"></i>
                 </a>
             </div>
         </div>

@@ -238,6 +238,27 @@
             position: relative;
         }
 
+        /* ESTILOS PARA EL MODAL DE PAGO */
+        .btn-sian {
+            background-color: var(--sian-pink);
+            color: white;
+            font-weight: 800;
+            border: none;
+            padding: 12px;
+            border-radius: 12px;
+            width: 100%;
+            font-size: 1rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 12px rgba(255, 107, 129, 0.3);
+        }
+
+        .btn-sian:hover {
+            background-color: #ff4a5a;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(255, 107, 129, 0.4);
+        }
+
         .btn-mark-read {
             position: absolute;
             right: 10px;
@@ -290,14 +311,24 @@
                 </span>
             </a>
 
-            {% if session.get('grace_period') %}
-                <div class="alert alert-danger text-center m-0 rounded-0 py-2 small">
-                    ⚠️ Tu suscripción venció hoy. 
-                    <a href="https://wa.me/528134939580?text=Hola,%20quiero%20renovar%20mi%20suscripción" target="_blank" class="fw-bold text-danger">
-                        <i class="bi bi-whatsapp"></i> Contáctanos para renovar
-                    </a> 
-                    y no perder tu acceso.
-                </div>
+            {% if session.get('role', 0) == 0 %}
+                {% if not session.get('is_pro_active') %}
+                    <div class="alert alert-danger text-center m-0 rounded-0 py-2 small shadow-sm" style="background-color: #ffe5e5; color: #d32f2f; border-bottom: 1px solid #ffcdd2;">
+                        <i class="fas fa-lock me-1"></i> Estás en modo de <strong>Solo Lectura</strong>. 
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#modalRenovacion" class="fw-bold text-danger text-decoration-underline ms-1">
+                            Renueva tu plan PRO aquí
+                        </a> 
+                        para volver a cotizar.
+                    </div>
+                {% elif session.get('grace_period') %}
+                    <div class="alert alert-warning text-center m-0 rounded-0 py-2 small shadow-sm" style="background-color: #fff3cd; color: #856404; border-bottom: 1px solid #ffeeba;">
+                        <i class="fas fa-exclamation-triangle me-1"></i> ¡Último día! Tu plan vence <strong>HOY</strong>. 
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#modalRenovacion" class="fw-bold text-decoration-underline ms-1" style="color: #856404;">
+                            Renueva tu plan PRO aquí
+                        </a> 
+                        para evitar interrupciones.
+                    </div>
+                {% endif %}
             {% endif %}
 
             {% if session.get('user_id') %}
@@ -524,6 +555,72 @@
         {% endwith %}
 
         {% block content %}{% endblock %}
+    </div>
+
+    <div class="modal fade" id="modalRenovacion" tabindex="-1" aria-labelledby="modalRenovacionLabel" aria-hidden="true" data-bs-theme="light">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg">
+                
+                <div class="modal-header border-0 bg-dark text-white rounded-top-4 p-4 position-relative overflow-hidden">
+                    <h5 class="modal-title fw-bold position-relative z-1" id="modalRenovacionLabel">
+                        <i class="fas fa-crown text-warning me-2"></i> Reactiva Sianeffects PRO
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white position-relative z-1" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                
+                <div class="modal-body p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <h4 class="fw-bold mb-2">No detengas tu negocio</h4>
+                        <p class="text-muted" style="font-size: 0.95rem;">Renueva tu acceso y desbloquea la creación de cotizaciones, descarga de PDFs y todos tus reportes.</p>
+                    </div>
+
+                    <div class="row g-3 mb-4">
+                        <div class="col-6">
+                            <form action="{{ url_for('payments.create_checkout_session') }}" method="POST" class="h-100">
+                                <input type="hidden" name="user_id" value="{{ session.get('user_id') }}">
+                                <input type="hidden" name="price_id" value="{{ stripe_mensual }}">
+                                
+                                <div class="border rounded-4 p-3 text-center h-100 d-flex flex-column justify-content-between">
+                                    <div>
+                                        <h6 class="fw-bold text-muted mb-1">Mensual</h6>
+                                        <div class="mb-3"><span class="fs-4 fw-bold text-dark">$149</span></div>
+                                    </div>
+                                    <button type="submit" class="btn btn-outline-dark fw-bold rounded-3 w-100" style="font-size: 0.85rem; padding: 10px;">
+                                        Pagar Mes
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <div class="col-6">
+                            <form action="{{ url_for('payments.create_checkout_session') }}" method="POST" class="h-100">
+                                <input type="hidden" name="user_id" value="{{ session.get('user_id') }}">
+                                <input type="hidden" name="price_id" value="{{ stripe_anual }}">
+                                
+                                <div class="border border-2 rounded-4 p-3 text-center h-100 position-relative d-flex flex-column justify-content-between" style="border-color: var(--sian-pink) !important; background-color: rgba(255, 107, 129, 0.03);">
+                                    <div class="position-absolute top-0 start-50 translate-middle text-white px-2 py-1 rounded-pill fw-bold shadow-sm" style="font-size: 0.65rem; background-color: var(--sian-pink); white-space: nowrap;">
+                                        AHORRAS 2 MESES
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-1" style="color: var(--sian-pink);">Anual</h6>
+                                        <div class="mb-3"><span class="fs-4 fw-bold text-dark">$1,490</span></div>
+                                    </div>
+                                    <button type="submit" class="btn btn-sian fw-bold rounded-3 w-100" style="font-size: 0.85rem; padding: 10px;">
+                                        <i class="fas fa-bolt me-1"></i> Pagar Año
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="text-center border-top pt-3">
+                        <a href="https://wa.me/5218134939580?text=Hola%20Sianeffects,%20tengo%20problemas%20con%20mi%20renovación." target="_blank" class="text-muted text-decoration-none small fw-bold">
+                            <i class="fab fa-whatsapp text-success me-1"></i> ¿Dudas o pago por transferencia?
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
