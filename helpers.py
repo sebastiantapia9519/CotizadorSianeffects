@@ -5,9 +5,14 @@ from datetime import datetime, timezone, timedelta
 import json
 import uuid
 import logging
+import pytz
 
 # ========================================================
 # DECORADORES DE PROTECCIÓN
+# ========================================================
+
+# ========================================================
+# DECORADORES DE PROTECCIÓN (Sincronización en tiempo real)
 # ========================================================
 
 def login_required(f):
@@ -16,16 +21,63 @@ def login_required(f):
         if 'user_id' not in session:
             flash('Por favor inicia sesión.', 'warning')
             return redirect(url_for('auth.login'))
+        
+        # -----------------------------------------------------------
+        # AUTO-SYNC: Sincronizamos la suscripción en CADA petición
+        # -----------------------------------------------------------
+        uid = session['user_id']
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute('SELECT subscription_end, role, estado_suscripcion FROM usuarios WHERE id = %s', (uid,))
+        user = cursor.fetchone()
+        cursor.close()
+        conn.close()
+
+        if not user:
+            session.clear()
+            return redirect(url_for('auth.login'))
+
+        # Regla Admin: Si es Admin en DB, es PRO en sesión
+        if user['role'] >= 1:
+            session['is_pro_active'] = True
+            session.pop('grace_period', None)
+            return f(*args, **kwargs)
+
+        # --- LÓGICA DE DÍAS CALENDARIO ---
+        f_end = user['subscription_end']
+        estado = (user.get('estado_suscripcion') or '').strip().lower()
+        
+        tz_mx = pytz.timezone('America/Mexico_City')
+        hoy_mx = datetime.now(tz_mx).date()
+
+        # Reset por defecto
+        session['is_pro_active'] = False
+        session.pop('grace_period', None)
+
+        if f_end and estado not in ['expirada', 'vencida']:
+            # Normalizamos el fin de suscripción a solo FECHA
+            if isinstance(f_end, str):
+                fecha_vence_mx = datetime.strptime(f_end[:10], '%Y-%m-%d').date()
+            else:
+                fecha_vence_mx = f_end.date() if hasattr(f_end, 'date') else f_end
+
+            # REGLA DE SEBASTIÁN: Todo el día siguiente es de gracia
+            dia_gracia = fecha_vence_mx + timedelta(days=1)
+
+            if hoy_mx <= fecha_vence_mx:
+                session['is_pro_active'] = True
+            elif hoy_mx == dia_gracia:
+                session['is_pro_active'] = True
+                session['grace_period'] = True
+        
         return f(*args, **kwargs)
     return decorated_function
 
 def admin_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # Protege rutas sensibles (como borrar usuarios o ver métricas globales)
-        # Permite acceso si es Admin (1) o Dueño (2)
         if 'user_id' not in session or session.get('role', 0) < 1:
-            flash('Acceso denegado. Se requieren permisos de Administrador.', 'danger')
+            flash('Acceso denegado.', 'danger')
             return redirect(url_for('main.cotizador'))
         return f(*args, **kwargs)
     return decorated_function
@@ -33,73 +85,18 @@ def admin_required(f):
 def subscription_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        # 1. Verificar sesión básica
-        if 'user_id' not in session:
-            flash('Por favor inicia sesión.', 'warning')
+        # Como login_required ya sincronizó la sesión, aquí solo decidimos
+        if not session.get('user_id'):
             return redirect(url_for('auth.login'))
+            
+        if session.get('is_pro_active'):
+            return f(*args, **kwargs)
         
-        # -----------------------------------------------------------
-        # BLINDAJE PARA DUEÑOS (NIVEL 2) Y ADMINS (NIVEL 1)
-        # -----------------------------------------------------------
-        if session.get('role', 0) >= 1:
-            session['is_pro_active'] = True  # <-- MAGIA 1: Sincroniza al Admin
-            return f(*args, **kwargs)
-
-        # 2. Si es un usuario mortal (Rol 0), revisamos la BD
-        conn = get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute('SELECT subscription_end, role FROM usuarios WHERE id = %s', (session['user_id'],))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
-
-        if not user:
-            session.clear()
-            flash('Tu cuenta ya no es válida o fue eliminada.', 'error')
-            return redirect(url_for('auth.login'))
-
-        # Doble verificación por si en BD sí es admin
-        if user['role'] >= 1:
-            session['is_pro_active'] = True  # <-- MAGIA 2
-            return f(*args, **kwargs)
-
-        def _rebotar_vencido(msg='Tu suscripción ha vencido. Contáctanos para renovar.'):
-            session['is_pro_active'] = False # <-- Apagamos el PRO
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
-                return jsonify({'success': False, 'error': msg, 'code': 'SUBSCRIPTION_REQUIRED'}), 403
-            flash(msg, 'warning')
-            return redirect(url_for('main.plan_vencido'))
-
-        if not user['subscription_end']:
-            return _rebotar_vencido('Tu periodo de prueba ha terminado. Por favor suscríbete.')
-            
-        try:
-            f_end = user['subscription_end']
-            if isinstance(f_end, str):
-                fecha_fin = datetime.strptime(f_end[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
-            else:
-                fecha_fin = f_end if f_end.tzinfo else f_end.replace(tzinfo=timezone.utc)
-            
-            ahora = datetime.now(timezone.utc)
-            session.pop('grace_period', None)
-
-            if ahora > fecha_fin:
-                diferencia = ahora - fecha_fin
-                if diferencia.total_seconds() <= 86400:
-                    session['grace_period'] = True
-                    session['is_pro_active'] = True # <-- MAGIA 3: Está vencido pero en Grace Period, lo dejamos operar
-                    return f(*args, **kwargs)
-                else:
-                    return _rebotar_vencido()
-            else:
-                session['is_pro_active'] = True
-
-        except Exception as e:
-            current_app.logger.error(f"AUTH_DATE_ERROR: Fallo al verificar fecha de suscripcion para user {session.get('user_id')} - {e}")
-            session['is_pro_active'] = False
-            pass
-
-        return f(*args, **kwargs)
+        # Si llegamos aquí es que no es PRO activo
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest' or request.is_json:
+            return jsonify({'success': False, 'error': 'Plan vencido', 'code': 'SUBSCRIPTION_REQUIRED'}), 403
+        
+        return redirect(url_for('main.plan_vencido'))
     return decorated_function
 
 # ========================================================

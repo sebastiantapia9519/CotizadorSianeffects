@@ -15,6 +15,7 @@
 import os
 import csv
 import math
+import pytz
 import uuid
 from io import StringIO
 
@@ -175,19 +176,34 @@ def dashboard():
         cursor.close()
         conn.close()
 
-    # 7. CONVERSIÓN DE FECHAS A HORA LOCAL
+# 7. CONVERSIÓN DE FECHAS A "DÍA COMPLETO" (MÉXICO) - FIX DE MATH ERROR
+    tz_mx = pytz.timezone('America/Mexico_City')
     ahora_local = utc_to_local(ahora_utc)
+
     for u in users:
         if u['subscription_end']:
             try:
                 f = u['subscription_end']
+                # 1. Normalizamos a objeto datetime UTC
                 if isinstance(f, str):
-                    f = datetime.strptime(f[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
-                elif not f.tzinfo:
-                    f = f.replace(tzinfo=timezone.utc)
-                u['subscription_end'] = utc_to_local(f)
-            except:
-                pass
+                    f_dt = datetime.strptime(f[:19], '%Y-%m-%d %H:%M:%S').replace(tzinfo=timezone.utc)
+                else:
+                    f_dt = f if f.tzinfo else f.replace(tzinfo=timezone.utc)
+                
+                # 2. EL TRUCO: Forzamos el vencimiento al final del día (23:59:59) en UTC 
+                # antes de convertirlo a local. Esto asegura que el "Día 10" se mantenga 
+                # como "Día 10" tras el desfase de México y que siga siendo un objeto 'datetime'
+                # para que la resta en el HTML no truene (TypeError).
+                f_end_of_day = f_dt.replace(hour=23, minute=59, second=59)
+                u['subscription_end'] = utc_to_local(f_end_of_day)
+                
+                # 3. Flags para los badges del Admin (Usando comparativa de fechas puras)
+                dia_vence = u['subscription_end'].date()
+                u['is_grace_period'] = (ahora_local.date() == dia_vence + timedelta(days=1))
+                u['is_expired'] = (ahora_local.date() > dia_vence + timedelta(days=1))
+                
+            except Exception as e:
+                current_app.logger.error(f"Error procesando fecha admin: {e}")
 
         if u['last_login']:
             try:

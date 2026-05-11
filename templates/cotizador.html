@@ -362,7 +362,15 @@
                                 </div>
                                 <div class="col-4">
                                     <small class="text-muted fw-bold d-block">Venta Unit.</small>
-                                    <div id="resultadoPrecio" class="text-price-main">$0.00</div>
+                                    <div id="boxPrecioUnitarioInteractuable" style="cursor: pointer;"
+                                        onclick="activarAjusteUnitario()" title="Clic para ajustar este precio">
+                                        <div id="resultadoPrecio" class="text-price-main">$0.00</div>
+                                        <input type="number" id="inputPrecioUnitarioManual"
+                                            class="form-control form-control-sm d-none text-success fw-bold"
+                                            style="font-size: 1.1rem;"
+                                            onblur="aplicarAjusteUnitario()"
+                                            onkeyup="if(event.key === 'Enter') this.blur()">
+                                    </div>
                                 </div>
                                 <div class="col-4">
                                     <label class="small fw-bold text-success d-block">Cantidad</label>
@@ -1174,12 +1182,28 @@
         const precioSugerido = baseParaGanancia + montoGanancia + extra;
 
         // 7. ACTUALIZAMOS VARIABLES GLOBALES
-        costoProduccionCalculado = costoTotal;
-        precioVentaCalculado = precioSugerido;
+        costoProduccionCalculado = Math.round(costoTotal * 100) / 100;
+        let sugeridoBase = Math.round(precioSugerido * 100) / 100;
+
+        // Si hay un precio manual guardado y sigue siendo mayor al sugerido, lo usamos
+        if (precioUnitarioManual !== null && precioUnitarioManual >= sugeridoBase) {
+            precioVentaCalculado = precioUnitarioManual;
+        } else {
+            precioVentaCalculado = sugeridoBase;
+            precioUnitarioManual = null; // Se limpia si el costo sube más allá del manual
+        }
 
         // 8. MOSTRAMOS EN PANTALLA
-        document.getElementById('resultadoCosto').innerText = '$' + costoTotal.toFixed(2);
-        document.getElementById('resultadoPrecio').innerText = '$' + precioSugerido.toFixed(2);
+        document.getElementById('resultadoCosto').innerText = '$' + costoProduccionCalculado.toFixed(2);
+        const displayPrecio = document.getElementById('resultadoPrecio');
+        displayPrecio.innerText = '$' + precioVentaCalculado.toFixed(2);
+
+        // Cambiamos el color si es manual para que sepas que está activado
+        if (precioUnitarioManual !== null) {
+            displayPrecio.style.color = "var(--sian-pink)"; // O un color que resalte
+        } else {
+            displayPrecio.style.color = "var(--sian-teal)";
+        }
 
         // 9. CÁLCULO DEL CARRITO
         let subtotalCarrito = 0;
@@ -1324,6 +1348,8 @@
         document.getElementById('cantidadParaCarrito').value = 1;
         document.getElementById('inputManoObra').value = 0;
 
+        precioUnitarioManual = null;
+
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
         precioVentaCalculado = 0;
@@ -1375,7 +1401,7 @@
 
         carrito.push({
             concepto: nom,
-            precio_unitario: precioVentaCalculado,
+            precio_unitario: Math.round(precioVentaCalculado * 100) / 100,
             costo_unitario: costoProduccionCalculado,
             cantidad: cant,
             subtotal: precioVentaCalculado * cant,
@@ -1474,8 +1500,8 @@
         if (subtotalActualCarrito > 0 && subtotalObjetivo > 0) {
             const factorProrrateo = subtotalObjetivo / subtotalActualCarrito;
             carrito.forEach(item => {
-                item.precio_unitario = parseFloat((item.precio_unitario * factorProrrateo).toFixed(6));
-                item.subtotal = parseFloat((item.precio_unitario * item.cantidad).toFixed(6));
+                item.precio_unitario = Math.round((item.precio_unitario * factorProrrateo) * 100) / 100;
+                item.subtotal = Math.round((item.precio_unitario * item.cantidad) * 100) / 100;
             });
         }
         // --- FIN MAGIA INVISIBLE ---
@@ -1830,13 +1856,14 @@
 
                 data.items.forEach(item => {
                     carrito.push({
-                        concepto: item.concepto,
-                        precio_unitario: parseFloat(item.precio_unitario),
-                        costo_unitario: parseFloat(item.costo_unitario),
-                        cantidad: parseFloat(item.cantidad),
-                        subtotal: parseFloat(item.subtotal),
-                        composicion: JSON.parse(item.composicion)
-                    });
+                    concepto: concepto,
+                    precio_unitario: precio,
+                    costo_unitario: costo,
+                    cantidad: cantidad,
+                    fecha_registro: fecha,
+                    subtotal: Math.round((precio * cantidad) * 100) / 100,
+                    composicion: JSON.stringify([{ tipo: 'manual', nombre: 'Venta Rápida' }])
+                });
                 });
 
                 renderizarCarrito();
@@ -1949,6 +1976,69 @@
             console.error("Error cargando recarga:", e);
         }
     }
+
+    // Variable global para controlar si hay un ajuste manual en el producto actual
+let precioUnitarioManual = null;
+
+function activarAjusteUnitario() {
+    // Solo permitimos ajustar si ya hay un cálculo base (mayor a 0)
+    if (precioVentaCalculado <= 0) return;
+
+    const display = document.getElementById('resultadoPrecio');
+    const input = document.getElementById('inputPrecioUnitarioManual');
+
+    display.classList.add('d-none');
+    input.classList.remove('d-none');
+    
+    // Si ya había un manual usamos ese, si no, el calculado
+    input.value = (precioUnitarioManual || precioVentaCalculado).toFixed(2);
+    input.focus();
+    input.select();
+}
+
+function aplicarAjusteUnitario() {
+    const display = document.getElementById('resultadoPrecio');
+    const input = document.getElementById('inputPrecioUnitarioManual');
+    const nuevoValor = parseFloat(input.value);
+
+    // 1. Obtenemos el sugerido base para comparar
+    // (SugeridoBase es el valor que calculó el sistema antes de tu cambio)
+    const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
+    const extra = (document.getElementById('datoLaborActiva').value === 'true') ? 
+                  (parseFloat(document.getElementById('inputManoObra').value) || 0) * (costoMinuto || 0) : 
+                  (parseFloat(document.getElementById('inputManoObra').value) || 0);
+    
+    // Simplificamos: si el valor es válido y mayor/igual al actual, lo guardamos
+    if (!isNaN(nuevoValor) && nuevoValor >= precioVentaCalculado) {
+        precioUnitarioManual = nuevoValor;
+    } else {
+        // Si es menor, mandamos alerta y reseteamos
+        if (nuevoValor < precioVentaCalculado) {
+            Swal.fire({
+                toast: true, position: 'top-end', icon: 'info',
+                title: 'No puedes vender por debajo del costo sugerido',
+                showConfirmButton: false, timer: 2500
+            });
+        }
+        precioUnitarioManual = null;
+    }
+
+    display.classList.remove('d-none');
+    input.classList.add('d-none');
+    
+    // ESTA ES LA CLAVE: Recalcular todo para que la variable del carrito se actualice
+    calcularTotal();
+}
+
+// Nueva función auxiliar para que el renderizado sea consistente
+function actualizarDisplayPrecio() {
+    const precioAMostrar = precioUnitarioManual || precioVentaCalculado;
+    document.getElementById('resultadoPrecio').innerText = '$' + precioAMostrar.toFixed(2);
+    
+    // Actualizamos la variable global que usa agregarAlCarrito
+    // (Ojo: precioVentaCalculado ahora servirá como el valor final a subir al carrito)
+    // Pero solo si precioUnitarioManual existe.
+}
 
 </script>
 {% endblock %}
