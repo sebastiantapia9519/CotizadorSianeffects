@@ -105,7 +105,8 @@ def materiales():
     # --- LÓGICA PARA CARGAR LA VISTA (MÉTODO GET) ---
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM materiales WHERE user_id = %s", (user_id,))
+    # Ordenamos alfabéticamente ignorando mayúsculas/minúsculas
+    cursor.execute("SELECT * FROM materiales WHERE user_id = %s ORDER BY LOWER(nombre) ASC", (user_id,))
     rows = cursor.fetchall()
     materiales_lista = [dict(row) for row in rows]
     
@@ -233,7 +234,8 @@ def equipos():
     # --- MÉTODO GET ---
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM maquinaria WHERE user_id = %s", (user_id,))
+    # Ordenamos la maquinaria alfabéticamente
+    cursor.execute("SELECT * FROM maquinaria WHERE user_id = %s ORDER BY LOWER(nombre) ASC", (user_id,))
     rows = cursor.fetchall()
     cursor.close()
     conn.close()
@@ -336,7 +338,8 @@ def recetas():
                    FROM productos p 
                    LEFT JOIN producto_detalles pd ON p.id=pd.producto_id 
                    WHERE p.user_id=%s 
-                   GROUP BY p.id"""
+                   GROUP BY p.id
+                   ORDER BY LOWER(p.nombre) ASC"""
         cursor.execute(query, (user_id,))
         recetas_db = cursor.fetchall()
         
@@ -354,10 +357,12 @@ def recetas():
             receta_dict['ingredientes_reales'] = json.dumps([dict(d) for d in detalles])
             recetas_lista.append(receta_dict)
             
-        cursor.execute("SELECT id, nombre, precio_unitario FROM materiales WHERE user_id = %s", (user_id,))
+        # Ordenamos los materiales disponibles para que sea fácil encontrarlos al armar recetas
+        cursor.execute("SELECT id, nombre, precio_unitario FROM materiales WHERE user_id = %s ORDER BY LOWER(nombre) ASC", (user_id,))
         materiales_disponibles = [dict(row) for row in cursor.fetchall()]
 
-        cursor.execute("SELECT id, nombre, costo_desgaste FROM maquinaria WHERE user_id = %s", (user_id,))
+        # Ordenamos la maquinaria disponible
+        cursor.execute("SELECT id, nombre, costo_desgaste FROM maquinaria WHERE user_id = %s ORDER BY LOWER(nombre) ASC", (user_id,))
         maquinaria_disponible = [dict(row) for row in cursor.fetchall()]
             
     except Exception as e:

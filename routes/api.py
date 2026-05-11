@@ -65,6 +65,7 @@ def obtener_receta(id):
         FROM producto_detalles pd
         JOIN materiales m ON pd.material_id = m.id
         WHERE pd.producto_id = %s
+        ORDER BY LOWER(m.nombre) ASC
     ''', (id,))
     detalles = cursor.fetchall()
 
@@ -73,6 +74,7 @@ def obtener_receta(id):
         FROM producto_maquinaria pm
         JOIN maquinaria mq ON pm.maquinaria_id = mq.id
         WHERE pm.producto_id = %s
+        ORDER BY LOWER(mq.nombre) ASC
     ''', (id,))
     maquinaria = cursor.fetchall()
 

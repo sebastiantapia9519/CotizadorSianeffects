@@ -116,13 +116,14 @@ def cotizador():
             config = {}
         # -------------------------------------------------------------
         
-        cursor.execute('SELECT * FROM materiales WHERE user_id=%s ORDER BY nombre ASC', (uid,))
+        # Ordenamos usando LOWER() para que 'a' y 'A' se traten igual
+        cursor.execute('SELECT * FROM materiales WHERE user_id=%s ORDER BY LOWER(nombre) ASC', (uid,))
         materiales = cursor.fetchall()
         
-        cursor.execute('SELECT * FROM productos WHERE user_id=%s ORDER BY nombre ASC', (uid,))
+        cursor.execute('SELECT * FROM productos WHERE user_id=%s ORDER BY LOWER(nombre) ASC', (uid,))
         productos = cursor.fetchall()
         
-        cursor.execute('SELECT * FROM maquinaria WHERE user_id=%s ORDER BY nombre ASC', (uid,))
+        cursor.execute('SELECT * FROM maquinaria WHERE user_id=%s ORDER BY LOWER(nombre) ASC', (uid,))
         equipos = cursor.fetchall()
 
         data = {
