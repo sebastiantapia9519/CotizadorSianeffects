@@ -37,6 +37,8 @@ def login_required(f):
             session.clear()
             return redirect(url_for('auth.login'))
 
+        session['role'] = user['role']
+
         # Regla Admin: Si es Admin en DB, es PRO en sesión
         if user['role'] >= 1:
             session['is_pro_active'] = True
@@ -63,6 +65,8 @@ def login_required(f):
 
             # REGLA DE SEBASTIÁN: Todo el día siguiente es de gracia
             dia_gracia = fecha_vence_mx + timedelta(days=1)
+
+            print(f"DEBUG: User: {uid} | f_end: {f_end} | estado: '{estado}' | hoy: {hoy_mx}")
 
             if hoy_mx <= fecha_vence_mx:
                 session['is_pro_active'] = True

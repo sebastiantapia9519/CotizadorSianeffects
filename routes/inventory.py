@@ -1,3 +1,4 @@
+from curses import flash
 from flask import Blueprint, request, session, jsonify, render_template, redirect, url_for, current_app
 import json
 from helpers import login_required, subscription_required
@@ -20,9 +21,22 @@ def materiales():
 
     # --- LÓGICA PARA GUARDAR O EDITAR (MÉTODO POST) ---
     if request.method == 'POST':
-        if session.get('role', 0) < 1:
+        if session.get('role', 0) < 1 and not session.get('is_pro_active'):
             return jsonify({"status": "error", "message": "Acceso de Solo Lectura. Renueva tu plan PRO para modificar materiales.", "code": "PRO_REQUIRED"}), 403
+
+        # REGLA DEL DÍA DE GRACIA
+        if session.get('grace_period'):
+            conn = get_db()
+            cursor = conn.cursor()
+            cursor.execute("SELECT role FROM usuarios WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
             
+            if user and user['role'] < 1:
+                flash(f'Disfruta tus últimas horas gratis. Tu suscripción finalizó ayer.', "warning")
+                session.pop('grace_period', None)
+            cursor.close()
+            conn.close()
+
         conn = get_db()
         cursor = conn.cursor()
         try:
@@ -181,7 +195,7 @@ def equipos():
     u_name = session.get('username', 'Anonimo')
     
     if request.method == 'POST':
-        if session.get('role', 0) < 1:
+        if session.get('role', 0) < 1 and not session.get('is_pro_active'):
             return jsonify({"status": "error", "message": "Acceso de Solo Lectura. Renueva tu plan PRO para modificar equipos.", "code": "PRO_REQUIRED"}), 403
             
         conn = get_db()
@@ -298,7 +312,7 @@ def recetas():
     u_name = session.get('username', 'Anonimo')
     
     if request.method == 'POST':
-        if session.get('role', 0) < 1:
+        if session.get('role', 0) < 1 and not session.get('is_pro_active'):
             from flask import flash
             flash("Acceso de Solo Lectura. Renueva tu plan PRO para modificar recetas.", "warning")
             return redirect(url_for('inventory.recetas'))
