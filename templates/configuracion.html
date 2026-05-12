@@ -1217,6 +1217,11 @@
                             <span class="sidebar-icon"><i class="fas fa-truck"></i></span>
                             Logística
                         </a>
+                        <a class="sidebar-link" id="list-utils-list" data-bs-toggle="list" href="#list-utils"
+                            role="tab">
+                            <span class="sidebar-icon"><i class="fas fa-qrcode"></i></span>
+                            Utilidades
+                        </a>
                     </div>
                 </div>
 
@@ -2141,6 +2146,37 @@
                 </div>
 
                 <!-- ============================================ -->
+                <!-- TAB: UTILIDADES -->
+                <!-- ============================================ -->
+                <div class="tab-pane fade" id="list-utils" role="tabpanel">
+                    <div class="config-card">
+                        <div class="card-header-modern">
+                            <div class="card-title-modern">
+                                <div class="title-icon">
+                                    <i class="fas fa-tools"></i>
+                                </div>
+                                <div>
+                                    <h5>Utilidades Rápidas</h5>
+                                    <small class="text-muted">Herramientas que no se guardan, listas para usar</small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-body-modern text-center py-5">
+                            <div class="row justify-content-center">
+                                <div class="col-md-6">
+                                    <div class="p-4 border rounded-4 bg-light text-center" style="cursor: pointer; transition: all 0.2s ease;" data-bs-toggle="modal" data-bs-target="#modalQR" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                        <i class="fas fa-qrcode fa-3x text-primary mb-3"></i>
+                                        <h6 class="fw-bold">Generador de QR</h6>
+                                        <p class="text-muted small mb-0">Crea códigos QR al instante para links, Wi-Fi o textos. Listo para copy-paste.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ============================================ -->
                 <!-- TAB 5: SUSCRIPCIÓN (REDISEÑADO) -->
                 <!-- ============================================ -->
                 <div class="tab-pane fade" id="list-suscripcion" role="tabpanel">
@@ -2392,6 +2428,44 @@
         </div>
     </div>
 </div>
+
+<!-- Modal: Generador de QR -->
+<div class="modal fade" id="modalQR" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow-lg border-0">
+            <div class="modal-header border-bottom px-4">
+                <h6 class="modal-title fw-bold">
+                    <i class="fas fa-qrcode me-2 text-primary"></i> Generador de Código QR
+                </h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body p-4 text-center">
+                <div class="form-group-modern text-start">
+                    <label class="form-label-modern">Enlace o Texto</label>
+                    <input type="text" id="qrInputText" class="form-input-modern" placeholder="Ej. https://tu-enlace.com o texto libre" oninput="generarQR()">
+                </div>
+                
+                <div class="mt-4 p-3 border rounded-3 bg-light d-flex justify-content-center align-items-center" style="min-height: 280px;">
+                    <canvas id="qrCanvas" style="display: none; border-radius: 8px; max-width: 100%;"></canvas>
+                    <span id="qrPlaceholder" class="text-muted small">
+                        <i class="fas fa-image fa-2x mb-2 d-block opacity-50"></i>
+                        Ingresa un texto arriba
+                    </span>
+                </div>
+
+                <div class="mt-4">
+                    <button class="btn-secondary-modern w-100 fw-bold" onclick="copiarQR()" id="btnCopiarQR" disabled>
+                        <i class="fas fa-copy me-2"></i>Copiar Imagen
+                    </button>
+                    <small class="text-muted d-block mt-2">📱 En celular: Mantén presionada la imagen para compartir/copiar.</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Librería para generar el QR sin internet/backend -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -2953,6 +3027,68 @@
         chatMessages.scrollTop = chatMessages.scrollHeight;
 
         return msgId;
+    }
+
+    // ============================================
+    // UTILIDADES: GENERADOR DE QR
+    // ============================================
+    let qrInstance;
+
+    function generarQR() {
+        const input = document.getElementById('qrInputText').value.trim();
+        const canvas = document.getElementById('qrCanvas');
+        const placeholder = document.getElementById('qrPlaceholder');
+        const btnCopy = document.getElementById('btnCopiarQR');
+
+        if (input) {
+            canvas.style.display = 'block';
+            placeholder.style.display = 'none';
+            btnCopy.disabled = false;
+            
+            if (!qrInstance) {
+                qrInstance = new QRious({
+                    element: canvas,
+                    size: 250,
+                    value: input,
+                    backgroundAlpha: 0, // Transparente opcional
+                    foreground: '#111827' // Color oscuro del tema
+                });
+            } else {
+                qrInstance.value = input;
+            }
+        } else {
+            canvas.style.display = 'none';
+            placeholder.style.display = 'block';
+            btnCopy.disabled = true;
+        }
+    }
+
+    function copiarQR() {
+        const canvas = document.getElementById('qrCanvas');
+        const btnCopy = document.getElementById('btnCopiarQR');
+        
+        canvas.toBlob(function(blob) {
+            try {
+                // API moderna de portapapeles
+                navigator.clipboard.write([
+                    new ClipboardItem({ 'image/png': blob })
+                ]).then(() => {
+                    // Animación visual de éxito
+                    const originalText = btnCopy.innerHTML;
+                    btnCopy.innerHTML = '<i class="fas fa-check me-2"></i>¡QR Copiado!';
+                    btnCopy.classList.replace('btn-secondary-modern', 'btn-primary-modern');
+                    
+                    setTimeout(() => {
+                        btnCopy.innerHTML = originalText;
+                        btnCopy.classList.replace('btn-primary-modern', 'btn-secondary-modern');
+                    }, 2500);
+                }).catch(err => {
+                    Swal.fire('Ups', 'Tu navegador bloqueó el copiado automático. Haz clic derecho (o mantén presionado en móvil) sobre el QR y selecciona "Copiar imagen".', 'info');
+                });
+            } catch (err) {
+                Swal.fire('Ups', 'Haz clic derecho sobre la imagen (o mantén presionado) para copiarla.', 'info');
+            }
+        });
     }
 </script>
 {% endblock %}
