@@ -192,7 +192,7 @@ def pago_exitoso():
             checkout_session = stripe.checkout.Session.retrieve(session_id)
             if checkout_session.payment_status == 'paid':
                 
-                # FIX: Usamos getattr en lugar de .get() porque metadata es un StripeObject
+                # Usamos getattr en lugar de .get() porque metadata es un StripeObject
                 plan = getattr(checkout_session.metadata, 'plan_type', 'mensual')
                 
                 if plan == 'anual':
@@ -207,6 +207,11 @@ def pago_exitoso():
                 conn = get_db()
                 cursor = conn.cursor()
                 try:
+                    # Obtenemos el usuario antes de enviar el correo
+                    cursor.execute("SELECT username, email FROM usuarios WHERE id = %s", (user_id,))
+                    user_data = cursor.fetchone()
+
+                    # Actualizamos la suscripción
                     cursor.execute("""
                         UPDATE usuarios 
                         SET subscription_end = %s, 
@@ -220,6 +225,7 @@ def pago_exitoso():
                         INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
                         VALUES (%s, %s, %s, %s)
                     """, (user_id, f"Activación PRO {plan} (verificación instantánea)", "Pagos", f"Session ID: {session_id}"))
+                    
                     
                     conn.commit()
                     current_app.logger.info(f"INSTANT_ACTIVATION: Usuario {user_id} activado como PRO en BD")
@@ -237,24 +243,6 @@ def pago_exitoso():
                 
         except Exception as e:
             current_app.logger.error(f"Error consultando Stripe en pago_exitoso: {e}")
-
-    # Refrescar la sesión con los datos actualizados de la BD
-    conn = get_db()
-    cursor = conn.cursor()
-    try:
-        cursor.execute("SELECT role, estado_suscripcion FROM usuarios WHERE id = %s", (user_id,))
-        user_db = cursor.fetchone()
-        if user_db:
-            session['role'] = user_db['role']
-            if user_db['estado_suscripcion'] == 'Activo':
-                session['is_pro_active'] = True
-    except Exception as e:
-        current_app.logger.error(f"Error refrescando sesión post-pago: {e}")
-    finally:
-        cursor.close()
-        conn.close()
-
-    return render_template('pago_exitoso.html')
 
     # Refrescar la sesión con los datos actualizados de la BD
     conn = get_db()

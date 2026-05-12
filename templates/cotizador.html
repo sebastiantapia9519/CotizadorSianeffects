@@ -283,10 +283,11 @@
                             <div class="row g-2">
                                 {% for eq in equipos %}
                                 <div class="col-6 col-md-4">
-                                    <label
-                                        class="check-maquinaria-label d-flex align-items-center gap-2 border p-2 rounded shadow-sm h-100">
+                                    <label class="check-maquinaria-label d-flex align-items-center gap-2 border p-2 rounded shadow-sm h-100">
                                         <input type="checkbox" class="form-check-input check-maquinaria-input m-0"
-                                            value="{{ eq['costo_desgaste'] }}" data-id="{{ eq['id'] }}"
+                                            value="{{ eq['costo_desgaste'] }}" 
+                                            data-id="{{ eq['id'] }}" 
+                                            data-nombre="{{ eq['nombre'] }}" 
                                             onchange="calcularTotal()">
                                         <span class="lh-sm">{{ eq['nombre'] }} <br> <small class="text-success"
                                                 style="font-size:0.75rem">(+${{ eq['costo_desgaste'] }})</small></span>
@@ -1390,10 +1391,9 @@
         });
 
         document.querySelectorAll('.check-maquinaria-input:checked').forEach(chk => {
-            const label = chk.closest('label').innerText.split('\n')[0];
             composicionActual.push({
                 tipo: 'maquinaria',
-                nombre: label,
+                nombre: chk.getAttribute('data-nombre'),
                 id: chk.getAttribute('data-id'),
                 costo: parseFloat(chk.value)
             });
