@@ -17,11 +17,15 @@
     .border-active { border-left-color: #198754; }
     .border-expired { border-left-color: #dc3545; }
     .border-warning { border-left-color: #ffc107; }
+    .border-info { border-left-color: #0dcaf0; }
+    
     .icon-box { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.1rem; }
     .bg-blue-light { background-color: #e7f1ff; color: #0d6efd; }
     .bg-green-light { background-color: #e8f5e9; color: #198754; }
     .bg-red-light { background-color: #f8d7da; color: #dc3545; }
     .bg-yellow-light { background-color: #fff8e1; color: #ffc107; }
+    .bg-info-light { background-color: #e0f8f8; color: #0dcaf0; }
+    
     .stat-value { font-size: 1.5rem; font-weight: 700; color: #212529; margin-bottom: 6px; }
     .stat-label { font-size: 0.65rem; font-weight: 600; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
     .table-minimal { font-size: 0.85rem; }
@@ -76,6 +80,7 @@
     [data-bs-theme="dark"] .bg-green-light { background-color: rgba(25, 135, 84, 0.15) !important; color: #34d399 !important; }
     [data-bs-theme="dark"] .bg-red-light { background-color: rgba(220, 53, 69, 0.15) !important; color: #f87171 !important; }
     [data-bs-theme="dark"] .bg-yellow-light { background-color: rgba(255, 193, 7, 0.15) !important; color: #fbbf24 !important; }
+    [data-bs-theme="dark"] .bg-info-light { background-color: rgba(13, 202, 240, 0.15) !important; color: #38bdf8 !important; }
 
     /* Inputs y Formularios */
     [data-bs-theme="dark"] .form-select,
@@ -176,6 +181,7 @@
             </div>
         </div>
 
+        <!-- FILA 1: MÉTRICAS DE USUARIOS -->
         <div class="row g-3">
             <div class="col-6 col-md-3">
                 <div class="sian-stat-card border-total">
@@ -203,6 +209,41 @@
                     <div class="icon-box bg-yellow-light"><i class="fas fa-hourglass-half"></i></div>
                     <div class="stat-value">{{ proximos_a_vencer }}</div>
                     <div class="stat-label">Vencen pronto</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FILA 2: MÉTRICAS FINANCIERAS (NUEVO) -->
+        <div class="row g-3 mt-1">
+            <div class="col-6 col-md-3">
+                <div class="sian-stat-card border-info">
+                    <div class="icon-box bg-info-light"><i class="fas fa-money-bill-wave"></i></div>
+                    <div class="stat-value text-info">${{ mrr_total }}</div>
+                    <div class="stat-label">MRR Estimado (MXN)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="sian-stat-card border-active">
+                    <div class="icon-box bg-green-light"><i class="fas fa-arrow-trend-up"></i></div>
+                    <div class="stat-value text-success">+{{ nuevos_pro }}</div>
+                    <div class="stat-label">Nuevos PRO (Mes)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="sian-stat-card border-expired">
+                    <div class="icon-box bg-red-light"><i class="fas fa-arrow-trend-down"></i></div>
+                    <div class="stat-value text-danger">-{{ churn_total }}</div>
+                    <div class="stat-label">Bajas / Churn (Mes)</div>
+                </div>
+            </div>
+            <div class="col-6 col-md-3">
+                <div class="sian-stat-card border-total">
+                    <div class="icon-box bg-blue-light"><i class="fas fa-layer-group"></i></div>
+                    <div class="d-flex gap-2 justify-content-center pt-2">
+                        <span class="badge bg-primary rounded-pill px-3 py-2">M: {{ planes_dict.mensual }}</span>
+                        <span class="badge bg-success rounded-pill px-3 py-2">A: {{ planes_dict.anual }}</span>
+                    </div>
+                    <div class="stat-label mt-3">Distribución Planes</div>
                 </div>
             </div>
         </div>
@@ -260,9 +301,9 @@
         <div class="row mt-4 g-4">
             <div class="col-12 col-md-6 col-lg-5">
                 <div class="sian-stat-card" style="align-items: flex-start; padding: 20px;">
-                    <div class="stat-label mb-3">Origen de Registros ({{ mes_sel }}/{{ anio_sel }})</div>
+                    <div class="stat-label mb-3">Distribución de Suscripciones</div>
                     <div style="position: relative; height: 250px; width: 100%;">
-                        <canvas id="chartFuentes"></canvas>
+                        <canvas id="chartPlanes"></canvas>
                     </div>
                 </div>
             </div>
@@ -316,10 +357,7 @@
 <script>
     document.addEventListener("DOMContentLoaded", function () {
         // 🔥 MAGIA DARK MODE EN CHART.JS 🔥
-        // Verificamos si el modo oscuro está activo leyendo el atributo del <html>
         const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        
-        // Configuramos colores base dependiendo del tema
         const textColor = isDarkMode ? '#94a3b8' : '#86868b';
         const gridColor = isDarkMode ? '#334155' : '#e5e7eb';
         
@@ -345,7 +383,7 @@
                     tension: 0.4,
                     borderWidth: 3,
                     pointRadius: 4,
-                    pointBackgroundColor: isDarkMode ? '#1e293b' : '#fff', // El fondo del punto
+                    pointBackgroundColor: isDarkMode ? '#1e293b' : '#fff', 
                     pointBorderWidth: 2
                 }]
             },
@@ -367,24 +405,24 @@
             }
         });
 
-        // 2. Gráfica de Origen
-        new Chart(document.getElementById('chartFuentes'), {
+        // 2. Gráfica de PLANES (Reemplaza a Origen)
+        new Chart(document.getElementById('chartPlanes'), {
             type: 'doughnut',
             data: {
-                labels: {{ origen_labels | tojson }},
+                labels: ['Mensual', 'Anual', 'Free / Trial'],
                 datasets: [{
-                    data: {{ origen_data | tojson }},
-                    backgroundColor: ['#0d6efd', '#34c759', '#5856d6', '#ff9500', '#ff2d55'],
+                    data: [{{ planes_dict.mensual }}, {{ planes_dict.anual }}, {{ planes_dict.free }}],
+                    backgroundColor: ['#0d6efd', '#198754', '#6c757d'],
                     borderWidth: isDarkMode ? 2 : 0,
-                    borderColor: isDarkMode ? '#1e293b' : '#fff' // Separador oscuro en la dona
+                    borderColor: isDarkMode ? '#1e293b' : '#fff' 
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '80%',
+                cutout: '75%',
                 plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 10 }, color: textColor } }
+                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 12 }, color: textColor } }
                 }
             }
         });

@@ -491,18 +491,19 @@
 
                         {% set badge_class = 'badge-vencido' %}
                         {% set badge_text = 'Expirado' %}
+                        {% set estado_lower = estado_bd|lower %}
 
                         {% if u['role'] >= 1 %}
                             {% set badge_class = 'badge-activo' %}
                             {% set badge_text = '∞ Ilimitado' %}
-                        {% elif estado_bd == 'Cancelado' %}
+                        {% elif estado_lower in ['cancelado', 'cancelada'] %}
                             {% set badge_class = 'badge-suspendido' %}
                             {% set badge_text = 'Cancelado' %}
-                        {% elif estado_bd == 'Suspendido' %}
-                            {% set badge_class = 'badge-suspendido' %}
-                            {% set badge_text = 'Suspendido' %}
+                        {% elif estado_lower == 'pago fallido' %}
+                            {% set badge_class = 'badge-vencido' %}
+                            {% set badge_text = 'Pago Fallido' %}
                         {% elif is_active %}
-                            {% if estado_bd == 'Trial' %}
+                            {% if estado_lower == 'trial' %}
                                 {% set badge_class = 'badge-prueba' %}
                                 {% set badge_text = 'En Prueba' %}
                                 {% if dias_restantes <= 3 %}
@@ -517,6 +518,10 @@
                                     {% set badge_text = 'Vence en ' ~ dias_restantes ~ 'd' %}
                                 {% endif %}
                             {% endif %}
+                        {% else %}
+                            {# Si NO es activo por fecha, forzamos vencido sin importar lo que diga la BD #}
+                            {% set badge_class = 'badge-vencido' %}
+                            {% set badge_text = 'Vencido' %}
                         {% endif %}
 
                         <tr>

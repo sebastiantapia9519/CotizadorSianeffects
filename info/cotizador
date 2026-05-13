@@ -213,6 +213,31 @@ ONBOARDING
 - Cookie has_free_trial: vigente 1 año, aviso suave en registro desde el mismo navegador
 - El verdadero escudo anti-abuso es la BD: email único garantizado por constraint
 
+ESTADOS DE SUSCRIPCIÓN Y PLANES (DICCIONARIO NORMALIZADO)
+---------------------------------------------------------
+El sistema evalúa el acceso (Paywall) y las métricas financieras (MRR en el Dashboard)
+basándose en tres pilares: La Fecha de Vencimiento, el Estado y el Tipo de Plan.
+Para evitar errores de "Case Sensitivity" (mayúsculas/minúsculas) en PostgreSQL, todas
+las consultas analíticas utilizan la función LOWER() sobre estos campos.
+
+1. Columna `estado_suscripcion` (Workflow del Cliente)
+   - 'Trial':         Asignado automáticamente al registrarse. Activa 7 días de prueba.
+   - 'Activo':        Asignado tras un pago exitoso (Stripe o Manual).
+   - 'Cancelado':     El usuario canceló la renovación automática desde el portal (Stripe).
+   - 'Pago Fallido':  El cargo automático fue declinado (Stripe Webhook).
+   - 'Vencido':       La fecha `subscription_end` ya pasó (Asignado dinámicamente).
+
+2. Columna `plan_type` (Clasificación Financiera - MRR)
+   - 'Free':          Plan inicial durante el Trial. No suma al MRR.
+   - 'mensual':       Suma $149 MXN al MRR.
+   - 'anual':         Suma $124.16 MXN al MRR (Costo Anual / 12 meses).
+
+*NOTA DE DISEÑO (Lazy Evaluation):* El guardián de rutas (helpers.py) prioriza la columna
+`subscription_end` sobre las etiquetas de texto. Si el estado dice 'Activo' pero la fecha 
+límite ya fue superada en huso horario de México (America/Mexico_City) + 24 hrs de gracia, 
+el usuario pierde el acceso PRO automáticamente sin necesidad de que una tarea en segundo 
+plano actualice el campo de texto a 'Vencido'.
+
 ESQUEMA DE PAGOS (Fase 1 — Manual)
 ------------------------------------
 Los pagos se gestionan externamente (transferencia bancaria o efectivo).

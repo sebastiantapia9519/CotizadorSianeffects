@@ -56,7 +56,8 @@ def login_required(f):
         session['is_pro_active'] = False
         session.pop('grace_period', None)
 
-        if f_end and estado not in ['expirada', 'vencida']:
+        # Permite la entrada si es Trial o Activo, y la fecha aún no pasa
+        if f_end and estado in ['trial', 'activo']:
             # Normalizamos el fin de suscripción a solo FECHA
             if isinstance(f_end, str):
                 fecha_vence_mx = datetime.strptime(f_end[:10], '%Y-%m-%d').date()
@@ -65,8 +66,6 @@ def login_required(f):
 
             # REGLA DE SEBASTIÁN: Todo el día siguiente es de gracia
             dia_gracia = fecha_vence_mx + timedelta(days=1)
-
-            print(f"DEBUG: User: {uid} | f_end: {f_end} | estado: '{estado}' | hoy: {hoy_mx}")
 
             if hoy_mx <= fecha_vence_mx:
                 session['is_pro_active'] = True

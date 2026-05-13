@@ -1230,10 +1230,25 @@
                     <div class="sidebar-nav">
                         <a class="sidebar-link" id="list-suscripcion-list" data-bs-toggle="list"
                             href="#list-suscripcion" role="tab">
-                            <span class="sidebar-icon"><i class="fas fa-gem"></i></span>
+                            <span class="sidebar-icon">
+                                {% if (usuario.get('plan_type') or 'free')|lower == 'free' %}
+                                    <i class="fas fa-clock"></i>
+                                {% else %}
+                                    <i class="fas fa-gem"></i>
+                                {% endif %}
+                            </span>
                             Plan Actual
+                            
                             {% if usuario['role'] == 0 %}
-                            <span class="sidebar-badge">PRO</span>
+                                {% if session.get('is_pro_active') %}
+                                    {% if (usuario.get('plan_type') or 'free')|lower == 'free' %}
+                                        <span class="sidebar-badge" style="background-color: #e0f2fe; color: #0284c7;">TRIAL</span>
+                                    {% else %}
+                                        <span class="sidebar-badge">PRO</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="sidebar-badge" style="background-color: #fee2e2; color: #b91c1c;">VENCIDO</span>
+                                {% endif %}
                             {% endif %}
                         </a>
                     </div>
@@ -2177,22 +2192,49 @@
                 </div>
 
                 <!-- ============================================ -->
-                <!-- TAB 5: SUSCRIPCIÓN (REDISEÑADO) -->
+                <!-- TAB 5: SUSCRIPCIÓN (REDISEÑADO Y DINÁMICO) -->
                 <!-- ============================================ -->
                 <div class="tab-pane fade" id="list-suscripcion" role="tabpanel">
                     <div class="config-card border-0"
                         style="background: linear-gradient(145deg, #1a1f2e, #2a3142); color: white;">
                         <div class="card-body-modern p-5 text-center">
+                            
+                            {% set plan_actual = (usuario.get('plan_type') or 'free')|lower %}
+                            {% set estado_actual = (usuario.get('estado_suscripcion') or 'trial')|lower %}
+
                             <div class="mb-4">
                                 <div class="mx-auto mb-3 d-flex align-items-center justify-content-center"
                                     style="width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;">
-                                    <i class="fas fa-gem fa-2x text-warning"></i>
+                                    {% if plan_actual == 'free' or estado_actual == 'trial' %}
+                                        <i class="fas fa-clock fa-2x text-info"></i>
+                                    {% else %}
+                                        <i class="fas fa-gem fa-2x text-warning"></i>
+                                    {% endif %}
                                 </div>
-                                <h3 class="fw-bold text-white mb-1">Plan Sianeffects PRO</h3>
-                                <p class="text-light opacity-75">Acceso ilimitado a todas las herramientas</p>
+                                
+                                <!-- TÍTULO DINÁMICO SEGÚN EL PLAN -->
+                                <h3 class="fw-bold text-white mb-1">
+                                    {% if usuario['role'] >= 1 %}
+                                        Sianeffects STAFF
+                                    {% elif plan_actual == 'anual' %}
+                                        Plan PRO (Anual)
+                                    {% elif plan_actual == 'mensual' %}
+                                        Plan PRO (Mensual)
+                                    {% else %}
+                                        Prueba Gratuita
+                                    {% endif %}
+                                </h3>
+                                
+                                <p class="text-light opacity-75">
+                                    {% if plan_actual == 'free' %}
+                                        Evaluando las herramientas del sistema
+                                    {% else %}
+                                        Acceso ilimitado a todas las herramientas
+                                    {% endif %}
+                                </p>
                             </div>
 
-                           <div class="p-4 mb-4 mx-auto rounded-4"
+                            <div class="p-4 mb-4 mx-auto rounded-4"
                                 style="max-width: 400px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1);">
                                 
                                 <h6 class="opacity-50 small text-uppercase fw-bold mb-2" style="color: #fff;">
@@ -2211,34 +2253,47 @@
 
                                     {% elif not session.get('is_pro_active') %}
                                     <span class="text-danger">
-                                        <i class="fas fa-times-circle me-2"></i>Inactiva / Cancelada
+                                        <i class="fas fa-times-circle me-2"></i>
+                                        {% if estado_actual == 'pago fallido' %}
+                                            Pago Fallido
+                                        {% else %}
+                                            Inactiva / Vencida
+                                        {% endif %}
                                     </span>
 
                                     {% elif usuario['subscription_end'] %}
-                                    {% set fecha_str = usuario['subscription_end']|string %}
-                                    {% set anio = fecha_str[0:4] %}
-                                    {% set mes = fecha_str[5:7] %}
-                                    {% set dia = fecha_str[8:10]|int %}
-                                    {% set nombres_meses = {
-                                    '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr',
-                                    '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago',
-                                    '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic'
-                                    } %}
-                                    <span style="color: #fff;">{{ dia }} {{ nombres_meses[mes] }}, {{ anio }}</span>
-                                    
+                                        {% set fecha_str = usuario['subscription_end']|string %}
+                                        {% set anio = fecha_str[0:4] %}
+                                        {% set mes = fecha_str[5:7] %}
+                                        {% set dia = fecha_str[8:10]|int %}
+                                        {% set nombres_meses = {
+                                        '01': 'Ene', '02': 'Feb', '03': 'Mar', '04': 'Abr',
+                                        '05': 'May', '06': 'Jun', '07': 'Jul', '08': 'Ago',
+                                        '09': 'Sep', '10': 'Oct', '11': 'Nov', '12': 'Dic'
+                                        } %}
+                                        <span style="color: #fff;">{{ dia }} {{ nombres_meses[mes] }}, {{ anio }}</span>
                                     {% else %}
-                                    <span class="text-warning">Ilimitada</span>
+                                        <span class="text-warning">Ilimitada</span>
                                     {% endif %}
                                 </h2>
                             </div>
 
-                            <form action="{{ url_for('payments.billing_portal') }}" method="POST">
-                                <button type="submit" class="btn btn-outline-light rounded-pill px-4 btn-sm opacity-75">
-                                    <i class="fas fa-credit-card me-2"></i> Gestionar suscripción o Cancelar
+                            <!-- BOTONES CONDICIONALES -->
+                            {% if plan_actual in ['mensual', 'anual'] and usuario.get('stripe_customer_id') %}
+                                <form action="{{ url_for('payments.billing_portal') }}" method="POST">
+                                    <button type="submit" class="btn btn-outline-light rounded-pill px-4 btn-sm opacity-75">
+                                        <i class="fas fa-credit-card me-2"></i> Gestionar suscripción o Cancelar
+                                    </button>
+                                </form>
+                                <p class="text-muted small mt-3">Podrás descargar tus facturas y actualizar tu método de pago.</p>
+                            
+                            {% elif not session.get('is_pro_active') or plan_actual == 'free' %}
+                                <button type="button" class="btn btn-warning rounded-pill px-4 fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#modalRenovacion">
+                                    <i class="fas fa-bolt me-1"></i> ¡Hacerme PRO ahora!
                                 </button>
-                            </form>
-                            <p class="text-muted small mt-3">Podrás descargar tus facturas y actualizar tu método de
-                                pago.</p>
+                                <p class="text-muted small mt-3">Actualiza tu cuenta para no perder el acceso a tus cotizaciones.</p>
+                            {% endif %}
+
                         </div>
                     </div>
                 </div>

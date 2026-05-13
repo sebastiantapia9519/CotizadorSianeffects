@@ -148,14 +148,15 @@ def procesar_pago_exitoso(user_id, plan, stripe_session_id, stripe_customer_id):
             else:
                 nueva_fecha = now_utc() + relativedelta(months=1)
             
-            # Actualizamos subscription_end, estado_suscripcion y stripe_customer_id
+            # Actualizamos subscription_end, estado_suscripcion, stripe_customer_id Y plan_type
             cursor.execute("""
                 UPDATE usuarios 
                 SET subscription_end = %s, 
                     estado_suscripcion = 'Activo',
-                    stripe_customer_id = %s
+                    stripe_customer_id = %s,
+                    plan_type = %s
                 WHERE id = %s
-            """, (nueva_fecha, stripe_customer_id, user_id))
+            """, (nueva_fecha, stripe_customer_id, plan, user_id))
 
             cursor.execute("""
                 INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
@@ -211,14 +212,15 @@ def pago_exitoso():
                     cursor.execute("SELECT username, email FROM usuarios WHERE id = %s", (user_id,))
                     user_data = cursor.fetchone()
 
-                    # Actualizamos la suscripción
+                    # Actualizamos la suscripción y el plan
                     cursor.execute("""
                         UPDATE usuarios 
                         SET subscription_end = %s, 
                             estado_suscripcion = 'Activo',
-                            stripe_customer_id = %s
+                            stripe_customer_id = %s,
+                            plan_type = %s
                         WHERE id = %s
-                    """, (nueva_fecha, stripe_customer_id, user_id))
+                    """, (nueva_fecha, stripe_customer_id, plan, user_id))
                     
                     # Registrar en logs
                     cursor.execute("""
@@ -309,7 +311,7 @@ def procesar_cancelacion(stripe_customer_id):
             # Usamos now_utc() para mantener la consistencia con el resto de tu app
             cursor.execute("""
                 UPDATE usuarios 
-                SET estado_suscripcion = 'Cancelada',
+                SET estado_suscripcion = 'Cancelado',
                     fecha_cancelacion = %s
                 WHERE id = %s
             """, (now_utc(), user['id']))

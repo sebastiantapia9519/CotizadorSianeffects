@@ -95,15 +95,19 @@ def dashboard():
             params.extend([f'%{search_query}%', f'%{search_query}%'])
 
         if status_filter == 'expirados':
-            base_where += " AND u.plan_type != 'Free' OR u.subscription_end < %s"
+            # Ahora busca el estado 'Vencido' directamente o fechas que ya pasaron
+            base_where += " AND (LOWER(u.estado_suscripcion) IN ('vencida', 'vencido', 'expirada', 'cancelada', 'cancelado', 'pago fallido') OR u.subscription_end < %s)"
             params.append(ahora_utc)
         elif status_filter == 'activos':
-            base_where += " AND u.plan_type != 'Free' AND u.subscription_end >= %s"
+            # Busca explícitamente el estado 'Activo' (blindado con LOWER) o que su plan_type sea de pago y fecha vigente
+            base_where += " AND (LOWER(u.estado_suscripcion) = 'activo' OR LOWER(u.plan_type) IN ('mensual', 'anual')) AND u.subscription_end >= %s"
             params.append(ahora_utc)
         elif status_filter == 'trial':
-            base_where += " AND u.estado_suscripcion = 'Trial'"
+            # Busca los que están en Trial (ignorando mayúsculas/minúsculas)
+            base_where += " AND LOWER(u.estado_suscripcion) = 'trial'"
         elif status_filter == 'free':
-            base_where += " AND u.plan_type = 'Free'"
+            # Busca los que tienen el plan_type en 'Free' (ignorando mayúsculas/minúsculas)
+            base_where += " AND LOWER(u.plan_type) = 'free'"
 
         # 3. CONTEO TOTAL
         count_sql = f"SELECT COUNT(*) as total FROM usuarios u {base_where}"

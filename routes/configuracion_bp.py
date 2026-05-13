@@ -431,7 +431,7 @@ def actualizar_logistica_base():
         flash('Los costos y márgenes de envío deben ser numéricos.', 'danger')
         return redirect(url_for('configuracion.configuracion') + '#list-envios')
 
-    # 2. LÓGICA PRO: RESOLUCIÓN DE LINKS CORTOS
+    # 2. RESOLUCIÓN DE LINKS CORTOS
     if origin_address and ("goo.gl" in origin_address or "googleusercontent" in origin_address):
         try:
             import requests

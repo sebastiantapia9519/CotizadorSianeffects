@@ -128,8 +128,8 @@ def login():
                 try:
                     ahora = now_utc().replace(tzinfo=None) if now_utc().tzinfo else now_utc()
                     
-                    # Verificamos si tiene fecha de fin y si el estado es 'activa' o 'activo'
-                    if sub_end and estado in ['activa', 'activo']:
+                    # Verificamos si tiene fecha de fin y si el estado es 'trial' o 'activo'
+                    if sub_end and estado in ['trial', 'activo']:
                         sub_end_clean = sub_end.replace(tzinfo=None) if sub_end.tzinfo else sub_end
                         if sub_end_clean > ahora:
                             session['is_pro_active'] = True
@@ -283,7 +283,7 @@ def registro():
             username, email, hashed_pw, telefono, company_name,
             0, subscription_end, created_at, created_at, True,
             origen_registro, utm_campaign, False,
-            'activa', 'Trial'  # Forzamos los valores iniciales correctos
+            'Trial', 'Free'  
         ))
 
         user_id = cursor.fetchone()['id']  # ID del usuario recién creado

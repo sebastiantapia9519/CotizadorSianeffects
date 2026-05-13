@@ -14,7 +14,6 @@ def index():
     admin_id = session.get('user_id', 'N/A')
     
     conn = get_db_connection()
-    # ACTIVAMOS EL MODO DICCIONARIO: Ahora los resultados son {'columna': valor}
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     
     nombres_meses = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
@@ -25,7 +24,7 @@ def index():
     semana_proxima = ahora + timedelta(days=7)
     
     try:
-        # 1. TOTALES (Limpios y legibles)
+        # 1. TOTALES
         cursor.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1")
         total_usuarios = cursor.fetchone()['total']
         
@@ -38,7 +37,7 @@ def index():
                        (ahora, semana_proxima))
         proximos_a_vencer = cursor.fetchone()['total']
 
-        # 2. HEAVY USERS (Orden SQL corregido)
+        # 2. HEAVY USERS
         query_heavy = '''
             SELECT u.username, u.company_name, u.subscription_end, COUNT(v.id) as total_cotizaciones
             FROM usuarios u
@@ -53,7 +52,6 @@ def index():
             query_heavy += " AND to_char(v.fecha, 'YYYY') = %s"
             params_heavy.append(anio_sel)
         
-        # En Postgres, si agrupas, debes incluir todas las columnas seleccionadas
         query_heavy += " GROUP BY u.id, u.username, u.company_name, u.subscription_end ORDER BY total_cotizaciones DESC LIMIT 5"
         cursor.execute(query_heavy, params_heavy)
         top_leales = cursor.fetchall()
@@ -61,7 +59,6 @@ def index():
         # 3. GRÁFICA CRECIMIENTO
         meses_labels, usuarios_data = [], []
         for i in range(-5, 1):
-            # Usamos as_string=False para obtener el objeto y extraer año/mes
             fecha_dt = ahora_sql(meses=i, as_string=False)
             y, m = str(fecha_dt.year), f"{fecha_dt.month:02d}"
             meses_labels.append(f"{nombres_meses[int(m)-1]} {y}")
@@ -69,23 +66,7 @@ def index():
             cursor.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1 AND to_char(created_at, 'MM') = %s AND to_char(created_at, 'YYYY') = %s", (m, y))
             usuarios_data.append(cursor.fetchone()['total'])
 
-        # 4. ORIGEN
-        query_origen = "SELECT origen_registro, COUNT(id) as conteo FROM usuarios WHERE role <= 1"
-        params_origen = []
-        if mes_sel:
-            query_origen += " AND to_char(created_at, 'MM') = %s"
-            params_origen.append(mes_sel)
-        if anio_sel:
-            query_origen += " AND to_char(created_at, 'YYYY') = %s"
-            params_origen.append(anio_sel)
-        
-        query_origen += " GROUP BY origen_registro"
-        cursor.execute(query_origen, params_origen)
-        origen_raw = cursor.fetchall()
-        origen_labels = [r['origen_registro'].capitalize() for r in origen_raw if r['origen_registro']]
-        origen_data = [r['conteo'] for r in origen_raw if r['origen_registro']]
-
-        # 5. SEGMENTACIÓN
+        # 4. SEGMENTACIÓN
         segmentos = {"Zombies (0-2)": 0, "Exploradores (3-14)": 0, "Power Users (15+)": 0}
         query_segmentos = "SELECT COUNT(v.id) as total_v FROM usuarios u LEFT JOIN ventas v ON u.id = v.user_id WHERE u.role <= 1"
         params_seg = []
@@ -106,16 +87,83 @@ def index():
             elif 3 <= cots <= 14: segmentos["Exploradores (3-14)"] += 1
             else: segmentos["Power Users (15+)"] += 1
 
+        # =====================================================================
+        # 5. MÉTRICAS FINANCIERAS Y STRIPE (BLINDADO)
+        # =====================================================================
+        
+        # A. Distribución de planes y MRR
+        # Usamos LOWER() para que acepte 'Activo', 'activo', 'ACTIVO' o 'activa'
+        cursor.execute("""
+            SELECT LOWER(plan_type) as plan_normalizado, COUNT(id) as cantidad 
+            FROM usuarios 
+            WHERE LOWER(estado_suscripcion) IN ('activo', 'activa') 
+            AND role <= 1
+            AND subscription_end > %s 
+            GROUP BY LOWER(plan_type)
+        """, (ahora,))
+        desglose_planes = cursor.fetchall()
+        
+        PRECIO_MENSUAL = 149
+        PRECIO_ANUAL = 1490
+        
+        mrr_total = 0
+        planes_dict = {'mensual': 0, 'anual': 0, 'free': 0}
+        
+        for fila in desglose_planes:
+            tipo = (fila['plan_normalizado'] or 'free').strip()
+            cantidad = fila['cantidad']
+            
+            # Solo actualizamos el dict si es una llave que conocemos
+            if tipo in planes_dict:
+                planes_dict[tipo] += cantidad
+            else:
+                # Si llega basura de la BD, la mandamos a free
+                planes_dict['free'] = planes_dict.get('free', 0) + cantidad
+            
+            if tipo == 'mensual':
+                mrr_total += (cantidad * PRECIO_MENSUAL)
+            elif tipo == 'anual':
+                mrr_total += (cantidad * (PRECIO_ANUAL / 12))
+
+        # B. Churn (Cancelaciones)
+        query_churn = "SELECT COUNT(id) as bajas FROM usuarios WHERE LOWER(estado_suscripcion) IN ('cancelada', 'cancelado') AND role <= 1"
+        params_churn = []
+        if mes_sel:
+            query_churn += " AND to_char(fecha_cancelacion, 'MM') = %s"
+            params_churn.append(mes_sel)
+        if anio_sel:
+            query_churn += " AND to_char(fecha_cancelacion, 'YYYY') = %s"
+            params_churn.append(anio_sel)
+            
+        cursor.execute(query_churn, params_churn)
+        churn_total = cursor.fetchone()['bajas']
+
+        # C. Nuevas Activaciones PRO
+        query_nuevos = "SELECT COUNT(id) as nuevos FROM logs_actividad WHERE accion LIKE 'Activación PRO%%' AND modulo = 'Pagos'"
+        params_nuevos = []
+        if mes_sel:
+            query_nuevos += " AND to_char(created_at, 'MM') = %s"
+            params_nuevos.append(mes_sel)
+        if anio_sel:
+            query_nuevos += " AND to_char(created_at, 'YYYY') = %s"
+            params_nuevos.append(anio_sel)
+            
+        cursor.execute(query_nuevos, params_nuevos)
+        nuevos_pro = cursor.fetchone()['nuevos']
+
         return render_template(
             'dashboard/index.html',
             total_usuarios=total_usuarios, activos=activos, vencidos=vencidos, proximos_a_vencer=proximos_a_vencer,
-            ahora_actual=ahora_sql(as_string=True), # Para el texto en el footer del dashboard
+            ahora_actual=ahora_sql(as_string=True),
             top_leales=top_leales, meses_labels=meses_labels, usuarios_data=usuarios_data,
-            origen_labels=origen_labels, origen_data=origen_data,
             seg_labels=list(segmentos.keys()), seg_data=list(segmentos.values()),
             mes_sel=mes_sel, anio_sel=anio_sel,
             lista_meses=[(f"{i:02d}", nombres_meses[i-1]) for i in range(1, 13)],
-            lista_anios=[2025, 2026, 2027, 2028]
+            lista_anios=[2025, 2026, 2027, 2028],
+            mrr_total=round(mrr_total, 2),
+            planes_dict=planes_dict,
+            churn_total=churn_total,
+            nuevos_pro=nuevos_pro
         )
 
     except Exception as e:

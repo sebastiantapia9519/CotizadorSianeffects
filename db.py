@@ -131,7 +131,9 @@ def init_db():
         fecha_cancelacion TIMESTAMP,
         plan_type TEXT DEFAULT 'Free',
         trial_start TIMESTAMP,
-        
+        dias_regalados INTEGER DEFAULT 0,
+        recordatorio_enviado BOOLEAN DEFAULT FALSE,
+        stripe_customer_id TEXT,
         verificado BOOLEAN DEFAULT FALSE,
         tutorial_visto BOOLEAN DEFAULT FALSE
     )
@@ -175,7 +177,13 @@ def init_db():
         logo_empresa TEXT DEFAULT '',
         mostrar_ayuda BOOLEAN DEFAULT TRUE,
         modo_oscuro BOOLEAN DEFAULT FALSE,
-        ticket_bw BOOLEAN DEFAULT FALSE
+        ticket_bw BOOLEAN DEFAULT FALSE,
+        servicios_mensuales_estimados INTEGER DEFAULT 100,
+        porcentaje_gastos_operativos REAL DEFAULT 10,
+        notas_ticket VARCHAR(255) DEFAULT '',
+        labor_activa BOOLEAN DEFAULT FALSE,
+        salario_deseado NUMERIC DEFAULT 15000,
+        horas_semanales NUMERIC DEFAULT 20
     )
     """)
 
@@ -278,8 +286,10 @@ def init_db():
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL,
         accion TEXT,
-        detalle TEXT,
+        modulo TEXT,
         fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        detalle TEXT,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (user_id) REFERENCES usuarios(id)
     )
     """)
@@ -317,7 +327,9 @@ def init_db():
         costo_total REAL DEFAULT 0,
         document_type TEXT DEFAULT 'receipt',
         tax_engine TEXT DEFAULT 'none',
-        impuestos REAL DEFAULT 0
+        impuestos REAL DEFAULT 0,
+        envio REAL DEFAULT 0,
+        costo_fijo_prorrateado NUMERIC DEFAULT 0
     )
     """)
 
@@ -359,7 +371,7 @@ def init_db():
         media_url TEXT NOT NULL,
         media_type TEXT DEFAULT 'image',
         precio REAL DEFAULT 0,
-        stock INTEGER DEFAULT 1,
+        stock BOOLEAN DEFAULT TRUE,
         orden INTEGER DEFAULT 0,
         activo BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -519,6 +531,38 @@ def init_db():
         notas TEXT,
         FOREIGN KEY(planner_id) REFERENCES planners(id)
     )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS anuncios_globales (
+            id SERIAL PRIMARY KEY,
+            titulo VARCHAR(255) NOT NULL,
+            mensaje TEXT NOT NULL,
+            tipo VARCHAR(50) DEFAULT 'info',
+            url TEXT,
+            activo BOOLEAN DEFAULT TRUE,
+            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS anuncios_vistos (
+            user_id INTEGER NOT NULL,
+            anuncio_id INTEGER NOT NULL,
+            fecha_visto TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS notificaciones_manuales (
+            id SERIAL PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            titulo VARCHAR(255) NOT NULL,
+            mensaje TEXT NOT NULL,
+            tipo VARCHAR(50) DEFAULT 'info',
+            leida BOOLEAN DEFAULT FALSE,
+            url TEXT,
+            batch_id VARCHAR(255),
+            fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
     """)
     
     # =========================
