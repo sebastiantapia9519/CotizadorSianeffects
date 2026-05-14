@@ -132,23 +132,35 @@ def webhook():
 # LÓGICA DE ACTUALIZACIÓN DE USUARIO Y LOGS
 # =============================================================================
 def procesar_pago_exitoso(user_id, plan, stripe_session_id, stripe_customer_id):
-    """
-    Actualiza el rol del usuario, extiende su suscripción, guarda el Customer ID,
-    registra el log y dispara el correo.
-    """
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT username, email FROM usuarios WHERE id = %s", (user_id,))
+        # 1. Traemos los datos actuales para ver si acumulamos tiempo
+        cursor.execute("SELECT username, email, subscription_end FROM usuarios WHERE id = %s", (user_id,))
         user = cursor.fetchone()
         
         if user:
-            if plan == 'anual':
-                nueva_fecha = now_utc() + relativedelta(years=1)
-            else:
-                nueva_fecha = now_utc() + relativedelta(months=1)
+            ahora = now_utc()
+            current_end = user['subscription_end']
             
-            # Actualizamos subscription_end, estado_suscripcion, stripe_customer_id Y plan_type
+            # Normalizar timezone si es necesario
+            if current_end and current_end.tzinfo is None:
+                current_end = current_end.replace(tzinfo=timezone.utc)
+
+            # LÓGICA CLAVE: ¿Desde cuándo sumamos?
+            # Si el usuario sigue activo, sumamos desde su fecha de vencimiento. 
+            # Si ya venció, sumamos desde hoy.
+            base_date = current_end if (current_end and current_end > ahora) else ahora
+
+            if plan == 'anual':
+                nueva_fecha = base_date + relativedelta(years=1)
+            else:
+                nueva_fecha = base_date + relativedelta(months=1)
+            
+            # Forzar cierre del día 23:59:59
+            nueva_fecha = nueva_fecha.replace(hour=23, minute=59, second=59)
+
+            # 2. Actualizamos la BD (Igual que antes pero con la fecha exacta)
             cursor.execute("""
                 UPDATE usuarios 
                 SET subscription_end = %s, 
@@ -157,11 +169,13 @@ def procesar_pago_exitoso(user_id, plan, stripe_session_id, stripe_customer_id):
                     plan_type = %s
                 WHERE id = %s
             """, (nueva_fecha, stripe_customer_id, plan, user_id))
-
+            
+            # LOGGING MANUAL (Opcional pero recomendado para ver el acumulado)
+            dias_agregados = (nueva_fecha - (current_end if current_end else ahora)).days
             cursor.execute("""
                 INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
                 VALUES (%s, %s, %s, %s)
-            """, (user_id, f"Renovación PRO {plan} exitosa", "Pagos", f"Stripe ID: {stripe_session_id}"))  
+            """, (user_id, f"Renovación {plan} exitosa", "Pagos", f"Stripe ID: {stripe_session_id} | Se sumaron {dias_agregados} días."))
 
             conn.commit()
 

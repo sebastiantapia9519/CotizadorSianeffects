@@ -26,6 +26,7 @@ from flask import (
 )
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
+from dateutil.relativedelta import relativedelta
 
 from db import get_db_connection as get_db
 from helpers import admin_required
@@ -108,6 +109,9 @@ def dashboard():
         elif status_filter == 'free':
             # Busca los que tienen el plan_type en 'Free' (ignorando mayúsculas/minúsculas)
             base_where += " AND LOWER(u.plan_type) = 'free'"
+        elif status_filter == 'cortesia':
+            # Filtro para el nuevo estado de cortesía manual
+            base_where += " AND LOWER(u.plan_type) = 'cortesia'"
 
         # 3. CONTEO TOTAL
         count_sql = f"SELECT COUNT(*) as total FROM usuarios u {base_where}"
@@ -251,7 +255,7 @@ def dashboard():
 def renovar():
     """
     Renueva la suscripción de un usuario por N meses.
-    Requiere role >= 1. Usa POST para protección CSRF.
+    Diferencia automáticamente entre planes Mensuales, Anuales o Pro.
     """
     if session.get('role') < 1:
         flash('No tienes permisos para renovar membresías.', 'error')
@@ -260,33 +264,74 @@ def renovar():
     admin_id   = session.get('user_id')
     admin_name = session.get('username', 'Admin_Desconocido')
 
-    user_id         = request.form.get('user_id')
-    meses           = int(request.form.get('meses', 1))
-    nueva_fecha_fin = now_utc() + timedelta(days=meses * 30)
+    user_id = request.form.get('user_id')
+    try:
+        meses = int(request.form.get('meses', 1))
+    except (ValueError, TypeError):
+        meses = 1
+
+    # 1. Definir el tipo de plan según los meses seleccionados
+    if meses == 1:
+        nuevo_plan = 'Mensual'
+    elif meses == 12:
+        nuevo_plan = 'Anual'
+    else:
+        nuevo_plan = 'Pro'
 
     conn   = get_db()
     cursor = conn.cursor()
-    try:
-        cursor.execute('SELECT username FROM usuarios WHERE id = %s', (user_id,))
-        target      = cursor.fetchone()
-        target_name = target['username'] if target else f"ID {user_id}"
 
+    try:
+        # 2. Consultar datos actuales del usuario (Nombre y Vencimiento)
+        cursor.execute('SELECT username, subscription_end FROM usuarios WHERE id = %s', (user_id,))
+        target = cursor.fetchone()
+        
+        if not target:
+            flash('Usuario no encontrado.', 'error')
+            return redirect(url_for('admin.dashboard'))
+
+        target_name = target['username']
+        current_sub_end = target['subscription_end']
+        ahora = now_utc()
+
+        # 3. Lógica de acumulación con relativedelta (MESES REALES)
+        if current_sub_end:
+            if current_sub_end.tzinfo is None:
+                current_sub_end = current_sub_end.replace(tzinfo=timezone.utc)
+            
+            # Si sigue activo, sumamos meses reales desde el vencimiento
+            if current_sub_end > ahora:
+                nueva_fecha_fin = current_sub_end + relativedelta(months=meses)
+            else:
+                # Si ya venció, sumamos meses reales desde hoy
+                nueva_fecha_fin = ahora + relativedelta(months=meses)
+        else:
+            nueva_fecha_fin = ahora + relativedelta(months=meses)
+
+        # Forzar que el día termine a las 23:59:59 para evitar micro-desfases
+        nueva_fecha_fin = nueva_fecha_fin.replace(hour=23, minute=59, second=59)
+
+        # 4. Actualización en la Base de Datos
         cursor.execute(
-            'UPDATE usuarios SET subscription_end = %s, estado_suscripcion = %s WHERE id = %s',
-            (nueva_fecha_fin, 'Activo', user_id)
+            '''UPDATE usuarios 
+               SET subscription_end = %s, 
+                   estado_suscripcion = %s, 
+                   plan_type = %s 
+               WHERE id = %s''',
+            (nueva_fecha_fin, 'Activo', nuevo_plan, user_id)
         )
         conn.commit()
 
         current_app.logger.info(
             f"SUB_RENEWED: Admin '{admin_name}' (ID:{admin_id}) renovó a '{target_name}' "
-            f"(ID:{user_id}) por {meses} mes(es)."
+            f"(ID:{user_id}) por {meses} mes(es) como plan {nuevo_plan}."
         )
-        flash(f'Suscripción de {target_name} renovada por {meses} mes(es).', 'success')
+        flash(f'Suscripción de {target_name} renovada ({nuevo_plan}) por {meses} mes(es).', 'success')
 
     except Exception as e:
         conn.rollback()
         current_app.logger.error(f"SUB_RENEWED_ERROR: Admin '{admin_name}' (ID:{admin_id}) → {e}")
-        flash('Error al renovar la suscripción.', 'error')
+        flash(f'Error al renovar: {str(e)}', 'error')
     finally:
         cursor.close()
         conn.close()
@@ -650,7 +695,11 @@ def sumar_tiempo():
             UPDATE usuarios
             SET subscription_end   = %s,
                 estado_suscripcion = %s,
-                plan_type          = CASE WHEN plan_type = 'Free' THEN 'Pro' ELSE plan_type END,
+                -- Si es Free, ahora será 'Cortesia'. Si ya tenía algo, lo mantenemos o marcamos como extensión
+                plan_type          = CASE 
+                                        WHEN plan_type = 'Free' THEN 'Cortesia' 
+                                        ELSE plan_type 
+                                     END,
                 dias_regalados     = COALESCE(dias_regalados, 0) + %s
             WHERE id = %s
         ''', (nueva_fecha_fin, 'Activo', dias_a_sumar, user_id))

@@ -396,7 +396,7 @@
 
     <div class="filtros-divider"></div>
 
-    <!-- Fila 2: Pills de estado (scroll horizontal en mobile) -->
+    <!-- Fila 2: Pills de estado -->
     <div class="filtros-pills-row">
         <button type="button"
             class="btn-filter {% if not status_filter or status_filter == 'all' %}active{% endif %}"
@@ -407,6 +407,11 @@
             class="btn-filter {% if status_filter == 'activos' %}active{% endif %}"
             onclick="setAdminStatus('activos', this)">
             🟢 Premium Activos
+        </button>
+        <button type="button"
+            class="btn-filter {% if status_filter == 'cortesia' %}active{% endif %}"
+            onclick="setAdminStatus('cortesia', this)">
+            🎁 En Cortesía
         </button>
         <button type="button"
             class="btn-filter {% if status_filter == 'expirados' %}active{% endif %}"
@@ -492,6 +497,7 @@
                         {% set badge_class = 'badge-vencido' %}
                         {% set badge_text = 'Expirado' %}
                         {% set estado_lower = estado_bd|lower %}
+                        {% set plan_lower = plan|lower %}
 
                         {% if u['role'] >= 1 %}
                             {% set badge_class = 'badge-activo' %}
@@ -509,6 +515,13 @@
                                 {% if dias_restantes <= 3 %}
                                     {% set badge_class = 'badge-alerta' %}
                                     {% set badge_text = 'Vence en ' ~ dias_restantes ~ 'd' %}
+                                {% endif %}
+                            {% elif plan_lower == 'cortesia' %} <!-- NUEVA LÓGICA -->
+                                {% set badge_class = 'badge-activo' %}
+                                {% set badge_text = '🎁 Cortesía' %}
+                                {% if dias_restantes <= 3 %}
+                                    {% set badge_class = 'badge-alerta' %}
+                                    {% set badge_text = 'Regalo vence: ' ~ dias_restantes ~ 'd' %}
                                 {% endif %}
                             {% else %}
                                 {% set badge_class = 'badge-activo' %}

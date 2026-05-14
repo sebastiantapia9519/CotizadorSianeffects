@@ -87,12 +87,14 @@ def index():
             elif 3 <= cots <= 14: segmentos["Exploradores (3-14)"] += 1
             else: segmentos["Power Users (15+)"] += 1
 
-        # =====================================================================
+# =====================================================================
         # 5. MÉTRICAS FINANCIERAS Y STRIPE (BLINDADO)
         # =====================================================================
         
-        # A. Distribución de planes y MRR
-        # Usamos LOWER() para que acepte 'Activo', 'activo', 'ACTIVO' o 'activa'
+        PRECIO_MENSUAL = 149
+        PRECIO_ANUAL = 1490
+
+        # A. Distribución de planes y MRR (Salud a largo plazo)
         cursor.execute("""
             SELECT LOWER(plan_type) as plan_normalizado, COUNT(id) as cantidad 
             FROM usuarios 
@@ -103,9 +105,6 @@ def index():
         """, (ahora,))
         desglose_planes = cursor.fetchall()
         
-        PRECIO_MENSUAL = 149
-        PRECIO_ANUAL = 1490
-        
         mrr_total = 0
         planes_dict = {'mensual': 0, 'anual': 0, 'free': 0}
         
@@ -113,17 +112,83 @@ def index():
             tipo = (fila['plan_normalizado'] or 'free').strip()
             cantidad = fila['cantidad']
             
-            # Solo actualizamos el dict si es una llave que conocemos
             if tipo in planes_dict:
                 planes_dict[tipo] += cantidad
             else:
-                # Si llega basura de la BD, la mandamos a free
                 planes_dict['free'] = planes_dict.get('free', 0) + cantidad
             
             if tipo == 'mensual':
                 mrr_total += (cantidad * PRECIO_MENSUAL)
             elif tipo == 'anual':
                 mrr_total += (cantidad * (PRECIO_ANUAL / 12))
+
+        # B. Churn (Cancelaciones en el periodo seleccionado)
+        query_churn = "SELECT COUNT(id) as bajas FROM usuarios WHERE LOWER(estado_suscripcion) IN ('cancelada', 'cancelado') AND role <= 1"
+        params_churn = []
+        if mes_sel:
+            query_churn += " AND to_char(fecha_cancelacion, 'MM') = %s"
+            params_churn.append(mes_sel)
+        if anio_sel:
+            query_churn += " AND to_char(fecha_cancelacion, 'YYYY') = %s"
+            params_churn.append(anio_sel)
+            
+        cursor.execute(query_churn, params_churn)
+        churn_total = cursor.fetchone()['bajas']
+
+        # C. Nuevas Activaciones PRO (En el periodo seleccionado)
+        query_nuevos = "SELECT COUNT(id) as nuevos FROM logs_actividad WHERE accion LIKE 'Activación PRO%%' AND modulo = 'Pagos'"
+        params_nuevos = []
+        if mes_sel:
+            query_nuevos += " AND to_char(created_at, 'MM') = %s"
+            params_nuevos.append(mes_sel)
+        if anio_sel:
+            query_nuevos += " AND to_char(created_at, 'YYYY') = %s"
+            params_nuevos.append(anio_sel)
+            
+        cursor.execute(query_nuevos, params_nuevos)
+        nuevos_pro = cursor.fetchone()['nuevos']
+
+        # D. FLUJO DE CAJA / INGRESOS REALES (Dinero en el banco este mes)
+        query_ingresos = """
+            SELECT accion 
+            FROM logs_actividad 
+            WHERE (accion LIKE 'Activación PRO%%' OR accion LIKE 'Renovación PRO%%') 
+            AND modulo = 'Pagos'
+        """
+        params_ingresos = []
+        if mes_sel:
+            query_ingresos += " AND to_char(created_at, 'MM') = %s"
+            params_ingresos.append(mes_sel)
+        if anio_sel:
+            query_ingresos += " AND to_char(created_at, 'YYYY') = %s"
+            params_ingresos.append(anio_sel)
+            
+        cursor.execute(query_ingresos, params_ingresos)
+        pagos_logs = cursor.fetchall()
+
+        ingresos_brutos = 0
+        for pago in pagos_logs:
+            accion_texto = pago['accion'].lower()
+            if 'anual' in accion_texto:
+                ingresos_brutos += PRECIO_ANUAL
+            elif 'mensual' in accion_texto:
+                ingresos_brutos += PRECIO_MENSUAL
+
+        return render_template(
+            'dashboard/index.html',
+            total_usuarios=total_usuarios, activos=activos, vencidos=vencidos, proximos_a_vencer=proximos_a_vencer,
+            ahora_actual=ahora_sql(as_string=True),
+            top_leales=top_leales, meses_labels=meses_labels, usuarios_data=usuarios_data,
+            seg_labels=list(segmentos.keys()), seg_data=list(segmentos.values()),
+            mes_sel=mes_sel, anio_sel=anio_sel,
+            lista_meses=[(f"{i:02d}", nombres_meses[i-1]) for i in range(1, 13)],
+            lista_anios=[2025, 2026, 2027, 2028],
+            mrr_total=round(mrr_total, 2),
+            ingresos_brutos=ingresos_brutos,
+            planes_dict=planes_dict,
+            churn_total=churn_total,
+            nuevos_pro=nuevos_pro
+        )
 
         # B. Churn (Cancelaciones)
         query_churn = "SELECT COUNT(id) as bajas FROM usuarios WHERE LOWER(estado_suscripcion) IN ('cancelada', 'cancelado') AND role <= 1"
