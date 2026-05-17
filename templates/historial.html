@@ -411,12 +411,12 @@
         left: 0;
         background: white;
         border: 1px solid var(--border-color);
-        border-radius: 14px;
-        overflow: hidden;
-        min-width: 160px;
-        box-shadow: var(--shadow-md);
+        border-radius: 18px;
+        min-width: 220px;
+        box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.35);
+        padding: 10px;
         opacity: 0;
-        transform: translateY(-5px);
+        transform: translateY(8px) scale(0.98);
         pointer-events: none;
         transition: var(--transition-smooth);
         z-index: 999;
@@ -424,20 +424,41 @@
 
     .estado-menu.show {
         opacity: 1;
-        transform: translateY(0);
+        transform: translateY(0) scale(1);
         pointer-events: auto;
     }
 
-    .estado-menu div {
-        padding: 10px 14px;
-        font-size: .85rem;
-        font-weight: 500;
+    .estado-menu-title {
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 8px 10px 10px;
+    }
+
+    .estado-menu-option {
+        border-radius: 12px;
+        padding: 11px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1e293b;
         cursor: pointer;
         transition: background 0.15s ease;
     }
 
-    .estado-menu div:hover {
+    .estado-menu-option:hover {
         background: #f8fafc;
+    }
+
+    .estado-menu-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        flex-shrink: 0;
     }
 
     /* ===================================================
@@ -1040,6 +1061,25 @@
         color: #f8fafc;
     }
 
+    [data-bs-theme="dark"] .estado-menu {
+        background: #1e293b !important;
+        border-color: #475569 !important;
+        box-shadow: 0 16px 30px rgba(0, 0, 0, 0.35) !important;
+    }
+
+    [data-bs-theme="dark"] .estado-menu-title {
+        color: #94a3b8 !important;
+    }
+
+    [data-bs-theme="dark"] .estado-menu-option {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .estado-menu-option:hover {
+        background: #334155 !important;
+        color: #ffffff !important;
+    }
+
     [data-bs-theme="dark"] .btn-filter {
         background-color: #1e293b;
         border-color: #334155;
@@ -1389,11 +1429,22 @@
                                 </span>
                             </div>
                             <div class="estado-menu" onclick="event.stopPropagation()">
-                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'pendiente')">Pendiente</div>
-                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'en_proceso')">En proceso</div>
-                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'listo')">Listo</div>
-                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'entregado')">Entregado</div>
-                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'cancelado')">Anulada</div>
+                                
+                                <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'pendiente')">
+                                    <span class="estado-menu-dot bulk-dot-pendiente"></span> Pendiente
+                                </div>
+                                <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'en_proceso')">
+                                    <span class="estado-menu-dot bulk-dot-proceso"></span> En proceso
+                                </div>
+                                <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'listo')">
+                                    <span class="estado-menu-dot bulk-dot-listo"></span> Listo
+                                </div>
+                                <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'entregado')">
+                                    <span class="estado-menu-dot bulk-dot-entregado"></span> Entregado
+                                </div>
+                                <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'cancelado')">
+                                    <span class="estado-menu-dot bulk-dot-cancelado"></span> Anulada
+                                </div>
                             </div>
                         </div>
                     </td>
@@ -1622,11 +1673,22 @@
                             </span>
                         </div>
                         <div class="estado-menu" onclick="event.stopPropagation()" style="left: auto; right: 0;">
-                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'pendiente')">Pendiente</div>
-                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'en_proceso')">En proceso</div>
-                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'listo')">Listo</div>
-                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'entregado')">Entregado</div>
-                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'cancelado')">Anulada</div>
+                            <div class="estado-menu-title">Cambiar pedido a</div>
+                            <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'pendiente')">
+                                <span class="estado-menu-dot bulk-dot-pendiente"></span> Pendiente
+                            </div>
+                            <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'en_proceso')">
+                                <span class="estado-menu-dot bulk-dot-proceso"></span> En proceso
+                            </div>
+                            <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'listo')">
+                                <span class="estado-menu-dot bulk-dot-listo"></span> Listo
+                            </div>
+                            <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'entregado')">
+                                <span class="estado-menu-dot bulk-dot-entregado"></span> Entregado
+                            </div>
+                            <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'cancelado')">
+                                <span class="estado-menu-dot bulk-dot-cancelado"></span> Anulada
+                            </div>
                         </div>
                     </div>
                 </div>
