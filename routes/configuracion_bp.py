@@ -98,14 +98,14 @@ def configuracion():
         if config_row:
             config = dict(config_row) 
             # Valores por defecto para usuarios antiguos
-            config.setdefault('porcentaje_gastos_operativos', 10)
+            config.setdefault('porcentaje_gastos_operativos', 0)
             config.setdefault('labor_activa', False)
             config.setdefault('salario_deseado', 15000.0)
             config.setdefault('horas_semanales', 20.0)
         else:
             config = {
                 'margen_ganancia': 100,
-                'porcentaje_gastos_operativos': 10,
+                'porcentaje_gastos_operativos': 0,
                 'labor_activa': False,
                 'salario_deseado': 15000.0,
                 'horas_semanales': 20.0,
@@ -278,10 +278,10 @@ def actualizar_negocio():
         margen = float(request.form.get('margen') or 0)
         try:
             porcentaje_operativo = float(
-                request.form.get('porcentaje_gastos_operativos') or 10
+                request.form.get('porcentaje_gastos_operativos') or 0
             )
         except ValueError:
-            porcentaje_operativo = 10.0
+            porcentaje_operativo = 0.0
 
         empresa = request.form.get('nombre_empresa', '')
         slogan = request.form.get('slogan', '')

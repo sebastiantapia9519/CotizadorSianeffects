@@ -5,7 +5,7 @@
 {% block extra_css %}
 <style>
     /* ===================================================
-       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
+       🎨 VARIABLES & TEMAS
        =================================================== */
     :root {
         --sian-pink-hover: #ff4757;
@@ -13,22 +13,20 @@
         --bg-light-gray: #f8fafc;
         --border-color: #e2e8f0;
         --sian-primary: #ff4a5a;
+        --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+        --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        --transition-fast: all 0.15s ease;
+        --transition-smooth: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
     }
 
     body {
         background-color: #f1f5f9;
     }
 
-    /* UI Elements */
-    .card-custom {
-        border: 1px solid var(--border-color);
-        border-radius: 16px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        background: white;
-        overflow: hidden;
-    }
 
-    /* Buscador Vercel-Style */
+    /* ===================================================
+       🔍 BUSCADOR (Vercel-Style)
+       =================================================== */
     .search-container {
         position: relative;
         display: flex;
@@ -40,14 +38,14 @@
         padding: 12px 20px 12px 45px;
         border: 1px solid var(--border-color);
         background-color: white;
-        transition: all 0.2s ease;
+        transition: var(--transition-fast);
         font-size: 0.95rem;
         width: 100%;
     }
 
     .search-input:focus {
-        border-color: var(--sian-pink);
-        box-shadow: 0 0 0 3px var(--sian-pink-light);
+        border-color: var(--sian-primary);
+        box-shadow: 0 0 0 3px rgba(255, 74, 90, 0.1);
         outline: none;
     }
 
@@ -67,10 +65,12 @@
         font-size: 0.85rem;
     }
 
-    /* Botones */
+    /* ===================================================
+       🔘 BOTONES
+       =================================================== */
     .btn-primary {
-        background-color: var(--sian-pink);
-        border-color: var(--sian-pink);
+        background-color: var(--sian-primary);
+        border-color: var(--sian-primary);
         font-weight: 600;
     }
 
@@ -84,7 +84,7 @@
         border: 1px solid var(--border-color);
         background-color: white;
         font-weight: 600;
-        transition: all 0.2s;
+        transition: var(--transition-fast);
     }
 
     .btn-outline-custom:hover {
@@ -93,7 +93,9 @@
         border-color: #cbd5e1;
     }
 
-    /* Tabla Shopify-Style */
+    /* ===================================================
+       📊 TABLA DESKTOP (Shopify-Style)
+       =================================================== */
     .table {
         margin-bottom: 0;
     }
@@ -117,14 +119,73 @@
     }
 
     .table tbody tr {
-        transition: background-color 0.15s ease;
+        transition: var(--transition-fast);
     }
 
     .table tbody tr:hover {
         background-color: #f8fafc;
     }
 
-    /* Badges de Estado Modernos */
+    #tablaVentas {
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    #tablaVentas .col-check {
+        width: 48px;
+    }
+
+    #tablaVentas .col-folio {
+        width: 17%;
+    }
+
+    #tablaVentas .col-cliente {
+        width: 22%;
+    }
+
+    #tablaVentas .col-pago {
+        width: 18%;
+        text-align: center;
+    }
+
+    #tablaVentas .col-pedido {
+        width: 18%;
+        text-align: center;
+    }
+
+    #tablaVentas .col-monto {
+        width: 12%;
+        text-align: center;
+    }
+
+    #tablaVentas .col-accion {
+        width: 76px;
+        text-align: center;
+    }
+
+    #tablaVentas .col-pago .filter-header,
+    #tablaVentas .col-pedido .filter-header {
+        justify-content: center;
+    }
+
+    /* Filas canceladas */
+    .row-cancelada {
+        background-color: #fdf2f2 !important;
+    }
+
+    .row-cancelada td {
+        color: #94a3b8;
+    }
+
+    .row-cancelada .folio-text,
+    .row-cancelada .cliente-text,
+    .row-cancelada .monto-text {
+        text-decoration: line-through;
+    }
+
+    /* ===================================================
+       🏷️ BADGES DE ESTADO
+       =================================================== */
     .badge-status {
         font-weight: 600;
         font-size: 0.75rem;
@@ -159,275 +220,9 @@
         border: 1px solid #fecaca;
     }
 
-    /* Filas Canceladas */
-    .row-cancelada {
-        background-color: #fdf2f2 !important;
-    }
-
-    .row-cancelada td {
-        color: #94a3b8;
-    }
-
-    .row-cancelada .folio-text,
-    .row-cancelada .cliente-text,
-    .row-cancelada .monto-text {
-        text-decoration: line-through;
-    }
-
-    /* Estilos Paginación */
-    .pagination {
-        gap: 4px;
-        margin-top: 10px;
-    }
-
-    .page-link {
-        border: 1px solid transparent;
-        color: #475569;
-        border-radius: 8px;
-        width: 32px;
-        height: 32px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: 500;
-        transition: all 0.2s;
-    }
-
-    .page-item.active .page-link {
-        background-color: var(--sian-pink);
-        color: white;
-        border-color: var(--sian-pink);
-    }
-
-    .page-link:hover:not(.active) {
-        background-color: #f1f5f9;
-        border-color: #e2e8f0;
-    }
-
-    .page-item.disabled .page-link {
-        background-color: transparent;
-        color: #cbd5e1;
-    }
-
-    /* Menú Dropdown */
-    .dropdown-menu-custom {
-        border-radius: 12px;
-        border: 1px solid var(--border-color);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-        padding: 8px;
-    }
-
-    .dropdown-menu-custom .dropdown-item {
-        border-radius: 6px;
-        padding: 8px 12px;
-        font-size: 0.85rem;
-        font-weight: 500;
-        color: #334155;
-        transition: background-color 0.2s;
-    }
-
-    .dropdown-menu-custom .dropdown-item:hover {
-        background-color: #f1f5f9;
-    }
-
-    .dropdown-menu-custom .dropdown-divider {
-        margin: 4px 0;
-        border-color: #f1f5f9;
-    }
-
-    /* Utilidades */
-    .text-xs {
-        font-size: 0.75rem;
-    }
-
-    .font-medium {
-        font-weight: 500;
-    }
-
-    @media (max-width: 768px) {
-        .table-responsive {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
-        }
-
-        .search-btn {
-            position: static;
-            transform: none;
-            width: 100%;
-            margin-top: 8px;
-        }
-
-        .search-input {
-            padding-right: 20px;
-        }
-
-        .card-custom {
-            border-radius: 12px;
-        }
-    }
-
-    /* Tutorial Custom Styles */
-    .driver-popover {
-        border-radius: 12px !important;
-    }
-
-    .driver-popover-title {
-        font-weight: bold !important;
-        color: var(--sian-primary) !important;
-    }
-
-    .driver-popover-next-btn {
-        background-color: var(--sian-primary) !important;
-        text-shadow: none !important;
-        border: none !important;
-    }
-
-
     /* ===================================================
-       2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
+       🎯 PILLS FILTRO (arriba de tabla/cards)
        =================================================== */
-    [data-bs-theme="dark"] {
-        --text-dark: #f8fafc;
-        --bg-light-gray: #0f172a;
-        --border-color: #334155;
-    }
-
-    [data-bs-theme="dark"] body {
-        background-color: #0f172a !important;
-        /* Azul marino profundo */
-    }
-
-    /* Forzamos colores sólidos en tarjetas y modales para evitar transparencias */
-    [data-bs-theme="dark"] .card-custom,
-    [data-bs-theme="dark"] .modal-content,
-    [data-bs-theme="dark"] .dropdown-menu-custom,
-    [data-bs-theme="dark"] .card-footer {
-        background-color: #1e293b !important;
-        /* Azul pizarra (Sólido) */
-        border-color: #334155 !important;
-    }
-
-    [data-bs-theme="dark"] .search-input {
-        background-color: #0f172a !important;
-        border-color: #334155 !important;
-        color: #f8fafc !important;
-    }
-
-    [data-bs-theme="dark"] .search-input:focus {
-        border-color: var(--sian-pink) !important;
-    }
-
-    [data-bs-theme="dark"] .btn-outline-custom {
-        background-color: transparent !important;
-        border-color: #334155 !important;
-        color: #94a3b8 !important;
-    }
-
-    [data-bs-theme="dark"] .btn-outline-custom:hover {
-        background-color: #334155 !important;
-        color: #f8fafc !important;
-    }
-
-    [data-bs-theme="dark"] .table th {
-        background-color: #0f172a !important;
-        border-color: #334155 !important;
-        color: #94a3b8 !important;
-    }
-
-    [data-bs-theme="dark"] .table td {
-        border-color: #334155 !important;
-        color: #f8fafc !important;
-    }
-
-    /* 🔥 SOLUCIÓN AL HOVER BLANCO EN LA TABLA 🔥 */
-    [data-bs-theme="dark"] .table tbody tr:hover {
-        background-color: #334155 !important;
-    }
-
-    [data-bs-theme="dark"] .table tbody tr:hover td {
-        background-color: transparent !important;
-    }
-
-    /* Ajuste visual para la fila de canceladas */
-    [data-bs-theme="dark"] .row-cancelada,
-    [data-bs-theme="dark"] .row-cancelada td {
-        background-color: rgba(220, 53, 69, 0.1) !important;
-        color: #ef4444 !important;
-    }
-
-    /* 🔥 SOLUCIÓN AL FONDO BLANCO / TRANSPARENTE EN MODALES 🔥 */
-    [data-bs-theme="dark"] .bg-light,
-    [data-bs-theme="dark"] .bg-white,
-    [data-bs-theme="dark"] .bg-light-gray {
-        background-color: #0f172a !important;
-    }
-
-    [data-bs-theme="dark"] .text-dark {
-        color: #f8fafc !important;
-    }
-
-    [data-bs-theme="dark"] .text-muted {
-        color: #94a3b8 !important;
-    }
-
-    [data-bs-theme="dark"] .border,
-    [data-bs-theme="dark"] .border-light,
-    [data-bs-theme="dark"] .border-bottom {
-        border-color: #334155 !important;
-    }
-
-    /* Paginación en Dark Mode */
-    [data-bs-theme="dark"] .page-link {
-        color: #94a3b8 !important;
-        background-color: #1e293b !important;
-        border-color: #334155 !important;
-    }
-
-    [data-bs-theme="dark"] .page-link:hover:not(.active) {
-        background-color: #334155 !important;
-    }
-
-    /* Dropdown Menú en Dark Mode */
-    [data-bs-theme="dark"] .dropdown-menu-custom .dropdown-item {
-        color: #f8fafc !important;
-    }
-
-    [data-bs-theme="dark"] .dropdown-menu-custom .dropdown-item:hover {
-        background-color: #334155 !important;
-    }
-
-    [data-bs-theme="dark"] .dropdown-menu-custom .dropdown-divider {
-        border-color: #334155 !important;
-    }
-
-    /* Botón X de modales */
-    [data-bs-theme="dark"] .btn-close {
-        filter: invert(1) grayscale(100%) brightness(200%);
-    }
-
-    /* Modales internos */
-    [data-bs-theme="dark"] .modal-body {
-        color: #f8fafc !important;
-    }
-
-    [data-bs-theme="dark"] .modal-body .table-borderless thead th {
-        background-color: #1e293b !important;
-        box-shadow: 0 1px 0 #334155 !important;
-        color: #94a3b8 !important;
-    }
-
-    [data-bs-theme="dark"] .table-responsive,
-    .table-responsive {
-        overflow: visible !important;
-        /* Permite que el menú flote fuera de la tabla */
-    }
-
-    .dropdown-menu-custom {
-        z-index: 9999 !important;
-        /* Asegura que esté por encima de todo */
-    }
-
     .filter-pills {
         display: flex;
         flex-wrap: wrap;
@@ -440,7 +235,7 @@
         font-weight: 600;
         padding: 6px 16px;
         border-radius: 50px;
-        transition: all 0.2s ease;
+        transition: var(--transition-fast);
         border: 1px solid var(--border-color);
         background: white;
         color: #64748b;
@@ -456,7 +251,6 @@
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
     }
 
-    /* Colores por estado (Activos) */
     .btn-filter.active[data-filter="all"] {
         background-color: #64748b;
         border-color: #64748b;
@@ -482,6 +276,770 @@
         border-color: #ef4444;
     }
 
+    /* ===================================================
+       ⚙️ FILTROS EXCEL STYLE (Desktop)
+       =================================================== */
+    .filter-header {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        user-select: none;
+    }
+
+    .filter-icon {
+        font-size: 0.7rem;
+        opacity: 0.6;
+    }
+
+    .excel-filter-menu {
+        position: absolute;
+        top: calc(100% + 10px);
+        left: 0;
+        width: 220px;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        padding: 12px;
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 9999;
+        box-shadow: var(--shadow-md);
+    }
+
+    .excel-filter-menu.show {
+        display: flex;
+    }
+
+    .excel-filter-menu label {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.85rem;
+        font-weight: 500;
+        cursor: pointer;
+    }
+
+    .excel-filter-menu input[type="checkbox"] {
+        cursor: pointer;
+    }
+
+    /* ===================================================
+       💄 ESTADO PILLS (Pedido)
+       =================================================== */
+    .estado-pill {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 7px 12px;
+        border-radius: 999px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+        border: 1px solid transparent;
+        user-select: none;
+    }
+
+    .estado-pill:hover {
+        transform: translateY(-1px);
+    }
+
+    .estado-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    /* Estados del pedido */
+    .estado-pendiente {
+        background: #fef9c3;
+        color: #854d0e;
+    }
+
+    .estado-pendiente .estado-dot {
+        background: #eab308;
+    }
+
+    .estado-proceso {
+        background: #ffedd5;
+        color: #c2410c;
+    }
+
+    .estado-proceso .estado-dot {
+        background: #f97316;
+    }
+
+    .estado-listo {
+        background: #dbeafe;
+        color: #1d4ed8;
+    }
+
+    .estado-listo .estado-dot {
+        background: #3b82f6;
+    }
+
+    .estado-entregado {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .estado-entregado .estado-dot {
+        background: #22c55e;
+    }
+
+    .estado-anulado {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .estado-anulado .estado-dot {
+        background: #ef4444;
+    }
+
+    .estado-wrapper {
+        position: relative;
+        display: inline-block;
+    }
+
+    .estado-menu {
+        position: absolute;
+        top: calc(100% + 8px);
+        left: 0;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 14px;
+        overflow: hidden;
+        min-width: 160px;
+        box-shadow: var(--shadow-md);
+        opacity: 0;
+        transform: translateY(-5px);
+        pointer-events: none;
+        transition: var(--transition-smooth);
+        z-index: 999;
+    }
+
+    .estado-menu.show {
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+    }
+
+    .estado-menu div {
+        padding: 10px 14px;
+        font-size: .85rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s ease;
+    }
+
+    .estado-menu div:hover {
+        background: #f8fafc;
+    }
+
+    /* ===================================================
+       🛒 BARRA FLOTANTE DE ACCIONES EN MASA
+       =================================================== */
+    .bulk-bar {
+        position: fixed;
+        bottom: -100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #1e293b;
+        color: white;
+        padding: 12px 24px;
+        border-radius: 12px;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+        transition: var(--transition-smooth);
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        z-index: 99999;
+    }
+
+    .bulk-bar.active {
+        bottom: 24px;
+    }
+
+    .bulk-bar select {
+        background: #334155;
+        color: white;
+        border: 1px solid #475569;
+        border-radius: 6px;
+        padding: 6px 30px 6px 12px;
+        font-size: 0.9rem;
+        cursor: pointer;
+    }
+
+    .bulk-bar select:focus {
+        border-color: var(--sian-primary);
+        outline: none;
+    }
+
+    .bulk-bar {
+        backdrop-filter: blur(14px);
+        background: rgba(15, 23, 42, 0.96);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .bulk-action-btn {
+        background: #334155;
+        border: 1px solid #475569;
+        color: white;
+        border-radius: 10px;
+        padding: 8px 14px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition-fast);
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .bulk-action-btn:hover {
+        background: #475569;
+    }
+
+    .bulk-state-menu {
+        position: absolute;
+        bottom: calc(100% + 12px);
+        right: 0;
+        width: 240px;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 18px;
+        box-shadow: 0 20px 45px -15px rgba(15, 23, 42, 0.35);
+        padding: 10px;
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+        pointer-events: none;
+        transition: var(--transition-smooth);
+    }
+
+    .bulk-state-menu.show {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+        pointer-events: auto;
+    }
+
+    .bulk-state-title {
+        font-size: 0.72rem;
+        font-weight: 800;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 8px 10px 10px;
+    }
+
+    .bulk-state-option {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        border-radius: 12px;
+        padding: 11px 12px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1e293b;
+        cursor: pointer;
+        transition: var(--transition-fast);
+    }
+
+    .bulk-state-option:hover {
+        background: #f8fafc;
+    }
+
+    .bulk-state-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 999px;
+        flex-shrink: 0;
+    }
+
+    .bulk-dot-pendiente {
+        background: #eab308;
+    }
+
+    .bulk-dot-proceso {
+        background: #f97316;
+    }
+
+    .bulk-dot-listo {
+        background: #3b82f6;
+    }
+
+    .bulk-dot-entregado {
+        background: #22c55e;
+    }
+
+    .bulk-dot-cancelado {
+        background: #ef4444;
+    }
+
+    .bulk-bar-inner {
+        position: relative;
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 768px) {
+        .bulk-bar {
+            width: calc(100% - 24px);
+            left: 12px;
+            right: 12px;
+            bottom: -120px;
+            transform: none;
+            padding: 12px;
+            border-radius: 18px;
+        }
+
+        .bulk-bar.active {
+            bottom: 14px;
+        }
+
+        .bulk-bar-inner {
+            width: 100%;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        #bulkCount {
+            font-size: 0.85rem;
+            white-space: nowrap;
+        }
+
+        .bulk-action-btn {
+            padding: 9px 12px;
+            font-size: 0.82rem;
+            border-radius: 12px;
+            white-space: nowrap;
+        }
+
+        .bulk-state-menu {
+            position: fixed;
+            left: 12px;
+            right: 12px;
+            bottom: 82px;
+            width: auto;
+            max-height: 70vh;
+            overflow-y: auto;
+            border-radius: 22px;
+            padding: 12px;
+            transform: translateY(12px);
+        }
+
+        .bulk-state-menu.show {
+            transform: translateY(0);
+        }
+
+        .bulk-state-title {
+            padding: 8px 10px 12px;
+            font-size: 0.7rem;
+        }
+
+        .bulk-state-option {
+            padding: 14px 12px;
+            font-size: 0.95rem;
+            border-radius: 14px;
+        }
+
+        .bulk-state-dot {
+            width: 11px;
+            height: 11px;
+        }
+    }
+
+    [data-bs-theme="dark"] .bulk-state-menu {
+        background: #1e293b;
+        border-color: #334155;
+    }
+
+    [data-bs-theme="dark"] .bulk-state-title {
+        color: #94a3b8;
+    }
+
+    [data-bs-theme="dark"] .bulk-state-option {
+        color: #f8fafc;
+    }
+
+    [data-bs-theme="dark"] .bulk-state-option:hover {
+        background: #334155;
+    }
+
+    /* ===================================================
+       📱 VISTA MÓVIL - CARDS
+       =================================================== */
+
+    /* Contenedor de cards */
+    .mobile-card-container {
+        display: none;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    /* Card individual (móvil) */
+    .mobile-venta-card {
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 12px;
+        padding: 16px;
+        transition: var(--transition-fast);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .mobile-venta-card:active {
+        background-color: #f8fafc;
+    }
+
+    .mobile-venta-card.row-cancelada {
+        background-color: #fdf2f2;
+        border-color: #fecaca;
+    }
+
+    /* Header de card: folio + cliente + checkbox */
+    .card-header-mobile {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .card-folio-cliente {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .card-folio {
+        font-weight: 700;
+        color: var(--text-dark);
+        font-size: 0.95rem;
+        margin-bottom: 4px;
+    }
+
+    .card-folio.cancelada {
+        text-decoration: line-through;
+        color: #94a3b8;
+    }
+
+    .card-cliente {
+        font-weight: 600;
+        color: var(--text-dark);
+        font-size: 0.9rem;
+        word-break: break-word;
+        margin-bottom: 4px;
+    }
+
+    .card-cliente.cancelada {
+        text-decoration: line-through;
+        color: #94a3b8;
+    }
+
+    .card-fecha {
+        font-size: 0.75rem;
+        color: #94a3b8;
+    }
+
+    .card-checkbox {
+        flex-shrink: 0;
+        margin-top: 2px;
+    }
+
+    /* Fila de información: Pago + Pedido */
+    .card-info-row {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        padding: 12px;
+        background-color: var(--bg-light-gray);
+        border-radius: 8px;
+    }
+
+    .card-info-item {
+        flex: 1;
+        min-width: 140px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .card-info-label {
+        font-size: 0.65rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        color: #64748b;
+        letter-spacing: 0.05em;
+    }
+
+    .card-info-value {
+        font-size: 0.85rem;
+        font-weight: 500;
+    }
+
+    /* Monto y estado de pago */
+    .card-monto-section {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+        background-color: #f8fafc;
+        border-radius: 8px;
+        gap: 12px;
+    }
+
+    .card-monto {
+        flex: 1;
+    }
+
+    .card-monto-label {
+        font-size: 0.7rem;
+        color: #64748b;
+        font-weight: 600;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+
+    .card-monto-value {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+
+    .card-monto-value.cancelada {
+        text-decoration: line-through;
+        color: #94a3b8;
+    }
+
+    .card-pago-badge {
+        flex-shrink: 0;
+    }
+
+    /* Saldo pendiente (si existe) */
+    .card-saldo {
+        font-size: 0.75rem;
+        color: #dc2626;
+        font-weight: 600;
+        background: #fee2e2;
+        padding: 4px 8px;
+        border-radius: 6px;
+        text-align: center;
+    }
+
+    /* Footer con botones */
+    .card-footer-mobile {
+        display: flex;
+        gap: 8px;
+        padding-top: 8px;
+        border-top: 1px solid var(--border-color);
+    }
+
+    .card-btn-small {
+        flex: 1;
+        padding: 8px 12px;
+        font-size: 0.75rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: white;
+        color: #475569;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition-fast);
+    }
+
+    .card-btn-small:active {
+        background: #f8fafc;
+    }
+
+    .card-menu-btn {
+        padding: 8px 12px;
+        background: white;
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        cursor: pointer;
+    }
+
+    /* ===================================================
+       ☀️ PAGINACIÓN
+       =================================================== */
+    .pagination {
+        gap: 4px;
+        margin-top: 10px;
+    }
+
+    .page-link {
+        border: 1px solid transparent;
+        color: #475569;
+        border-radius: 8px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 500;
+        transition: var(--transition-fast);
+    }
+
+    .page-item.active .page-link {
+        background-color: var(--sian-primary);
+        color: white;
+        border-color: var(--sian-primary);
+    }
+
+    .page-link:hover:not(.active) {
+        background-color: #f1f5f9;
+        border-color: #e2e8f0;
+    }
+
+    .page-item.disabled .page-link {
+        background-color: transparent;
+        color: #cbd5e1;
+    }
+
+    /* ===================================================
+       🌙 MODO OSCURO (OVERRIDES)
+       =================================================== */
+    [data-bs-theme="dark"] {
+        --text-dark: #f8fafc;
+        --bg-light-gray: #0f172a;
+        --border-color: #334155;
+    }
+
+    [data-bs-theme="dark"] body {
+        background-color: #0f172a !important;
+    }
+
+    [data-bs-theme="dark"] .card-custom,
+    [data-bs-theme="dark"] .modal-content,
+    [data-bs-theme="dark"] .dropdown-menu-custom,
+    [data-bs-theme="dark"] .card-footer,
+    [data-bs-theme="dark"] .mobile-venta-card {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .search-input {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .search-input:focus {
+        border-color: var(--sian-primary) !important;
+    }
+
+    [data-bs-theme="dark"] .btn-outline-custom {
+        background-color: transparent !important;
+        border-color: #334155 !important;
+        color: #94a3b8 !important;
+    }
+
+    [data-bs-theme="dark"] .btn-outline-custom:hover {
+        background-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .table th {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+        color: #94a3b8 !important;
+    }
+
+    [data-bs-theme="dark"] .table td {
+        border-color: #334155 !important;
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .table tbody tr:hover {
+        background-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .table tbody tr:hover td {
+        background-color: transparent !important;
+    }
+
+    [data-bs-theme="dark"] .row-cancelada,
+    [data-bs-theme="dark"] .row-cancelada td {
+        background-color: rgba(220, 53, 69, 0.1) !important;
+        color: #ef4444 !important;
+    }
+
+    [data-bs-theme="dark"] .bg-light,
+    [data-bs-theme="dark"] .bg-white,
+    [data-bs-theme="dark"] .bg-light-gray {
+        background-color: #0f172a !important;
+    }
+
+    [data-bs-theme="dark"] .text-dark {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .text-muted {
+        color: #94a3b8 !important;
+    }
+
+    [data-bs-theme="dark"] .border,
+    [data-bs-theme="dark"] .border-light,
+    [data-bs-theme="dark"] .border-bottom {
+        border-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .page-link {
+        color: #94a3b8 !important;
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .page-link:hover:not(.active) {
+        background-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .dropdown-menu-custom .dropdown-item {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .dropdown-menu-custom .dropdown-item:hover {
+        background-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .dropdown-menu-custom .dropdown-divider {
+        border-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+
+    [data-bs-theme="dark"] .modal-body {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .modal-body .table-borderless thead th {
+        background-color: #1e293b !important;
+        box-shadow: 0 1px 0 #334155 !important;
+        color: #94a3b8 !important;
+    }
+
+    [data-bs-theme="dark"] .table-responsive {
+        overflow: visible !important;
+    }
+
+    [data-bs-theme="dark"] .excel-filter-menu {
+        background: #1e293b;
+        border-color: #334155;
+    }
+
+    [data-bs-theme="dark"] .excel-filter-menu label {
+        color: #f8fafc;
+    }
+
     [data-bs-theme="dark"] .btn-filter {
         background-color: #1e293b;
         border-color: #334155;
@@ -491,11 +1049,143 @@
     [data-bs-theme="dark"] .btn-filter:hover {
         background-color: #334155;
     }
+
+    [data-bs-theme="dark"] .card-info-row,
+    [data-bs-theme="dark"] .card-monto-section {
+        background-color: #0f172a !important;
+    }
+
+    [data-bs-theme="dark"] .card-info-label {
+        color: #94a3b8 !important;
+    }
+
+    [data-bs-theme="dark"] .card-info-value {
+        color: #f8fafc !important;
+    }
+
+    .dropdown-menu-custom {
+        z-index: 9999 !important;
+    }
+
+    /* ===================================================
+       📺 MEDIA QUERIES (RESPONSIVE BEHAVIOR)
+       =================================================== */
+
+    /* Tablet y arriba: mostrar tabla, ocultar cards */
+    @media (min-width: 769px) {
+        .desktop-table-container {
+            display: block;
+        }
+
+        .mobile-card-container {
+            display: none !important;
+        }
+    }
+
+    /* Móvil: ocultar tabla, mostrar cards */
+    @media (max-width: 768px) {
+        .desktop-table-container {
+            display: none;
+        }
+
+        .mobile-card-container {
+            display: flex !important;
+        }
+
+        .search-btn {
+            position: static;
+            transform: none;
+            width: 100%;
+            margin-top: 8px;
+        }
+
+        .search-input {
+            padding-right: 20px;
+        }
+
+        .card-custom {
+            border-radius: 12px;
+        }
+
+        .bulk-bar {
+            width: 90%;
+            justify-content: space-between;
+            padding: 12px 16px;
+        }
+
+        /* Ocultar filtros Excel en móvil (usamos pills) */
+        .filter-header {
+            display: none;
+        }
+    }
+
+    /* ===================================================
+       🎓 UTILIDADES
+       =================================================== */
+    .text-xs {
+        font-size: 0.75rem;
+    }
+
+    .font-medium {
+        font-weight: 500;
+    }
+
+    .w-20px {
+        width: 20px;
+    }
+
+    /* Animación suave para recargas AJAX */
+    .fade-in-quick {
+        animation: fadeInQuick 0.2s ease-out;
+    }
+
+    @keyframes fadeInQuick {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
+        }
+    }
+
+    .bulk-cancel-btn {
+        width: 34px;
+        height: 34px;
+        border-radius: 10px;
+        border: 1px solid #475569;
+        background: #334155;
+        color: #cbd5e1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: var(--transition-fast);
+    }
+
+    .bulk-cancel-btn:hover {
+        background: #475569;
+        color: white;
+    }
+
+    @media (max-width: 768px) {
+        .bulk-cancel-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 12px;
+            flex-shrink: 0;
+        }
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+<!-- 🎯 VARIABLES LOCALES ÚTILES -->
 {% set is_pro = session.get('is_pro_active') or session.get('role', 0) >= 1 %}
+
+<!-- ===================================================
+     ENCABEZADO: TÍTULO + BOTONES DE AYUDA
+     =================================================== -->
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
     <div>
         <h3 class="fw-bold m-0 text-dark" style="letter-spacing: -0.5px;">Bitácora de Ventas</h3>
@@ -520,94 +1210,152 @@
     </div>
 </div>
 
+<!-- ===================================================
+     BUSCADOR (Visible en ambos: desktop y móvil)
+     =================================================== -->
 <div class="mb-4" id="tour-buscador-historial">
-    <!-- Le agregamos el id="formBuscador" al form -->
     <form action="{{ url_for('main.historial') }}" method="GET" class="search-container" id="formBuscador">
         <i class="fas fa-search search-icon"></i>
+        <input type="hidden" name="status" value="{{ status }}">
         <input type="text" name="q" class="form-control search-input"
             placeholder="Buscar por Folio o Nombre del Cliente..." value="{{ q }}">
         <button type="submit" class="btn btn-primary search-btn d-none d-md-block shadow-sm">Buscar</button>
     </form>
-    <!-- Le quitamos el onclick y le ponemos form="formBuscador" -->
-    <button type="submit" form="formBuscador" class="btn btn-primary w-100 d-md-none mt-2 rounded-3 fw-bold shadow-sm">
-        Buscar
-    </button>
+    <button type="submit" form="formBuscador"
+        class="btn btn-primary w-100 d-md-none mt-2 rounded-3 fw-bold shadow-sm">Buscar</button>
 </div>
 
+<!-- ===================================================
+     PILLS FILTRO (Funciona en ambos formatos)
+     =================================================== -->
 <div class="filter-pills animate__animated animate__fadeIn">
     <button class="btn-filter {% if status == 'all' or not status %}active{% endif %}" data-filter="all"
         onclick="setStatusFilter('all')">Todas</button>
-
     <button class="btn-filter {% if status == 'pagado' %}active{% endif %}" data-filter="pagado"
         onclick="setStatusFilter('pagado')">Pagadas</button>
-
     <button class="btn-filter {% if status == 'anticipo' %}active{% endif %}" data-filter="anticipo"
         onclick="setStatusFilter('anticipo')">Con Anticipo</button>
-
     <button class="btn-filter {% if status == 'cotizacion' %}active{% endif %}" data-filter="cotizacion"
         onclick="setStatusFilter('cotizacion')">Cotizaciones</button>
-
     <button class="btn-filter {% if status == 'cancelada' %}active{% endif %}" data-filter="cancelada"
         onclick="setStatusFilter('cancelada')">Anuladas</button>
 </div>
 
-<div class="card card-custom" id="tour-tabla-historial">
+<!-- ===================================================
+     📊 VISTA DESKTOP: TABLA (oculta en <769px)
+     =================================================== -->
+<div class="desktop-table-container card card-custom" id="tour-tabla-historial">
     <div class="table-responsive">
         <table class="table align-middle" id="tablaVentas">
             <thead>
                 <tr>
-                    <th class="ps-3 ps-md-4 text-nowrap">Folio/Fecha</th>
-                    <th>Cliente</th>
-                    <th class="d-none d-md-table-cell">Estado</th>
-                    <th class="text-end text-nowrap">Monto</th>
-                    <th class="text-center text-nowrap" style="width: 60px;">Acción</th>
+                    <!-- Checkbox maestro -->
+                    <th class="ps-3 ps-md-4 col-check">
+                        <input type="checkbox" id="check-all" class="form-check-input shadow-sm cursor-pointer">
+                    </th>
+
+                    <!-- Folio/Fecha -->
+                    <th class="text-nowrap col-folio">Folio/Fecha</th>
+
+                    <!-- Cliente -->
+                    <th class="col-cliente">Cliente</th>
+
+                    <!-- Filtro: Estado de Pago (Desktop solo) -->
+                    <th class="d-none d-md-table-cell position-relative col-pago">
+                        <div class="filter-header" onclick="toggleFilterMenu('filterPago')">
+                            Pago
+                            <i class="fas fa-chevron-down filter-icon"></i>
+                        </div>
+                        <div class="excel-filter-menu" id="filterPago">
+                            <label><input type="checkbox" value="pagado" checked onchange="applyTableFilters()">
+                                Pagado</label>
+                            <label><input type="checkbox" value="anticipo" checked onchange="applyTableFilters()">
+                                Anticipo</label>
+                            <label><input type="checkbox" value="cotizacion" checked onchange="applyTableFilters()">
+                                Cotización</label>
+                            <label><input type="checkbox" value="cancelada" checked onchange="applyTableFilters()">
+                                Anulada</label>
+                        </div>
+                    </th>
+
+                    <!-- Filtro: Estado del Pedido (Desktop solo) -->
+                    <th class="d-none d-md-table-cell position-relative col-pedido">
+                        <div class="filter-header" onclick="toggleFilterMenu('filterPedido')">
+                            Pedido
+                            <i class="fas fa-chevron-down filter-icon"></i>
+                        </div>
+                        <div class="excel-filter-menu" id="filterPedido">
+                            <label><input type="checkbox" value="pendiente" checked onchange="applyTableFilters()">
+                                Pendiente</label>
+                            <label><input type="checkbox" value="en_proceso" checked onchange="applyTableFilters()"> En
+                                proceso</label>
+                            <label><input type="checkbox" value="listo" checked onchange="applyTableFilters()">
+                                Listo</label>
+                            <label><input type="checkbox" value="entregado" checked onchange="applyTableFilters()">
+                                Entregado</label>
+                            <label><input type="checkbox" value="cancelado" checked onchange="applyTableFilters()">
+                                Cancelado</label>
+                        </div>
+                    </th>
+
+                    <!-- Monto -->
+                    <th class="text-nowrap col-monto">Monto</th>
+
+                    <!-- Acciones -->
+                    <th class="text-nowrap col-accion">Acción</th>
                 </tr>
             </thead>
             <tbody>
                 {% for v in ventas %}
                 <tr class="item-venta {{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}"
-                    data-estado="{{ v['estado'] }}">
-                    <td class="ps-3 ps-md-4">
-                        <div class="fw-bold text-dark text-nowrap">#{{ v['id'] }}</div>
+                    data-estado="{{ v['estado'] }}"
+                    data-pedido="{{ v['estado_pedido'] if v['estado_pedido'] else 'pendiente' }}">
+                    <!-- Checkbox individual -->
+                    <td class="ps-3 ps-md-4 col-check">
+                        <input type="checkbox"
+                            class="venta-checkbox form-check-input shadow-sm {% if v['estado'] != 'cancelada' %}cursor-pointer{% endif %}"
+                            value="{{ v['id'] }}" {% if v['estado']=='cancelada' %}disabled{% endif %}>
+                    </td>
+
+                    <!-- Folio + Fecha -->
+                    <td class="col-folio">
+                        <div class="fw-bold text-dark text-nowrap folio-text">#{{ v['id'] }}</div>
                         <div class="text-muted text-xs mt-1 text-nowrap">
                             {{ v['fecha'].strftime('%d/%m/%Y') if v['fecha'] is not string else v['fecha'][:10] }}
                         </div>
                     </td>
 
-                    <td>
-                        <div class="fw-bold text-dark" style="word-break: break-word;">{{ v['cliente'] }}</div>
-
+                    <!-- Cliente -->
+                    <td class="col-cliente">
+                        <div class="fw-bold text-dark cliente-text" style="word-break: break-word;">{{ v['cliente'] }}
+                        </div>
+                        <!-- Badge de estado en móvil (solo visible en <768px) -->
                         <div class="d-block d-md-none mt-1">
-                            {% if v['estado'] == 'pagado' %}
-                            <span class="badge bg-success text-white" style="font-size: 0.6rem;">PAGADO</span>
-                            {% elif v['estado'] == 'anticipo' %}
-                            <span class="badge bg-warning text-dark" style="font-size: 0.6rem;">ANTICIPO</span>
-                            {% elif v['estado'] == 'cotizacion' %}
-                            <span class="badge bg-secondary text-white" style="font-size: 0.6rem;">COTIZACIÓN</span>
-                            {% elif v['estado'] == 'cancelada' %}
-                            <span class="badge bg-danger text-white" style="font-size: 0.6rem;">ANULADA</span>
+                            {% if v['estado'] == 'pagado' %}<span class="badge bg-success text-white"
+                                style="font-size: 0.6rem;">PAGADO</span>
+                            {% elif v['estado'] == 'anticipo' %}<span class="badge bg-warning text-dark"
+                                style="font-size: 0.6rem;">ANTICIPO</span>
+                            {% elif v['estado'] == 'cotizacion' %}<span class="badge bg-secondary text-white"
+                                style="font-size: 0.6rem;">COTIZACIÓN</span>
+                            {% elif v['estado'] == 'cancelada' %}<span class="badge bg-danger text-white"
+                                style="font-size: 0.6rem;">ANULADA</span>
                             {% endif %}
                         </div>
                     </td>
 
-                    <td class="d-none d-md-table-cell">
+                    <!-- Estado Pago (Desktop solo) -->
+                    <td class="d-none d-md-table-cell col-pago">
                         {% if v['estado'] == 'pagado' %}
-                        <span class="badge badge-status status-pagado">
-                            <i class="fas fa-check-circle"></i> PAGADO
-                        </span>
+                        <span class="badge badge-status status-pagado"><i class="fas fa-check-circle"></i> PAGADO</span>
                         {% elif v['estado'] == 'anticipo' %}
-                        <span class="badge badge-status status-anticipo">
-                            <i class="fas fa-clock"></i> ANTICIPO
-                        </span>
+                        <span class="badge badge-status status-anticipo"><i class="fas fa-clock"></i> ANTICIPO</span>
                         {% elif v['estado'] == 'cotizacion' %}
-                        <span class="badge badge-status status-cotizacion">
-                            <i class="fas fa-file-alt"></i> COTIZACIÓN
-                        </span>
+                        <span class="badge badge-status status-cotizacion"><i class="fas fa-file-alt"></i>
+                            COTIZACIÓN</span>
                         {% if v['fecha_vencimiento'] %}
-                        <div class="text-danger text-xs font-medium mt-1">
-                            Expira: {{ v['fecha_vencimiento'].strftime('%d/%m/%Y') if v['fecha_vencimiento'] is not
-                            string else v['fecha_vencimiento'][:10] }}
-                        </div>
+                        <div class="text-danger text-xs font-medium mt-1">Expira: {{
+                            v['fecha_vencimiento'].strftime('%d/%m/%Y') if v['fecha_vencimiento'] is not string else
+                            v['fecha_vencimiento'][:10] }}</div>
                         {% endif %}
                         {% elif v['estado'] == 'cancelada' %}
                         <span class="badge badge-status status-cancelada">ANULADA</span>
@@ -616,7 +1364,42 @@
                         {% endif %}
                     </td>
 
-                    <td>
+                    <!-- Estado Pedido (Desktop solo) -->
+                    <td class="d-none d-md-table-cell col-pedido">
+                        {% set est_ped = v['estado_pedido'] if v['estado_pedido'] else 'pendiente' %}
+                        <div class="estado-wrapper">
+                            <div class="estado-pill
+                                {% if est_ped == 'pendiente' %}estado-pendiente
+                                {% elif est_ped == 'en_proceso' %}estado-proceso
+                                {% elif est_ped == 'listo' %}estado-listo
+                                {% elif est_ped == 'entregado' %}estado-entregado
+                                {% elif est_ped == 'cancelado' %}estado-anulado
+                                {% endif %}" {% if v['estado'] !='cancelada' %}
+                                onclick="event.stopPropagation(); toggleEstadoMenu(this)" {% else %}
+                                style="cursor: not-allowed; opacity: 0.7;" {% endif %} data-id="{{ v['id'] }}" {% if
+                                no_es_desktop %} style="font-size: 0.75rem; padding: 5px 10px;" {% endif %}>
+                                <span class="estado-dot"></span>
+                                <span>
+                                    {% if est_ped == 'pendiente' %}Pendiente
+                                    {% elif est_ped == 'en_proceso' %}En proceso
+                                    {% elif est_ped == 'listo' %}Listo
+                                    {% elif est_ped == 'entregado' %}Entregado
+                                    {% elif est_ped == 'cancelado' %}Anulada
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="estado-menu" onclick="event.stopPropagation()">
+                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'pendiente')">Pendiente</div>
+                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'en_proceso')">En proceso</div>
+                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'listo')">Listo</div>
+                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'entregado')">Entregado</div>
+                                <div onclick="changeEstadoPedido({{ v['id'] }}, 'cancelado')">Anulada</div>
+                            </div>
+                        </div>
+                    </td>
+
+                    <!-- Monto -->
+                    <td class="col-monto">
                         <div class="fw-bold text-dark monto-text">${{ "{:,.2f}".format(v['total']) }}</div>
                         {% if v['impuestos'] and v['impuestos'] > 0 %}
                         <div class="text-muted text-xs mt-1 d-none d-md-block">(Incl. {{ v['tax_engine'] }})</div>
@@ -624,26 +1407,24 @@
                         {% if v['saldo_pendiente'] > 0.5 and v['estado'] != 'cancelada' %}
                         <div
                             class="text-danger text-xs font-medium mt-1 bg-danger bg-opacity-10 d-inline-block px-1 py-1 rounded">
-                            Resta: ${{ "{:,.2f}".format(v['saldo_pendiente']) }}
-                        </div>
+                            Resta: ${{ "{:,.2f}".format(v['saldo_pendiente']) }}</div>
                         {% endif %}
                     </td>
 
-                    <td class="text-center" {% if loop.index==1 %}id="tour-acciones" {% endif %}>
+                    <!-- Botón de Acciones (Dropdown) -->
+                    <td class="col-accion" {% if loop.index==1 %}id="tour-acciones" {% endif %}>
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm rounded-circle border" type="button"
                                 data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
                                 <i class="fas fa-ellipsis-v"></i>
                             </button>
-
-                            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-custom">
+                            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-custom shadow-lg">
                                 <li>
                                     <button class="dropdown-item d-flex align-items-center gap-2" type="button"
                                         onclick="verDetalles({{ v['id'] }})">
                                         <i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles
                                     </button>
                                 </li>
-
                                 {% if v['estado'] != 'cancelada' %}
                                 <li>
                                     <hr class="dropdown-divider">
@@ -667,7 +1448,6 @@
                                         <i class="fas fa-print text-dark w-20px text-center"></i> Imprimir Ticket
                                     </a>
                                 </li>
-
                                 {% if v['saldo_pendiente'] > 0.5 %}
                                 <li>
                                     {% if is_pro %}
@@ -684,7 +1464,6 @@
                                     {% endif %}
                                 </li>
                                 {% endif %}
-
                                 {% if v['estado'] == 'cotizacion' %}
                                 <li>
                                     {% if is_pro %}
@@ -701,7 +1480,6 @@
                                     {% endif %}
                                 </li>
                                 {% endif %}
-
                                 <li>
                                     <hr class="dropdown-divider">
                                 </li>
@@ -725,7 +1503,7 @@
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center py-5 bg-white">
+                    <td colspan="7" class="text-center py-5 bg-white">
                         <div class="opacity-50">
                             <i class="fas fa-inbox fa-3x mb-3 text-secondary"></i>
                             <h6 class="fw-bold text-dark">No hay registros</h6>
@@ -739,26 +1517,27 @@
         </table>
     </div>
 
+    <!-- Paginación (Desktop) -->
     {% if total_pages > 1 %}
     <div id="paginationContainer" class="card-footer py-3 d-flex flex-column align-items-center justify-content-center">
         <nav aria-label="Navegación de historial">
             <ul class="pagination m-0">
                 <li class="page-item {% if page == 1 %}disabled{% endif %}">
-                    <a class="page-link" href="{{ url_for('main.historial', page=page-1, q=q) }}" aria-label="Anterior">
+                    <a class="page-link" href="{{ url_for('main.historial', page=page-1, q=q, status=status) }}" aria-label="Anterior">
                         <i class="fas fa-chevron-left text-xs"></i>
                     </a>
                 </li>
                 {% for p in range(1, total_pages + 1) %}
                 {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %} <li
                     class="page-item {% if p == page %}active{% endif %}">
-                    <a class="page-link" href="{{ url_for('main.historial', page=p, q=q) }}">{{ p }}</a>
+                    <a class="page-link" href="{{ url_for('main.historial', page=p, q=q, status=status) }}">{{ p }}</a>
                     </li>
                     {% elif p == page - 3 or p == page + 3 %}
                     <li class="page-item disabled"><span class="page-link border-0">...</span></li>
                     {% endif %}
                     {% endfor %}
                     <li class="page-item {% if page == total_pages %}disabled{% endif %}">
-                        <a class="page-link" href="{{ url_for('main.historial', page=page+1, q=q) }}"
+                        <a class="page-link" href="{{ url_for('main.historial', page=page+1, q=q, status=status) }}"
                             aria-label="Siguiente">
                             <i class="fas fa-chevron-right text-xs"></i>
                         </a>
@@ -770,6 +1549,210 @@
     {% endif %}
 </div>
 
+<!-- ===================================================
+     📱 VISTA MÓVIL: CARDS (oculta en >768px)
+     =================================================== -->
+<div class="mobile-card-container card-custom" id="mobile-cards-container">
+    {% if ventas %}
+    {% for v in ventas %}
+    <div class="mobile-venta-card {% if v['estado'] == 'cancelada' %}row-cancelada{% endif %}"
+        data-estado="{{ v['estado'] }}" data-pedido="{{ v['estado_pedido'] if v['estado_pedido'] else 'pendiente' }}">
+
+        <!-- Header: Folio + Cliente + Checkbox -->
+        <div class="card-header-mobile">
+            <div class="card-folio-cliente">
+                <div class="card-folio {% if v['estado'] == 'cancelada' %}cancelada{% endif %}">#{{ v['id'] }}</div>
+                <div class="card-cliente {% if v['estado'] == 'cancelada' %}cancelada{% endif %}">{{ v['cliente'] }}
+                </div>
+                <div class="card-fecha">
+                    {{ v['fecha'].strftime('%d/%m/%Y') if v['fecha'] is not string else v['fecha'][:10] }}
+                </div>
+            </div>
+            <div class="card-checkbox">
+                <input type="checkbox"
+                    class="venta-checkbox form-check-input shadow-sm {% if v['estado'] != 'cancelada' %}cursor-pointer{% endif %}"
+                    value="{{ v['id'] }}" {% if v['estado']=='cancelada' %}disabled{% endif %}>
+            </div>
+        </div>
+
+        <!-- Fila de Información: Estado Pago + Estado Pedido -->
+        <div class="card-info-row">
+            <!-- Estado Pago -->
+            <div class="card-info-item">
+                <span class="card-info-label">💳 Pago</span>
+                <div class="card-info-value">
+                    {% if v['estado'] == 'pagado' %}
+                    <span class="badge badge-status status-pagado"><i class="fas fa-check-circle"></i> Pagado</span>
+                    {% elif v['estado'] == 'anticipo' %}
+                    <span class="badge badge-status status-anticipo"><i class="fas fa-clock"></i> Anticipo</span>
+                    {% elif v['estado'] == 'cotizacion' %}
+                    <span class="badge badge-status status-cotizacion"><i class="fas fa-file-alt"></i> Cotización</span>
+                    {% elif v['estado'] == 'cancelada' %}
+                    <span class="badge badge-status status-cancelada">Anulada</span>
+                    {% else %}
+                    <span class="badge badge-status bg-light text-dark">{{ v['estado'] }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Estado Pedido -->
+            <div class="card-info-item">
+                <span class="card-info-label">📦 Pedido</span>
+                <div class="card-info-value">
+                    {% set est_ped = v['estado_pedido'] if v['estado_pedido'] else 'pendiente' %}
+                    <div class="estado-wrapper">
+                        <div class="estado-pill
+                                {% if est_ped == 'pendiente' %}estado-pendiente
+                                {% elif est_ped == 'en_proceso' %}estado-proceso
+                                {% elif est_ped == 'listo' %}estado-listo
+                                {% elif est_ped == 'entregado' %}estado-entregado
+                                {% elif est_ped == 'cancelado' %}estado-anulado
+                                {% endif %}" {% if v['estado'] != 'cancelada' %}
+                            onclick="event.stopPropagation(); toggleEstadoMenu(this)" {% else %}
+                            style="cursor: not-allowed; opacity: 0.7; font-size: 0.75rem; padding: 5px 10px;" {% endif %}
+                            data-id="{{ v['id'] }}" {% if v['estado'] != 'cancelada' %}style="font-size: 0.75rem; padding: 5px 10px;"{% endif %}>
+                            <span class="estado-dot" style="width: 6px; height: 6px;"></span>
+                            <span>
+                                {% if est_ped == 'pendiente' %}Pendiente
+                                {% elif est_ped == 'en_proceso' %}En proceso
+                                {% elif est_ped == 'listo' %}Listo
+                                {% elif est_ped == 'entregado' %}Entregado
+                                {% elif est_ped == 'cancelado' %}Anulada
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="estado-menu" onclick="event.stopPropagation()" style="left: auto; right: 0;">
+                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'pendiente')">Pendiente</div>
+                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'en_proceso')">En proceso</div>
+                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'listo')">Listo</div>
+                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'entregado')">Entregado</div>
+                            <div onclick="changeEstadoPedido({{ v['id'] }}, 'cancelado')">Anulada</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Monto + Badge Pago -->
+        <div class="card-monto-section">
+            <div class="card-monto">
+                <div class="card-monto-label">Total</div>
+                <div class="card-monto-value {% if v['estado'] == 'cancelada' %}cancelada{% endif %}">${{
+                    "{:,.2f}".format(v['total']) }}</div>
+            </div>
+            {% if v['saldo_pendiente'] > 0.5 and v['estado'] != 'cancelada' %}
+            <div class="card-saldo">Resta: ${{ "{:,.2f}".format(v['saldo_pendiente']) }}</div>
+            {% endif %}
+        </div>
+
+        <!-- Botones de Acción (sin dropdown, botones inline) -->
+        <div class="card-footer-mobile">
+            <button class="card-btn-small" onclick="verDetalles({{ v['id'] }})">
+                <i class="fas fa-eye"></i> Ver
+            </button>
+            <button class="card-btn-small"
+                onclick="abrirMenuAcciones(this, {{ v['id'] }}, '{{ v['estado'] }}', {{ v['saldo_pendiente'] }}, '{{ v['estado_pedido'] }}')">
+                <i class="fas fa-ellipsis-h"></i> Más
+            </button>
+        </div>
+    </div>
+    {% endfor %}
+    {% else %}
+    <!-- Estado vacío -->
+    <div class="text-center py-5"
+        style="background: white; border-radius: 12px; border: 1px solid var(--border-color);">
+        <div class="opacity-50">
+            <i class="fas fa-inbox fa-3x mb-3 text-secondary"></i>
+            <h6 class="fw-bold text-dark">No hay registros</h6>
+            <p class="text-muted text-xs mb-0">No encontramos ventas o cotizaciones con esos filtros.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Paginación (Móvil) -->
+    {% if total_pages > 1 %}
+    <div id="paginationContainerMobile" class="py-3 d-flex flex-column align-items-center justify-content-center">
+        <nav aria-label="Navegación de historial">
+            <ul class="pagination m-0">
+                <li class="page-item {% if page == 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.historial', page=page-1, q=q, status=status) }}" aria-label="Anterior">
+                        <i class="fas fa-chevron-left text-xs"></i>
+                    </a>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %} <li
+                    class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('main.historial', page=p, q=q, status=status) }}">{{ p }}</a>
+                    </li>
+                    {% elif p == page - 3 or p == page + 3 %}
+                    <li class="page-item disabled"><span class="page-link border-0">...</span></li>
+                    {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if page == total_pages %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('main.historial', page=page+1, q=q, status=status) }}"
+                            aria-label="Siguiente">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </a>
+                    </li>
+            </ul>
+        </nav>
+        <span class="text-muted text-xs mt-2 font-medium">Mostrando página {{ page }} de {{ total_pages }}</span>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ===================================================
+     BARRA FLOTANTE DE ACCIONES EN MASA
+     (Funciona en ambos formatos)
+     =================================================== -->
+<div id="bulkActionsBar" class="bulk-bar">
+    <div class="bulk-bar-inner">
+        <span id="bulkCount" class="fw-bold text-sm">0 seleccionados</span>
+
+        <button class="bulk-action-btn" type="button" onclick="abrirMenuBulkEstado(event)">
+            <span class="d-none d-md-inline">Cambiar estado</span>
+            <span class="d-inline d-md-none">Estado</span>
+            <i class="fas fa-chevron-up"></i>
+        </button>
+
+        <button class="bulk-cancel-btn" type="button" onclick="cancelarSeleccionBulk()">
+            <i class="fas fa-times"></i>
+        </button>
+
+        <div id="bulkStateMenu" class="bulk-state-menu">
+            <div class="bulk-state-title">Cambiar pedido a</div>
+
+            <button class="bulk-state-option" type="button" onclick="applyBulkEstado('pendiente')">
+                <span class="bulk-state-dot bulk-dot-pendiente"></span>
+                Pendiente
+            </button>
+
+            <button class="bulk-state-option" type="button" onclick="applyBulkEstado('en_proceso')">
+                <span class="bulk-state-dot bulk-dot-proceso"></span>
+                En proceso
+            </button>
+
+            <button class="bulk-state-option" type="button" onclick="applyBulkEstado('listo')">
+                <span class="bulk-state-dot bulk-dot-listo"></span>
+                Listo
+            </button>
+
+            <button class="bulk-state-option" type="button" onclick="applyBulkEstado('entregado')">
+                <span class="bulk-state-dot bulk-dot-entregado"></span>
+                Entregado
+            </button>
+
+            <button class="bulk-state-option" type="button" onclick="applyBulkEstado('cancelado')">
+                <span class="bulk-state-dot bulk-dot-cancelado"></span>
+                Cancelado
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- ===================================================
+     💬 MODAL DETALLES (igual al original)
+     =================================================== -->
 <div class="modal fade" id="modalDetalle" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content border-0"
@@ -781,7 +1764,6 @@
                 </h5>
                 <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
             </div>
-
             <div class="modal-body p-4">
                 <div class="bg-light-gray d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-3 mb-4 p-4 rounded-4"
                     style="background-color: var(--bg-light-gray); border: 1px solid var(--border-color);">
@@ -791,7 +1773,6 @@
                     </div>
                     <div id="modalEstadoDiv"></div>
                 </div>
-
                 <h6 class="fw-bold text-dark mb-3">Detalle de Productos</h6>
                 <div class="rounded-4 border mb-4" style="max-height: 320px; overflow-y: auto; overflow-x: auto;">
                     <table class="table table-borderless mb-0 align-middle" style="min-width: 600px;">
@@ -808,14 +1789,12 @@
                         <tbody id="modalTablaCuerpo" class="text-sm"></tbody>
                     </table>
                 </div>
-
                 <h6 class="fw-bold text-dark mb-3">Resumen Financiero</h6>
                 <div class="card bg-white border rounded-4 shadow-sm overflow-hidden">
                     <div class="card-body p-0">
                         <div class="row g-0 text-center" id="panelFinanciero"></div>
                     </div>
                 </div>
-
                 <div id="avisoCotizacion" class="alert border border-warning rounded-4 mt-4 mb-0 d-none"
                     style="background-color: rgba(255, 193, 7, 0.1);">
                     <div class="d-flex align-items-center text-warning font-medium">
@@ -824,7 +1803,6 @@
                     </div>
                 </div>
             </div>
-
             <div class="modal-footer border-top-0 px-4 pb-4 pt-0">
                 <button type="button" class="btn border rounded-pill px-4 fw-bold text-dark w-100 bg-light"
                     data-bs-dismiss="modal">Cerrar Detalles</button>
@@ -832,243 +1810,648 @@
         </div>
     </div>
 </div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-
 <script>
-    // --- 0. VARIABLES GLOBALES DE ESTADO ---
-    // Tomamos el estado inicial desde Flask
+    /**
+     * ============================================================
+     * 🎯 VARIABLES GLOBALES DE ESTADO
+     * ============================================================
+     */
     let currentStatusFilter = '{{ status | default("all") }}';
 
-    // --- 1. EL MOTOR AJAX ("HTML OVER THE WIRE") ---
+    /**
+     * ============================================================
+     * 📡 MOTOR AJAX: Actualizador de Tabla y Cards (sin recargar)
+     * ============================================================
+     */
     async function actualizarTablaAJAX(url) {
-        const contenedor = document.getElementById('tour-tabla-historial');
+        const contenedorDesktop = document.getElementById('tour-tabla-historial');
+        const contenedorMovil = document.getElementById('mobile-cards-container');
 
-        // 1. Efecto visual de que está "pensando" (opacidad suave)
-        contenedor.style.transition = 'opacity 0.2s ease';
-        contenedor.style.opacity = '0.4';
-        contenedor.style.pointerEvents = 'none';
+        // Aplicar efecto visual de carga (fade out)
+        if (contenedorDesktop) {
+            contenedorDesktop.style.transition = 'opacity 0.2s ease';
+            contenedorDesktop.style.opacity = '0.4';
+            contenedorDesktop.style.pointerEvents = 'none';
+        }
 
         try {
-            // 2. Traer el HTML desde tu backend Flask en segundo plano
             const response = await fetch(url);
             const htmlText = await response.text();
-
-            // 3. Convertir el texto a un Documento DOM real en memoria
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
 
-            // 4. Extraer solo el div de la tabla y la paginación
-            const nuevoContenido = doc.getElementById('tour-tabla-historial').innerHTML;
+            // Actualizar tabla desktop
+            const nuevoContenidoDesktop = doc.getElementById('tour-tabla-historial');
+            if (nuevoContenidoDesktop && contenedorDesktop) {
+                contenedorDesktop.innerHTML = nuevoContenidoDesktop.innerHTML;
+            }
 
-            // 5. Inyectarlo en la pantalla del usuario (Reemplazo instantáneo)
-            contenedor.innerHTML = nuevoContenido;
+            // Actualizar cards móvil
+            const nuevoContenidoMovil = doc.getElementById('mobile-cards-container');
+            if (nuevoContenidoMovil && contenedorMovil) {
+                contenedorMovil.innerHTML = nuevoContenidoMovil.innerHTML;
+            }
 
-            // 6. Cambiar la URL del navegador sin recargar (para que funcione el botón "Atrás")
+            // Actualizar historial del navegador (para que el back funcione)
             window.history.pushState({ path: url }, '', url);
 
         } catch (error) {
             console.error('Error al actualizar por AJAX:', error);
-            // Fallback: Si algo sale mal con el internet, recargamos normal
+            // Fallback: recarga completa si AJAX falla
             window.location.href = url;
         } finally {
-            // 7. Devolver el color y habilitar clicks
-            contenedor.style.opacity = '1';
-            contenedor.style.pointerEvents = 'auto';
+            // Restaurar opacidad
+            if (contenedorDesktop) {
+                contenedorDesktop.style.opacity = '1';
+                contenedorDesktop.style.pointerEvents = 'auto';
+            }
+
+            // Limpiar estado de checkboxes y barra flotante
+            cancelarSeleccionBulk();
         }
     }
 
-    // --- 2. LÓGICA DE FILTRADO POR BOTONES (PILLS) ---
+    /**
+     * ============================================================
+     * 🔍 FILTRADO POR PILLS (Estado de Pago)
+     * ============================================================
+     */
     function setStatusFilter(filter) {
         currentStatusFilter = filter;
 
-        // Cambiar el color del botón visualmente de inmediato
+        // Actualizar estado visual de los pills
         document.querySelectorAll('.btn-filter').forEach(b => {
             b.classList.remove('active');
             if (b.getAttribute('data-filter') === filter) {
                 b.classList.add('active');
             }
         });
+        const statusInput = document.querySelector('#formBuscador input[name="status"]');
+        if (statusInput) statusInput.value = filter;
 
-        // Construir la URL y llamar a nuestro motor AJAX
+        // Construir URL con filtro y buscar
         const q = document.querySelector('.search-input').value;
-        const url = `{{ url_for('main.historial') }}?status=${filter}&q=${q}&page=1`;
+        const url = `{{ url_for('main.historial') }}?status=${filter}&q=${encodeURIComponent(q)}&page=1`;
+
+        // Actualizar AJAX (sin recargar la página)
         actualizarTablaAJAX(url);
     }
 
-    // --- 3. INTERCEPTAR BUSCADOR Y PAGINACIÓN ---
+    /**
+     * ============================================================
+     * 🔎 INTERCEPTAR BUSCADOR (Vercel-style)
+     * ============================================================
+     */
     document.addEventListener('DOMContentLoaded', () => {
-        // Interceptar el formulario de búsqueda
         const formBusqueda = document.getElementById('formBuscador');
         if (formBusqueda) {
             formBusqueda.addEventListener('submit', function (e) {
-                e.preventDefault(); // Evitamos que la página se ponga blanca y recargue
+                e.preventDefault();
                 const q = document.querySelector('.search-input').value;
-                const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${q}&page=1`;
+                const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${encodeURIComponent(q)}&page=1`;
                 actualizarTablaAJAX(url);
             });
         }
     });
 
-    // Interceptar clics en la paginación usando delegación de eventos 
-    // (Porque los botones de página se recrean cada que cambiamos de página)
+    /**
+     * ============================================================
+     * 📄 INTERCEPTAR PAGINACIÓN (ambos formatos)
+     * ============================================================
+     */
     document.addEventListener('click', function (e) {
         const linkPaginacion = e.target.closest('.page-link');
-        // Si el usuario picó un número de página válido
         if (linkPaginacion && linkPaginacion.href && !linkPaginacion.href.includes('javascript:')) {
-            e.preventDefault(); // Evitamos recarga completa
+            e.preventDefault();
             actualizarTablaAJAX(linkPaginacion.href);
         }
     });
 
+    /**
+     * ============================================================
+     * 📦 LÓGICA DE ESTADOS LOGÍSTICOS (Pedido)
+     * ============================================================
+     */
+    /**
+     * ============================================================
+     * 🛠️ FUNCIÓN MAESTRA ANTI-CORTES (PADDING DINÁMICO)
+     * ============================================================
+     */
+    function ajustarEspacioTabla(abierto, pixeles = 260) {
+        const contenedor = document.querySelector('.table-responsive');
+        if (!contenedor) return;
 
-    // --- 4. LÓGICA DEL TUTORIAL INTERACTIVO (DRIVER.JS) ---
-    function repetirTutorialHistorial() {
-        if (typeof window.driver === 'undefined') {
-            console.error("Driver.js no está cargado.");
+        contenedor.style.transition = 'padding-bottom 0.2s ease';
+
+        if (abierto) {
+            contenedor.style.paddingBottom = pixeles + 'px';
+        } else {
+            setTimeout(() => {
+                // Verificar que no haya NINGÚN menú abierto antes de contraer
+                if (!document.querySelector('.dropdown-menu.show') &&
+                    !document.querySelector('.estado-menu.show') &&
+                    !document.querySelector('.excel-filter-menu.show')) {
+                    contenedor.style.paddingBottom = '0px';
+                }
+            }, 150);
+        }
+    }
+
+    /**
+     * ============================================================
+     * 📦 LÓGICA DE ESTADOS LOGÍSTICOS (Pedido)
+     * ============================================================
+     */
+    function toggleEstadoMenu(el) {
+        const menu = el.parentElement.querySelector('.estado-menu');
+        const abrir = !menu.classList.contains('show');
+
+        // Cerrar otros menús abiertos
+        document.querySelectorAll('.estado-menu.show').forEach(m => m.classList.remove('show'));
+
+        if (abrir) {
+            menu.classList.add('show');
+            ajustarEspacioTabla(true, 180); // Expande espacio para este menú
+        } else {
+            menu.classList.remove('show');
+            ajustarEspacioTabla(false);
+        }
+    }
+
+    /**
+     * Cambiar estado del pedido vía AJAX (Individual)
+     */
+    async function changeEstadoPedido(id, nuevoEstado) {
+        // Cerrar menú y limpiar el padding de la tabla
+        document.querySelectorAll('.estado-menu.show').forEach(m => m.classList.remove('show'));
+        ajustarEspacioTabla(false);
+
+        // 1. Mostrar Toast de "Cargando..."
+        const Toast = Swal.mixin({
+            toast: true,
+            position: "top-end",
+            showConfirmButton: false,
+            timerProgressBar: true
+        });
+
+        Toast.fire({
+            title: 'Actualizando...',
+            didOpen: () => {
+                Swal.showLoading();
+            }
+        });
+
+        try {
+            const response = await fetch(`/api/ventas/${id}/estado-pedido`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ estado_pedido: nuevoEstado })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // 2. Cambiar Toast a "Éxito"
+                Toast.fire({
+                    icon: 'success',
+                    title: '✓ Actualización exitosa',
+                    timer: 2000
+                });
+
+                // 3. Recargar tabla manteniendo filtros
+                const q = document.querySelector('.search-input').value;
+                const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${encodeURIComponent(q)}&page={{ page }}`;
+                actualizarTablaAJAX(url);
+            } else {
+                Swal.fire('Error', data.error, 'error');
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            Swal.fire('Error', 'No se pudo actualizar el estado', 'error');
+        }
+    }
+
+    /**
+     * ============================================================
+     * LÓGICA DE ACCIONES EN MASA (CHECKBOXES)
+     * ============================================================
+     */
+    function getVistaActivaBulk() {
+        const desktop = document.querySelector('.desktop-table-container');
+        const mobile = document.querySelector('#mobile-cards-container');
+
+        const desktopVisible = desktop && window.getComputedStyle(desktop).display !== 'none';
+        const mobileVisible = mobile && window.getComputedStyle(mobile).display !== 'none';
+
+        if (desktopVisible) return 'desktop';
+        if (mobileVisible) return 'mobile';
+
+        return window.innerWidth <= 768 ? 'mobile' : 'desktop';
+    }
+
+    function getCheckboxesActivos() {
+        const vista = getVistaActivaBulk();
+
+        const selector = vista === 'mobile'
+            ? '#mobile-cards-container .venta-checkbox:not([disabled])'
+            : '#tour-tabla-historial .venta-checkbox:not([disabled])';
+
+        return Array.from(document.querySelectorAll(selector));
+    }
+
+    function getCheckboxesSeleccionadosActivos() {
+        return getCheckboxesActivos().filter(cb => cb.checked);
+    }
+
+    function cancelarSeleccionBulk() {
+        document.querySelectorAll('.venta-checkbox').forEach(cb => {
+            cb.checked = false;
+        });
+
+        const checkAll = document.getElementById('check-all');
+        if (checkAll) {
+            checkAll.checked = false;
+            checkAll.indeterminate = false;
+        }
+
+        const menu = document.getElementById('bulkStateMenu');
+        if (menu) menu.classList.remove('show');
+
+        updateBulkBar();
+    }
+    document.addEventListener('change', function (e) {
+        if (e.target.id === 'check-all') {
+            const checkboxes = getCheckboxesActivos();
+
+            checkboxes.forEach(cb => {
+                cb.checked = e.target.checked;
+            });
+
+            updateBulkBar();
             return;
         }
+
+        if (e.target.classList.contains('venta-checkbox')) {
+            const total = getCheckboxesActivos().length;
+            const marcados = getCheckboxesSeleccionadosActivos().length;
+            const chkAll = document.getElementById('check-all');
+
+            if (chkAll) {
+                chkAll.checked = total > 0 && total === marcados;
+                chkAll.indeterminate = marcados > 0 && marcados < total;
+            }
+
+            updateBulkBar();
+        }
+    });
+
+    /**
+     * Mostrar/ocultar barra flotante de acciones en masa
+     */
+    function updateBulkBar() {
+        const checked = getCheckboxesSeleccionadosActivos();
+        const bulkBar = document.getElementById('bulkActionsBar');
+        const bulkCount = document.getElementById('bulkCount');
+        const menu = document.getElementById('bulkStateMenu');
+
+        if (!bulkBar || !bulkCount) return;
+
+        const total = checked.length;
+        const plural = total !== 1 ? 's' : '';
+
+        bulkCount.innerText = `${total} seleccionado${plural}`;
+
+        if (total > 0) {
+            bulkBar.classList.add('active');
+        } else {
+            bulkBar.classList.remove('active');
+
+            if (menu) {
+                menu.classList.remove('show');
+            }
+        }
+    }
+
+    /**
+     * Abrir menú SweetAlert para cambiar estado en masa
+     */
+
+
+    function abrirMenuBulkEstado(event) {
+        if (event) event.stopPropagation();
+
+        const menu = document.getElementById('bulkStateMenu');
+        if (!menu) return;
+
+        menu.classList.toggle('show');
+
+        if (menu.classList.contains('show') && window.innerWidth <= 768) {
+            setTimeout(() => {
+                menu.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }, 50);
+        }
+    }
+
+    /**
+     * Aplicar cambio de estado en masa
+     */
+    async function applyBulkEstado(nuevoEstado) {
+        const menu = document.getElementById('bulkStateMenu');
+        if (menu) menu.classList.remove('show');
+
+        if (!nuevoEstado) return;
+
+        // Obtener IDs de ventas seleccionadas
+        const checkedBoxes = getCheckboxesSeleccionadosActivos();
+        const ids = checkedBoxes.map(cb => parseInt(cb.value));
+
+        // Mostrar indicador de carga
+        Swal.fire({
+            title: 'Actualizando...',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
+
+        try {
+            const response = await fetch('/api/ventas/bulk-estado-pedido', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ ids: ids, estado_pedido: nuevoEstado })
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Mostrar toast de éxito
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: "top-end",
+                    showConfirmButton: false,
+                    timer: 2000,
+                    timerProgressBar: true
+                });
+                Toast.fire({
+                    icon: "success",
+                    title: "✓ Actualización exitosa"
+                });
+
+                // Limpiar check maestro
+                cancelarSeleccionBulk();
+
+                // Recargar tabla
+                const q = document.querySelector('.search-input').value;
+                const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${encodeURIComponent(q)}&page={{ page }}`;
+                actualizarTablaAJAX(url);
+            } else {
+                Swal.fire('Error', data.error, 'error');
+            }
+        } catch (error) {
+            console.error("Error:", error);
+            Swal.fire('Error', 'Hubo un problema de red', 'error');
+        }
+    }
+
+    /**
+     * ============================================================
+     * 📱 MENÚ DE ACCIONES MÓVIL
+     * ============================================================
+     */
+    function abrirMenuAcciones(btn, id, estado, saldoPendiente, estadoPedido) {
+        const options = [
+            { label: '<i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles', action: () => verDetalles(id) },
+        ];
+
+        if (estado !== 'cancelada') {
+            options.push({
+                label: '<i class="fas fa-edit text-info w-20px text-center"></i> Editar',
+                action: () => recargarCotizacion(id)
+            });
+
+            options.push({
+                label: '<i class="fas fa-print text-dark w-20px text-center"></i> Imprimir Ticket',
+                action: () => window.open(`/ticket/${id}`, '_blank')
+            });
+
+            if (saldoPendiente > 0.5) {
+                options.push({
+                    label: '<i class="fas fa-dollar-sign text-success w-20px text-center"></i> Registrar Abono',
+                    action: () => abonar(id, saldoPendiente, estado)
+                });
+            }
+
+            if (estado === 'cotizacion') {
+                options.push({
+                    label: '<i class="fas fa-calendar-plus text-warning w-20px text-center"></i> Extender Vigencia',
+                    action: () => extenderExpiracion(id, '')
+                });
+            }
+
+            options.push({
+                label: '<i class="fas fa-trash-alt text-danger w-20px text-center"></i> Anular Venta',
+                action: () => cancelarVenta(id)
+            });
+        }
+
+        Swal.fire({
+            title: `Folio #${id}`,
+            html: options.map(opt =>
+                `<button class="btn btn-sm w-100 text-start mb-2" onclick="return false" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px; display: flex; align-items: center; gap: 12px;">${opt.label}</button>`
+            ).join(''),
+            showConfirmButton: false,
+            didOpen: () => {
+                document.querySelectorAll('.swal2-html-container button').forEach((btn, idx) => {
+                    btn.onclick = () => {
+                        options[idx].action();
+                        Swal.close();
+                    };
+                });
+            }
+        });
+    }
+
+    /**
+     * ============================================================
+     * 📊 MENÚS FILTRO EXCEL (Desktop solo)
+     * ============================================================
+     */
+    function toggleFilterMenu(id) {
+        const menu = document.getElementById(id);
+        const abrir = !menu.classList.contains('show');
+
+        // Cerrar otros menús
+        document.querySelectorAll('.excel-filter-menu').forEach(m => m.classList.remove('show'));
+
+        if (abrir) {
+            menu.classList.add('show');
+            ajustarEspacioTabla(true, 220); // Espacio para que quepan los checkboxes
+        } else {
+            menu.classList.remove('show');
+            ajustarEspacioTabla(false);
+        }
+    }
+    window.addEventListener('resize', function () {
+        cancelarSeleccionBulk();
+    });
+
+    // Cerrar menús si hago clic en cualquier parte de la pantalla
+    document.addEventListener('click', function (e) {
+        let cerroAlgo = false;
+
+        // 1. Cierra los filtros de excel
+        if (!e.target.closest('.filter-header') && !e.target.closest('.excel-filter-menu')) {
+            document.querySelectorAll('.excel-filter-menu.show').forEach(m => {
+                m.classList.remove('show');
+                cerroAlgo = true;
+            });
+        }
+
+        // 2. Cierra el menú de estatus del pedido
+        if (!e.target.closest('.estado-wrapper') && !e.target.closest('.dropdown')) {
+            document.querySelectorAll('.estado-menu.show').forEach(m => {
+                m.classList.remove('show');
+                cerroAlgo = true;
+            });
+        }
+
+        // Contrae la tabla solo si se cerró algún menú al dar clic afuera
+        if (cerroAlgo) {
+            ajustarEspacioTabla(false);
+        }
+    });
+
+    // Fijar el dropdown de Bootstrap (3 puntitos) cuando se abre
+    document.addEventListener('show.bs.dropdown', function (e) {
+        if (e.target.closest('.table-responsive')) {
+            ajustarEspacioTabla(true, 260); // Opciones de acciones ocupan más espacio
+        }
+    });
+
+    // Restaurar tabla cuando el dropdown de Bootstrap se cierra
+    document.addEventListener('hide.bs.dropdown', function (e) {
+        if (e.target.closest('.table-responsive')) {
+            ajustarEspacioTabla(false);
+        }
+    });
+
+    document.addEventListener('click', function (e) {
+        const menu = document.getElementById('bulkStateMenu');
+        const bulkBar = document.getElementById('bulkActionsBar');
+
+        if (!menu || !bulkBar) return;
+
+        if (!bulkBar.contains(e.target)) {
+            menu.classList.remove('show');
+        }
+    });
+
+    /**
+     * Aplicar filtros Excel a la tabla (ocultar/mostrar filas)
+     */
+    function applyTableFilters() {
+        const pagos = Array.from(document.querySelectorAll('#filterPago input:checked')).map(cb => cb.value);
+        const pedidos = Array.from(document.querySelectorAll('#filterPedido input:checked')).map(cb => cb.value);
+
+        document.querySelectorAll('.item-venta').forEach(row => {
+            const estado = row.dataset.estado;
+            const pedido = row.dataset.pedido;
+
+            const pagoOK = pagos.includes(estado);
+            const pedidoOK = pedidos.includes(pedido);
+
+            if (pagoOK && pedidoOK) {
+                row.style.display = '';
+            } else {
+                row.style.display = 'none';
+            }
+        });
+    }
+
+    /**
+     * ============================================================
+     * 🎬 FUNCIONES HEREDADAS (Tutorial, Modal, etc.)
+     * ============================================================
+     */
+
+    function repetirTutorialHistorial() {
+        if (typeof window.driver === 'undefined') return;
 
         const driverObj = window.driver.js.driver({
             showProgress: true,
             doneBtnText: '¡Entendido!',
-            nextBtnText: 'Siguiente &rarr;',
-            prevBtnText: '&larr; Atrás',
+            nextBtnText: 'Siguiente →',
+            prevBtnText: '← Atrás',
             allowClose: true,
-
-            onDestroyed: () => {
-                {% if mostrar_tour %}
-                fetch('/api/tutorial/completado', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        modulo: 'historial',
-                        version: {{ version_tour | default(1)
-                }}
-        })
-    }).catch (e => console.error("Error guardando tutorial:", e));
-    {% endif %}
-            },
-
-    steps: [
-        { popover: { title: 'Tu Bitácora de Ventas 📖', description: 'Aquí queda registrado absolutamente todo: ventas cobradas, clientes que deben dinero y presupuestos enviados.', align: 'center' } },
-        { element: '#tour-buscador-historial', popover: { title: '1. Encuentra Rápido', description: 'Busca por nombre de cliente o directamente por número de folio para encontrar ventas pasadas en segundos.', side: "bottom", align: 'start' } },
-        { element: '#tour-tabla-historial', popover: { title: '2. Estados Claros', description: 'Revisa de un vistazo qué está PAGADO (dinero en tu bolsa), qué es ANTICIPO (falta liquidar) y qué es solo COTIZACIÓN.', side: "top", align: 'center' } },
-        { element: '#tour-acciones', popover: { title: '3. El menú mágico', description: 'Haz clic en los 3 puntitos para: ver qué materiales usaste en esa venta, cobrar lo que te deben, imprimir el ticket en PDF o anular la venta si hubo un error.', side: "left", align: 'start' } },
-        { element: '#tour-btn-dashboard', popover: { title: '4. Panel de Finanzas', description: 'Cuando quieras ver resúmenes mensuales, gráficas de ganancias y exportar tu información a Excel, haz clic aquí.', side: "bottom", align: 'end' } }
-    ]
+            steps: [
+                {
+                    popover: {
+                        title: 'Tu Bitácora de Ventas 📖',
+                        description: 'Aquí queda registrado absolutamente todo.',
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-buscador-historial',
+                    popover: {
+                        title: '1. Encuentra Rápido',
+                        description: 'Busca por nombre de cliente o folio.',
+                        side: "bottom",
+                        align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-tabla-historial',
+                    popover: {
+                        title: '2. Estados Claros',
+                        description: 'Revisa de un vistazo tu estado financiero y logístico.',
+                        side: "top",
+                        align: 'center'
+                    }
+                },
+                {
+                    element: '#tour-acciones',
+                    popover: {
+                        title: '3. El menú mágico',
+                        description: 'Imprime tickets, cobra y edita.',
+                        side: "left",
+                        align: 'start'
+                    }
+                },
+                {
+                    element: '#tour-btn-dashboard',
+                    popover: {
+                        title: '4. Panel de Finanzas',
+                        description: 'Ve resúmenes y gráficas.',
+                        side: "bottom",
+                        align: 'end'
+                    }
+                }
+            ]
         });
-    driverObj.drive();
+
+        driverObj.drive();
     }
 
     {% if mostrar_tour %}
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.driver !== 'undefined') {
-            setTimeout(() => { repetirTutorialHistorial(); }, 800);
+            setTimeout(() => {
+                repetirTutorialHistorial();
+            }, 800);
         }
     });
     {% endif %}
 
+    /**
+     * ============================================================
+     * 🔧 FUNCIONES HEREDADAS (Recargar, Abonar, Anular, Extender)
+     * ============================================================
+     */
 
-    // --- 5. VER DETALLES ---
-    function verDetalles(id) {
-        const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
-        document.getElementById('modalFolio').innerText = id;
-        document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted"><div class="spinner-border spinner-border-sm text-primary me-2"></div>Cargando información...</td></tr>';
-        document.getElementById('panelFinanciero').innerHTML = '';
-        modal.show();
-
-        fetch('/api/obtener_detalles/' + id)
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    document.getElementById('modalFolio').innerText = data.folio;
-                    document.getElementById('modalCliente').innerText = data.cliente;
-
-                    const estadoDiv = document.getElementById('modalEstadoDiv');
-                    let badgeClass = '', icon = '', label = data.estado.toUpperCase();
-                    if (data.estado === 'pagado') { badgeClass = 'status-pagado'; icon = 'check-circle'; }
-                    else if (data.estado === 'cancelada') { badgeClass = 'status-cancelada'; icon = 'ban'; }
-                    else if (data.estado === 'anticipo') { badgeClass = 'status-anticipo'; icon = 'clock'; }
-                    else { badgeClass = 'status-cotizacion'; icon = 'file-alt'; label = 'COTIZACIÓN'; }
-
-                    estadoDiv.innerHTML = `<span class="badge badge-status ${badgeClass} fs-6 px-3 py-2"><i class="fas fa-${icon}"></i> ${label}</span>`;
-
-                    const tbody = document.getElementById('modalTablaCuerpo');
-                    tbody.innerHTML = '';
-                    let sumaCostos = 0, sumaGanancias = 0;
-
-                    data.items.forEach(item => {
-                        let cant = item.cantidad % 1 === 0 ? Math.round(item.cantidad) : item.cantidad;
-                        let ventaTotalItem = parseFloat(item.subtotal) || 0;
-                        let costoUnitarioBD = parseFloat(item.costo_unitario) || 0;
-                        let precioUnitarioBD = parseFloat(item.precio_unitario) || 0;
-                        if (precioUnitarioBD === 0 && cant > 0) precioUnitarioBD = ventaTotalItem / cant;
-                        let costoTotalItem = costoUnitarioBD * cant;
-                        let gananciaTotalItem = ventaTotalItem - costoTotalItem;
-                        sumaCostos += costoTotalItem;
-                        sumaGanancias += gananciaTotalItem;
-
-                        let htmlIngredientes = '';
-                        if (item.composicion) {
-                            try {
-                                const comp = JSON.parse(item.composicion);
-                                if (Array.isArray(comp) && comp.length > 0) {
-                                    const listaItems = comp.map(c => `<li class="text-xs text-muted mb-1">• ${c.cantidad || 1} x ${c.nombre}</li>`).join('');
-                                    htmlIngredientes = `<ul class="list-unstyled mb-0 mt-2 ps-2 border-start border-2 border-light">${listaItems}</ul>`;
-                                }
-                            } catch (e) { }
-                        }
-
-                        tbody.innerHTML += `
-                            <tr class="border-bottom border-light">
-                                <td class="ps-4 py-3" style="min-width: 220px;">
-                                    <div class="fw-bold text-dark">${item.concepto}</div>
-                                    ${htmlIngredientes}
-                                </td>
-                                <td class="text-center align-middle font-medium text-dark">${cant}</td>
-                                <td class="text-end text-muted align-middle text-xs">$${precioUnitarioBD.toFixed(2)}</td>
-                                <td class="text-end text-dark fw-bold align-middle">$${ventaTotalItem.toFixed(2)}</td>
-                                <td class="text-end text-danger text-opacity-75 align-middle text-xs">-$${costoTotalItem.toFixed(2)}</td>
-                                <td class="text-end pe-4 fw-bold text-success align-middle">$${gananciaTotalItem.toFixed(2)}</td>
-                            </tr>`;
-                    });
-
-                    const totalVenta = parseFloat(data.total || 0);
-                    const pagado = parseFloat(data.monto_pagado || 0);
-                    const pendiente = parseFloat(data.saldo_pendiente || 0);
-                    const gananciaReal = sumaGanancias - parseFloat(data.descuento_monto || 0);
-
-                    document.getElementById('panelFinanciero').innerHTML = `
-                        <div class="col-6 col-sm-3 p-3 border-end border-bottom border-sm-bottom-0 border-light">
-                            <span class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Monto Total</span>
-                            <span class="h5 fw-bold text-dark m-0">$${totalVenta.toFixed(2)}</span>
-                        </div>
-                        <div class="col-6 col-sm-3 p-3 border-end border-bottom border-sm-bottom-0 border-light">
-                            <span class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Pagado</span>
-                            <span class="h5 fw-bold text-primary m-0">$${pagado.toFixed(2)}</span>
-                        </div>
-                        <div class="col-6 col-sm-3 p-3 border-end border-light">
-                            <span class="text-muted text-xs fw-bold text-uppercase d-block mb-1">Por Cobrar</span>
-                            <span class="h5 fw-bold ${pendiente > 0.1 ? 'text-danger' : 'text-success'} m-0">$${pendiente.toFixed(2)}</span>
-                        </div>
-                        <div class="col-6 col-sm-3 p-3 bg-success bg-opacity-10">
-                            <span class="text-success text-xs fw-bold text-uppercase d-block mb-1">Ganancia Libre</span>
-                            <span class="h5 fw-bold text-success m-0">$${gananciaReal.toFixed(2)}</span>
-                        </div>
-                    `;
-
-                    const aviso = document.getElementById('avisoCotizacion');
-                    if (data.estado === 'cotizacion') aviso.classList.remove('d-none');
-                    else aviso.classList.add('d-none');
-                }
-            });
-    }
-
-
-    // --- 6. RECARGAR / EDITAR ---
     function recargarCotizacion(id) {
         Swal.fire({
             title: 'Editar Cotización?',
@@ -1101,47 +2484,151 @@
         });
     }
 
-
-    // --- 7. REGISTRAR ABONO ---
     function abonar(id, saldo, estado) {
         const titulo = estado === 'cotizacion' ? 'Convertir a Venta' : 'Registrar Abono';
         const sub = estado === 'cotizacion' ? 'Anticipo recibido:' : 'Monto que abona el cliente:';
 
-        Swal.fire({
-            title: titulo,
-            html: `<div class="mb-2">Saldo pendiente: <strong>$${saldo.toFixed(2)}</strong></div>`,
-            input: 'number',
-            inputAttributes: { min: 0, step: 0.01 },
-            inputLabel: sub,
-            inputPlaceholder: 'Ej. 500.00',
-            showCancelButton: true,
-            confirmButtonText: 'Guardar Pago',
-            cancelButtonText: 'Cancelar',
-            confirmButtonColor: '#10b981',
-            customClass: { confirmButton: 'rounded-pill px-4', cancelButton: 'rounded-pill px-4 text-dark' },
-            inputValidator: (value) => {
-                if (!value || value <= 0) return 'Ingresa un monto válido mayor a 0';
-                if (value > (saldo + 0.01)) return 'El abono no puede superar la deuda total';
-            }
-        }).then((result) => {
-            if (result.isConfirmed) {
-                fetch('/api/actualizar_venta', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ id: id, abono: result.value })
-                }).then(r => r.json()).then(d => {
-                    if (d.success) {
-                        Swal.fire({ icon: 'success', title: 'Pago Registrado', showConfirmButton: false, timer: 1500 }).then(() => location.reload());
-                    } else {
-                        Swal.fire('Error', d.message, 'error');
-                    }
+        const modalId = `modalAbono_${id}`;
+        const existente = document.getElementById(modalId);
+        if (existente) existente.remove();
+
+        const modalHTML = `
+            <div class="modal fade" id="${modalId}" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0" style="border-radius: 20px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                        <div class="modal-header border-bottom-0 pb-0 pt-4 px-4">
+                            <h5 class="modal-title fw-bold text-dark">${titulo}</h5>
+                            <button type="button" class="btn-close shadow-none" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="bg-light-gray p-4 rounded-4 mb-4" style="background-color: var(--bg-light-gray); border: 1px solid var(--border-color);">
+                                <div class="mb-2">
+                                    <span class="text-muted text-xs fw-bold text-uppercase">Saldo Pendiente</span>
+                                    <h4 class="fw-bold text-dark m-0 mt-1">$${saldo.toFixed(2)}</h4>
+                                </div>
+                            </div>
+                            
+                            <label class="form-label fw-bold text-dark mb-2">${sub}</label>
+                            <div class="input-group input-group-lg mb-4">
+                                <span class="input-group-text bg-white border" style="border-color: var(--border-color);">$</span>
+                                <input 
+                                    type="number" 
+                                    class="form-control form-control-lg" 
+                                    id="inputAbono_${id}"
+                                    placeholder="Ej. 500.00"
+                                    step="0.01"
+                                    min="0"
+                                    style="border-color: var(--border-color);"
+                                >
+                            </div>
+                            
+                            <div class="alert alert-info rounded-3 mb-0" style="background-color: #dbeafe; color: #1d4ed8; border: 1px solid #93c5fd;">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <small>El abono no puede superar el saldo pendiente.</small>
+                            </div>
+                        </div>
+                        <div class="modal-footer border-top-0 px-4 pb-4 pt-0">
+                            <button type="button" class="btn btn-outline-custom rounded-pill px-4 fw-bold" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-primary rounded-pill px-4 fw-bold" id="btnConfirmarAbono_${id}">Registrar Abono</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+
+        const modalElement = document.getElementById(modalId);
+        const modal = new bootstrap.Modal(modalElement);
+        const inputAbono = document.getElementById(`inputAbono_${id}`);
+        const btnConfirmar = document.getElementById(`btnConfirmarAbono_${id}`);
+
+        modalElement.addEventListener('shown.bs.modal', () => {
+            inputAbono.focus();
+        });
+
+        btnConfirmar.addEventListener('click', () => {
+            const monto = parseFloat(inputAbono.value);
+
+            if (!inputAbono.value || monto <= 0) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Ingresa un monto válido',
+                    text: 'El monto debe ser mayor a 0',
+                    confirmButtonColor: '#ff4a5a'
                 });
+                return;
+            }
+
+            if (monto > (saldo + 0.01)) {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Monto inválido',
+                    text: `El abono no puede superar $${saldo.toFixed(2)}`,
+                    confirmButtonColor: '#ff4a5a'
+                });
+                return;
+            }
+
+            btnConfirmar.disabled = true;
+            btnConfirmar.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Procesando...';
+
+            fetch('/api/actualizar_venta', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: id, abono: monto })
+            })
+                .then(response => response.json())
+                .then(d => {
+                    if (d.success) {
+                        modal.hide();
+                        Swal.fire({
+                            icon: 'success',
+                            title: '✓ Abono Registrado',
+                            text: `Se registró un abono de $${monto.toFixed(2)}`,
+                            showConfirmButton: false,
+                            timer: 2000,
+                            allowOutsideClick: false,
+                            allowEscapeKey: false
+                        }).then(() => {
+                            const q = document.querySelector('.search-input')?.value || '';
+                            const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${encodeURIComponent(q)}&page={{ page }}`;
+                            actualizarTablaAJAX(url);
+                            setTimeout(() => modalElement.remove(), 500);
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: d.message || d.error || 'No se pudo registrar el abono',
+                            confirmButtonColor: '#ef4444'
+                        });
+                        btnConfirmar.disabled = false;
+                        btnConfirmar.innerHTML = 'Registrar Abono';
+                    }
+                })
+                .catch(error => {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error de Conexión',
+                        text: 'No se pudo conectar con el servidor',
+                        confirmButtonColor: '#ef4444'
+                    });
+                    btnConfirmar.disabled = false;
+                    btnConfirmar.innerHTML = 'Registrar Abono';
+                });
+        });
+
+        inputAbono.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                btnConfirmar.click();
             }
         });
+
+        modal.show();
     }
 
-
-    // --- 8. ANULAR VENTA ---
     function cancelarVenta(id) {
         Swal.fire({
             title: '¿Anular Folio #' + id + '?',
@@ -1160,46 +2647,37 @@
                     body: JSON.stringify({ id: id })
                 }).then(r => r.json()).then(d => {
                     if (d.success) {
-                        Swal.fire({ icon: 'success', title: 'Venta Anulada', showConfirmButton: false, timer: 1500 }).then(() => location.reload());
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Venta Anulada',
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(() => {
+                            const q = document.querySelector('.search-input').value;
+                            const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${encodeURIComponent(q)}&page={{ page }}`;
+                            actualizarTablaAJAX(url);
+                        });
                     } else {
-                        Swal.fire('Error', d.message, 'error');
+                        Swal.fire('Error', d.message || d.error || 'No se pudo anular la venta', 'error');
                     }
                 });
             }
         });
     }
 
-
-    // --- 9. FIX PARA MENÚS CORTADOS ---
-    // (Ahora usamos delegación de eventos por si la tabla cambia con AJAX)
-    document.addEventListener('show.bs.dropdown', function (e) {
-        let tabla = e.target.closest('.table-responsive');
-        if (tabla) { tabla.style.transition = 'padding-bottom 0.2s ease'; tabla.style.paddingBottom = '260px'; }
-    });
-
-    document.addEventListener('hide.bs.dropdown', function (e) {
-        let tabla = e.target.closest('.table-responsive');
-        if (tabla) { setTimeout(() => { tabla.style.paddingBottom = '0px'; }, 200); }
-    });
-
-    // --- 10. EXTENDER VIGENCIA DE COTIZACIÓN ---
     function extenderExpiracion(id, fechaActual) {
-        // 1. Limpiar la fecha para forzar el formato YYYY-MM-DD que exige el navegador
         let fechaLimpia = "";
         if (fechaActual) {
             if (fechaActual.includes('/')) {
-                // Si la BD lo mandó como DD/MM/YYYY (Ej. 24/05/2026)
                 let partes = fechaActual.split('/');
                 if (partes.length === 3) {
                     fechaLimpia = `${partes[2]}-${partes[1]}-${partes[0]}`;
                 }
             } else if (fechaActual.length >= 10) {
-                // Si la BD lo mandó como YYYY-MM-DD HH:MM:SS
                 fechaLimpia = fechaActual.substring(0, 10);
             }
         }
 
-        // 2. Calcular fechas mínima (mañana) y máxima (1 mes) para nuestra validación
         const hoy = new Date();
         const manana = new Date(hoy);
         manana.setDate(manana.getDate() + 1);
@@ -1210,7 +2688,6 @@
         const minStr = manana.toISOString().split('T')[0];
         const maxStr = limiteMaximo.toISOString().split('T')[0];
 
-        // 3. Lanzar SweetAlert (Quitamos min y max del HTML para que no oculte fechas previas)
         Swal.fire({
             title: 'Extender Cotización',
             html: `
@@ -1231,7 +2708,6 @@
                     Swal.showValidationMessage('Por favor selecciona una fecha');
                     return false;
                 }
-                // Aquí aplicamos la regla de negocio de forma segura
                 if (fechaElegida < minStr || fechaElegida > maxStr) {
                     Swal.showValidationMessage('La fecha debe estar entre mañana y máximo 1 mes');
                     return false;
@@ -1255,17 +2731,98 @@
                                 title: 'Vigencia Extendida',
                                 showConfirmButton: false,
                                 timer: 1500
-                            }).then(() => location.reload());
+                            }).then(() => {
+                                const q = document.querySelector('.search-input').value;
+                                const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${encodeURIComponent(q)}&page={{ page }}`;
+                                actualizarTablaAJAX(url);
+                            });
                         } else {
                             Swal.fire('Error', data.error || 'Ocurrió un problema al actualizar', 'error');
                         }
                     })
                     .catch(err => {
-                        console.error(err);
                         Swal.fire('Error', 'Fallo de conexión con el servidor', 'error');
                     });
             }
         });
     }
+
+    /**
+     * ============================================================
+     * 💬 VER DETALLES DE VENTA (Modal)
+     * ============================================================
+     */
+    function verDetalles(id) {
+        const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
+        document.getElementById('modalFolio').innerText = id;
+        document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Cargando...</td></tr>';
+        document.getElementById('panelFinanciero').innerHTML = '';
+        modal.show();
+
+        fetch('/api/obtener_detalles/' + id)
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('modalFolio').innerText = data.folio;
+                    document.getElementById('modalCliente').innerText = data.cliente;
+
+                    const estadoDiv = document.getElementById('modalEstadoDiv');
+                    let badgeClass = '', icon = '', label = data.estado.toUpperCase();
+
+                    if (data.estado === 'pagado') {
+                        badgeClass = 'status-pagado';
+                        icon = 'check-circle';
+                    } else if (data.estado === 'cancelada') {
+                        badgeClass = 'status-cancelada';
+                        icon = 'ban';
+                    } else if (data.estado === 'anticipo') {
+                        badgeClass = 'status-anticipo';
+                        icon = 'clock';
+                    } else {
+                        badgeClass = 'status-cotizacion';
+                        icon = 'file-alt';
+                        label = 'COTIZACIÓN';
+                    }
+
+                    estadoDiv.innerHTML = `<span class="badge badge-status ${badgeClass} fs-6 px-3 py-2"><i class="fas fa-${icon}"></i> ${label}</span>`;
+
+                    const tbody = document.getElementById('modalTablaCuerpo');
+                    tbody.innerHTML = '';
+                    let sumaCostos = 0, sumaGanancias = 0;
+
+                    data.items.forEach(item => {
+                        let cant = item.cantidad;
+                        let ventaTotalItem = parseFloat(item.subtotal) || 0;
+                        let costoTotalItem = (parseFloat(item.costo_unitario) || 0) * cant;
+                        let gananciaTotalItem = ventaTotalItem - costoTotalItem;
+
+                        sumaCostos += costoTotalItem;
+                        sumaGanancias += gananciaTotalItem;
+
+                        tbody.innerHTML += `
+                            <tr class="border-bottom border-light">
+                                <td class="ps-4 py-3 fw-bold text-dark">${item.concepto}</td>
+                                <td class="text-center align-middle">${cant}</td>
+                                <td class="text-end text-muted align-middle">$${(ventaTotalItem / cant).toFixed(2)}</td>
+                                <td class="text-end text-dark fw-bold align-middle">$${ventaTotalItem.toFixed(2)}</td>
+                                <td class="text-end text-danger align-middle">-$${costoTotalItem.toFixed(2)}</td>
+                                <td class="text-end pe-4 fw-bold text-success align-middle">$${gananciaTotalItem.toFixed(2)}</td>
+                            </tr>`;
+                    });
+
+                    document.getElementById('panelFinanciero').innerHTML = `
+                        <div class="col-6 col-sm-3 p-3"><span class="d-block mb-1 text-xs">Total</span><h5>$${parseFloat(data.total).toFixed(2)}</h5></div>
+                        <div class="col-6 col-sm-3 p-3"><span class="d-block mb-1 text-xs">Pagado</span><h5>$${parseFloat(data.monto_pagado).toFixed(2)}</h5></div>
+                        <div class="col-6 col-sm-3 p-3"><span class="d-block mb-1 text-xs text-danger">Por Cobrar</span><h5 class="text-danger">$${parseFloat(data.saldo_pendiente).toFixed(2)}</h5></div>
+                        <div class="col-6 col-sm-3 p-3 bg-success bg-opacity-10"><span class="d-block mb-1 text-xs text-success">Ganancia</span><h5 class="text-success">$${(sumaGanancias - parseFloat(data.descuento_monto || 0)).toFixed(2)}</h5></div>
+                    `;
+                }
+            })
+            .catch(err => {
+                console.error('Error:', err);
+                document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="6" class="text-center py-5 text-danger">Error al cargar detalles</td></tr>';
+            });
+    }
+
 </script>
 {% endblock %}

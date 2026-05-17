@@ -382,8 +382,9 @@ def cancelar_venta():
                     mat_id, ahora_sql()
                 ))
 
+        # ACTUALIZACIÓN EN CASCADA: Finanzas y Logística
         cursor.execute(
-            "UPDATE ventas SET estado = 'cancelada' WHERE id = %s AND user_id = %s",
+            "UPDATE ventas SET estado = 'cancelada', estado_pedido = 'cancelado' WHERE id = %s AND user_id = %s",
             (venta_id, session['user_id'])
         )
 
@@ -391,7 +392,7 @@ def cancelar_venta():
         cursor.execute("""
             INSERT INTO logs_actividad (user_id, accion, modulo) 
             VALUES (%s, %s, %s)
-        """, (session['user_id'], f"Canceló la Venta #{venta_id}", "Ventas"))
+        """, (session['user_id'], f"Canceló la Venta #{venta_id} y anuló el pedido", "Ventas"))
         
         conn.commit()
         
@@ -400,7 +401,7 @@ def cancelar_venta():
         u_id = session.get('user_id', 'N/A')
         inv_status = "con devolucion de stock" if usar_inventario else "sin afectar stock"
         current_app.logger.info(
-            f"SALE_CANCELLED: Usuario '{u_name}' (ID: {u_id}) cancelo la Venta #{venta_id} ({inv_status})."
+            f"SALE_CANCELLED: Usuario '{u_name}' (ID: {u_id}) cancelo la Venta y Pedido #{venta_id} ({inv_status})."
         )
         
         return jsonify({'success': True})

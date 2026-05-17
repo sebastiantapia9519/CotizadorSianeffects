@@ -81,6 +81,23 @@ def dashboard():
     page          = request.args.get('page', 1, type=int)
     per_page      = 20
 
+    filtros_validos = {'all', 'activos', 'expirados', 'trial', 'free', 'cortesia'}
+    ordenes_validos = {
+        'created_at_desc',
+        'username_asc',
+        'username_desc',
+        'expiracion_asc',
+        'expiracion_desc',
+        'last_login_desc',
+        'last_login_asc',
+    }
+    if status_filter not in filtros_validos:
+        status_filter = 'all'
+    if sort_by not in ordenes_validos:
+        sort_by = 'created_at_desc'
+    if page < 1:
+        page = 1
+
     ahora_utc = now_utc()
 
     conn   = get_db()
@@ -96,28 +113,51 @@ def dashboard():
             params.extend([f'%{search_query}%', f'%{search_query}%'])
 
         if status_filter == 'expirados':
-            # Ahora busca el estado 'Vencido' directamente o fechas que ya pasaron
-            base_where += " AND (LOWER(u.estado_suscripcion) IN ('vencida', 'vencido', 'expirada', 'cancelada', 'cancelado', 'pago fallido') OR u.subscription_end < %s)"
+            base_where += """
+                AND u.role = 0
+                AND (
+                    LOWER(COALESCE(u.estado_suscripcion, '')) IN ('vencida', 'vencido', 'expirada', 'cancelada', 'cancelado', 'pago fallido')
+                    OR u.subscription_end < %s
+                    OR u.subscription_end IS NULL
+                )
+            """
             params.append(ahora_utc)
         elif status_filter == 'activos':
-            # Busca explícitamente el estado 'Activo' (blindado con LOWER) o que su plan_type sea de pago y fecha vigente
-            base_where += " AND (LOWER(u.estado_suscripcion) = 'activo' OR LOWER(u.plan_type) IN ('mensual', 'anual')) AND u.subscription_end >= %s"
+            base_where += """
+                AND u.role = 0
+                AND LOWER(COALESCE(u.estado_suscripcion, '')) = 'activo'
+                AND LOWER(COALESCE(u.plan_type, '')) IN ('mensual', 'anual')
+                AND u.subscription_end >= %s
+            """
             params.append(ahora_utc)
         elif status_filter == 'trial':
-            # Busca los que están en Trial (ignorando mayúsculas/minúsculas)
-            base_where += " AND LOWER(u.estado_suscripcion) = 'trial'"
+            base_where += """
+                AND u.role = 0
+                AND LOWER(COALESCE(u.estado_suscripcion, '')) = 'trial'
+                AND u.subscription_end >= %s
+            """
+            params.append(ahora_utc)
         elif status_filter == 'free':
-            # Busca los que tienen el plan_type en 'Free' (ignorando mayúsculas/minúsculas)
-            base_where += " AND LOWER(u.plan_type) = 'free'"
+            base_where += """
+                AND u.role = 0
+                AND LOWER(COALESCE(u.plan_type, 'free')) = 'free'
+                AND LOWER(COALESCE(u.estado_suscripcion, '')) != 'trial'
+            """
         elif status_filter == 'cortesia':
-            # Filtro para el nuevo estado de cortesía manual
-            base_where += " AND LOWER(u.plan_type) = 'cortesia'"
+            base_where += """
+                AND u.role = 0
+                AND LOWER(COALESCE(u.plan_type, '')) = 'cortesia'
+                AND u.subscription_end >= %s
+            """
+            params.append(ahora_utc)
 
         # 3. CONTEO TOTAL
         count_sql = f"SELECT COUNT(*) as total FROM usuarios u {base_where}"
         cursor.execute(count_sql, params)
         total_users = cursor.fetchone()['total']
         total_pages = math.ceil(total_users / per_page) if total_users > 0 else 1
+        if page > total_pages:
+            page = total_pages
         offset      = (page - 1) * per_page
 
         # 4. CONSTRUCCIÓN DINÁMICA DEL ORDER BY

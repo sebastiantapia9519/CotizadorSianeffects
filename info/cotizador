@@ -2,7 +2,7 @@
                     MANUAL TÉCNICO Y DE NEGOCIO: COTIZADOR SIANEFFECTS
 ================================================================================
 Última actualización: Mayo 2026
-Versión: 2.1 — Integración de Costos Operativos y Mano de Obra Dinámica
+Versión: 2.2 — Optimizaciones de UX, Búsqueda Inteligente y Menús Dinámicos
 Descripción: Plataforma SaaS (Software as a Service) diseñada para creadores,
 artesanos y agencias. Permite la gestión integral de costos de producción,
 inventarios, creación de "recetas" (productos), cotizaciones, abonos, logística
@@ -490,12 +490,12 @@ B) Venta Rápida:    Concepto libre con precio manual y costo declarado ($0 = ga
 
 ESTADOS DE UNA VENTA
 ---------------------
-Estado       Color       Descripción
------------  ----------  -------------------------------------------------------
-cotizacion   Gris        Temporal, caduca en 48 horas. No afecta inventario
-anticipo     Amarillo    Pago parcial registrado. Genera deuda liquidable
-pagado       Verde       Saldo $0.00 (diferencias < $0.05 se absorben automáticamente)
-cancelada    Rojo        Reintegra materiales al stock. Purga mensual automática
+Estado      Color       Descripción
+----------- ----------  -------------------------------------------------------
+cotizacion  Gris        Temporal, caduca en 48 horas. No afecta inventario
+anticipo    Amarillo    Pago parcial registrado. Genera deuda liquidable
+pagado      Verde       Saldo $0.00 (diferencias < $0.05 se absorben automáticamente)
+cancelada   Rojo        Reintegra materiales al stock. Purga mensual automática
 
 GESTIÓN DE IVA
 --------------
@@ -511,7 +511,44 @@ TICKETS Y PDF
 - El acceso al ticket queda registrado en logs_actividad.
 
 ================================================================================
-12. LOGÍSTICA DE ENVÍOS
+12. BITÁCORA Y GESTIÓN DE VENTAS
+================================================================================
+
+BÚSQUEDA INTELIGENTE (TOLERANCIA A ACENTOS)
+-------------------------------------------
+Para mejorar la experiencia del usuario (UX) en la barra de búsqueda del Historial,
+se implementó una búsqueda agnóstica de mayúsculas y acentos directamente en SQL
+sin requerir extensiones de base de datos complejas (como unaccent).
+- Se utiliza la combinación de TRANSLATE() y LOWER().
+- El motor convierte "MAMÁ VANE" y "mama vane" a una estructura base "mama vane"
+  para la comparación (ILIKE).
+
+PREVENCIÓN DE "CLIPPING" EN MENÚS FLOTANTES (UX)
+------------------------------------------------
+Las tablas responsivas (.table-responsive) en HTML emplean `overflow-x: auto`,
+lo que por comportamiento nativo en los navegadores corta cualquier elemento que
+exceda el borde vertical.
+- Solución implementada: Expansión dinámica del DOM vía JavaScript.
+- Al abrir un menú desplegable (Bootstrap o SweetAlert anidado), se inyecta
+  temporalmente un `margin-bottom` a la tabla, expandiendo el contenedor blanco
+  físicamente hacia abajo.
+- Al cerrar el menú o hacer clic afuera, el margen regresa a 0px con una 
+  transición CSS fluida (ease), asegurando que ninguna opción quede oculta.
+- Barra flotante de acciones masivas: Al seleccionar uno o más registros, aparece una barra inferior responsive con contador, menú compacto de cambio de estado y botón de cancelar selección. En móvil se comporta como bottom sheet para conservar contexto sin bloquear la pantalla completa.
+
+ACTUALIZACIÓN EN CASCADA Y ACCIONES MASIVAS
+-------------------------------------------
+El módulo soporta gestión individual y masiva (Bulk Actions) operado por APIs asíncronas.
+- Anulación en Cascada: Al anular una venta (estado = 'cancelada' en el flujo financiero),
+  el motor SQL ejecuta un UPDATE en cascada para asignar estado_pedido = 'cancelado' 
+  en el flujo logístico, evitando preparación de mercancía errónea.
+- Checkboxes Inteligentes: Los registros cancelados reciben el atributo `disabled` y
+  son excluidos algorítmicamente del selector maestro "Marcar todos".
+- Tiempos de Respuesta: Se emplea SweetAlert2 (toast loading) para retroalimentación
+  visual inmediata mientras la API despacha el cambio en segundo plano.
+
+================================================================================
+13. LOGÍSTICA DE ENVÍOS
 ================================================================================
 
 ESTRATEGIA LOCAL (ÚLTIMA MILLA)
@@ -527,7 +564,7 @@ ESTRATEGIA NACIONAL (VOLUMETRÍA)
 - Zona especial 'ALL' como tarifa general para estados no configurados
 
 ================================================================================
-13. PANEL FINANCIERO (DASHBOARD)
+14. PANEL FINANCIERO (DASHBOARD)
 ================================================================================
 
 KPIs PRINCIPALES
@@ -551,7 +588,7 @@ EXPORTACIÓN
 - BOM UTF-8 en CSV para compatibilidad con Excel en español
 
 ================================================================================
-14. CATÁLOGO PÚBLICO
+15. CATÁLOGO PÚBLICO
 ================================================================================
 
 - Almacenamiento de imágenes en Cloudflare R2 (conversión automática a WebP)
@@ -559,7 +596,7 @@ EXPORTACIÓN
 - Organización por categorías con orden configurable
 
 ================================================================================
-15. MÓDULO DE INVITACIONES DIGITALES
+16. MÓDULO DE INVITACIONES DIGITALES
 ================================================================================
 
 FUNCIONALIDADES
@@ -585,7 +622,7 @@ PLANNERS
 - Portal de cliente separado para gestión de sus invitaciones
 
 ================================================================================
-16. INFRAESTRUCTURA DE PRODUCCIÓN (RAILWAY)
+17. INFRAESTRUCTURA DE PRODUCCIÓN (RAILWAY)
 ================================================================================
 
 SERVICIOS ACTIVOS
@@ -630,7 +667,7 @@ BACKUP Y RESTORE
 - Los backups apuntan únicamente al entorno DEV para proteger producción
 
 ================================================================================
-17. ONBOARDING Y SOPORTE AL USUARIO
+18. ONBOARDING Y SOPORTE AL USUARIO
 ================================================================================
 
 CENTRO DE CAPACITACIÓN (/ayuda)
@@ -660,7 +697,7 @@ Cuatro tipos de notificaciones en el Navbar:
   4. Grace period: Banner de urgencia cuando la suscripción venció ese día
 
 ================================================================================
-18. ASISTENTE INTELIGENTE DE COSTOS (CHATBOT IA)
+19. ASISTENTE INTELIGENTE DE COSTOS (CHATBOT IA)
 ================================================================================
 
 PROPÓSITO
@@ -765,7 +802,7 @@ Estados visuales:
 
 MANEJO DE ERRORES Y TIMEOUT
 -----------------------------
-Tipo de error                   Respuesta                                   Código HTTP
+Tipo de error                   Respuesta                                  Código HTTP
 ------------------------------  -------------------------------------------  -----------
 Mensaje vacío                   {'error': 'Mensaje vacío'}                   400
 Timeout de API (>10s)           "❌ No pude conectar, intenta de nuevo"      500
@@ -890,7 +927,7 @@ Historial no persiste           session.modified = True falta   Ya implementado 
 Cuota excedida                  >1,500 requests en 24 hrs       Esperar reset diario o pagar
 
 ================================================================================
-19. PASARELA DE PAGOS AUTOMATIZADA (STRIPE)
+20. PASARELA DE PAGOS AUTOMATIZADA (STRIPE)
 ================================================================================
 
 PROPÓSITO

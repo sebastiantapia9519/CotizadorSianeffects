@@ -296,9 +296,12 @@ def registro():
 
         # Configuración general del negocio (margen, inventario, etc.)
         cursor.execute('''
-            INSERT INTO configuracion (user_id, margen_ganancia, inventario_activo, ticket_bw, nombre_empresa)
-            VALUES (%s, %s, %s, %s, %s)
-        ''', (user_id, 100, False, False, company_name))
+            INSERT INTO configuracion (
+                user_id, margen_ganancia, porcentaje_gastos_operativos,
+                inventario_activo, ticket_bw, nombre_empresa
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (user_id, 100, 0, False, False, company_name))
 
         # Configuración de envíos con tarifas base razonables
         cursor.execute('''

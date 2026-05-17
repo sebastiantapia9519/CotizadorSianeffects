@@ -15,6 +15,9 @@ from utils.tutorial_utils import debe_mostrar_tutorial, obtener_version_tutorial
 
 main_bp = Blueprint('main', __name__)
 
+# Definición de estados válidos para la logística de pedidos
+ESTADOS_PERMITIDOS = {'pendiente', 'en_proceso', 'listo', 'entregado', 'cancelado'}
+
 # --- RUTAS DE ACCESO PRINCIPAL (EL PORTERO) ---
 
 @main_bp.route('/')
@@ -285,7 +288,7 @@ def guardar_venta():
             WHERE user_id=%s
         """, (u_id,))
         config_row = cursor.fetchone()
-        porcentaje_operativo = float(config_row['porcentaje_gastos_operativos']) if config_row and config_row['porcentaje_gastos_operativos'] else 10.0
+        porcentaje_operativo = float(config_row['porcentaje_gastos_operativos']) if config_row and config_row['porcentaje_gastos_operativos'] else 0.0
 
         for item in items:
             cantidad = float(item.get('cantidad', 0))
@@ -448,9 +451,7 @@ def guardar_venta():
             current_app.logger.warning(f"Error al guardar log de actividad en Cotizador: {e}")
 
         conn.commit()
-        
-        current_app.logger.info(f"SALE_SAVED: Usuario '{u_name}' (ID: {u_id}) guardo la venta/cotizacion #{venta_id} con estado '{estado.upper()}'")
-        
+                
         return jsonify({'success': True, 'ticket_id': venta_id})
 
     except Exception as e:
@@ -461,49 +462,105 @@ def guardar_venta():
         cursor.close()
         conn.close()
 
-# --- ACTUALIZAR VENTA (ABONOS) ---
-@main_bp.route('/api/actualizar_venta', methods=['POST'])
-@subscription_required
-def actualizar_venta():
-    data = request.get_json()
-    venta_id = data.get('id')
-    abono = float(data.get('abono', 0))
+# ========================================================
+# APIS PARA CONTROL DE ESTADOS DE PEDIDO (LOGÍSTICA)
+# ========================================================
+
+# 1. CAMBIAR ESTADO DE PEDIDO INDIVIDUAL
+@main_bp.route('/api/ventas/<int:venta_id>/estado-pedido', methods=['PATCH'])
+@login_required
+def update_estado_pedido(venta_id):
+    data = request.get_json() or {}
+    nuevo_estado = data.get('estado_pedido')
+    uid = session['user_id']
     u_name = session.get('username', 'Anonimo')
-    u_id = session.get('user_id', 'N/A')
+
+    if nuevo_estado not in ESTADOS_PERMITIDOS:
+        return jsonify({'success': False, 'error': 'Estado de pedido no válido'}), 400
 
     conn = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute("SELECT total, monto_pagado FROM ventas WHERE id = %s AND user_id = %s", (venta_id, u_id))
+        # Asegurarnos de que la venta le pertenece al usuario actual
+        cursor.execute("SELECT id, estado FROM ventas WHERE id = %s AND user_id = %s", (venta_id, uid))
         venta = cursor.fetchone()
         if not venta:
-            return jsonify({'success': False, 'message': 'Venta no encontrada'}), 404
-            
-        nuevo_pagado = float(venta['monto_pagado']) + abono
-        nuevo_saldo = float(venta['total']) - nuevo_pagado
-        nuevo_estado = 'pagado' if nuevo_saldo <= 0.5 else 'anticipo'
-        
-        cursor.execute('''
-            UPDATE ventas SET monto_pagado = %s, saldo_pendiente = %s, estado = %s, fecha_vencimiento = NULL 
-            WHERE id = %s
-        ''', (nuevo_pagado, max(0, nuevo_saldo), nuevo_estado, venta_id))
+            return jsonify({'success': False, 'error': 'Venta no encontrada'}), 404
+        if venta['estado'] == 'cancelada':
+            return jsonify({'success': False, 'error': 'No se puede modificar un pedido anulado'}), 400
 
+        # Realizar la actualización
+        cursor.execute("""
+            UPDATE ventas 
+            SET estado_pedido = %s 
+            WHERE id = %s AND user_id = %s
+        """, (nuevo_estado, venta_id, uid))
+
+        # Registro en la bitácora del sistema
         try:
             cursor.execute("""
                 INSERT INTO logs_actividad (user_id, accion, modulo) 
                 VALUES (%s, %s, %s)
-            """, (u_id, f"Abonó ${abono:,.2f} a Venta #{venta_id}", "Ventas"))
-        except Exception as e:
-            current_app.logger.warning(f"Error al guardar log de actividad en Abono: {e}")
-        
+            """, (uid, f"Cambió el estado del pedido a '{nuevo_estado}' en Venta #{venta_id}", "Ventas"))
+        except Exception as log_e:
+            current_app.logger.warning(f"Error al guardar log de estado_pedido: {log_e}")
+
         conn.commit()
-        
-        current_app.logger.info(f"SALE_PAYMENT: Usuario '{u_name}' (ID: {u_id}) registro abono de ${abono} a Venta #{venta_id}. Estado: {nuevo_estado.upper()}")
-        
-        return jsonify({'success': True, 'nuevo_estado': nuevo_estado})
+        current_app.logger.info(f"ORDER_STATUS_UPDATED: Usuario '{u_name}' (ID: {uid}) cambió estado de pedido de Venta #{venta_id} a '{nuevo_estado}'")
+        return jsonify({'success': True, 'message': 'Estado del pedido actualizado correctamente'})
+
     except Exception as e:
         conn.rollback()
-        return jsonify({'success': False, 'message': str(e)}), 500
+        current_app.logger.error(f"ORDER_STATUS_ERROR: Error al actualizar estado individual - {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+
+# 2. CAMBIAR ESTADO DE PEDIDO EN MASA (BULK ACTIONS)
+@main_bp.route('/api/ventas/bulk-estado-pedido', methods=['POST'])
+@login_required
+def bulk_update_estado_pedido():
+    data = request.get_json() or {}
+    venta_ids = data.get('ids')  # Espera una lista de enteros, ej: [101, 102, 103]
+    nuevo_estado = data.get('estado_pedido')
+    uid = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+
+    if nuevo_estado not in ESTADOS_PERMITIDOS:
+        return jsonify({'success': False, 'error': 'Estado no válido'}), 400
+    if not venta_ids or not isinstance(venta_ids, list):
+        return jsonify({'success': False, 'error': 'IDs no válidos o vacíos'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        # Ejecutar update masivo blindado por el user_id de la sesión
+        cursor.execute("""
+            UPDATE ventas 
+            SET estado_pedido = %s 
+            WHERE id IN %s AND user_id = %s AND estado != 'cancelada'
+        """, (nuevo_estado, tuple(venta_ids), uid))
+        actualizadas = cursor.rowcount
+
+        # Registro en bitácora
+        try:
+            cursor.execute("""
+                INSERT INTO logs_actividad (user_id, accion, modulo) 
+                VALUES (%s, %s, %s)
+            """, (uid, f"Cambió en masa el estado del pedido a '{nuevo_estado}' para {actualizadas} ventas", "Ventas"))
+        except Exception as log_e:
+            current_app.logger.warning(f"Error al guardar log de bulk estado_pedido: {log_e}")
+
+        conn.commit()
+        current_app.logger.info(f"ORDER_BULK_STATUS_UPDATED: Usuario '{u_name}' (ID: {uid}) actualizó {actualizadas} ventas al estado '{nuevo_estado}'")
+        return jsonify({'success': True, 'message': f'{actualizadas} pedidos actualizados con éxito'})
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"ORDER_BULK_STATUS_ERROR: Error en cambio masivo - {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
     finally:
         cursor.close()
         conn.close()
@@ -531,7 +588,8 @@ def historial():
     params_count = [uid]
 
     if q:
-        sql_count += " AND (CAST(id AS TEXT) ILIKE %s OR cliente ILIKE %s)"
+        # CAMBIO 1: Ignorar acentos y mayúsculas en el conteo
+        sql_count += " AND (CAST(id AS TEXT) ILIKE %s OR TRANSLATE(LOWER(cliente), 'áéíóú', 'aeiou') ILIKE TRANSLATE(LOWER(%s), 'áéíóú', 'aeiou'))"
         params_count.extend([f'%{q}%', f'%{q}%'])
     
     if status != 'all':
@@ -543,11 +601,12 @@ def historial():
     total_pages = math.ceil(total_registros / per_page)
 
     # --- 2. QUERY PARA DATOS ---
-    sql = 'SELECT id, cliente, fecha, total, estado, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine FROM ventas WHERE user_id=%s'
+    sql = 'SELECT id, cliente, fecha, total, estado, estado_pedido, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine FROM ventas WHERE user_id=%s'
     params = [uid]
     
     if q:
-        sql += " AND (CAST(id AS TEXT) ILIKE %s OR cliente ILIKE %s)"
+        # CAMBIO 2: Ignorar acentos y mayúsculas en la búsqueda real
+        sql += " AND (CAST(id AS TEXT) ILIKE %s OR TRANSLATE(LOWER(cliente), 'áéíóú', 'aeiou') ILIKE TRANSLATE(LOWER(%s), 'áéíóú', 'aeiou'))"
         params.extend([f'%{q}%', f'%{q}%'])
         
     if status != 'all':

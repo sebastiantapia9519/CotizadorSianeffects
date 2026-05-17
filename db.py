@@ -179,12 +179,17 @@ def init_db():
         modo_oscuro BOOLEAN DEFAULT FALSE,
         ticket_bw BOOLEAN DEFAULT FALSE,
         servicios_mensuales_estimados INTEGER DEFAULT 100,
-        porcentaje_gastos_operativos REAL DEFAULT 10,
+        porcentaje_gastos_operativos REAL DEFAULT 0,
         notas_ticket VARCHAR(255) DEFAULT '',
         labor_activa BOOLEAN DEFAULT FALSE,
         salario_deseado NUMERIC DEFAULT 15000,
         horas_semanales NUMERIC DEFAULT 20
     )
+    """)
+
+    cursor.execute("""
+    ALTER TABLE configuracion
+    ALTER COLUMN porcentaje_gastos_operativos SET DEFAULT 0
     """)
 
     # =========================
