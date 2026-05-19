@@ -2,7 +2,7 @@
                     MANUAL TÉCNICO Y DE NEGOCIO: COTIZADOR SIANEFFECTS
 ================================================================================
 Última actualización: Mayo 2026
-Versión: 2.2 — Optimizaciones de UX, Búsqueda Inteligente y Menús Dinámicos
+Versión: 2.3 — Total Mágico por Descuento, Edición Consistente y Utilidades Admin
 Descripción: Plataforma SaaS (Software as a Service) diseñada para creadores,
 artesanos y agencias. Permite la gestión integral de costos de producción,
 inventarios, creación de "recetas" (productos), cotizaciones, abonos, logística
@@ -333,9 +333,31 @@ Acciones disponibles:
   Modo Fantasma           GET     Impersona a cualquier usuario (util para soporte)
   Eliminar usuario        POST    Borrado en cascada completo incluyendo R2
   Exportar CSV            GET     Reporte de todos los usuarios con BOM UTF-8
+  Eliminar folio anulado  POST    Purga manual definitiva por ID, solo estado='cancelada'
   Monitor de logs         GET     Últimas 100 líneas de limpieza.log en tiempo real
   Descargar log           GET     Descarga completa del archivo limpieza.log
   Bitácora por usuario    GET/JSON Últimos 20 eventos de actividad (para modal)
+
+MENÚ UTILIDADES
+---------------
+Para reducir ruido visual en el encabezado del panel, las acciones de operación
+menos frecuentes se agrupan en el dropdown "Utilidades":
+  - Reportes:
+      * Exportar usuarios (CSV)
+  - Mantenimiento:
+      * Eliminar folio anulado
+
+El borrado manual de folios anulados vive en /admin/eliminar-cotizacion y exige:
+  1. role >= 1 vía @admin_required
+  2. Método POST
+  3. ID numérico del folio
+  4. Confirmación textual exacta: BORRAR
+  5. Que el registro en ventas tenga estado = 'cancelada'
+
+Si el folio está activo, pagado, con anticipo o como cotización vigente, el backend
+rechaza la operación. Cuando procede, borra primero venta_detalles y después ventas,
+registra un evento en logs_actividad y deja rastro en limpieza.log con prefijo
+QUOTE_DELETED.
 
 PROTECCIONES DEL PANEL
 -----------------------
@@ -343,6 +365,7 @@ PROTECCIONES DEL PANEL
 - Un admin (role=1) no puede asignar roles >= al suyo
 - No se puede eliminar al propio usuario
 - No se puede eliminar a usuarios de igual o mayor rango (excepto role=2)
+- No se pueden purgar folios no anulados desde Utilidades
 - Cada acción queda registrada en app.logger con formato:
   "ACCION: Admin 'nombre' (ID:X) operó sobre 'target' (ID:Y) — detalle"
 
@@ -384,6 +407,7 @@ SUB_RENEWED              Suscripción renovada por admin
 TIME_ADDED               Días sumados a suscripción
 ROLE_CHANGED             Cambio de rol con valores anterior → nuevo
 USER_DELETED             Eliminación permanente con cascada
+QUOTE_DELETED            Purga manual definitiva de folio anulado desde /admin
 EXPORT_DATA              Exportación de CSV o Excel
 R2_CLEANUP               Archivo eliminado de Cloudflare R2
 SALE_SAVED               Venta/cotización guardada
@@ -502,6 +526,61 @@ GESTIÓN DE IVA
 Toggle en el carrito permite sumar el porcentaje configurado (ej. 16%) sobre
 el subtotal + envío. El motor de impuestos registra "IVA 16%" en tax_engine.
 
+DESCUENTO Y "TOTAL MÁGICO" (Mayo 2026)
+--------------------------------------
+El total interactuable del carrito permite cuadrar o redondear un ticket sin
+alterar los precios unitarios de los productos.
+
+Regla central:
+  - Los precios unitarios del carrito son fuente de verdad y NO se prorratean.
+  - Si el usuario escribe un total objetivo, el sistema ajusta el porcentaje de
+    descuento para llegar matemáticamente a ese total.
+  - Esto evita que productos como un termo de $265.00 terminen guardados con
+    precios ocultos o alterados.
+
+Flujo frontend (templates/cotizador.html):
+  1. El usuario hace clic sobre el total.
+  2. Ingresa un nuevo total objetivo.
+  3. aplicarMagiaTotal() calcula la diferencia contra el total actual.
+  4. Si quiere cobrar menos, aumenta el descuento.
+  5. Si quiere cobrar más, reduce el descuento.
+  6. Si hay IVA activo, el ajuste de descuento se divide entre factorTax
+     (1 + taxPct/100), porque cada peso modificado en descuento impacta también
+     la base del impuesto.
+  7. El nuevo descuento se escribe en inputDescuento y sliderDescuento con hasta
+     4 decimales para conservar precisión.
+  8. calcularTotal() refresca subtotal, descuento, impuestos y total visible.
+
+Ejemplo:
+  - Subtotal carrito: $2,650.00
+  - Descuento visible: 15%
+  - Descuento original: $397.50
+  - Total matemático: $2,252.50
+  - Total redondeado visible: $2,253.00
+  - Backend absorbe centavos ajustando descuento_monto cuando aplica, sin tocar
+    precio_unitario ni subtotal de los detalles.
+
+Sin IVA:
+  nuevoDescuentoDinero = descuentoActualDinero - diferenciaTotal
+
+Con IVA:
+  nuevoDescuentoDinero = descuentoActualDinero - (diferenciaTotal / factorTax)
+
+Persistencia backend (/guardar_venta en routes/main.py):
+  - Recalcula subtotal_calculado desde items usando precio_unitario * cantidad.
+  - Si descuento_porcentaje > 0, recalcula descuento_monto desde el subtotal.
+  - Limita descuento_monto para que nunca exceda el subtotal.
+  - Calcula base_imponible = subtotal_con_descuento + envio.
+  - Calcula impuestos sobre base_imponible.
+  - Redondea total_calculado hacia arriba con math.ceil().
+  - Si el redondeo cabe dentro del descuento, reduce descuento_monto por
+    diferencia_redondeo / factor_tax para que el ticket cierre sin alterar
+    precios unitarios.
+
+Nota operativa:
+  Si no existe descuento suficiente para absorber el redondeo, el total sigue
+  redondeado hacia arriba y el descuento no se vuelve negativo.
+
 TICKETS Y PDF
 -------------
 - El ticket se genera con los datos del negocio del usuario (logo, slogan, web).
@@ -509,6 +588,8 @@ TICKETS Y PDF
   para garantías o términos, evitando tickets excesivamente largos.
 - Accesible por URL directa /ticket/<id> (sin requerir login para compartir).
 - El acceso al ticket queda registrado en logs_actividad.
+- En tickets con total mágico, el subtotal de detalles conserva precios unitarios
+  originales; el ajuste se refleja en descuento_monto y descuento_porcentaje.
 
 ================================================================================
 12. BITÁCORA Y GESTIÓN DE VENTAS
@@ -546,6 +627,42 @@ El módulo soporta gestión individual y masiva (Bulk Actions) operado por APIs 
   son excluidos algorítmicamente del selector maestro "Marcar todos".
 - Tiempos de Respuesta: Se emplea SweetAlert2 (toast loading) para retroalimentación
   visual inmediata mientras la API despacha el cambio en segundo plano.
+
+EDICIÓN DE COTIZACIONES DESDE HISTORIAL
+---------------------------------------
+Existen dos rutas de carga hacia el cotizador:
+  A) /cotizador?cargar_cotizacion=<id>
+     - Usa /api/get_cotizacion/<id> en routes/main.py.
+     - Devuelve descuento_porcentaje, tax_percent e items.
+
+  B) Botón "Editar" desde /historial
+     - Usa /api/obtener_detalles/<id> en routes/api.py.
+     - Guarda datos en sessionStorage y redirige a /cotizador.
+     - recuperarSesionCotizacion() reconstruye el carrito.
+
+Corrección Mayo 2026:
+  - /api/obtener_detalles/<id> ahora devuelve:
+      * descuento_porcentaje
+      * descuento_monto
+      * subtotal
+      * impuestos
+      * envio
+  - templates/historial.html guarda recarga_descuento_porcentaje.
+  - templates/cotizador.html restaura ese valor en inputDescuento y sliderDescuento.
+  - Al editar, el botón "Solo Cotizar" cambia a "Actualizar Cotización" y se conserva
+    ventaIdEdicion para actualizar el mismo folio, no crear duplicado.
+
+Caso probado:
+  - Folio #217 creado con Venta Rápida.
+  - 10 piezas x $265.00 = $2,650.00.
+  - Descuento 15%.
+  - Total guardado: $2,253.00.
+  - Al editar desde Historial, cargó:
+      * ventaIdEdicion = 217
+      * descuento input/slider = 15
+      * label descuento = -$397.50
+      * total visible = $2,253.00
+  - Al actualizar el cliente, se guardó sobre el mismo folio sin duplicarlo.
 
 ================================================================================
 13. LOGÍSTICA DE ENVÍOS
