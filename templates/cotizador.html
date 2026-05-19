@@ -1285,35 +1285,49 @@
             return;
         }
 
-        // --- 1. MATEMÁTICA INVERSA ---
+        // --- LA NUEVA MAGIA ---
+        // En lugar de alterar los precios unitarios de cada producto,
+        // simplemente forzamos el total en la UI.
+        
+        // 1. Calculamos cuánto dinero de diferencia hay entre lo que el sistema calculó
+        // y lo que tú quieres cobrar.
+        const diferencia = nuevoTotal - totalOriginal;
+        
+        // 2. Si la diferencia es negativa (quieres cobrar menos), aumentamos el descuento.
+        // Si la diferencia es positiva (quieres cobrar más, como un redondeo hacia arriba),
+        // reducimos el descuento.
+        
+        // Primero, calculamos cuál era el descuento en dinero que ya tenías
+        let subtotalActualCarrito = 0;
+        carrito.forEach(i => subtotalActualCarrito += (i.precio_unitario * i.cantidad));
+        
+        const descPctActual = parseFloat(document.getElementById('inputDescuento').value) || 0;
+        let descuentoDineroActual = subtotalActualCarrito * (descPctActual / 100);
+        
         const taxSwitch = document.getElementById('taxSwitch').checked;
         const taxPct = taxSwitch ? (parseFloat(document.getElementById('taxPercent').value) || 0) : 0;
         const factorTax = 1 + (taxPct / 100);
 
-        const descPct = parseFloat(document.getElementById('inputDescuento').value) || 0;
-        const factorDesc = 1 - (descPct / 100);
+        // Ajustamos el descuento en dinero. Si hay impuestos, el cambio en descuento
+        // impacta el total multiplicado por el IVA, por eso se divide entre factorTax.
+        let nuevoDescuentoDinero = descuentoDineroActual - (diferencia / factorTax);
+        
+        // Convertimos ese nuevo dinero de descuento a porcentaje para el slider
+        // (Asegurándonos de no dividir entre cero)
+        let nuevoDescPct = 0;
+        if (subtotalActualCarrito > 0) {
+           nuevoDescPct = (nuevoDescuentoDinero / subtotalActualCarrito) * 100;
+        }
+        
+        // Nos aseguramos de que el porcentaje sea válido (entre 0 y 100)
+        nuevoDescPct = Math.max(0, Math.min(100, nuevoDescPct));
 
-        const costoEnvioActual = typeof costoEnvio !== 'undefined' ? costoEnvio : 0;
-
-        const totalSinImpuesto = nuevoTotal / factorTax;
-        const totalSinEnvio = totalSinImpuesto - costoEnvioActual;
-        const subtotalObjetivo = totalSinEnvio / factorDesc;
-
-        // --- 2. PRORRATEO CON DECIMALES OCULTOS ---
-        let subtotalActualCarrito = 0;
-        carrito.forEach(i => subtotalActualCarrito += (i.precio_unitario * i.cantidad));
-
-        if (subtotalActualCarrito === 0) return;
-
-        const factorProrrateo = subtotalObjetivo / subtotalActualCarrito;
-
-        carrito.forEach(item => {
-            item.precio_unitario = parseFloat((item.precio_unitario * factorProrrateo).toFixed(6));
-            item.subtotal = parseFloat((item.precio_unitario * item.cantidad).toFixed(6));
-        });
-
-        // Refrescamos visuales
-        renderizarCarrito();
+        // Actualizamos los controles visuales con el nuevo porcentaje exacto
+        document.getElementById('inputDescuento').value = nuevoDescPct.toFixed(4); // Usamos 4 decimales para mayor precisión
+        document.getElementById('sliderDescuento').value = nuevoDescPct;
+        
+        // Volvemos a calcular todo para que la UI se actualice limpiamente
+        calcularTotal();
 
         Swal.fire({
             toast: true, position: 'top-end', icon: 'success',
@@ -1480,32 +1494,7 @@
 
         const cli = document.getElementById('nombreCliente').value || "Cliente General";
 
-        // --- MAGIA INVISIBLE: SINCRONIZAR UI CON BACKEND ---
-        const totalVisualTexto = document.getElementById('totalTicket').innerText.replace(/[$,]/g, '');
-        const totalVisual = parseFloat(totalVisualTexto) || 0;
-
-        const taxSwitch = document.getElementById('taxSwitch').checked;
-        const taxPct = taxSwitch ? (parseFloat(document.getElementById('taxPercent').value) || 0) : 0;
-        const factorTax = 1 + (taxPct / 100);
-
-        const descPct = parseFloat(document.getElementById('inputDescuento').value) || 0;
-        const factorDesc = 1 - (descPct / 100);
-
-        const costoEnvioActual = typeof costoEnvio !== 'undefined' ? costoEnvio : 0;
-
-        const subtotalObjetivo = ((totalVisual / factorTax) - costoEnvioActual) / factorDesc;
-
-        let subtotalActualCarrito = 0;
-        carrito.forEach(i => subtotalActualCarrito += (i.precio_unitario * i.cantidad));
-
-        if (subtotalActualCarrito > 0 && subtotalObjetivo > 0) {
-            const factorProrrateo = subtotalObjetivo / subtotalActualCarrito;
-            carrito.forEach(item => {
-                item.precio_unitario = Math.round((item.precio_unitario * factorProrrateo) * 100) / 100;
-                item.subtotal = Math.round((item.precio_unitario * item.cantidad) * 100) / 100;
-            });
-        }
-        // --- FIN MAGIA INVISIBLE ---
+        
 
         let subtotal = 0;
         let costo_total = 0;
@@ -1514,11 +1503,16 @@
             costo_total += (i.costo_unitario * i.cantidad);
         });
 
+        const descPct = parseFloat(document.getElementById('inputDescuento').value) || 0;
+        const taxSwitch = document.getElementById('taxSwitch').checked;
+        const taxPct = taxSwitch ? (parseFloat(document.getElementById('taxPercent').value) || 0) : 0;
+        const costoEnvioActual = typeof costoEnvio !== 'undefined' ? costoEnvio : 0;
         const desc_monto = subtotal * (descPct / 100);
         const subtotal_con_descuento = subtotal - desc_monto;
-        const tax_amount = subtotal_con_descuento * (taxPct / 100);
+        const base_imponible = subtotal_con_descuento + costoEnvioActual;
+        const tax_amount = base_imponible * (taxPct / 100);
 
-        const totalFinalCalculado = Math.round(((subtotal_con_descuento + costoEnvioActual) + tax_amount) * 100) / 100;
+        const totalFinalCalculado = Math.ceil(Math.round((base_imponible + tax_amount) * 100) / 100);
 
         let estado = 'pagado';
         let pago_inicial = totalFinalCalculado;
@@ -1852,8 +1846,8 @@
                     btn.innerHTML = btn.innerHTML.replace('Solo Cotizar', 'Actualizar Cotización');
                 });
                 document.getElementById('nombreCliente').value = data.cliente;
-                document.getElementById('inputDescuento').value = data.descuento;
-                document.getElementById('sliderDescuento').value = data.descuento;
+                document.getElementById('inputDescuento').value = data.descuento_porcentaje;
+                document.getElementById('sliderDescuento').value = data.descuento_porcentaje;
 
                 data.items.forEach(item => {
                     carrito.push({
@@ -1959,6 +1953,12 @@
                 document.getElementById('nombreCliente').value = cliente;
             }
 
+            const descuento = sessionStorage.getItem('recarga_descuento_porcentaje');
+            if (descuento !== null) {
+                document.getElementById('inputDescuento').value = descuento;
+                document.getElementById('sliderDescuento').value = descuento;
+            }
+
             if (sessionStorage.getItem('recarga_tax_active') === 'true') {
                 document.getElementById('taxSwitch').checked = true;
                 document.getElementById('taxPercent').value = sessionStorage.getItem('recarga_tax_percent') || 0;
@@ -1970,6 +1970,7 @@
             sessionStorage.removeItem('recarga_cotizacion');
             sessionStorage.removeItem('recarga_cliente');
             sessionStorage.removeItem('recarga_id');
+            sessionStorage.removeItem('recarga_descuento_porcentaje');
             sessionStorage.removeItem('recarga_tax_percent');
             sessionStorage.removeItem('recarga_tax_active');
 

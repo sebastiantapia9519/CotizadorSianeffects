@@ -146,6 +146,10 @@ def obtener_detalles_venta(id):
         'costo_total': venta['costo_total'],
         'monto_pagado': venta['monto_pagado'],
         'saldo_pendiente': venta['saldo_pendiente'],
+        'descuento_porcentaje': venta['descuento_porcentaje'] if 'descuento_porcentaje' in venta.keys() else 0,
+        'descuento_monto': venta['descuento_monto'] if 'descuento_monto' in venta.keys() else 0,
+        'subtotal': venta['subtotal'] if 'subtotal' in venta.keys() else 0,
+        'impuestos': venta['impuestos'] if 'impuestos' in venta.keys() else 0,
         'envio': venta['envio'] if 'envio' in venta.keys() else 0,
         'items': items
     })

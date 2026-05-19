@@ -304,11 +304,16 @@ def guardar_venta():
             subtotal_calculado += item_subtotal_real
             costo_total_calculado += (cantidad * costo_u)
 
+        subtotal_calculado = round(subtotal_calculado, 2)
+        
+        if descuento_pct > 0:
+            descuento_monto = round(subtotal_calculado * (descuento_pct / 100), 2)
+        
         if descuento_monto > subtotal_calculado:
             descuento_monto = subtotal_calculado 
 
-        subtotal_con_descuento = subtotal_calculado - descuento_monto
-        base_imponible = subtotal_con_descuento + costo_envio
+        subtotal_con_descuento = round(subtotal_calculado - descuento_monto, 2)
+        base_imponible = round(subtotal_con_descuento + costo_envio, 2)
 
         tax_amount_calculado = 0.0
         tax_engine = "none"
@@ -323,7 +328,21 @@ def guardar_venta():
         # Se lo sumamos al costo total para saber tu costo real final
         costo_total_calculado += costo_operativo_de_esta_venta
 
-        total_calculado = base_imponible + tax_amount_calculado
+        total_calculado_exacto = base_imponible + tax_amount_calculado
+        total_calculado = math.ceil(total_calculado_exacto) 
+
+        # Si el redondeo hacia arriba cabe dentro del descuento, lo absorbemos ahí
+        # para mantener intactos los precios unitarios de los productos.
+        diferencia_redondeo = round(total_calculado - total_calculado_exacto, 2)
+        factor_tax = 1 + (tax_percent / 100)
+        ajuste_descuento = round(diferencia_redondeo / factor_tax, 2)
+        if diferencia_redondeo > 0 and descuento_monto >= ajuste_descuento:
+            descuento_monto = round(descuento_monto - ajuste_descuento, 2)
+            subtotal_con_descuento = round(subtotal_calculado - descuento_monto, 2)
+            base_imponible = round(subtotal_con_descuento + costo_envio, 2)
+            if tax_percent > 0:
+                tax_amount_calculado = base_imponible * (tax_percent / 100)
+        
         monto_pagado_real = min(monto_pagado_total, total_calculado)
         saldo_pendiente_real = total_calculado - monto_pagado_real
 
@@ -715,7 +734,10 @@ def get_cotizacion(id):
             current_app.logger.warning(f"Error al guardar log de actividad en Cargar Cotizacion: {e}")
 
         return jsonify({
-            'success': True, 'id': venta['id'], 'cliente': venta['cliente'], 'descuento': venta['descuento_porcentaje'],
+            'success': True, 
+            'id': venta['id'], 
+            'cliente': venta['cliente'],
+            'descuento_porcentaje': venta['descuento_porcentaje'], 
             'tax_percent': venta['tax_engine'].replace('IVA ', '').replace('%', '') if venta['tax_engine'] != 'none' else 0,
             'items': items
         })

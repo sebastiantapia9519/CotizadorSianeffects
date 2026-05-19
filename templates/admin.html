@@ -349,9 +349,28 @@
         <a href="{{ url_for('admin.monitor') }}" class="btn btn-white btn-sm rounded-pill shadow-sm px-3 text-center">
             <i class="fas fa-terminal text-primary me-2"></i>Monitor
         </a>
-        <a href="{{ url_for('admin.exportar_usuarios') }}" class="btn btn-success btn-sm border-0 rounded-pill shadow-sm px-3 text-center d-none d-md-block" style="background-color: #059669;">
-            <i class="fas fa-file-excel me-2"></i>Exportar
-        </a>
+        <div class="dropdown">
+            <button class="btn btn-white btn-sm rounded-pill shadow-sm px-3 text-center dropdown-toggle" type="button"
+                data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-toolbox text-secondary me-2"></i>Utilidades
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end custom-dropdown-menu">
+                <li><h6 class="dropdown-header">REPORTES</h6></li>
+                <li>
+                    <a href="{{ url_for('admin.exportar_usuarios') }}" class="dropdown-item">
+                        <i class="fas fa-file-excel text-success opacity-75 me-1"></i> Exportar usuarios
+                    </a>
+                </li>
+                <li><hr class="dropdown-divider my-1"></li>
+                <li><h6 class="dropdown-header">MANTENIMIENTO</h6></li>
+                <li>
+                    <button type="button" class="dropdown-item text-danger"
+                        data-bs-toggle="modal" data-bs-target="#modalEliminarCotizacion">
+                        <i class="fas fa-eraser opacity-75 me-1"></i> Eliminar folio anulado
+                    </button>
+                </li>
+            </ul>
+        </div>
         <span class="badge bg-white text-dark border px-3 py-2 rounded-pill shadow-sm d-flex align-items-center justify-content-center m-0 fw-medium" style="font-size: 0.85rem;">
             <i class="fas fa-users text-primary me-2"></i> {{ stats['total'] }} Usuarios
             <span class="text-muted fw-light mx-2">|</span>
@@ -836,6 +855,43 @@
             <div class="modal-footer border-0 pt-0">
                 <button type="button" class="btn btn-white w-100 rounded-pill shadow-sm" data-bs-dismiss="modal">Cerrar</button>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="modalEliminarCotizacion" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <div class="modal-header border-0 pb-0">
+                <div>
+                    <h6 class="modal-title fw-bold text-dark m-0">Eliminar folio anulado</h6>
+                    <small class="text-muted">Borrado permanente por ID</small>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{{ url_for('admin.eliminar_cotizacion') }}" method="POST" class="require-confirm"
+                data-title="¿Eliminar folio anulado?"
+                data-text="Se borrará definitivamente de la base de datos y ya no aparecerá en historial, ticket ni reportes."
+                data-icon="error"
+                data-btn-color="#d33"
+                data-btn-text="Sí, eliminar permanentemente">
+                <div class="modal-body">
+                    <label class="small text-muted mb-1">ID del folio anulado</label>
+                    <input type="number" name="cotizacion_id" class="form-control text-center fw-bold rounded-3 mb-3"
+                        placeholder="Ej. 217" min="1" required>
+
+                    <label class="small text-muted mb-1">Confirmación</label>
+                    <input type="text" name="confirmacion" class="form-control text-center fw-bold rounded-3"
+                        placeholder="Escribe BORRAR" required>
+                    <small class="text-danger d-block mt-2">
+                        Solo se eliminarán folios ya anulados. Ventas activas, pagadas, con anticipo o cotizaciones vigentes serán rechazadas.
+                    </small>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-white rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger rounded-pill px-4">Eliminar</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

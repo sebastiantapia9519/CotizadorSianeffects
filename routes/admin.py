@@ -585,6 +585,78 @@ def stop_impersonate():
     return redirect(url_for('auth.login'))
 
 
+@admin_bp.route('/eliminar-cotizacion', methods=['POST'])
+@admin_required
+def eliminar_cotizacion():
+    cotizacion_id = request.form.get('cotizacion_id', '').strip()
+    confirmacion = request.form.get('confirmacion', '').strip().upper()
+    admin_id = session.get('user_id')
+    admin_name = session.get('username', 'Admin_Desconocido')
+
+    if not cotizacion_id.isdigit():
+        flash('Ingresa un ID de folio válido.', 'danger')
+        return redirect(url_for('admin.dashboard'))
+
+    if confirmacion != 'BORRAR':
+        flash('Para eliminar el folio debes escribir BORRAR en la confirmación.', 'warning')
+        return redirect(url_for('admin.dashboard'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute("""
+            SELECT v.id, v.user_id, v.cliente, v.total, v.estado, u.username
+            FROM ventas v
+            LEFT JOIN usuarios u ON u.id = v.user_id
+            WHERE v.id = %s
+        """, (int(cotizacion_id),))
+        venta = cursor.fetchone()
+
+        if not venta:
+            conn.rollback()
+            flash(f'No existe un folio #{cotizacion_id}.', 'danger')
+            return redirect(url_for('admin.dashboard'))
+
+        if venta['estado'] != 'cancelada':
+            conn.rollback()
+            flash(f'El folio #{cotizacion_id} no está anulado; su estado actual es "{venta["estado"]}".', 'danger')
+            return redirect(url_for('admin.dashboard'))
+
+        cursor.execute('DELETE FROM venta_detalles WHERE venta_id = %s', (venta['id'],))
+        detalles_borrados = cursor.rowcount
+        cursor.execute('DELETE FROM ventas WHERE id = %s', (venta['id'],))
+
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
+            VALUES (%s, %s, %s, %s)
+        """, (
+            admin_id,
+            f"Eliminó permanentemente el folio anulado #{venta['id']}",
+            "Admin",
+            f"Cliente: {venta['cliente']} | Usuario dueño: {venta['username']} (ID:{venta['user_id']}) | Total: {venta['total']} | Detalles borrados: {detalles_borrados}"
+        ))
+
+        conn.commit()
+        current_app.logger.warning(
+            f"QUOTE_DELETED: Admin '{admin_name}' (ID:{admin_id}) eliminó permanentemente "
+            f"el folio anulado #{venta['id']} de usuario '{venta['username']}' (ID:{venta['user_id']})."
+        )
+        flash(f'Folio anulado #{venta["id"]} eliminado permanentemente.', 'success')
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(
+            f"QUOTE_DELETE_ERROR: Admin '{admin_name}' (ID:{admin_id}) falló al eliminar folio #{cotizacion_id} - {e}"
+        )
+        flash('Error interno al eliminar el folio. Intenta de nuevo.', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('admin.dashboard'))
+
+
 # =============================================================================
 # ELIMINAR USUARIO (POST)
 # =============================================================================
