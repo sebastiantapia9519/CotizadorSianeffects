@@ -2534,9 +2534,11 @@
                             sessionStorage.setItem('recarga_cliente', data.cliente);
                             sessionStorage.setItem('recarga_id', id);
                             sessionStorage.setItem('recarga_descuento_porcentaje', data.descuento_porcentaje || 0);
+                            sessionStorage.setItem('recarga_envio', data.envio || 0);
                             if (data.impuestos > 0) {
-                                let subDescontado = data.subtotal - data.descuento_monto;
-                                let pct = Math.round((data.impuestos / subDescontado) * 100);
+                                let subDescontado = (parseFloat(data.subtotal) || 0) - (parseFloat(data.descuento_monto) || 0);
+                                let baseImponible = subDescontado + (parseFloat(data.envio) || 0);
+                                let pct = baseImponible > 0 ? Math.round((data.impuestos / baseImponible) * 100) : 0;
                                 sessionStorage.setItem('recarga_tax_percent', pct);
                                 sessionStorage.setItem('recarga_tax_active', 'true');
                             }

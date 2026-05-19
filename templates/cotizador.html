@@ -1959,6 +1959,15 @@
                 document.getElementById('sliderDescuento').value = descuento;
             }
 
+            const envioRecargado = parseFloat(sessionStorage.getItem('recarga_envio')) || 0;
+            if (envioRecargado > 0) {
+                costoEnvio = envioRecargado;
+                document.getElementById('resumenEnvio').classList.remove('d-none');
+                document.getElementById('descEnvio').textContent = 'Envío registrado';
+                document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
+                document.getElementById('btnTextoEnvio').innerText = 'Cambiar';
+            }
+
             if (sessionStorage.getItem('recarga_tax_active') === 'true') {
                 document.getElementById('taxSwitch').checked = true;
                 document.getElementById('taxPercent').value = sessionStorage.getItem('recarga_tax_percent') || 0;
@@ -1971,6 +1980,7 @@
             sessionStorage.removeItem('recarga_cliente');
             sessionStorage.removeItem('recarga_id');
             sessionStorage.removeItem('recarga_descuento_porcentaje');
+            sessionStorage.removeItem('recarga_envio');
             sessionStorage.removeItem('recarga_tax_percent');
             sessionStorage.removeItem('recarga_tax_active');
 
