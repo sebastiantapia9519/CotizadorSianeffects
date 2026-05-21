@@ -2,277 +2,683 @@
 
 {% block content %}
 <style>
-    /* ===================================================
-       1. ESTILOS ORIGINALES (MODO CLARO INTACTO)
-       =================================================== */
-    .dashboard-bg { background-color: #fcfcfc; min-height: 100vh; padding: 1.5rem 0 3rem 0; }
-    .sian-stat-card {
-        background: #ffffff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
-        padding: 16px 10px; text-align: center; border-left: 4px solid transparent; height: 100%;
-        display: flex; flex-direction: column; align-items: center; justify-content: center;
-        transition: transform 0.2s;
+    .dashboard-bg {
+        background: var(--bs-body-bg);
+        min-height: 100vh;
+        padding: 1rem 0 2.5rem;
     }
-    .sian-stat-card:hover { transform: translateY(-2px); }
-    .border-total { border-left-color: #0d6efd; }
-    .border-active { border-left-color: #198754; }
-    .border-expired { border-left-color: #dc3545; }
-    .border-warning { border-left-color: #ffc107; }
-    .border-info { border-left-color: #0dcaf0; }
-    
-    .icon-box { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; margin-bottom: 12px; font-size: 1.1rem; }
-    .bg-blue-light { background-color: #e7f1ff; color: #0d6efd; }
-    .bg-green-light { background-color: #e8f5e9; color: #198754; }
-    .bg-red-light { background-color: #f8d7da; color: #dc3545; }
-    .bg-yellow-light { background-color: #fff8e1; color: #ffc107; }
-    .bg-info-light { background-color: #e0f8f8; color: #0dcaf0; }
-    
-    .stat-value { font-size: 1.5rem; font-weight: 700; color: #212529; margin-bottom: 6px; }
-    .stat-label { font-size: 0.65rem; font-weight: 600; color: #6c757d; text-transform: uppercase; letter-spacing: 0.5px; }
-    .table-minimal { font-size: 0.85rem; }
-    .table-minimal th { font-weight: 600; color: #86868b; text-transform: uppercase; font-size: 0.7rem; border: none; }
-    .filter-bar { background: #fff; border-radius: 50px; padding: 8px 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05); }
 
-    /* ===================================================
-       2. MODO OSCURO (OVERRIDE AUTOMÁTICO EXACTO)
-       =================================================== */
-    [data-bs-theme="dark"] .dashboard-bg { 
-        background-color: #0f172a !important; 
+    .dashboard-shell {
+        display: grid;
+        gap: 1rem;
     }
-    
-    /* Tarjetas y Contenedores */
-    [data-bs-theme="dark"] .sian-stat-card {
-        background-color: #1e293b !important;
-        box-shadow: none !important;
-        border-top: 1px solid #334155;
-        border-right: 1px solid #334155;
-        border-bottom: 1px solid #334155;
+
+    .metric-card,
+    .panel-card {
+        background: var(--bs-card-bg, var(--bs-body-bg));
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(18, 28, 45, 0.05);
     }
-    
+
+    .metric-card {
+        min-height: 142px;
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    .metric-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: .75rem;
+    }
+
+    .metric-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        flex: 0 0 auto;
+    }
+
+    .metric-value {
+        color: var(--bs-emphasis-color);
+        font-size: 1.7rem;
+        line-height: 1.05;
+        font-weight: 750;
+        letter-spacing: 0;
+    }
+
+    .metric-label,
+    .eyebrow {
+        color: var(--bs-secondary-color);
+        font-size: .72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: .04em;
+    }
+
+    .metric-note {
+        color: var(--bs-secondary-color);
+        font-size: .78rem;
+        line-height: 1.35;
+        margin: .4rem 0 0;
+    }
+
+    .panel-card {
+        padding: 1rem;
+    }
+
+    .panel-title {
+        color: var(--bs-emphasis-color);
+        font-size: .98rem;
+        font-weight: 750;
+        margin: 0;
+    }
+
+    .panel-subtitle {
+        color: var(--bs-secondary-color);
+        font-size: .8rem;
+        margin: .2rem 0 0;
+    }
+
+    .dashboard-table {
+        font-size: .84rem;
+        margin: 0;
+    }
+
+    .dashboard-table th {
+        color: var(--bs-secondary-color);
+        border-bottom-color: var(--bs-border-color);
+        font-size: .68rem;
+        font-weight: 750;
+        letter-spacing: .04em;
+        text-transform: uppercase;
+        white-space: nowrap;
+    }
+
+    .dashboard-table td {
+        border-color: var(--bs-border-color);
+        vertical-align: middle;
+    }
+
+    .identity-main {
+        color: var(--bs-emphasis-color);
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+
+    .identity-sub {
+        color: var(--bs-secondary-color);
+        font-size: .76rem;
+        overflow-wrap: anywhere;
+    }
+
+    .filter-bar {
+        background: var(--bs-card-bg, var(--bs-body-bg));
+        border: 1px solid var(--bs-border-color);
+        border-radius: 8px;
+        box-shadow: 0 8px 24px rgba(18, 28, 45, 0.05);
+        padding: .65rem;
+    }
+
+    .source-row {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: .75rem;
+        padding: .65rem 0;
+        border-bottom: 1px solid var(--bs-border-color);
+    }
+
+    .source-row:last-child {
+        border-bottom: 0;
+    }
+
+    .source-kicker {
+        color: var(--bs-secondary-color);
+        font-size: .76rem;
+    }
+
+    .source-value {
+        color: var(--bs-emphasis-color);
+        font-weight: 750;
+        white-space: nowrap;
+    }
+
+    .mini-progress {
+        background: var(--bs-tertiary-bg);
+        border-radius: 999px;
+        height: 7px;
+        overflow: hidden;
+    }
+
+    .mini-progress span {
+        display: block;
+        height: 100%;
+        border-radius: 999px;
+        background: #2563eb;
+    }
+
+    .empty-state {
+        color: var(--bs-secondary-color);
+        padding: 1.5rem 1rem;
+        text-align: center;
+        font-size: .88rem;
+    }
+
+    .chart-box {
+        position: relative;
+        height: 285px;
+        width: 100%;
+    }
+
+    .chart-box-sm {
+        position: relative;
+        height: 240px;
+        width: 100%;
+    }
+
+    .bg-revenue { background: #dcfce7; color: #15803d; }
+    .bg-mrr { background: #dbeafe; color: #1d4ed8; }
+    .bg-users { background: #fef3c7; color: #b45309; }
+    .bg-churn { background: #fee2e2; color: #b91c1c; }
+    .bg-watch { background: #e0f2fe; color: #0369a1; }
+
+    .dashboard-table .badge {
+        max-width: 100%;
+        white-space: normal;
+    }
+
+    [data-bs-theme="dark"] .dashboard-bg { background: var(--bs-body-bg); }
+    [data-bs-theme="dark"] .metric-card,
+    [data-bs-theme="dark"] .panel-card,
     [data-bs-theme="dark"] .filter-bar {
-        background-color: #1e293b !important;
-        border: 1px solid #334155 !important;
-        box-shadow: none !important;
+        background: var(--bs-tertiary-bg);
+        border-color: var(--bs-border-color);
+        box-shadow: none;
     }
-
-    [data-bs-theme="dark"] .modal-content {
-        background-color: #1e293b !important;
-        border-color: #334155 !important;
-    }
-
-    /* Textos Genéricos */
-    [data-bs-theme="dark"] h3,
-    [data-bs-theme="dark"] .stat-value,
-    [data-bs-theme="dark"] .fw-bold,
+    [data-bs-theme="dark"] .metric-value,
+    [data-bs-theme="dark"] .panel-title,
+    [data-bs-theme="dark"] .identity-main,
+    [data-bs-theme="dark"] .source-value,
     [data-bs-theme="dark"] .text-dark,
     [data-bs-theme="dark"] strong {
-        color: #f8fafc !important;
+        color: var(--bs-emphasis-color) !important;
     }
-
-    [data-bs-theme="dark"] p,
-    [data-bs-theme="dark"] .stat-label,
+    [data-bs-theme="dark"] .metric-label,
+    [data-bs-theme="dark"] .metric-note,
+    [data-bs-theme="dark"] .panel-subtitle,
+    [data-bs-theme="dark"] .identity-sub,
+    [data-bs-theme="dark"] .source-kicker,
     [data-bs-theme="dark"] .text-muted,
     [data-bs-theme="dark"] small {
-        color: #94a3b8 !important;
+        color: var(--bs-secondary-color) !important;
     }
-
-    /* Iconos (Ajuste de opacidad) */
-    [data-bs-theme="dark"] .bg-blue-light { background-color: rgba(13, 110, 253, 0.15) !important; color: #60a5fa !important; }
-    [data-bs-theme="dark"] .bg-green-light { background-color: rgba(25, 135, 84, 0.15) !important; color: #34d399 !important; }
-    [data-bs-theme="dark"] .bg-red-light { background-color: rgba(220, 53, 69, 0.15) !important; color: #f87171 !important; }
-    [data-bs-theme="dark"] .bg-yellow-light { background-color: rgba(255, 193, 7, 0.15) !important; color: #fbbf24 !important; }
-    [data-bs-theme="dark"] .bg-info-light { background-color: rgba(13, 202, 240, 0.15) !important; color: #38bdf8 !important; }
-
-    /* Inputs y Formularios */
+    [data-bs-theme="dark"] .dashboard-table th,
+    [data-bs-theme="dark"] .dashboard-table td,
+    [data-bs-theme="dark"] .source-row {
+        border-color: var(--bs-border-color);
+    }
     [data-bs-theme="dark"] .form-select,
     [data-bs-theme="dark"] .form-control {
-        background-color: #0f172a !important;
-        border: 1px solid #334155 !important;
-        color: #f8fafc !important;
-    }
-    
-    [data-bs-theme="dark"] .form-select option {
-        background-color: #1e293b !important;
-        color: #f8fafc !important;
-    }
-
-    /* Tablas */
-    [data-bs-theme="dark"] .table-minimal th {
-        color: #94a3b8 !important;
-    }
-    [data-bs-theme="dark"] .table-minimal td {
-        border-color: #334155 !important;
-    }
-
-    /* Modal Extras */
-    [data-bs-theme="dark"] .modal-header.border-0 {
-        border-bottom: 1px solid #334155 !important;
-    }
-    
-    [data-bs-theme="dark"] #resultado_link {
-        background-color: #0f172a !important;
-        border-color: #3b82f6 !important;
-    }
-
-    [data-bs-theme="dark"] .btn-close {
-        filter: invert(1) grayscale(100%) brightness(200%);
+        background: var(--bs-body-bg) !important;
+        border-color: var(--bs-border-color) !important;
+        color: var(--bs-body-color) !important;
     }
     [data-bs-theme="dark"] .btn-light {
-    background-color: #1e293b !important;
-    border-color: #334155 !important;
-    color: #f8fafc !important;
+        background: var(--bs-tertiary-bg);
+        border-color: var(--bs-border-color);
+        color: var(--bs-body-color);
+    }
+    [data-bs-theme="dark"] .text-bg-light {
+        background-color: var(--bs-body-bg) !important;
+        color: var(--bs-emphasis-color) !important;
+        border-color: var(--bs-border-color) !important;
+    }
+    [data-bs-theme="dark"] .bg-revenue { background: rgba(34, 197, 94, .16); color: #4ade80; }
+    [data-bs-theme="dark"] .bg-mrr { background: rgba(59, 130, 246, .16); color: #60a5fa; }
+    [data-bs-theme="dark"] .bg-users { background: rgba(245, 158, 11, .18); color: #fbbf24; }
+    [data-bs-theme="dark"] .bg-churn { background: rgba(239, 68, 68, .16); color: #f87171; }
+    [data-bs-theme="dark"] .bg-watch { background: rgba(14, 165, 233, .16); color: #38bdf8; }
+
+    @media (max-width: 767.98px) {
+        .dashboard-bg {
+            padding: .75rem 0 2rem;
+        }
+
+        .dashboard-bg .container {
+            padding-left: .75rem;
+            padding-right: .75rem;
+        }
+
+        .dashboard-shell {
+            gap: .75rem;
+        }
+
+        .metric-card,
+        .panel-card {
+            border-radius: 8px;
+            box-shadow: none;
+        }
+
+        .metric-card {
+            min-height: 118px;
+            padding: .85rem;
+        }
+
+        .metric-value {
+            font-size: 1.36rem;
+        }
+
+        .metric-note,
+        .panel-subtitle {
+            font-size: .75rem;
+        }
+
+        .metric-icon {
+            width: 34px;
+            height: 34px;
+        }
+
+        .filter-bar form {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr;
+            width: 100%;
+        }
+
+        .filter-bar .eyebrow {
+            grid-column: 1 / -1;
+        }
+
+        .filter-bar .form-select,
+        .filter-bar .btn,
+        .filter-bar a.btn {
+            width: 100%;
+            max-width: none !important;
+        }
+
+        .chart-box {
+            height: 245px;
+        }
+
+        .chart-box-sm {
+            height: 220px;
+        }
+
+        .table-responsive {
+            overflow: visible;
+        }
+
+        .dashboard-table {
+            border-collapse: separate;
+            border-spacing: 0 .65rem;
+            font-size: .82rem;
+        }
+
+        .dashboard-table thead {
+            display: none;
+        }
+
+        .dashboard-table tbody,
+        .dashboard-table tr,
+        .dashboard-table td {
+            display: block;
+            width: 100%;
+        }
+
+        .dashboard-table tr {
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: 8px;
+            padding: .75rem;
+        }
+
+        [data-bs-theme="dark"] .dashboard-table tr {
+            background: var(--bs-body-bg);
+        }
+
+        .dashboard-table td {
+            border: 0;
+            padding: .38rem 0;
+            text-align: left !important;
+            display: grid;
+            grid-template-columns: minmax(82px, 34%) 1fr;
+            gap: .65rem;
+            align-items: start;
+        }
+
+        .dashboard-table td::before {
+            content: attr(data-label);
+            color: var(--bs-secondary-color);
+            font-size: .68rem;
+            font-weight: 800;
+            letter-spacing: .04em;
+            text-transform: uppercase;
+        }
+
+        .dashboard-table td:first-child {
+            display: block;
+            padding-top: 0;
+        }
+
+        .dashboard-table td:first-child::before {
+            display: none;
+        }
+
+        .dashboard-table td:last-child {
+            padding-bottom: 0;
+        }
+
+        .source-row {
+            grid-template-columns: 1fr;
+            gap: .25rem;
+        }
+
+        .source-value {
+            white-space: normal;
+            font-size: 1.05rem;
+        }
     }
 
-    [data-bs-theme="dark"] .btn-light:hover {
-        background-color: #334155 !important;
+    @media (max-width: 575.98px) {
+        .metric-card { min-height: 124px; }
+        .metric-value { font-size: 1.28rem; }
+        .metric-label,
+        .eyebrow {
+            font-size: .66rem;
+        }
+        .panel-card {
+            padding: .85rem;
+        }
     }
 </style>
 
 <div class="dashboard-bg">
-    <div class="container">
-        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-3">
+    <div class="container dashboard-shell">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
             <div>
-                <h3 style="font-weight: 600; margin-bottom: 0;">Salud de Sianeffects</h3>
-                <p style="font-size: 0.85rem; margin-bottom: 0;">Métricas de crecimiento y retención</p>
+                <div class="eyebrow">Dashboard admin</div>
+                <h3 class="mb-1 fw-bold">Salud de Sianeffects</h3>
+                <p class="text-muted mb-0">Periodo: <strong>{{ periodo_label }}</strong>. Cifras basadas en usuarios, logs de pago y ventas guardadas.</p>
             </div>
-            
-            <div class="d-flex gap-2">
-                <a href="{{ url_for('admin.gestion_notificaciones') }}" 
-                class="btn btn-light shadow-sm d-flex align-items-center justify-content-center" 
-                style="border-radius: 50px; font-weight: 600; padding: 8px 18px; border: 1px solid var(--bs-border-color);">
-                    <i class="fas fa-bullhorn me-2 text-danger"></i> 
-                    <span class="d-none d-sm-inline">Notificar</span>
-                </a>
 
-                <button class="btn btn-primary shadow-sm" 
-                        style="border-radius: 50px; font-weight: 600; padding: 8px 18px;" 
-                        data-bs-toggle="modal" data-bs-target="#modalEnlaces">
-                    <i class="fas fa-link me-2"></i> Crear Enlace
-                </button>
+            <div class="d-flex gap-2 flex-wrap">
+                <a href="{{ url_for('admin.gestion_notificaciones') }}" class="btn btn-light border shadow-sm">
+                    <i class="fas fa-bullhorn me-2 text-danger"></i>Notificar
+                </a>
             </div>
         </div>
 
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="d-flex align-items-center gap-3 flex-wrap">
-                    <form action="{{ url_for('dashboard.index') }}" method="GET" class="filter-bar d-flex align-items-center gap-2">
-                        <span class="small fw-bold text-muted me-2">Análisis de Periodo:</span>
-                        <select name="mes" class="form-select form-select-sm border-0 bg-white shadow-sm rounded-pill">
-                            <option value="">Mes (Todos)</option>
-                            {% for val, nom in lista_meses %}
-                            <option value="{{ val }}" {% if val==mes_sel %}selected{% endif %}>{{ nom }}</option>
-                            {% endfor %}
-                        </select>
-                        <select name="anio" class="form-select form-select-sm border-0 bg-white shadow-sm rounded-pill">
-                            <option value="">Año (Todos)</option>
-                            {% for a in lista_anios %}
-                            <option value="{{ a }}" {% if a|string==anio_sel|string %}selected{% endif %}>{{ a }}</option>
-                            {% endfor %}
-                        </select>
-                        <button type="submit" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
-                            <i class="fas fa-sync-alt me-1"></i> Actualizar
-                        </button>
-                    </form>
-                    {% if mes_sel or anio_sel %}
-                    <a href="{{ url_for('dashboard.index') }}" class="btn btn-light btn-sm rounded-pill border shadow-sm px-3">
-                        <i class="fas fa-globe-americas me-1 text-primary"></i> Ver Histórico Total
-                    </a>
+        <div class="filter-bar">
+            <form action="{{ url_for('dashboard.index') }}" method="GET" class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="eyebrow me-1">Filtrar</span>
+                <select name="mes" class="form-select form-select-sm" style="max-width: 150px;">
+                    <option value="">Todos los meses</option>
+                    {% for val, nom in lista_meses %}
+                    <option value="{{ val }}" {% if val==mes_sel %}selected{% endif %}>{{ nom }}</option>
+                    {% endfor %}
+                </select>
+                <select name="anio" class="form-select form-select-sm" style="max-width: 130px;">
+                    <option value="">Todos los años</option>
+                    {% for a in lista_anios %}
+                    <option value="{{ a }}" {% if a|string==anio_sel|string %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+                <button type="submit" class="btn btn-primary btn-sm">
+                    <i class="fas fa-rotate me-1"></i>Actualizar
+                </button>
+                {% if mes_sel or anio_sel %}
+                <a href="{{ url_for('dashboard.index') }}" class="btn btn-light btn-sm border">
+                    <i class="fas fa-xmark me-1"></i>Limpiar
+                </a>
+                {% endif %}
+            </form>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-top">
+                        <div class="metric-label">Ingreso mensual esperado</div>
+                        <div class="metric-icon bg-revenue"><i class="fas fa-money-bill-wave"></i></div>
+                    </div>
+                    <div>
+                        <div class="metric-value">${{ "%.0f"|format(ingresos_brutos) }}</div>
+                        <p class="metric-note">Calculado desde suscripciones activas.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-top">
+                        <div class="metric-label">MRR estimado</div>
+                        <div class="metric-icon bg-mrr"><i class="fas fa-chart-line"></i></div>
+                    </div>
+                    <div>
+                        <div class="metric-value">${{ "%.0f"|format(mrr_total) }}</div>
+                        <p class="metric-note">Mensuales activos + anuales prorrateados.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-top">
+                        <div class="metric-label">Nuevos PRO</div>
+                        <div class="metric-icon bg-users"><i class="fas fa-user-plus"></i></div>
+                    </div>
+                    <div>
+                        <div class="metric-value">+{{ nuevos_pro }}</div>
+                        <p class="metric-note">Activaciones unicas detectadas en logs.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="metric-card">
+                    <div class="metric-top">
+                        <div class="metric-label">Bajas</div>
+                        <div class="metric-icon bg-churn"><i class="fas fa-user-minus"></i></div>
+                    </div>
+                    <div>
+                        <div class="metric-value">-{{ churn_total }}</div>
+                        <p class="metric-note">Cancelaciones marcadas en usuarios.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-6 col-lg-3">
+                <div class="metric-card">
+                    <div class="metric-label">Clientes totales</div>
+                    <div class="metric-value">{{ total_usuarios }}</div>
+                    <p class="metric-note">Usuarios con role cliente o staff operativo.</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card">
+                    <div class="metric-label">Activos</div>
+                    <div class="metric-value">{{ activos }}</div>
+                    <p class="metric-note">Con vencimiento posterior a hoy.</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card">
+                    <div class="metric-label">Vencidos</div>
+                    <div class="metric-value">{{ vencidos }}</div>
+                    <p class="metric-note">Total menos usuarios activos.</p>
+                </div>
+            </div>
+            <div class="col-6 col-lg-3">
+                <div class="metric-card">
+                    <div class="metric-label">Vencen en 7 dias</div>
+                    <div class="metric-value">{{ proximos_a_vencer }}</div>
+                    <p class="metric-note">Riesgo inmediato de churn.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-xl-8">
+                <div class="panel-card h-100">
+                    <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
+                        <div>
+                            <h5 class="panel-title">Suscripciones que explican la cifra</h5>
+                            <p class="panel-subtitle">Esta tabla sale de usuarios activos por plan. Es la misma fuente que la distribucion de suscripciones.</p>
+                        </div>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table dashboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Cliente</th>
+                                    <th>Plan</th>
+                                    <th>Suscrito</th>
+                                    <th>Vence</th>
+                                    <th class="text-end">Cobro</th>
+                                    <th class="text-end">Monto</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usuario in suscripciones_activas %}
+                                <tr>
+                                    <td data-label="Cliente">
+                                        <div class="identity-main">{{ usuario.company_name or usuario.username }}</div>
+                                        <div class="identity-sub">{{ usuario.email }}</div>
+                                    </td>
+                                    <td data-label="Plan"><span class="badge text-bg-light border">{{ usuario.plan_type|title }}</span></td>
+                                    <td data-label="Suscrito">
+                                        {{ usuario.fecha_suscripcion_real.strftime('%d/%m/%Y') if usuario.fecha_suscripcion_real else 'Sin fecha' }}
+                                    </td>
+                                    <td data-label="Vence">
+                                        {{ usuario.subscription_end.strftime('%d/%m/%Y') if usuario.subscription_end else 'Sin fecha' }}
+                                    </td>
+                                    <td data-label="Cobro" class="text-end">${{ "%.0f"|format(usuario.cobro_plan) }}</td>
+                                    <td data-label="Monto" class="text-end fw-bold">${{ "%.0f"|format(usuario.aporte_mensual) }}/mes</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="6"><div class="empty-state">No hay suscripciones activas de pago.</div></td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 col-xl-4">
+                <div class="panel-card h-100">
+                    <h5 class="panel-title">Desglose financiero</h5>
+                    <p class="panel-subtitle">Separado para no mezclar flujo real con MRR.</p>
+
+                    <div class="source-row">
+                        <div>
+                            <strong>Mensual</strong>
+                            <div class="source-kicker">{{ planes_dict.mensual }} activos x ${{ precios_plan.mensual }}</div>
+                        </div>
+                        <div class="source-value">${{ "%.0f"|format(planes_dict.mensual * precios_plan.mensual) }}</div>
+                    </div>
+                    <div class="source-row">
+                        <div>
+                            <strong>Anual prorrateado</strong>
+                            <div class="source-kicker">{{ planes_dict.anual }} activos x (${{ precios_plan.anual }} / 12)</div>
+                        </div>
+                        <div class="source-value">${{ "%.0f"|format(planes_dict.anual * (precios_plan.anual / 12)) }}</div>
+                    </div>
+                    <div class="source-row">
+                        <div>
+                            <strong>Total mensual esperado</strong>
+                            <div class="source-kicker">Mensual + anual prorrateado</div>
+                        </div>
+                        <div class="source-value">${{ "%.0f"|format(mrr_total) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12 col-lg-7">
+                <div class="panel-card h-100">
+                    <h5 class="panel-title">Crecimiento e ingresos recientes</h5>
+                    <p class="panel-subtitle">Ultimos 6 meses: registros nuevos contra ingreso mensual esperado actual.</p>
+                    <div class="chart-box"><canvas id="chartCrecimiento"></canvas></div>
+                </div>
+            </div>
+            <div class="col-12 col-lg-5">
+                <div class="panel-card h-100">
+                    <h5 class="panel-title">Resumen de planes activos</h5>
+                    <p class="panel-subtitle">La referencia confiable para ingresos y planes activos.</p>
+                    {% set total_planes_pago = planes_dict.mensual + planes_dict.anual %}
+                    <div class="source-row">
+                        <div>
+                            <strong>Mensuales activos</strong>
+                            <div class="source-kicker">{{ planes_dict.mensual }} de {{ total_planes_pago }} suscripciones pagadas</div>
+                        </div>
+                        <div class="source-value">{{ planes_dict.mensual }}</div>
+                    </div>
+                    <div class="source-row">
+                        <div>
+                            <strong>Anuales activos</strong>
+                            <div class="source-kicker">{{ planes_dict.anual }} de {{ total_planes_pago }} suscripciones pagadas</div>
+                        </div>
+                        <div class="source-value">{{ planes_dict.anual }}</div>
+                    </div>
+                    <div class="source-row">
+                        <div>
+                            <strong>Free / Trial activos</strong>
+                            <div class="source-kicker">No suman al ingreso mensual</div>
+                        </div>
+                        <div class="source-value">{{ planes_dict.free }}</div>
+                    </div>
+                    {% if total_planes_pago == 0 %}
+                    <div class="empty-state">Todavia no hay suscripciones de pago activas.</div>
                     {% endif %}
                 </div>
             </div>
         </div>
 
-        <!-- FILA 1: MÉTRICAS DE USUARIOS -->
         <div class="row g-3">
-            <div class="col-6 col-md-3">
-                <div class="sian-stat-card border-total">
-                    <div class="icon-box bg-blue-light"><i class="fas fa-users"></i></div>
-                    <div class="stat-value">{{ total_usuarios }}</div>
-                    <div class="stat-label">Total Clientes</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="sian-stat-card border-active">
-                    <div class="icon-box bg-green-light"><i class="fas fa-crown"></i></div>
-                    <div class="stat-value">{{ activos }}</div>
-                    <div class="stat-label">Activos</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="sian-stat-card border-expired">
-                    <div class="icon-box bg-red-light"><i class="fas fa-user-slash"></i></div>
-                    <div class="stat-value">{{ vencidos }}</div>
-                    <div class="stat-label">Vencidos</div>
-                </div>
-            </div>
-            <div class="col-6 col-md-3">
-                <div class="sian-stat-card border-warning">
-                    <div class="icon-box bg-yellow-light"><i class="fas fa-hourglass-half"></i></div>
-                    <div class="stat-value">{{ proximos_a_vencer }}</div>
-                    <div class="stat-label">Vencen pronto</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- FILA 2: MÉTRICAS FINANCIERAS (MRR + FLUJO DE CAJA) -->
-        <div class="row g-3 mt-1">
-            <!-- 1. MRR (Salud) -->
-            <div class="col-6 col-lg-3">
-                <div class="sian-stat-card border-info">
-                    <div class="icon-box bg-info-light"><i class="fas fa-chart-line"></i></div>
-                    <div class="stat-value text-info">${{ mrr_total }}</div>
-                    <div class="stat-label">MRR Estimado (MXN)</div>
-                </div>
-            </div>
-            <!-- 2. Cash Flow (Dinero Real) NUEVA TARJETA -->
-            <div class="col-6 col-lg-3">
-                <div class="sian-stat-card border-active" style="border-left-color: #059669;">
-                    <div class="icon-box" style="background-color: #d1fae5; color: #059669;"><i class="fas fa-money-bill-wave"></i></div>
-                    <div class="stat-value" style="color: #059669;">${{ ingresos_brutos }}</div>
-                    <div class="stat-label">Ingresos (Periodo)</div>
-                </div>
-            </div>
-            <!-- 3. Nuevos PRO -->
-            <div class="col-4 col-lg-2">
-                <div class="sian-stat-card border-active">
-                    <div class="icon-box bg-green-light"><i class="fas fa-arrow-trend-up"></i></div>
-                    <div class="stat-value text-success">+{{ nuevos_pro }}</div>
-                    <div class="stat-label">Nuevos PRO</div>
-                </div>
-            </div>
-            <!-- 4. Churn / Bajas -->
-            <div class="col-4 col-lg-2">
-                <div class="sian-stat-card border-expired">
-                    <div class="icon-box bg-red-light"><i class="fas fa-arrow-trend-down"></i></div>
-                    <div class="stat-value text-danger">-{{ churn_total }}</div>
-                    <div class="stat-label">Bajas (Churn)</div>
-                </div>
-            </div>
-            <!-- 5. Distribución -->
-            <div class="col-4 col-lg-2">
-                <div class="sian-stat-card border-total">
-                    <div class="icon-box bg-blue-light"><i class="fas fa-layer-group"></i></div>
-                    <div class="d-flex flex-column gap-1 pt-1 w-100 px-2">
-                        <span class="badge bg-primary w-100 rounded-pill">M: {{ planes_dict.mensual }}</span>
-                        <span class="badge bg-success w-100 rounded-pill">A: {{ planes_dict.anual }}</span>
+            <div class="col-12 col-xl-6">
+                <div class="panel-card h-100">
+                    <h5 class="panel-title">Quien se acaba de registrar</h5>
+                    <p class="panel-subtitle">Sirve para detectar rapido si entro una persona nueva.</p>
+                    <div class="table-responsive">
+                        <table class="table dashboard-table">
+                            <thead>
+                                <tr>
+                                    <th>Usuario</th>
+                                    <th>Plan</th>
+                                    <th class="text-end">Fecha</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for usuario in nuevos_usuarios %}
+                                <tr>
+                                    <td data-label="Usuario">
+                                        <div class="identity-main">{{ usuario.company_name or usuario.username }}</div>
+                                        <div class="identity-sub">{{ usuario.email }}</div>
+                                    </td>
+                                    <td data-label="Plan"><span class="badge text-bg-light border">{{ usuario.plan_type or 'Free' }}</span></td>
+                                    <td data-label="Fecha" class="text-end">{{ usuario.created_at.strftime('%d/%m/%Y') if usuario.created_at else 'N/A' }}</td>
+                                </tr>
+                                {% else %}
+                                <tr><td colspan="3"><div class="empty-state">No hay usuarios nuevos para este periodo.</div></td></tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             </div>
-        </div>
 
-        <div class="row mt-4 g-4">
-            <div class="col-12 col-lg-7">
-                <div class="sian-stat-card" style="align-items: flex-start; padding: 20px;">
-                    <div class="stat-label mb-3">Velocidad de Adquisición (Histórico)</div>
-                    <div style="position: relative; height: 300px; width: 100%;">
-                        <canvas id="chartCrecimiento"></canvas>
-                    </div>
-                </div>
-            </div>
-            <div class="col-12 col-lg-5">
-                <div class="sian-stat-card" style="align-items: flex-start; padding: 20px;">
-                    <div class="stat-label mb-3">Heavy Users (Actividad del Mes)</div>
-                    <div class="table-responsive w-100">
-                        <table class="table table-minimal align-middle">
+            <div class="col-12 col-xl-6">
+                <div class="panel-card h-100">
+                    <h5 class="panel-title">Usuarios con mas actividad</h5>
+                    <p class="panel-subtitle">Cotizaciones creadas en el periodo seleccionado.</p>
+                    <div class="table-responsive">
+                        <table class="table dashboard-table">
                             <thead>
                                 <tr>
                                     <th>Empresa</th>
@@ -283,24 +689,23 @@
                             <tbody>
                                 {% for cliente in top_leales %}
                                 <tr>
-                                    <td>
-                                        <strong>{{ cliente.company_name }}</strong><br>
-                                        <small class="text-muted">@{{ cliente.username }}</small>
+                                    <td data-label="Empresa">
+                                        <div class="identity-main">{{ cliente.company_name or cliente.username }}</div>
+                                        <div class="identity-sub">@{{ cliente.username }}</div>
                                     </td>
-                                    <td class="text-center">
-                                        <span class="badge bg-blue-light" style="font-size: 0.8rem;">{{ cliente.total_cotizaciones }}</span>
-                                    </td>
-                                    <td class="text-end">
-                                        {% if cliente.subscription_end.strftime('%Y-%m-%d %H:%M:%S') > ahora_actual %}
-                                        <span class="text-success small"><i class="fas fa-check-circle"></i> Al día</span>
+                                    <td data-label="Cots." class="text-center"><span class="badge text-bg-primary">{{ cliente.total_cotizaciones }}</span></td>
+                                    <td data-label="Estado" class="text-end">
+                                        {% if cliente.suscripcion_activa %}
+                                        <span class="text-success small"><i class="fas fa-check-circle"></i> Al dia</span>
+                                        {% elif cliente.subscription_end %}
+                                        <span class="text-danger small"><i class="fas fa-circle-exclamation"></i> Vencio {{ cliente.subscription_end.strftime('%d/%m/%Y') }}</span>
                                         {% else %}
-                                        <div class="text-danger small" style="line-height: 1;">
-                                            <i class="fas fa-exclamation-circle"></i> Vencido<br>
-                                            <small style="font-size: 0.65rem;">({{ cliente.subscription_end.strftime('%d/%m/%Y') }})</small>
-                                        </div>
+                                        <span class="text-muted small">Sin fecha</span>
                                         {% endif %}
                                     </td>
                                 </tr>
+                                {% else %}
+                                <tr><td colspan="3"><div class="empty-state">Sin actividad para este periodo.</div></td></tr>
                                 {% endfor %}
                             </tbody>
                         </table>
@@ -309,136 +714,141 @@
             </div>
         </div>
 
-        <div class="row mt-4 g-4">
-            <div class="col-12 col-md-6 col-lg-5">
-                <div class="sian-stat-card" style="align-items: flex-start; padding: 20px;">
-                    <div class="stat-label mb-3">Distribución de Suscripciones</div>
-                    <div style="position: relative; height: 250px; width: 100%;">
-                        <canvas id="chartPlanes"></canvas>
-                    </div>
+        <div class="row g-3">
+            <div class="col-12 col-lg-5">
+                <div class="panel-card h-100">
+                    <h5 class="panel-title">Distribucion de suscripciones</h5>
+                    <p class="panel-subtitle">Solo usuarios activos por tipo de plan.</p>
+                    <div class="chart-box-sm"><canvas id="chartPlanes"></canvas></div>
                 </div>
             </div>
-            <div class="col-12 col-md-6 col-lg-7">
-                <div class="sian-stat-card" style="align-items: flex-start; padding: 20px;">
-                    <div class="stat-label mb-3">Perfil de Uso (Lealtad por Actividad)</div>
-                    <div style="position: relative; height: 250px; width: 100%;">
-                        <canvas id="chartSegmentos"></canvas>
-                    </div>
+            <div class="col-12 col-lg-7">
+                <div class="panel-card h-100">
+                    <h5 class="panel-title">Perfil de uso</h5>
+                    <p class="panel-subtitle">Segmenta clientes por cantidad de cotizaciones.</p>
+                    <div class="chart-box-sm"><canvas id="chartSegmentos"></canvas></div>
                 </div>
             </div>
         </div>
-    </div>
-</div>
 
-<div class="modal fade" id="modalEnlaces" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius: 20px; border: none;">
-            <div class="modal-header border-0 pt-4 px-4">
-                <h5 class="modal-title fw-bold">Generador de Marketing</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body p-4">
-                <div class="mb-3">
-                    <label class="stat-label d-block mb-2">Canal de Difusión</label>
-                    <select id="utm_source" class="form-select border-0 bg-light rounded-3">
-                        <option value="instagram">Instagram</option>
-                        <option value="facebook">Facebook</option>
-                        <option value="tiktok">TikTok</option>
-                        <option value="whatsapp">WhatsApp</option>
-                        <option value="recomendacion">Recomendación</option>
-                    </select>
-                </div>
-                <div class="mb-4">
-                    <label class="stat-label d-block mb-2">Nombre de Campaña</label>
-                    <input type="text" id="utm_campaign" class="form-control border-0 bg-light rounded-3" placeholder="Ej: promo_mayo">
-                </div>
-                <button class="btn btn-primary w-100 fw-bold py-2 rounded-3" onclick="generarEnlace()">Crear Link</button>
-                <div id="resultado_link" class="mt-4 p-3 rounded-3" style="display: none; background: #f0f7ff; border: 1px dashed #0d6efd;">
-                    <div class="input-group">
-                        <input type="text" id="link_final" class="form-control form-control-sm border-0 bg-transparent text-dark" readonly>
-                        <button class="btn btn-sm btn-primary rounded-3 px-3" onclick="copiarEnlace()"><i class="fas fa-copy"></i></button>
-                    </div>
-                </div>
+        {% if churn_reciente %}
+        <div class="panel-card">
+            <h5 class="panel-title">Bajas recientes</h5>
+            <p class="panel-subtitle">Clientes cancelados en el periodo, para dar seguimiento manual.</p>
+            <div class="table-responsive mt-2">
+                <table class="table dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Cliente</th>
+                            <th>Plan</th>
+                            <th class="text-end">Cancelacion</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for baja in churn_reciente %}
+                        <tr>
+                            <td data-label="Cliente">
+                                <div class="identity-main">{{ baja.company_name or baja.username }}</div>
+                                <div class="identity-sub">{{ baja.email }}</div>
+                            </td>
+                            <td data-label="Plan">{{ baja.plan_type or 'N/A' }}</td>
+                            <td data-label="Cancelacion" class="text-end">{{ baja.fecha_cancelacion.strftime('%d/%m/%Y') if baja.fecha_cancelacion else 'Sin fecha' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
+        {% endif %}
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
     document.addEventListener("DOMContentLoaded", function () {
-        // 🔥 MAGIA DARK MODE EN CHART.JS 🔥
-        const isDarkMode = document.documentElement.getAttribute('data-bs-theme') === 'dark';
-        const textColor = isDarkMode ? '#94a3b8' : '#86868b';
-        const gridColor = isDarkMode ? '#334155' : '#e5e7eb';
-        
+        const styles = getComputedStyle(document.documentElement);
+        const textColor = styles.getPropertyValue('--bs-secondary-color').trim();
+        const gridColor = styles.getPropertyValue('--bs-border-color').trim();
+        const cardBg = styles.getPropertyValue('--bs-card-bg').trim() || styles.getPropertyValue('--bs-tertiary-bg').trim();
+
         Chart.defaults.font.family = "'Segoe UI', sans-serif";
         Chart.defaults.color = textColor;
 
-        // 1. Gráfica de Adquisición
         const ctxLine = document.getElementById('chartCrecimiento').getContext('2d');
-        const gradient = ctxLine.createLinearGradient(0, 0, 0, 300);
-        gradient.addColorStop(0, 'rgba(13, 110, 253, 0.2)');
-        gradient.addColorStop(1, 'rgba(13, 110, 253, 0)');
-
         new Chart(ctxLine, {
-            type: 'line',
+            type: 'bar',
             data: {
                 labels: {{ meses_labels | tojson }},
-                datasets: [{
-                    label: 'Registros',
-                    data: {{ usuarios_data | tojson }},
-                    borderColor: '#0d6efd',
-                    backgroundColor: gradient,
-                    fill: true,
-                    tension: 0.4,
-                    borderWidth: 3,
-                    pointRadius: 4,
-                    pointBackgroundColor: isDarkMode ? '#1e293b' : '#fff', 
-                    pointBorderWidth: 2
-                }]
+                datasets: [
+                    {
+                        type: 'line',
+                        label: 'Ingresos',
+                        data: {{ ingresos_data | tojson }},
+                        borderColor: '#16a34a',
+                        backgroundColor: 'rgba(22, 163, 74, 0.12)',
+                        yAxisID: 'y1',
+                        tension: 0.35,
+                        fill: true,
+                        borderWidth: 3,
+                        pointRadius: 3
+                    },
+                    {
+                        label: 'Registros',
+                        data: {{ usuarios_data | tojson }},
+                        backgroundColor: '#2563eb',
+                        borderRadius: 6,
+                        yAxisID: 'y'
+                    }
+                ]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
                 scales: {
-                    y: { 
-                        beginAtZero: true, 
+                    y: {
+                        beginAtZero: true,
                         ticks: { stepSize: 1, color: textColor },
-                        grid: { color: gridColor, drawBorder: false }
+                        grid: { color: gridColor }
                     },
-                    x: { 
-                        grid: { display: false },
-                        ticks: { color: textColor }
-                    }
+                    y1: {
+                        beginAtZero: true,
+                        position: 'right',
+                        ticks: {
+                            color: textColor,
+                            callback: value => '$' + value
+                        },
+                        grid: { drawOnChartArea: false }
+                    },
+                    x: { grid: { display: false }, ticks: { color: textColor } }
                 },
-                plugins: { legend: { display: false } }
+                plugins: {
+                    legend: { position: 'bottom', labels: { color: textColor, boxWidth: 12 } }
+                }
             }
         });
 
-        // 2. Gráfica de PLANES (Reemplaza a Origen)
         new Chart(document.getElementById('chartPlanes'), {
             type: 'doughnut',
             data: {
                 labels: ['Mensual', 'Anual', 'Free / Trial'],
                 datasets: [{
                     data: [{{ planes_dict.mensual }}, {{ planes_dict.anual }}, {{ planes_dict.free }}],
-                    backgroundColor: ['#0d6efd', '#198754', '#6c757d'],
-                    borderWidth: isDarkMode ? 2 : 0,
-                    borderColor: isDarkMode ? '#1e293b' : '#fff' 
+                    backgroundColor: ['#2563eb', '#16a34a', '#94a3b8'],
+                    borderColor: cardBg,
+                    borderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '75%',
+                cutout: '72%',
                 plugins: {
-                    legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 12 }, color: textColor } }
+                    legend: { position: 'bottom', labels: { boxWidth: 10, color: textColor } }
                 }
             }
         });
 
-        // 3. Gráfica de Segmentación
         new Chart(document.getElementById('chartSegmentos'), {
             type: 'bar',
             data: {
@@ -446,9 +856,9 @@
                 datasets: [{
                     label: 'Usuarios',
                     data: {{ seg_data | tojson }},
-                    backgroundColor: ['#ff3b30', '#ffcc00', '#34c759'],
-                    borderRadius: 8,
-                    barThickness: 30
+                    backgroundColor: ['#ef4444', '#f59e0b', '#16a34a'],
+                    borderRadius: 6,
+                    barThickness: 28
                 }]
             },
             options: {
@@ -457,37 +867,16 @@
                 maintainAspectRatio: false,
                 plugins: { legend: { display: false } },
                 scales: {
-                    x: { 
-                        beginAtZero: true, 
+                    x: {
+                        beginAtZero: true,
                         ticks: { stepSize: 1, color: textColor },
-                        grid: { color: gridColor, drawBorder: false }
+                        grid: { color: gridColor }
                     },
-                    y: { 
-                        grid: { display: false },
-                        ticks: { color: textColor }
-                    }
+                    y: { grid: { display: false }, ticks: { color: textColor } }
                 }
             }
         });
     });
 
-    function generarEnlace() {
-        const baseUrl = window.location.origin + "/registro";
-        const source = document.getElementById('utm_source').value;
-        const camp = document.getElementById('utm_campaign').value.trim().replace(/\s+/g, '_').toLowerCase();
-        let final = `${baseUrl}?utm_source=${source}`;
-        if (camp) final += `&utm_campaign=${camp}`;
-        document.getElementById('link_final').value = final;
-        document.getElementById('resultado_link').style.display = 'block';
-    }
-
-    function copiarEnlace() {
-        const input = document.getElementById('link_final');
-        input.select();
-        document.execCommand('copy');
-        const btn = document.querySelector('#resultado_link .btn');
-        btn.innerHTML = '<i class="fas fa-check"></i>';
-        setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 2000);
-    }
 </script>
 {% endblock %}
