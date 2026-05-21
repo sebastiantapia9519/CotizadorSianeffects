@@ -139,6 +139,15 @@ def index():
                 mrr_total += cantidad * (PRECIO_ANUAL / 12)
 
         cursor.execute("""
+            SELECT COUNT(id) as total
+            FROM usuarios
+            WHERE role <= 1
+              AND subscription_end > %s
+              AND LOWER(COALESCE(plan_type, 'free')) NOT IN ('mensual', 'anual')
+        """, (ahora,))
+        planes_dict['free'] = cursor.fetchone()['total'] or 0
+
+        cursor.execute("""
             SELECT id, username, email, company_name, LOWER(COALESCE(plan_type, 'free')) as plan_type,
                    estado_suscripcion, subscription_end, created_at,
                    (
@@ -270,20 +279,35 @@ def index():
         cursor.execute(query_heavy, params_heavy)
         top_leales = cursor.fetchall()
 
-        meses_labels, usuarios_data, ingresos_data = [], [], []
-        for i in range(-5, 1):
+        meses_labels, usuarios_data, comparativa_registros = [], [], []
+        total_mes_anterior = None
+        for i in range(-11, 1):
             fecha_dt = ahora_sql(meses=i, as_string=False)
             y, m = str(fecha_dt.year), f"{fecha_dt.month:02d}"
-            meses_labels.append(f"{nombres_meses[int(m) - 1]} {y}")
+            mes_label = f"{nombres_meses[int(m) - 1]} {y}"
+            meses_labels.append(mes_label)
 
             cursor.execute("""
                 SELECT COUNT(id) as total
                 FROM usuarios
                 WHERE role <= 1 AND to_char(created_at, 'MM') = %s AND to_char(created_at, 'YYYY') = %s
             """, (m, y))
-            usuarios_data.append(cursor.fetchone()['total'] or 0)
+            total_mes = cursor.fetchone()['total'] or 0
+            usuarios_data.append(total_mes)
 
-            ingresos_data.append(round(mrr_total, 2) if i == 0 else 0)
+            diferencia = None if total_mes_anterior is None else total_mes - total_mes_anterior
+            if total_mes_anterior in (None, 0):
+                porcentaje = None if total_mes_anterior is None else (100 if total_mes > 0 else 0)
+            else:
+                porcentaje = round((diferencia / total_mes_anterior) * 100, 1)
+
+            comparativa_registros.append({
+                'mes': mes_label,
+                'total': total_mes,
+                'diferencia': diferencia,
+                'porcentaje': porcentaje,
+            })
+            total_mes_anterior = total_mes
 
         segmentos = {"Sin uso (0-2)": 0, "En adopción (3-14)": 0, "Power users (15+)": 0}
         query_segmentos = """
@@ -317,7 +341,7 @@ def index():
             top_leales=top_leales,
             meses_labels=meses_labels,
             usuarios_data=usuarios_data,
-            ingresos_data=ingresos_data,
+            comparativa_registros=comparativa_registros,
             seg_labels=list(segmentos.keys()),
             seg_data=list(segmentos.values()),
             mes_sel=mes_sel,

@@ -602,34 +602,41 @@
         <div class="row g-3">
             <div class="col-12 col-lg-7">
                 <div class="panel-card h-100">
-                    <h5 class="panel-title">Crecimiento e ingresos recientes</h5>
-                    <p class="panel-subtitle">Ultimos 6 meses: registros nuevos contra ingreso mensual esperado actual.</p>
+                    <h5 class="panel-title">Registro de usuarios por mes</h5>
+                    <p class="panel-subtitle">Ultimos 12 meses para comparar si los registros van subiendo.</p>
                     <div class="chart-box"><canvas id="chartCrecimiento"></canvas></div>
                 </div>
             </div>
             <div class="col-12 col-lg-5">
                 <div class="panel-card h-100">
                     <h5 class="panel-title">Resumen de planes activos</h5>
-                    <p class="panel-subtitle">La referencia confiable para ingresos y planes activos.</p>
+                    <p class="panel-subtitle">Usuarios activos separados por los que generan ingreso y los que no.</p>
                     {% set total_planes_pago = planes_dict.mensual + planes_dict.anual %}
                     <div class="source-row">
                         <div>
-                            <strong>Mensuales activos</strong>
-                            <div class="source-kicker">{{ planes_dict.mensual }} de {{ total_planes_pago }} suscripciones pagadas</div>
+                            <strong>Suscripciones pagadas</strong>
+                            <div class="source-kicker">Mensual + anual activos</div>
+                        </div>
+                        <div class="source-value">{{ total_planes_pago }}</div>
+                    </div>
+                    <div class="source-row">
+                        <div>
+                            <strong>Mensual</strong>
+                            <div class="source-kicker">{{ planes_dict.mensual }} usuarios x ${{ precios_plan.mensual }}/mes</div>
                         </div>
                         <div class="source-value">{{ planes_dict.mensual }}</div>
                     </div>
                     <div class="source-row">
                         <div>
-                            <strong>Anuales activos</strong>
-                            <div class="source-kicker">{{ planes_dict.anual }} de {{ total_planes_pago }} suscripciones pagadas</div>
+                            <strong>Anual</strong>
+                            <div class="source-kicker">{{ planes_dict.anual }} usuarios x ${{ precios_plan.anual }}/año</div>
                         </div>
                         <div class="source-value">{{ planes_dict.anual }}</div>
                     </div>
                     <div class="source-row">
                         <div>
-                            <strong>Free / Trial activos</strong>
-                            <div class="source-kicker">No suman al ingreso mensual</div>
+                            <strong>Free / Trial</strong>
+                            <div class="source-kicker">Activos, pero sin ingreso mensual</div>
                         </div>
                         <div class="source-value">{{ planes_dict.free }}</div>
                     </div>
@@ -637,6 +644,55 @@
                     <div class="empty-state">Todavia no hay suscripciones de pago activas.</div>
                     {% endif %}
                 </div>
+            </div>
+        </div>
+
+        <div class="panel-card">
+            <h5 class="panel-title">Comparativa mensual de registros</h5>
+            <p class="panel-subtitle">Total de cuentas creadas cada mes y variacion contra el mes anterior.</p>
+            <div class="table-responsive mt-2">
+                <table class="table dashboard-table">
+                    <thead>
+                        <tr>
+                            <th>Mes</th>
+                            <th class="text-center">Registros</th>
+                            <th class="text-end">Cambio</th>
+                            <th class="text-end">Crecimiento</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for mes in comparativa_registros %}
+                        <tr>
+                            <td data-label="Mes">
+                                <div class="identity-main">{{ mes.mes }}</div>
+                            </td>
+                            <td data-label="Registros" class="text-center fw-bold">{{ mes.total }}</td>
+                            <td data-label="Cambio" class="text-end">
+                                {% if mes.diferencia is none %}
+                                <span class="text-muted">Base</span>
+                                {% elif mes.diferencia > 0 %}
+                                <span class="text-success fw-bold">+{{ mes.diferencia }}</span>
+                                {% elif mes.diferencia < 0 %}
+                                <span class="text-danger fw-bold">{{ mes.diferencia }}</span>
+                                {% else %}
+                                <span class="text-muted">0</span>
+                                {% endif %}
+                            </td>
+                            <td data-label="Crecimiento" class="text-end">
+                                {% if mes.porcentaje is none %}
+                                <span class="text-muted">Base</span>
+                                {% elif mes.porcentaje > 0 %}
+                                <span class="text-success fw-bold">+{{ mes.porcentaje }}%</span>
+                                {% elif mes.porcentaje < 0 %}
+                                <span class="text-danger fw-bold">{{ mes.porcentaje }}%</span>
+                                {% else %}
+                                <span class="text-muted">0%</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
             </div>
         </div>
 
@@ -779,27 +835,13 @@
             type: 'bar',
             data: {
                 labels: {{ meses_labels | tojson }},
-                datasets: [
-                    {
-                        type: 'line',
-                        label: 'Ingresos',
-                        data: {{ ingresos_data | tojson }},
-                        borderColor: '#16a34a',
-                        backgroundColor: 'rgba(22, 163, 74, 0.12)',
-                        yAxisID: 'y1',
-                        tension: 0.35,
-                        fill: true,
-                        borderWidth: 3,
-                        pointRadius: 3
-                    },
-                    {
-                        label: 'Registros',
-                        data: {{ usuarios_data | tojson }},
-                        backgroundColor: '#2563eb',
-                        borderRadius: 6,
-                        yAxisID: 'y'
-                    }
-                ]
+                datasets: [{
+                    label: 'Registros',
+                    data: {{ usuarios_data | tojson }},
+                    backgroundColor: '#2563eb',
+                    borderRadius: 6,
+                    maxBarThickness: 36
+                }]
             },
             options: {
                 responsive: true,
@@ -810,15 +852,6 @@
                         beginAtZero: true,
                         ticks: { stepSize: 1, color: textColor },
                         grid: { color: gridColor }
-                    },
-                    y1: {
-                        beginAtZero: true,
-                        position: 'right',
-                        ticks: {
-                            color: textColor,
-                            callback: value => '$' + value
-                        },
-                        grid: { drawOnChartArea: false }
                     },
                     x: { grid: { display: false }, ticks: { color: textColor } }
                 },
