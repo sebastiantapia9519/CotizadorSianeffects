@@ -1187,12 +1187,12 @@
         costoProduccionCalculado = Math.round(costoTotal * 100) / 100;
         let sugeridoBase = Math.round(precioSugerido * 100) / 100;
 
-        // Si hay un precio manual guardado y sigue siendo mayor al sugerido, lo usamos
-        if (precioUnitarioManual !== null && precioUnitarioManual >= sugeridoBase) {
+        // CAMBIO CLAVE: Mientras tu precio manual sea mayor o igual a lo que te cuesta hacerlo, es válido.
+        if (precioUnitarioManual !== null && precioUnitarioManual >= costoTotal) {
             precioVentaCalculado = precioUnitarioManual;
         } else {
             precioVentaCalculado = sugeridoBase;
-            precioUnitarioManual = null; // Se limpia si el costo sube más allá del manual
+            precioUnitarioManual = null; // Se limpia SOLO si el costo de producción supera tu precio manual
         }
 
         // 8. MOSTRAMOS EN PANTALLA
@@ -2013,23 +2013,16 @@ function aplicarAjusteUnitario() {
     const input = document.getElementById('inputPrecioUnitarioManual');
     const nuevoValor = parseFloat(input.value);
 
-    // 1. Obtenemos el sugerido base para comparar
-    // (SugeridoBase es el valor que calculó el sistema antes de tu cambio)
-    const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
-    const extra = (document.getElementById('datoLaborActiva').value === 'true') ? 
-                  (parseFloat(document.getElementById('inputManoObra').value) || 0) * (costoMinuto || 0) : 
-                  (parseFloat(document.getElementById('inputManoObra').value) || 0);
-    
-    // Simplificamos: si el valor es válido y mayor/igual al actual, lo guardamos
-    if (!isNaN(nuevoValor) && nuevoValor >= precioVentaCalculado) {
+    // CAMBIO CLAVE: Comparamos contra costoProduccionCalculado, NO contra precioVentaCalculado
+    if (!isNaN(nuevoValor) && nuevoValor >= costoProduccionCalculado) {
         precioUnitarioManual = nuevoValor;
     } else {
-        // Si es menor, mandamos alerta y reseteamos
-        if (nuevoValor < precioVentaCalculado) {
+        // Si es menor al COSTO REAL, mandamos alerta y reseteamos
+        if (nuevoValor < costoProduccionCalculado) {
             Swal.fire({
-                toast: true, position: 'top-end', icon: 'info',
-                title: 'No puedes vender por debajo del costo sugerido',
-                showConfirmButton: false, timer: 2500
+                toast: true, position: 'top-end', icon: 'warning',
+                title: 'No puedes vender por debajo de tu costo real ($' + costoProduccionCalculado.toFixed(2) + ')',
+                showConfirmButton: false, timer: 3500
             });
         }
         precioUnitarioManual = null;
@@ -2038,7 +2031,7 @@ function aplicarAjusteUnitario() {
     display.classList.remove('d-none');
     input.classList.add('d-none');
     
-    // ESTA ES LA CLAVE: Recalcular todo para que la variable del carrito se actualice
+    // Recalcular todo para que la variable del carrito se actualice
     calcularTotal();
 }
 

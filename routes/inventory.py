@@ -1,4 +1,4 @@
-from curses import flash
+from flask import flash
 from flask import Blueprint, request, session, jsonify, render_template, redirect, url_for, current_app
 import json
 from helpers import login_required, subscription_required

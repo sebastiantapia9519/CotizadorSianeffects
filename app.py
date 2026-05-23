@@ -29,6 +29,10 @@ from logging.handlers import RotatingFileHandler
 # --- Terceros ---
 import pytz
 from dotenv import load_dotenv
+
+# Cargamos el .env antes de importar módulos locales que usan os.getenv()
+load_dotenv()
+
 from flask import (
     Flask,
     session,
@@ -47,10 +51,6 @@ from services.cloudflare_service import delete_from_cloudflare
 from services.mail_service import enviar_correo_sian
 from utils.datetime_utils import now_utc
 from db import get_db_connection
-
-# Cargamos el .env antes de cualquier os.getenv()
-load_dotenv()
-
 
 # =============================================================================
 # INICIALIZACIÓN DE FLASK
