@@ -2284,8 +2284,17 @@
      * ============================================================
      */
     function abrirMenuAcciones(btn, id, estado, saldoPendiente, estadoPedido) {
-        // Obtenemos si el usuario es PRO desde la variable de Jinja para proteger la vista móvil
-        const isPro = {{ 'true' if is_pro else 'false' }};
+    // Consultamos la sesión directamente para evitar problemas de scope entre bloques
+    const isPro = {{ 'true' if session.get('is_pro_active') or session.get('role', 0) >= 1 else 'false' }};
+
+    const options = [
+        { label: '<i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles', action: () => verDetalles(id) },
+    ];
+
+    if (estado !== 'cancelada') {
+        
+        // EDITAR
+        if (isPro) {
 
         const options = [
             { label: '<i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles', action: () => verDetalles(id) },
