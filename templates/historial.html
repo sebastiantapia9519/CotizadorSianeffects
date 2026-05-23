@@ -2278,28 +2278,24 @@
         }
     }
 
-    /**
+/**
      * ============================================================
-     * 📱 MENÚ DE ACCIONES MÓVIL
+     * 📱 MENÚ DE ACCIONES MÓVIL - VERSIÓN CORRECTA Y COMPLETA
      * ============================================================
      */
     function abrirMenuAcciones(btn, id, estado, saldoPendiente, estadoPedido) {
-    // Consultamos la sesión directamente para evitar problemas de scope entre bloques
-    const isPro = {{ 'true' if session.get('is_pro_active') or session.get('role', 0) >= 1 else 'false' }};
+        // Consultamos la sesión directamente
+        const isPro = {{ 'true' if session.get('is_pro_active') or session.get('role', 0) >= 1 else 'false' }};
 
-    const options = [
-        { label: '<i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles', action: () => verDetalles(id) },
-    ];
-
-    if (estado !== 'cancelada') {
-        
-        // EDITAR
-        if (isPro) {
-
+        // Inicializar opciones con VER DETALLES (siempre disponible)
         const options = [
-            { label: '<i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles', action: () => verDetalles(id) },
+            { 
+                label: '<i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles', 
+                action: () => verDetalles(id) 
+            },
         ];
 
+        // Si la venta NO está cancelada, agregar más opciones
         if (estado !== 'cancelada') {
             
             // EDITAR
@@ -2310,12 +2306,12 @@
                 });
             } else {
                 options.push({
-                    label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Editar',
+                    label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Editar (PRO)',
                     action: () => new bootstrap.Modal(document.getElementById('modalRenovacion')).show()
                 });
             }
 
-            // IMPRIMIR TICKET (Esto siempre fallaba menos porque abre una pestaña nueva, no un Swal)
+            // IMPRIMIR TICKET
             options.push({
                 label: '<i class="fas fa-print text-dark w-20px text-center"></i> Imprimir Ticket',
                 action: () => window.open(`/ticket/${id}`, '_blank')
@@ -2330,7 +2326,7 @@
                     });
                 } else {
                     options.push({
-                        label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Registrar Abono',
+                        label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Registrar Abono (PRO)',
                         action: () => new bootstrap.Modal(document.getElementById('modalRenovacion')).show()
                     });
                 }
@@ -2345,7 +2341,7 @@
                     });
                 } else {
                     options.push({
-                        label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Extender Vigencia',
+                        label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Extender Vigencia (PRO)',
                         action: () => new bootstrap.Modal(document.getElementById('modalRenovacion')).show()
                     });
                 }
@@ -2359,12 +2355,13 @@
                 });
             } else {
                 options.push({
-                    label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Anular Venta',
+                    label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Anular Venta (PRO)',
                     action: () => new bootstrap.Modal(document.getElementById('modalRenovacion')).show()
                 });
             }
         }
 
+        // Mostrar el menú SweetAlert
         Swal.fire({
             title: `Folio #${id}`,
             html: options.map(opt =>
@@ -2374,14 +2371,10 @@
             didOpen: () => {
                 document.querySelectorAll('.swal2-html-container button').forEach((btn, idx) => {
                     btn.onclick = () => {
-                        // LA SOLUCIÓN: Primero cerramos este menú explícitamente.
                         Swal.close();
-                        
-                        // Esperamos 200ms para que la animación termine y el DOM se limpie
-                        // antes de disparar la acción que abrirá el siguiente SweetAlert.
                         setTimeout(() => {
                             options[idx].action();
-                        }, 200); 
+                        }, 200);
                     };
                 });
             }
