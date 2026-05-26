@@ -283,12 +283,11 @@
                             <div class="row g-2">
                                 {% for eq in equipos %}
                                 <div class="col-6 col-md-4">
-                                    <label class="check-maquinaria-label d-flex align-items-center gap-2 border p-2 rounded shadow-sm h-100">
+                                    <label
+                                        class="check-maquinaria-label d-flex align-items-center gap-2 border p-2 rounded shadow-sm h-100">
                                         <input type="checkbox" class="form-check-input check-maquinaria-input m-0"
-                                            value="{{ eq['costo_desgaste'] }}" 
-                                            data-id="{{ eq['id'] }}" 
-                                            data-nombre="{{ eq['nombre'] }}" 
-                                            onchange="calcularTotal()">
+                                            value="{{ eq['costo_desgaste'] }}" data-id="{{ eq['id'] }}"
+                                            data-nombre="{{ eq['nombre'] }}" onchange="calcularTotal()">
                                         <span class="lh-sm">{{ eq['nombre'] }} <br> <small class="text-success"
                                                 style="font-size:0.75rem">(+${{ eq['costo_desgaste'] }})</small></span>
                                     </label>
@@ -301,27 +300,29 @@
                             <div class="d-flex align-items-center justify-content-between mb-2">
                                 <label class="fw-bold small text-muted m-0" id="labelManoObra">
                                     {% if config.get('labor_activa') %}
-                                        <i class="fas fa-stopwatch text-warning me-1"></i> Tiempo de Fabricación
+                                    <i class="fas fa-stopwatch text-warning me-1"></i> Tiempo de Fabricación
                                     {% else %}
-                                        <i class="fas fa-plus-circle text-muted me-1"></i> Costo Extra (Fijo)
+                                    <i class="fas fa-plus-circle text-muted me-1"></i> Costo Extra (Fijo)
                                     {% endif %}
                                 </label>
                                 <div class="input-group w-50 shadow-sm rounded-3 overflow-hidden border border-light">
                                     <span class="input-group-text border-0 bg-white" id="prefixManoObra">
-                                        {% if config.get('labor_activa') %}<i class="fas fa-clock text-warning"></i>{% else %}${% endif %}
+                                        {% if config.get('labor_activa') %}<i class="fas fa-clock text-warning"></i>{%
+                                        else %}${% endif %}
                                     </span>
-                                    
-                                    <input type="number" class="form-control border-0 fw-bold" id="inputManoObra" value="0" min="0"
-                                        onfocus="if(this.value=='0') this.value=''"
+
+                                    <input type="number" class="form-control border-0 fw-bold" id="inputManoObra"
+                                        value="0" min="0" onfocus="if(this.value=='0') this.value=''"
                                         onblur="if(this.value=='') { this.value='0'; } calcularTotal()"
                                         oninput="calcularTotal()">
-                                        
-                                    <span class="input-group-text border-0 bg-white small text-muted" id="suffixManoObra" style="font-size: 0.75rem;">
+
+                                    <span class="input-group-text border-0 bg-white small text-muted"
+                                        id="suffixManoObra" style="font-size: 0.75rem;">
                                         {% if config.get('labor_activa') %}min{% else %}.00{% endif %}
                                     </span>
                                 </div>
                             </div>
-                            
+
                             {% if config.get('labor_activa') %}
                             <div class="text-end text-warning fw-bold small" id="displayCostoTiempoCalculado">
                                 +$0.00 de tu tiempo
@@ -334,7 +335,8 @@
                             <div class="d-flex align-items-center justify-content-between">
                                 <div>
                                     <i class="fas fa-receipt text-primary me-2"></i>
-                                    <span class="fw-bold small text-dark">Costos Operativos ({{ config.get('porcentaje_gastos_operativos', 0) }}%)</span>
+                                    <span class="fw-bold small text-dark">Costos Operativos ({{
+                                        config.get('porcentaje_gastos_operativos', 0) }}%)</span>
                                     <br>
                                     <small class="text-muted" style="font-size: 0.75rem;">
                                         Calculado sobre el costo base de esta receta.
@@ -343,7 +345,8 @@
                                 <div class="text-end">
                                     <div class="text-primary fw-bold fs-5 monto-costo-operativo">$0.00</div>
                                     <small class="text-muted" style="font-size: 0.7rem;">
-                                        <a href="/configuracion#list-negocio" class="text-decoration-none" target="_blank">
+                                        <a href="/configuracion#list-negocio" class="text-decoration-none"
+                                            target="_blank">
                                             <i class="fas fa-cog"></i> Ajustar %
                                         </a>
                                     </small>
@@ -365,12 +368,12 @@
                                     <small class="text-muted fw-bold d-block">Venta Unit.</small>
                                     <div id="boxPrecioUnitarioInteractuable" style="cursor: pointer;"
                                         onclick="activarAjusteUnitario()" title="Clic para ajustar este precio">
-                                        <div id="resultadoPrecio" class="text-price-main">$0.00  <i class="fas fa-magic me-1"></i></div>
-                                        
+                                        <div id="resultadoPrecio" class="text-price-main">$0.00 <i
+                                                class="fas fa-magic me-1"></i></div>
+
                                         <input type="number" id="inputPrecioUnitarioManual"
                                             class="form-control form-control-sm d-none text-success fw-bold"
-                                            style="font-size: 1.1rem;"
-                                            onblur="aplicarAjusteUnitario()"
+                                            style="font-size: 1.1rem;" onblur="aplicarAjusteUnitario()"
                                             onkeyup="if(event.key === 'Enter') this.blur()">
                                     </div>
                                 </div>
@@ -690,21 +693,21 @@
                 <!-- PESTAÑAS: Local | Nacional | Manual -->
                 <ul class="nav nav-pills nav-fill mb-4 gap-2" id="pills-tab" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active fw-bold border rounded-pill" 
-                            id="pills-local-tab" data-bs-toggle="pill" data-bs-target="#pills-local" type="button">
+                        <button class="nav-link active fw-bold border rounded-pill" id="pills-local-tab"
+                            data-bs-toggle="pill" data-bs-target="#pills-local" type="button">
                             🛵 Local
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold border rounded-pill" 
-                            id="pills-nacional-tab" data-bs-toggle="pill" data-bs-target="#pills-nacional" type="button">
+                        <button class="nav-link fw-bold border rounded-pill" id="pills-nacional-tab"
+                            data-bs-toggle="pill" data-bs-target="#pills-nacional" type="button">
                             📦 Nacional
                         </button>
                     </li>
                     <!-- 🆕 NUEVA PESTAÑA: Manual -->
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link fw-bold border rounded-pill" 
-                            id="pills-manual-tab" data-bs-toggle="pill" data-bs-target="#pills-manual" type="button">
+                        <button class="nav-link fw-bold border rounded-pill" id="pills-manual-tab" data-bs-toggle="pill"
+                            data-bs-target="#pills-manual" type="button">
                             ✏️ Manual
                         </button>
                     </li>
@@ -715,12 +718,13 @@
                     <div class="tab-pane fade show active" id="pills-local">
                         <div class="alert alert-light border small text-muted">
                             <i class="fas fa-info-circle text-primary"></i>
-                            Pega un link de Google Maps. Si el enlace no se procesa, intenta copiarlo nuevamente o compartirlo desde otro dispositivo.
+                            Pega un link de Google Maps. Si el enlace no se procesa, intenta copiarlo nuevamente o
+                            compartirlo desde otro dispositivo.
                         </div>
                         <label class="small fw-bold mb-1">Link de Ubicación Google Maps</label>
                         <div class="input-group mb-3">
-                            <input type="text" id="inputMapsLink" class="form-control" 
-                                placeholder="http://maps.google.com/...@25.67,-100.30" 
+                            <input type="text" id="inputMapsLink" class="form-control"
+                                placeholder="http://maps.google.com/...@25.67,-100.30"
                                 onchange="extraerCoordenadas(this)">
                             <button class="btn btn-outline-secondary" type="button" onclick="pegarDelPortapapeles()">
                                 <i class="fas fa-paste"></i>
@@ -730,7 +734,7 @@
                             <div class="col-6"><input type="hidden" id="latDestino"></div>
                             <div class="col-6"><input type="hidden" id="lngDestino"></div>
                         </div>
-                        <button class="btn btn-primary w-100 fw-bold rounded-pill" 
+                        <button class="btn btn-primary w-100 fw-bold rounded-pill"
                             onclick="solicitarCotizacion('local')">
                             Calcular Tarifa Local
                         </button>
@@ -763,7 +767,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button class="btn btn-primary w-100 fw-bold rounded-pill mt-4" 
+                        <button class="btn btn-primary w-100 fw-bold rounded-pill mt-4"
                             onclick="solicitarCotizacion('nacional')">
                             Cotizar Paquetería
                         </button>
@@ -772,19 +776,20 @@
                     <!-- 🆕 TAB 3: MANUAL (NUEVO) -->
                     <div class="tab-pane fade" id="pills-manual">
                         <div class="text-center py-3">
-                            <div class="avatar bg-info bg-opacity-10 text-info rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" 
+                            <div class="avatar bg-info bg-opacity-10 text-info rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
                                 style="width: 70px; height: 70px;">
                                 <i class="fas fa-pen-to-square fa-2x"></i>
                             </div>
                             <h6 class="fw-bold text-dark">Ingreso Manual de Costo</h6>
                             <p class="text-muted small px-4 mb-4">
-                                Si ya acordaste el precio del envío con el cliente o proveedor, ingrésalo aquí directamente.
+                                Si ya acordaste el precio del envío con el cliente o proveedor, ingrésalo aquí
+                                directamente.
                             </p>
                         </div>
 
                         <div class="mb-4">
                             <label class="small fw-bold text-muted">Descripción del Envío (Opcional)</label>
-                            <input type="text" id="envioDescripcionManual" class="form-control" 
+                            <input type="text" id="envioDescripcionManual" class="form-control"
                                 placeholder="Ej. DHL Express, Local con X">
                         </div>
 
@@ -792,13 +797,13 @@
                             <label class="small fw-bold text-primary">Costo del Envío</label>
                             <div class="input-group input-group-lg">
                                 <span class="input-group-text bg-light border-0">$</span>
-                                <input type="number" id="envioCostoManual" class="form-control text-center fw-bold bg-light border-0" 
-                                    placeholder="0.00" step="0.01">
+                                <input type="number" id="envioCostoManual"
+                                    class="form-control text-center fw-bold bg-light border-0" placeholder="0.00"
+                                    step="0.01">
                             </div>
                         </div>
 
-                        <button class="btn btn-success w-100 fw-bold rounded-pill py-3" 
-                            onclick="aplicarEnvioManual()">
+                        <button class="btn btn-success w-100 fw-bold rounded-pill py-3" onclick="aplicarEnvioManual()">
                             <i class="fas fa-check-circle me-2"></i> Aplicar Envío Manual
                         </button>
                     </div>
@@ -826,13 +831,16 @@
     let carrito = [];
     let costoEnvio = 0;
     let infoEnvio = null;
-  
+
+    let precioUnitarioManual = null;
+    let isCargandoReceta = false;
+
 
     // ============================================================================
     // INICIALIZACIÓN PRINCIPAL (Eventos de Carga de Página)
     // ============================================================================
-    document.addEventListener('DOMContentLoaded', async function() {
-        
+    document.addEventListener('DOMContentLoaded', async function () {
+
 
         // 2. Configurar la fecha actual por defecto en el panel Express
         const ahora = new Date();
@@ -900,7 +908,7 @@
                         modulo: 'cotizador',
                         version: {{ version_tour | default(1) }}
                     })
-                }).catch (e => console.error("Error guardando tutorial:", e));
+                }).catch(e => console.error("Error guardando tutorial:", e));
                 {% endif %}
             },
 
@@ -1010,8 +1018,8 @@
     // ============================================================================
     // RECETAS Y MATERIALES (LÓGICA ESTABLE)
     // ============================================================================
-    function obtenerOpciones() { 
-        return document.getElementById('masterSelect').innerHTML; 
+    function obtenerOpciones() {
+        return document.getElementById('masterSelect').innerHTML;
     }
 
     function agregarFila(idMat = 0, cantidad = 1) {
@@ -1079,7 +1087,7 @@
         const row = sel.closest('.item-row');
         const opcion = sel.options[sel.selectedIndex];
         const precio = parseFloat(opcion.getAttribute('data-precio')) || 0;
-        const unidad = opcion.getAttribute('data-unidad') || 'pieza'; 
+        const unidad = opcion.getAttribute('data-unidad') || 'pieza';
 
         row.querySelector('.input-precio').value = precio.toFixed(2);
 
@@ -1113,6 +1121,9 @@
      * Incluye el prorrateo de gastos fijos mensuales
      */
     function calcularTotal() {
+        // Si estamos armando la receta desde el carrito o BD, no calcules nada aún
+        if (isCargandoReceta) return;
+
         // 1. COSTOS DE MATERIALES
         let totalCostosMat = 0;
         document.querySelectorAll('.item-row').forEach(row => {
@@ -1130,18 +1141,18 @@
         let extra = 0;
         const inputMano = parseFloat(document.getElementById('inputManoObra').value) || 0;
         const laborActiva = document.getElementById('datoLaborActiva').value === 'true';
-        
+
         if (laborActiva) {
             // El input son MINUTOS. Calculamos cuánto vale el minuto.
             const salario = parseFloat(document.getElementById('datoSalario').value) || 0;
             const horasSemana = parseFloat(document.getElementById('datoHoras').value) || 0;
             const horasMes = horasSemana * 4.33;
             const costoMinuto = horasMes > 0 ? (salario / horasMes) / 60 : 0;
-            
+
             extra = inputMano * costoMinuto;
-            
+
             const displayTiempo = document.getElementById('displayCostoTiempoCalculado');
-            if(displayTiempo) {
+            if (displayTiempo) {
                 displayTiempo.innerText = `+$${extra.toFixed(2)} de tu tiempo`;
             }
         } else {
@@ -1175,11 +1186,11 @@
 
         // 6. PRECIO SUGERIDO (Margen inteligente)
         const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
-        
+
         // Separamos tu sueldo para que la ganancia SOLO multiplique los materiales y operaciones
         const baseParaGanancia = totalCostosMat + totalMaquinaria + costoOperativoCalculado;
         const montoGanancia = baseParaGanancia * (margen / 100);
-        
+
         // El precio sugerido es: Materiales + Ganancia del negocio + Tu Sueldo limpio
         const precioSugerido = baseParaGanancia + montoGanancia + extra;
 
@@ -1288,22 +1299,22 @@
         // --- LA NUEVA MAGIA ---
         // En lugar de alterar los precios unitarios de cada producto,
         // simplemente forzamos el total en la UI.
-        
+
         // 1. Calculamos cuánto dinero de diferencia hay entre lo que el sistema calculó
         // y lo que tú quieres cobrar.
         const diferencia = nuevoTotal - totalOriginal;
-        
+
         // 2. Si la diferencia es negativa (quieres cobrar menos), aumentamos el descuento.
         // Si la diferencia es positiva (quieres cobrar más, como un redondeo hacia arriba),
         // reducimos el descuento.
-        
+
         // Primero, calculamos cuál era el descuento en dinero que ya tenías
         let subtotalActualCarrito = 0;
         carrito.forEach(i => subtotalActualCarrito += (i.precio_unitario * i.cantidad));
-        
+
         const descPctActual = parseFloat(document.getElementById('inputDescuento').value) || 0;
         let descuentoDineroActual = subtotalActualCarrito * (descPctActual / 100);
-        
+
         const taxSwitch = document.getElementById('taxSwitch').checked;
         const taxPct = taxSwitch ? (parseFloat(document.getElementById('taxPercent').value) || 0) : 0;
         const factorTax = 1 + (taxPct / 100);
@@ -1311,21 +1322,21 @@
         // Ajustamos el descuento en dinero. Si hay impuestos, el cambio en descuento
         // impacta el total multiplicado por el IVA, por eso se divide entre factorTax.
         let nuevoDescuentoDinero = descuentoDineroActual - (diferencia / factorTax);
-        
+
         // Convertimos ese nuevo dinero de descuento a porcentaje para el slider
         // (Asegurándonos de no dividir entre cero)
         let nuevoDescPct = 0;
         if (subtotalActualCarrito > 0) {
-           nuevoDescPct = (nuevoDescuentoDinero / subtotalActualCarrito) * 100;
+            nuevoDescPct = (nuevoDescuentoDinero / subtotalActualCarrito) * 100;
         }
-        
+
         // Nos aseguramos de que el porcentaje sea válido (entre 0 y 100)
         nuevoDescPct = Math.max(0, Math.min(100, nuevoDescPct));
 
         // Actualizamos los controles visuales con el nuevo porcentaje exacto
         document.getElementById('inputDescuento').value = nuevoDescPct.toFixed(4); // Usamos 4 decimales para mayor precisión
         document.getElementById('sliderDescuento').value = nuevoDescPct;
-        
+
         // Volvemos a calcular todo para que la UI se actualice limpiamente
         calcularTotal();
 
@@ -1494,7 +1505,7 @@
 
         const cli = document.getElementById('nombreCliente').value || "Cliente General";
 
-        
+
 
         let subtotal = 0;
         let costo_total = 0;
@@ -1673,6 +1684,8 @@
         document.getElementById('inputManoObra').value = 0;
         document.querySelectorAll('.check-maquinaria-input').forEach(c => c.checked = false);
 
+        precioUnitarioManual = null;
+
         fetch('/api/receta/' + id).then(r => r.json()).then(d => {
             if (d.error) {
                 Swal.fire({ icon: 'error', title: '¡Oops!', text: d.error, confirmButtonColor: '#ff4757' });
@@ -1694,17 +1707,17 @@
         });
     }
 
-    function limpiarMateriales() { 
-        document.getElementById('listaMateriales').innerHTML = ''; 
+    function limpiarMateriales() {
+        document.getElementById('listaMateriales').innerHTML = '';
     }
 
     // ============================================================================
     // ENVÍOS
     // ============================================================================
-    function abrirModalEnvios() { 
-        new bootstrap.Modal(document.getElementById('modalEnvios')).show(); 
+    function abrirModalEnvios() {
+        new bootstrap.Modal(document.getElementById('modalEnvios')).show();
     }
-    
+
     function limpiarEnvio() {
         costoEnvio = 0;
         infoEnvio = null;
@@ -1797,38 +1810,57 @@
     function aplicarEnvioManual() {
         const costoInput = document.getElementById('envioCostoManual');
         const descripcionInput = document.getElementById('envioDescripcionManual');
-        
+
         const costo = parseFloat(costoInput.value);
-        
+
         if (isNaN(costo) || costo < 0) {
             Swal.fire({ icon: 'warning', title: 'Costo inválido', text: 'Ingresa un monto válido para el envío.', borderRadius: '15px' });
             return;
         }
-        
+
         costoEnvio = costo;
         const descripcion = descripcionInput.value.trim() || 'Envío Manual';
-        
+
         document.getElementById('resumenEnvio').classList.remove('d-none');
         document.getElementById('descEnvio').textContent = descripcion;
         document.getElementById('montoEnvioDisplay').innerText = formatMoney(costoEnvio);
         document.getElementById('btnTextoEnvio').innerText = 'Cambiar';
-        
+
         const modalEl = document.getElementById('modalEnvios');
         bootstrap.Modal.getInstance(modalEl).hide();
-        
+
         calcularTotal();
-        
+
         costoInput.value = '';
         descripcionInput.value = '';
-        
+
         Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Envío manual aplicado', showConfirmButton: false, timer: 1500 });
     }
 
     // ============================================================================
     // UTILIDADES DE SESIÓN E HISTORIAL
     // ============================================================================
+    function normalizarItemCarrito(item) {
+        const precio = parseFloat(item.precio_unitario) || 0;
+        const costo = parseFloat(item.costo_unitario) || 0;
+        const cantidad = parseFloat(item.cantidad) || 1;
+        const subtotalBase = item.subtotal !== undefined && item.subtotal !== null
+            ? parseFloat(item.subtotal)
+            : precio * cantidad;
+
+        return {
+            concepto: item.concepto || 'Producto',
+            precio_unitario: Math.round(precio * 100) / 100,
+            costo_unitario: Math.round(costo * 100) / 100,
+            cantidad: cantidad,
+            fecha_registro: item.fecha_registro || item.fecha_item || null,
+            subtotal: Math.round(subtotalBase * 100) / 100,
+            composicion: item.composicion || JSON.stringify([{ tipo: 'manual', nombre: 'Venta Rápida' }])
+        };
+    }
+
     function cargarCotizacion(id) {
-        console.log("Iniciando carga de cotización ID:", id); 
+        console.log("Iniciando carga de cotización ID:", id);
         fetch('/api/get_cotizacion/' + id)
             .then(r => r.json())
             .then(data => {
@@ -1850,15 +1882,7 @@
                 document.getElementById('sliderDescuento').value = data.descuento_porcentaje;
 
                 data.items.forEach(item => {
-                    carrito.push({
-                    concepto: concepto,
-                    precio_unitario: precio,
-                    costo_unitario: costo,
-                    cantidad: cantidad,
-                    fecha_registro: fecha,
-                    subtotal: Math.round((precio * cantidad) * 100) / 100,
-                    composicion: JSON.stringify([{ tipo: 'manual', nombre: 'Venta Rápida' }])
-                });
+                    carrito.push(normalizarItemCarrito(item));
                 });
 
                 renderizarCarrito();
@@ -1882,7 +1906,7 @@
         }
 
         if (compArray.length > 0 && compArray[0].tipo === 'manual') {
-            document.getElementById('express-tab').click(); 
+            document.getElementById('express-tab').click();
             document.getElementById('expressConcepto').value = item.concepto;
             document.getElementById('expressPrecio').value = item.precio_unitario;
             document.getElementById('expressCantidad').value = item.cantidad;
@@ -1898,7 +1922,9 @@
             return;
         }
 
-        document.getElementById('receta-tab').click(); 
+        document.getElementById('receta-tab').click();
+
+        isCargandoReceta = true; // 🔴 ENCENDEMOS SEMÁFORO: "Nadie calcule nada"
 
         limpiarMateriales();
         document.getElementById('inputManoObra').value = 0;
@@ -1906,6 +1932,9 @@
 
         document.getElementById('nombreProductoActual').value = item.concepto;
         document.getElementById('cantidadParaCarrito').value = item.cantidad;
+
+        // Rescatamos el precio unitario guardado para no volver al sugerido calculado.
+        precioUnitarioManual = parseFloat(item.precio_unitario) || null;
 
         compArray.forEach(c => {
             if (c.tipo === 'material') agregarFila(c.id, c.cantidad);
@@ -1918,16 +1947,19 @@
         carrito.splice(index, 1);
         renderizarCarrito();
 
+        // Damos 300ms de gracia para que JavaScript termine de renderizar los inputs
         setTimeout(() => {
-            calcularTotal();
+            isCargandoReceta = false; // 🟢 APAGAMOS SEMÁFORO
+            calcularTotal(); // Ahora sí, calcula con los datos reales
+
             let costoCalculadoSinExtra = costoProduccionCalculado;
             let diferenciaExtra = item.costo_unitario - costoCalculadoSinExtra;
 
             if (diferenciaExtra > 0.05) {
                 document.getElementById('inputManoObra').value = diferenciaExtra.toFixed(2);
-                calcularTotal(); 
+                calcularTotal();
             }
-        }, 200); 
+        }, 300);
     }
 
     function recuperarSesionCotizacion() {
@@ -1937,7 +1969,7 @@
         try {
             const data = JSON.parse(items);
             carrito = [];
-            data.forEach(i => carrito.push(i));
+            data.forEach(i => carrito.push(normalizarItemCarrito(i)));
             renderizarCarrito();
 
             const recargaId = sessionStorage.getItem('recarga_id');
@@ -1989,68 +2021,58 @@
         }
     }
 
-    // Variable global para controlar si hay un ajuste manual en el producto actual
-let precioUnitarioManual = null;
+    function activarAjusteUnitario() {
+        // Solo permitimos ajustar si ya hay un cálculo base (mayor a 0)
+        if (precioVentaCalculado <= 0) return;
 
-function activarAjusteUnitario() {
-    // Solo permitimos ajustar si ya hay un cálculo base (mayor a 0)
-    if (precioVentaCalculado <= 0) return;
+        const display = document.getElementById('resultadoPrecio');
+        const input = document.getElementById('inputPrecioUnitarioManual');
 
-    const display = document.getElementById('resultadoPrecio');
-    const input = document.getElementById('inputPrecioUnitarioManual');
+        display.classList.add('d-none');
+        input.classList.remove('d-none');
 
-    display.classList.add('d-none');
-    input.classList.remove('d-none');
-    
-    // Si ya había un manual usamos ese, si no, el calculado
-    input.value = (precioUnitarioManual || precioVentaCalculado).toFixed(2);
-    input.focus();
-    input.select();
-}
-
-function aplicarAjusteUnitario() {
-    const display = document.getElementById('resultadoPrecio');
-    const input = document.getElementById('inputPrecioUnitarioManual');
-    const nuevoValor = parseFloat(input.value);
-
-    // 1. Obtenemos el sugerido base para comparar
-    // (SugeridoBase es el valor que calculó el sistema antes de tu cambio)
-    const margen = parseFloat(document.getElementById('datoMargen').value) || 0;
-    const extra = (document.getElementById('datoLaborActiva').value === 'true') ? 
-                  (parseFloat(document.getElementById('inputManoObra').value) || 0) * (costoMinuto || 0) : 
-                  (parseFloat(document.getElementById('inputManoObra').value) || 0);
-    
-    // Simplificamos: si el valor es válido y mayor/igual al actual, lo guardamos
-    if (!isNaN(nuevoValor) && nuevoValor >= precioVentaCalculado) {
-        precioUnitarioManual = nuevoValor;
-    } else {
-        // Si es menor, mandamos alerta y reseteamos
-        if (nuevoValor < precioVentaCalculado) {
-            Swal.fire({
-                toast: true, position: 'top-end', icon: 'info',
-                title: 'No puedes vender por debajo del costo sugerido',
-                showConfirmButton: false, timer: 2500
-            });
-        }
-        precioUnitarioManual = null;
+        // Si ya había un manual usamos ese, si no, el calculado
+        input.value = (precioUnitarioManual || precioVentaCalculado).toFixed(2);
+        input.focus();
+        input.select();
     }
 
-    display.classList.remove('d-none');
-    input.classList.add('d-none');
-    
-    // ESTA ES LA CLAVE: Recalcular todo para que la variable del carrito se actualice
-    calcularTotal();
-}
+    function aplicarAjusteUnitario() {
+        const display = document.getElementById('resultadoPrecio');
+        const input = document.getElementById('inputPrecioUnitarioManual');
+        const nuevoValor = parseFloat(input.value);
 
-// Nueva función auxiliar para que el renderizado sea consistente
-function actualizarDisplayPrecio() {
-    const precioAMostrar = precioUnitarioManual || precioVentaCalculado;
-    document.getElementById('resultadoPrecio').innerText = '$' + precioAMostrar.toFixed(2);
-    
-    // Actualizamos la variable global que usa agregarAlCarrito
-    // (Ojo: precioVentaCalculado ahora servirá como el valor final a subir al carrito)
-    // Pero solo si precioUnitarioManual existe.
-}
+        // Simplificamos: si el valor es válido y mayor/igual al actual, lo guardamos
+        if (!isNaN(nuevoValor) && nuevoValor >= precioVentaCalculado) {
+            precioUnitarioManual = nuevoValor;
+        } else {
+            // Si es menor, mandamos alerta y reseteamos
+            if (nuevoValor < precioVentaCalculado) {
+                Swal.fire({
+                    toast: true, position: 'top-end', icon: 'info',
+                    title: 'No puedes vender por debajo del costo sugerido',
+                    showConfirmButton: false, timer: 2500
+                });
+            }
+            precioUnitarioManual = null;
+        }
+
+        display.classList.remove('d-none');
+        input.classList.add('d-none');
+
+        //Recalcular todo para que la variable del carrito se actualice
+        calcularTotal();
+    }
+
+    // Nueva función auxiliar para que el renderizado sea consistente
+    function actualizarDisplayPrecio() {
+        const precioAMostrar = precioUnitarioManual || precioVentaCalculado;
+        document.getElementById('resultadoPrecio').innerText = '$' + precioAMostrar.toFixed(2);
+
+        // Actualizamos la variable global que usa agregarAlCarrito
+        // (Ojo: precioVentaCalculado ahora servirá como el valor final a subir al carrito)
+        // Pero solo si precioUnitarioManual existe.
+    }
 
 </script>
 {% endblock %}

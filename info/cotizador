@@ -686,17 +686,53 @@ ESTRATEGIA NACIONAL (VOLUMETRÍA)
 
 KPIs PRINCIPALES
 -----------------
-- Ingresos Brutos del período seleccionado
-- Ganancia Neta (descontando costos de producción)
-- Dinero por Cobrar (anticipos pendientes)
-- Total de ventas cerradas
+- Ingreso mensual esperado: se calcula desde usuarios activos con plan de pago.
+  Fuente: tabla `usuarios`, filtrando `subscription_end > now_utc()`.
+  Fórmula: (mensuales activos * $149) + (anuales activos * $1490 / 12).
+- MRR estimado: misma base del ingreso mensual esperado; no usa logs de pago para evitar
+  duplicados por activaciones/verificaciones instantáneas.
+- Nuevos PRO: activaciones únicas detectadas en `logs_actividad` con `modulo = 'Pagos'`.
+- Bajas: usuarios con `estado_suscripcion` cancelado/cancelada.
+- Clientes totales, activos, vencidos y próximos a vencer: derivados de `usuarios` y
+  `subscription_end`.
 
-VISUALIZACIONES (ApexCharts)
-------------------------------
-- Gráfica de área: ingresos vs ganancias por período
-- Gráfica de barras: vista macro de últimos 6 meses
-- Gráfica de dona: porcentaje de ganancia vs costos de producción
-- Top 5 productos más vendidos por volumen y ganancia
+SUSCRIPCIONES QUE EXPLICAN LA CIFRA
+-----------------------------------
+La tabla principal de suscripciones usa únicamente usuarios activos con `plan_type` mensual
+o anual. Muestra:
+- Cliente / email
+- Plan
+- Fecha de suscripción: primer log de pago del usuario; si no existe, `usuarios.created_at`
+- Fecha de vencimiento (`subscription_end`)
+- Cobro del plan
+- Aporte mensual estimado
+
+IMPORTANTE: esta tabla no usa `origen_registro` ni `utm_campaign`. Esa medición quedó fuera
+del dashboard hasta que el tracking de origen sea confiable.
+
+RESUMEN DE PLANES ACTIVOS
+-------------------------
+- Suscripciones pagadas: mensual + anual activos.
+- Mensual: usuarios activos con `plan_type = 'mensual'`.
+- Anual: usuarios activos con `plan_type = 'anual'`.
+- Free / Trial: usuarios activos cuyo `plan_type` NO es mensual ni anual. Este conteo se
+  basa en `subscription_end > now_utc()` y no depende de que `estado_suscripcion` sea
+  'Activo', porque los trials suelen conservar estado 'Trial'.
+
+COMPARATIVA DE REGISTROS
+------------------------
+El dashboard muestra los últimos 12 meses de registros de usuarios:
+- Total de usuarios registrados por mes (`usuarios.created_at`)
+- Diferencia contra el mes anterior
+- Porcentaje de crecimiento o caída
+
+Ejemplo: Abril 50 registros, Mayo 65 registros → +15 usuarios, +30%.
+
+VISUALIZACIONES (Chart.js)
+--------------------------
+- Gráfica de barras: registros de usuarios por mes en los últimos 12 meses.
+- Gráfica de dona: distribución de suscripciones activas por plan (mensual, anual, free/trial).
+- Gráfica de barras horizontal: perfil de uso por cantidad de cotizaciones.
 
 EXPORTACIÓN
 -----------
