@@ -1198,12 +1198,12 @@
         costoProduccionCalculado = Math.round(costoTotal * 100) / 100;
         let sugeridoBase = Math.round(precioSugerido * 100) / 100;
 
-        // Si hay un precio manual guardado y sigue siendo mayor al sugerido, lo usamos
-        if (precioUnitarioManual !== null && precioUnitarioManual >= sugeridoBase) {
+        // CAMBIO CLAVE: Mientras tu precio manual sea mayor o igual a lo que te cuesta hacerlo, es válido.
+        if (precioUnitarioManual !== null && precioUnitarioManual >= costoTotal) {
             precioVentaCalculado = precioUnitarioManual;
         } else {
             precioVentaCalculado = sugeridoBase;
-            precioUnitarioManual = null; // Se limpia si el costo sube más allá del manual
+            precioUnitarioManual = null; // Se limpia SOLO si el costo de producción supera tu precio manual
         }
 
         // 8. MOSTRAMOS EN PANTALLA
@@ -1504,8 +1504,6 @@
         }
 
         const cli = document.getElementById('nombreCliente').value || "Cliente General";
-
-
 
         let subtotal = 0;
         let costo_total = 0;
@@ -2042,16 +2040,16 @@
         const input = document.getElementById('inputPrecioUnitarioManual');
         const nuevoValor = parseFloat(input.value);
 
-        // Simplificamos: si el valor es válido y mayor/igual al actual, lo guardamos
-        if (!isNaN(nuevoValor) && nuevoValor >= precioVentaCalculado) {
+        // Comparamos contra costoProduccionCalculado, no contra precioVentaCalculado,
+        // para permitir subir o bajar el sugerido sin vender por debajo del costo real.
+        if (!isNaN(nuevoValor) && nuevoValor >= costoProduccionCalculado) {
             precioUnitarioManual = nuevoValor;
         } else {
-            // Si es menor, mandamos alerta y reseteamos
-            if (nuevoValor < precioVentaCalculado) {
+            if (nuevoValor < costoProduccionCalculado) {
                 Swal.fire({
-                    toast: true, position: 'top-end', icon: 'info',
-                    title: 'No puedes vender por debajo del costo sugerido',
-                    showConfirmButton: false, timer: 2500
+                    toast: true, position: 'top-end', icon: 'warning',
+                    title: 'No puedes vender por debajo de tu costo real ($' + costoProduccionCalculado.toFixed(2) + ')',
+                    showConfirmButton: false, timer: 3500
                 });
             }
             precioUnitarioManual = null;

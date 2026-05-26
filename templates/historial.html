@@ -2278,47 +2278,90 @@
         }
     }
 
-    /**
+/**
      * ============================================================
-     * 📱 MENÚ DE ACCIONES MÓVIL
+     * 📱 MENÚ DE ACCIONES MÓVIL - VERSIÓN CORRECTA Y COMPLETA
      * ============================================================
      */
     function abrirMenuAcciones(btn, id, estado, saldoPendiente, estadoPedido) {
+        // Consultamos la sesión directamente
+        const isPro = {{ 'true' if session.get('is_pro_active') or session.get('role', 0) >= 1 else 'false' }};
+
+        // Inicializar opciones con VER DETALLES (siempre disponible)
         const options = [
-            { label: '<i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles', action: () => verDetalles(id) },
+            { 
+                label: '<i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles', 
+                action: () => verDetalles(id) 
+            },
         ];
 
+        // Si la venta NO está cancelada, agregar más opciones
         if (estado !== 'cancelada') {
-            options.push({
-                label: '<i class="fas fa-edit text-info w-20px text-center"></i> Editar',
-                action: () => recargarCotizacion(id)
-            });
+            
+            // EDITAR
+            if (isPro) {
+                options.push({
+                    label: '<i class="fas fa-edit text-info w-20px text-center"></i> Editar',
+                    action: () => recargarCotizacion(id)
+                });
+            } else {
+                options.push({
+                    label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Editar (PRO)',
+                    action: () => new bootstrap.Modal(document.getElementById('modalRenovacion')).show()
+                });
+            }
 
+            // IMPRIMIR TICKET
             options.push({
                 label: '<i class="fas fa-print text-dark w-20px text-center"></i> Imprimir Ticket',
                 action: () => window.open(`/ticket/${id}`, '_blank')
             });
 
+            // ABONAR
             if (saldoPendiente > 0.5) {
-                options.push({
-                    label: '<i class="fas fa-dollar-sign text-success w-20px text-center"></i> Registrar Abono',
-                    action: () => abonar(id, saldoPendiente, estado)
-                });
+                if (isPro) {
+                    options.push({
+                        label: '<i class="fas fa-dollar-sign text-success w-20px text-center"></i> Registrar Abono',
+                        action: () => abonar(id, saldoPendiente, estado)
+                    });
+                } else {
+                    options.push({
+                        label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Registrar Abono (PRO)',
+                        action: () => new bootstrap.Modal(document.getElementById('modalRenovacion')).show()
+                    });
+                }
             }
 
+            // EXTENDER VIGENCIA
             if (estado === 'cotizacion') {
-                options.push({
-                    label: '<i class="fas fa-calendar-plus text-warning w-20px text-center"></i> Extender Vigencia',
-                    action: () => extenderExpiracion(id, '')
-                });
+                if (isPro) {
+                    options.push({
+                        label: '<i class="fas fa-calendar-plus text-warning w-20px text-center"></i> Extender Vigencia',
+                        action: () => extenderExpiracion(id, '')
+                    });
+                } else {
+                    options.push({
+                        label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Extender Vigencia (PRO)',
+                        action: () => new bootstrap.Modal(document.getElementById('modalRenovacion')).show()
+                    });
+                }
             }
 
-            options.push({
-                label: '<i class="fas fa-trash-alt text-danger w-20px text-center"></i> Anular Venta',
-                action: () => cancelarVenta(id)
-            });
+            // ANULAR VENTA
+            if (isPro) {
+                options.push({
+                    label: '<i class="fas fa-trash-alt text-danger w-20px text-center"></i> Anular Venta',
+                    action: () => cancelarVenta(id)
+                });
+            } else {
+                options.push({
+                    label: '<i class="fas fa-lock text-muted w-20px text-center"></i> Anular Venta (PRO)',
+                    action: () => new bootstrap.Modal(document.getElementById('modalRenovacion')).show()
+                });
+            }
         }
 
+        // Mostrar el menú SweetAlert
         Swal.fire({
             title: `Folio #${id}`,
             html: options.map(opt =>
@@ -2328,8 +2371,10 @@
             didOpen: () => {
                 document.querySelectorAll('.swal2-html-container button').forEach((btn, idx) => {
                     btn.onclick = () => {
-                        options[idx].action();
                         Swal.close();
+                        setTimeout(() => {
+                            options[idx].action();
+                        }, 200);
                     };
                 });
             }

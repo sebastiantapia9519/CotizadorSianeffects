@@ -1,12 +1,14 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
+
 import psycopg2
 import psycopg2.extras
 from psycopg2 import pool # Importamos el motor de albercas
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timezone
-from dotenv import load_dotenv
 
-load_dotenv()
+
 
 # ======================================================
 # VARIABLES GLOBALES PARA EL POOL
