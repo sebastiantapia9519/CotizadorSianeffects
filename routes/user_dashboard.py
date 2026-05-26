@@ -43,23 +43,31 @@ def mi_panel():
         # para que cada KPI decida qué sumar exactamente sin excluir a los demás.
         cursor.execute("""
             SELECT 
-                COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN total ELSE 0 END), 0) as ingresos_brutos,
-                COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN (total - COALESCE(costo_total, 0)) ELSE 0 END), 0) as ganancia_neta,
+                COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN total ELSE 0 END), 0) as total_facturado,
+                COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN (COALESCE(subtotal, 0) - COALESCE(descuento_monto, 0)) ELSE 0 END), 0) as venta_neta_productos,
+                COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN COALESCE(monto_pagado, 0) ELSE 0 END), 0) as ingresos_cobrados,
+                COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN ((COALESCE(subtotal, 0) - COALESCE(descuento_monto, 0)) - COALESCE(costo_total, 0)) ELSE 0 END), 0) as ganancia_neta,
                 COALESCE(SUM(CASE WHEN estado IN ('pagado', 'anticipo') THEN COALESCE(costo_total, 0) ELSE 0 END), 0) as costos_produccion,
                 COALESCE(SUM(CASE WHEN estado IN ('pendiente', 'anticipo') THEN COALESCE(saldo_pendiente, 0) ELSE 0 END), 0) as dinero_calle,
-                COUNT(CASE WHEN estado IN ('pagado', 'anticipo') THEN 1 END) as total_ventas
+                COUNT(CASE WHEN estado IN ('pagado', 'anticipo') THEN 1 END) as total_ventas,
+                COUNT(CASE WHEN estado = 'cotizacion' THEN 1 END) as total_cotizaciones,
+                COUNT(CASE WHEN estado = 'cancelada' THEN 1 END) as total_canceladas
             FROM ventas 
             WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') = %s AND estado != 'cancelado'
         """, (user_id, periodo_str))
         kpis_row = cursor.fetchone()
         
-        kpis = dict(kpis_row) if kpis_row else {'ingresos_brutos': 0, 'ganancia_neta': 0, 'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0}
+        kpis = dict(kpis_row) if kpis_row else {
+            'total_facturado': 0, 'venta_neta_productos': 0, 'ingresos_cobrados': 0, 'ganancia_neta': 0,
+            'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0,
+            'total_cotizaciones': 0, 'total_canceladas': 0
+        }
 
         # --- 3. GRÁFICA 1: DIARIA (PROTECCIÓN DE NULOS EN COSTOS) ---
         cursor.execute("""
             SELECT to_char(fecha, 'YYYY-MM-DD') as dia, 
-                   SUM(total) as ingresos, 
-                   SUM(total - COALESCE(costo_total, 0)) as ganancia
+                   SUM(COALESCE(monto_pagado, 0)) as ingresos, 
+                   SUM((COALESCE(subtotal, 0) - COALESCE(descuento_monto, 0)) - COALESCE(costo_total, 0)) as ganancia
             FROM ventas
             WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') = %s AND estado IN ('pagado', 'anticipo')
             GROUP BY dia ORDER BY dia ASC
@@ -69,8 +77,8 @@ def mi_panel():
         fechas_diarias, ing_diarios, gan_diarias = [], [], []
         for fila in grafica_diaria_db:
             fechas_diarias.append(f"Día {fila['dia'][-2:]}") 
-            ing_diarios.append(round(fila['ingresos'], 2))
-            gan_diarias.append(round(fila['ganancia'], 2))
+            ing_diarios.append(round(float(fila['ingresos']), 2))
+            gan_diarias.append(round(float(fila['ganancia']), 2))
 
         # --- 4. GRÁFICA 2: HISTÓRICA (CORREGIDO VIAJE EN EL TIEMPO) ---
         # Ahora los 6 meses se calculan desde el mes que el usuario seleccionó, no desde el día de hoy.
@@ -79,8 +87,8 @@ def mi_panel():
         
         cursor.execute("""
             SELECT to_char(fecha, 'YYYY-MM') as mes, 
-                   SUM(total) as ingresos, 
-                   SUM(total - COALESCE(costo_total, 0)) as ganancia
+                   SUM(COALESCE(monto_pagado, 0)) as ingresos, 
+                   SUM((COALESCE(subtotal, 0) - COALESCE(descuento_monto, 0)) - COALESCE(costo_total, 0)) as ganancia
             FROM ventas
             WHERE user_id = %s 
               AND to_char(fecha, 'YYYY-MM') >= %s 
@@ -93,15 +101,23 @@ def mi_panel():
         meses_hist, ing_hist, gan_hist = [], [], []
         for fila in grafica_hist_db:
             meses_hist.append(fila['mes'])
-            ing_hist.append(round(fila['ingresos'], 2))
-            gan_hist.append(round(fila['ganancia'], 2))
+            ing_hist.append(round(float(fila['ingresos']), 2))
+            gan_hist.append(round(float(fila['ganancia']), 2))
 
         # --- 5. TOP 5 PRODUCTOS ---
         cursor.execute("""
-            SELECT vd.concepto, SUM(vd.cantidad) as cantidad_vendida, SUM(vd.subtotal) as total_generado
+            SELECT
+                vd.concepto,
+                SUM(vd.cantidad) as cantidad_vendida,
+                SUM(vd.subtotal) as total_generado,
+                SUM(vd.cantidad * COALESCE(vd.costo_unitario, 0)) as costo_generado,
+                SUM(vd.subtotal - (vd.cantidad * COALESCE(vd.costo_unitario, 0))) as utilidad_estimada,
+                COUNT(DISTINCT v.id) as tickets
             FROM venta_detalles vd JOIN ventas v ON vd.venta_id = v.id
             WHERE v.user_id = %s AND to_char(v.fecha, 'YYYY-MM') = %s AND v.estado IN ('pagado', 'anticipo')
-            GROUP BY vd.concepto ORDER BY cantidad_vendida DESC LIMIT 5
+            GROUP BY vd.concepto
+            ORDER BY cantidad_vendida DESC, total_generado DESC
+            LIMIT 5
         """, (user_id, periodo_str))
         top_productos = cursor.fetchall()
 
@@ -126,7 +142,11 @@ def mi_panel():
 
     except Exception as e:
         current_app.logger.error(f"DASHBOARD_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al cargar panel - {e}")
-        kpis = {'ingresos_brutos': 0, 'ganancia_neta': 0, 'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0}
+        kpis = {
+            'total_facturado': 0, 'venta_neta_productos': 0, 'ingresos_cobrados': 0, 'ganancia_neta': 0,
+            'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0,
+            'total_cotizaciones': 0, 'total_canceladas': 0
+        }
         fechas_diarias, ing_diarios, gan_diarias, meses_hist, ing_hist, gan_hist, top_productos, stock_bajo = [], [], [], [], [], [], [], []
         inventario_activo = False
     finally:

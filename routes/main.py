@@ -758,28 +758,91 @@ def descargar_excel():
     uid = session['user_id']
     u_name = session.get('username', 'Anonimo')
     
-    query = '''
-        SELECT v.id as "Folio", v.fecha as "Fecha_Registro", v.fecha_vencimiento as "Fecha_Vencimiento",
-            v.cliente as "Cliente", v.estado as "Estado_Actual", v.total as "Total_Ticket",
-            v.monto_pagado as "Pagado", v.saldo_pendiente as "Resta_Por_Pagar",
-            d.concepto as "Producto", d.cantidad as "Cantidad", d.precio_unitario as "Precio_Unit_Venta"
-        FROM ventas v JOIN venta_detalles d ON v.id = d.venta_id 
-        WHERE v.user_id = %s ORDER BY v.fecha DESC
+    query_tickets = '''
+        SELECT
+            v.id as "Folio",
+            v.fecha as "Fecha",
+            v.fecha_vencimiento as "Fecha_Vencimiento",
+            v.cliente as "Cliente",
+            v.estado as "Estado",
+            v.subtotal as "Subtotal_Productos",
+            v.descuento_monto as "Descuento",
+            v.envio as "Envio",
+            v.impuestos as "Impuestos",
+            v.total as "Total_Ticket",
+            v.monto_pagado as "Cobrado",
+            v.saldo_pendiente as "Por_Cobrar",
+            v.costo_total as "Costo_Total",
+            ((COALESCE(v.subtotal, 0) - COALESCE(v.descuento_monto, 0)) - COALESCE(v.costo_total, 0)) as "Utilidad_Estimada",
+            v.tax_engine as "Impuesto_Aplicado"
+        FROM ventas v
+        WHERE v.user_id = %s
+        ORDER BY v.fecha DESC
+    '''
+    query_productos = '''
+        SELECT
+            v.id as "Folio",
+            v.fecha as "Fecha",
+            v.cliente as "Cliente",
+            v.estado as "Estado",
+            d.concepto as "Producto",
+            d.cantidad as "Cantidad",
+            d.precio_unitario as "Precio_Unitario",
+            d.subtotal as "Subtotal_Linea",
+            d.costo_unitario as "Costo_Unitario",
+            (d.costo_unitario * d.cantidad) as "Costo_Linea",
+            (d.subtotal - (d.costo_unitario * d.cantidad)) as "Utilidad_Linea_Antes_Desc"
+        FROM ventas v JOIN venta_detalles d ON v.id = d.venta_id
+        WHERE v.user_id = %s
+        ORDER BY v.fecha DESC, v.id DESC
     '''
     try:
-        df = pd.read_sql_query(query, conn, params=(uid,))
+        df_tickets = pd.read_sql_query(query_tickets, conn, params=(uid,))
+        df_productos = pd.read_sql_query(query_productos, conn, params=(uid,))
         conn.close()
         
-        if not df.empty:
-            df['Fecha_Registro'] = pd.to_datetime(df['Fecha_Registro'], errors='coerce').apply(
-                lambda x: utc_to_local(x.to_pydatetime()).strftime('%d/%m/%Y %I:%M %p') if pd.notnull(x) else 'Pendiente'
+        for df in (df_tickets, df_productos):
+            if not df.empty and 'Fecha' in df.columns:
+                df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce').apply(
+                    lambda x: utc_to_local(x.to_pydatetime()).strftime('%d/%m/%Y %I:%M %p') if pd.notnull(x) else 'Pendiente'
+                )
+
+        if not df_tickets.empty:
+            df_tickets['Fecha_Vencimiento'] = pd.to_datetime(df_tickets['Fecha_Vencimiento'], errors='coerce').apply(
+                lambda x: utc_to_local(x.to_pydatetime()).strftime('%d/%m/%Y %I:%M %p') if pd.notnull(x) else ''
             )
+
+        tickets_activos = df_tickets[df_tickets['Estado'].isin(['pagado', 'anticipo'])] if not df_tickets.empty else df_tickets
+        resumen = {
+            'Alcance': 'Global',
+            'Tickets_Activos': int(len(tickets_activos)) if tickets_activos is not None else 0,
+            'Cotizaciones': int((df_tickets['Estado'] == 'cotizacion').sum()) if not df_tickets.empty else 0,
+            'Anuladas': int((df_tickets['Estado'] == 'cancelada').sum()) if not df_tickets.empty else 0,
+            'Total_Ticket': float(tickets_activos['Total_Ticket'].sum()) if not tickets_activos.empty else 0,
+            'Cobrado': float(tickets_activos['Cobrado'].sum()) if not tickets_activos.empty else 0,
+            'Por_Cobrar': float(tickets_activos['Por_Cobrar'].sum()) if not tickets_activos.empty else 0,
+            'Costo_Total': float(tickets_activos['Costo_Total'].sum()) if not tickets_activos.empty else 0,
+            'Utilidad_Estimada': float(tickets_activos['Utilidad_Estimada'].sum()) if not tickets_activos.empty else 0,
+            'Descuentos': float(tickets_activos['Descuento'].sum()) if not tickets_activos.empty else 0,
+            'Envios': float(tickets_activos['Envio'].sum()) if not tickets_activos.empty else 0,
+            'Impuestos': float(tickets_activos['Impuestos'].sum()) if not tickets_activos.empty else 0
+        }
+        resumen['Margen_Estimado_%'] = round((resumen['Utilidad_Estimada'] / resumen['Total_Ticket']) * 100, 2) if resumen['Total_Ticket'] > 0 else 0
+        df_resumen = pd.DataFrame([resumen])
 
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer: 
-            df.to_excel(writer, index=False, sheet_name='Detalle de Ventas')
+            df_resumen.to_excel(writer, index=False, sheet_name='Resumen')
+            df_tickets.to_excel(writer, index=False, sheet_name='Tickets')
+            df_productos.to_excel(writer, index=False, sheet_name='Productos')
 
-        current_app.logger.info(f"EXPORT_DATA: Usuario '{u_name}' (ID: {uid}) descargo el reporte de ventas en Excel")
+            for sheet in writer.book.worksheets:
+                sheet.freeze_panes = 'A2'
+                for column_cells in sheet.columns:
+                    max_length = max(len(str(cell.value)) if cell.value is not None else 0 for cell in column_cells)
+                    sheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 2, 12), 30)
+
+        current_app.logger.info(f"EXPORT_DATA: Usuario '{u_name}' (ID: {uid}) descargo el reporte global de ventas en Excel")
         
 
         output.seek(0)

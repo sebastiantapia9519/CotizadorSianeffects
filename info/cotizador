@@ -41,6 +41,27 @@ La aplicación maneja dos entornos completamente aislados mediante variables de 
 El archivo db.py valida el entorno activo y lanza una excepción si detecta que
 DEV apunta a PRD o viceversa, evitando contaminación accidental de datos en producción.
 
+RUTA LOCAL DEL PROYECTO Y EJECUCIÓN
+-----------------------------------
+Para cambios del cotizador, el proyecto correcto en la máquina de desarrollo es:
+
+  /Users/sebastiantapia/Documents/CotizacionesSianeffects
+
+No usar como referencia la carpeta:
+
+  /Users/sebastiantapia/Documents/Sianeffects Cotizador
+
+Esa carpeta puede existir pero no contiene el proyecto funcional del cotizador.
+
+Comando local habitual:
+
+  cd /Users/sebastiantapia/Documents/CotizacionesSianeffects
+  FLASK_DEBUG=0 PORT=5055 venv/bin/python app.py
+
+Si el puerto 5055 ya está ocupado, usar otro puerto libre:
+
+  FLASK_DEBUG=0 PORT=5057 venv/bin/python app.py
+
 SEGURIDAD DE SESIONES
 ---------------------
 - SESSION_COOKIE_SECURE=True     → Solo viaja por HTTPS
@@ -652,6 +673,54 @@ Corrección Mayo 2026:
   - Al editar, el botón "Solo Cotizar" cambia a "Actualizar Cotización" y se conserva
     ventaIdEdicion para actualizar el mismo folio, no crear duplicado.
 
+Corrección post-pull Mayo 2026: precio manual en recetas recuperadas
+  Problema:
+    - Si una receta calculaba precio sugerido de $52.00, el usuario podía ajustar
+      manualmente el precio a $70.00 y agregarla al carrito correctamente.
+    - Al guardar la cotización y luego editarla desde Historial, al hacer clic en el
+      producto del carrito para editar la receta, el cotizador recalculaba y volvía
+      a mostrar $52.00 en vez de conservar los $70.00 guardados.
+    - Después de un git pull, templates/cotizador.html quedó en conflicto (UU) y
+      también había riesgo de romper JavaScript por funciones duplicadas o variables
+      redeclaradas.
+
+  Solución en templates/cotizador.html:
+    - Variable global única:
+        let precioUnitarioManual = null;
+        let isCargandoReceta = false;
+    - normalizarItemCarrito(item):
+        Normaliza precio_unitario, costo_unitario, cantidad y subtotal a Number.
+        Esto evita errores con .toFixed() cuando PostgreSQL/JSON entrega decimales
+        como texto.
+    - cargarCotizacion(id):
+        Reconstruye el carrito con normalizarItemCarrito(item). No debe usar variables
+        inexistentes como concepto, precio, costo, cantidad o fecha.
+    - recuperarSesionCotizacion():
+        Al volver desde /historial usando sessionStorage, también normaliza cada item
+        antes de renderizar el carrito.
+    - cargarRecetaDesdeCarrito(index):
+        Antes de recalcular la receta, rescata:
+          precioUnitarioManual = parseFloat(item.precio_unitario) || null;
+        Con esto el precio guardado en la cotización se conserva al editar el item.
+    - calcularTotal():
+        Si existe precioUnitarioManual, se conserva mientras sea mayor o igual al
+        costo real de producción (costoTotal), no mientras sea mayor al precio sugerido.
+        Esto permite cobrar por debajo del sugerido si sigue siendo rentable.
+    - aplicarAjusteUnitario():
+        Compara contra costoProduccionCalculado, no contra precioVentaCalculado.
+        Mensaje esperado si se intenta vender por debajo del costo real:
+          "No puedes vender por debajo de tu costo real ($X.XX)".
+
+  Verificaciones recomendadas después de tocar este flujo:
+    - venv/bin/python -m py_compile app.py routes/main.py routes/api.py
+    - Renderizar templates/cotizador.html con app.test_request_context('/cotizador').
+    - Extraer los scripts inline y correr:
+        node --check /private/tmp/cotizador-inline.js
+    - Confirmar que solo exista una declaración:
+        let precioUnitarioManual = null;
+    - Confirmar que no queden marcadores de conflicto:
+        <<<<<<<, =======, >>>>>>>
+
 Caso probado:
   - Folio #217 creado con Venta Rápida.
   - 10 piezas x $265.00 = $2,650.00.
@@ -683,6 +752,97 @@ ESTRATEGIA NACIONAL (VOLUMETRÍA)
 ================================================================================
 14. PANEL FINANCIERO (DASHBOARD)
 ================================================================================
+
+PANEL DEL USUARIO: /mi-panel
+----------------------------
+Archivo principal:
+  - templates/dashboard/mi_panel.html
+Backend:
+  - routes/user_dashboard.py
+
+Objetivo:
+  Mostrar al cliente una lectura honesta de su mes seleccionado, separando dinero
+  cobrado, venta facturada, utilidad estimada, saldos por cobrar y desempeño de
+  productos.
+
+Definiciones de datos mostrados:
+  - Cobrado:
+      SUM(monto_pagado) de ventas con estado `pagado` o `anticipo`.
+      Representa dinero recibido realmente.
+  - Total Ticket:
+      SUM(total) de ventas con estado `pagado` o `anticipo`.
+      Incluye productos, descuento aplicado, envío, impuestos y redondeo.
+  - Venta Neta:
+      SUM(subtotal - descuento_monto) de ventas con estado `pagado` o `anticipo`.
+      Representa productos vendidos después de descuentos, sin envío ni impuestos.
+  - Costos Producto:
+      SUM(costo_total), incluyendo costos registrados en los items y costo operativo
+      prorrateado guardado por guardar_venta().
+  - Utilidad Estimada:
+      SUM((subtotal - descuento_monto) - costo_total).
+      No usa `total - costo_total` porque `total` incluye envío e impuestos y eso
+      inflaría artificialmente la utilidad.
+  - Por Cobrar:
+      SUM(saldo_pendiente) de tickets con anticipo o pendiente.
+      En el flujo normal actual lo más común es `anticipo`.
+  - Tickets Activos:
+      COUNT de folios en estado `pagado` o `anticipo`.
+  - Cotizaciones / Anuladas:
+      Se muestran aparte y no suman a utilidad.
+
+Gráficas:
+  - "Cobros y Utilidad":
+      Serie 1: Cobrado = SUM(monto_pagado).
+      Serie 2: Utilidad Estimada = SUM((subtotal - descuento_monto) - costo_total).
+  - "Radiografía de Ingresos":
+      Dona de Venta Neta separada en Utilidad Estimada y Costo de Producción.
+
+Productos Más Vendidos:
+  - Fuente: venta_detalles unido con ventas.
+  - Solo considera ventas `pagado` o `anticipo` del periodo seleccionado.
+  - Ordena por unidades vendidas y, en empate, por dinero vendido.
+  - Muestra producto, unidades, número de tickets, vendido y utilidad estimada por línea:
+      utilidad_estimada = SUM(subtotal_linea - cantidad * costo_unitario)
+  - Esta vista ayuda a distinguir "se vende mucho" de "deja utilidad".
+
+Responsive móvil:
+  - templates/dashboard/mi_panel.html incluye reglas específicas para pantallas menores
+    a 768px.
+  - Los KPIs reducen padding, tamaño de iconos y tipografía para evitar desbordes.
+  - Las notas/leyendas de KPI (`.kpi-note`) siempre deben permanecer visibles en móvil.
+    En pantallas muy angostas (<380px) solo se reduce la tipografía; no se ocultan.
+  - La tabla de Productos Más Vendidos se oculta en móvil y se reemplaza por tarjetas
+    `.mobile-product-item` con unidades, tickets, vendido, utilidad y promedio.
+  - El calendario reduce gap, padding, tamaño de celda y dots para no romper el grid.
+  - La barra de filtros se convierte en grid de mes, año y botón; el botón Reporte ocupa
+    ancho completo debajo.
+  - En el gráfico "Cobros y Utilidad", el selector Este Mes / Últimos 6 Meses se centra
+    en móvil con ancho máximo. Para el histórico móvil, las etiquetas del eje X usan solo
+    el mes abreviado y rotación ligera para evitar que "Feb 2026 / Abr 2026 / May 2026"
+    se encimen.
+  - En la vista diaria del mismo gráfico, las etiquetas del eje X muestran solo el número
+    de día (01, 02, 15, etc.), sin el prefijo "Día", para evitar amontonamiento visual.
+  - Cuidado Jinja: el bloque `{% block content %}` debe cerrarse antes de abrir
+    `{% block scripts %}`. Si `scripts` queda anidado dentro de `content`, el layout
+    renderiza el JavaScript dos veces y aparece el error:
+      Uncaught SyntaxError: Identifier 'chartData' has already been declared
+    Verificación rápida:
+      render_template('dashboard/mi_panel.html', ...).count('const chartData') debe ser 1.
+
+Reporte Excel del botón "Reporte":
+  - Ruta: /descargar_excel en routes/main.py.
+  - Es global, no filtrado por el mes del panel.
+  - Genera workbook .xlsx con:
+      * Resumen: totales globales de tickets activos, cotizaciones, anuladas,
+        total ticket, cobrado, por cobrar, costo, utilidad estimada, descuentos,
+        envíos, impuestos y margen estimado.
+      * Tickets: un folio por fila con fechas, cliente, estado, subtotal,
+        descuento, envío, impuestos, total, cobrado, por cobrar, costo total,
+        utilidad estimada e impuesto aplicado.
+      * Productos: líneas de venta con cantidad, precio unitario, subtotal,
+        costo unitario, costo de línea y utilidad antes de descuento global.
+  - Fechas convertidas a hora local antes de exportar.
+  - El archivo ajusta anchos de columna y congela encabezados.
 
 KPIs PRINCIPALES
 -----------------
