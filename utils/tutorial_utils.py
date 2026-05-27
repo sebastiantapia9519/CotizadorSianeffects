@@ -1,4 +1,5 @@
 from db import get_db_connection
+from flask import current_app
 
 # ==========================================
 # CONFIGURACIÓN DE TUTORIALES (DRIVER.JS)
@@ -38,7 +39,7 @@ def debe_mostrar_tutorial(user_id, modulo):
         
         # Escenario B: Ya vio una versión. Comparamos la guardada con la de VERSIONES_APP.
         # En Postgres, fetchone() devuelve un dict (si configuramos el cursor así) o None.
-        if estado['version_vista'] < version_actual_app:
+        if int(estado['version_vista'] or 0) < version_actual_app:
             return True
             
         return False

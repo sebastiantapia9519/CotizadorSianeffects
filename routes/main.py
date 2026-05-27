@@ -31,6 +31,15 @@ def parse_optional_int(value):
 def is_general_customer_name(value):
     return (value or '').strip().lower() == 'cliente general'
 
+
+def limpiar_texto_cliente(value, max_len, required=False, field_name='Campo'):
+    value = (value or '').strip()
+    if required and not value:
+        raise ValueError(f'{field_name} es obligatorio')
+    if len(value) > max_len:
+        raise ValueError(f'{field_name} no puede superar {max_len} caracteres')
+    return value
+
 # --- RUTAS DE ACCESO PRINCIPAL (EL PORTERO) ---
 
 @main_bp.route('/')
@@ -86,7 +95,7 @@ def marcar_visto_global(anuncio_id):
 def procesar_fila_fechas(fila_db):
     if not fila_db: return None
     item = dict(fila_db)
-    campos_fecha = ['fecha', 'fecha_vencimiento', 'created_at', 'fecha_entrega']
+    campos_fecha = ['fecha', 'fecha_vencimiento', 'created_at', 'fecha_entrega', 'fecha_registro', 'ultima_venta']
     for campo in campos_fecha:
         valor_original = item.get(campo)
         if valor_original:
@@ -155,15 +164,201 @@ def cotizador():
         conn.close()
     return render_template('cotizador.html', **data)
 
+
+@main_bp.route('/clientes', methods=['GET', 'POST'])
+@subscription_required
+def clientes():
+    uid = session['user_id']
+
+    if request.method == 'POST':
+        try:
+            nombre = limpiar_texto_cliente(request.form.get('nombre'), 120, True, 'Nombre')
+            contacto = limpiar_texto_cliente(request.form.get('contacto'), 60, False, 'Contacto')
+            plataforma = limpiar_texto_cliente(request.form.get('plataforma'), 80, False, 'Origen')
+            notas_cliente = limpiar_texto_cliente(request.form.get('notas_cliente'), 500, False, 'Notas')
+        except ValueError as e:
+            flash(str(e), 'warning')
+            return redirect(url_for('main.clientes'))
+
+        if is_general_customer_name(nombre):
+            flash('"Cliente General" no se guarda como cliente real.', 'warning')
+            return redirect(url_for('main.clientes'))
+
+        conn = get_db()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("""
+                INSERT INTO clientes (user_id, nombre, contacto, plataforma, notas_cliente)
+                VALUES (%s, %s, %s, %s, %s)
+            """, (uid, nombre, contacto, plataforma, notas_cliente))
+            cursor.execute("""
+                INSERT INTO logs_actividad (user_id, accion, modulo)
+                VALUES (%s, %s, %s)
+            """, (uid, "Creó cliente", "Clientes"))
+            conn.commit()
+            flash('Cliente creado correctamente.', 'success')
+        except Exception as e:
+            conn.rollback()
+            current_app.logger.error(f"CLIENT_CREATE_ERROR: Usuario {uid} - {e}")
+            flash('No se pudo crear el cliente.', 'danger')
+        finally:
+            cursor.close()
+            conn.close()
+
+        return redirect(url_for('main.clientes'))
+
+    q = request.args.get('q', '').strip()
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        params = [uid]
+        where = "WHERE c.user_id = %s"
+        if q:
+            where += """
+                AND (
+                    TRANSLATE(LOWER(c.nombre), 'áéíóú', 'aeiou') ILIKE TRANSLATE(LOWER(%s), 'áéíóú', 'aeiou')
+                    OR COALESCE(c.contacto, '') ILIKE %s
+                    OR TRANSLATE(LOWER(COALESCE(c.plataforma, '')), 'áéíóú', 'aeiou') ILIKE TRANSLATE(LOWER(%s), 'áéíóú', 'aeiou')
+                )
+            """
+            like = f'%{q}%'
+            params.extend([like, like, like])
+
+        cursor.execute(f"""
+            SELECT
+                c.id,
+                c.nombre,
+                c.contacto,
+                c.plataforma,
+                c.notas_cliente,
+                c.fecha_registro,
+                COUNT(v.id) AS ventas_count,
+                MAX(v.fecha) AS ultima_venta
+            FROM clientes c
+            LEFT JOIN ventas v ON v.cliente_id = c.id AND v.user_id = c.user_id
+            {where}
+            GROUP BY c.id
+            ORDER BY LOWER(c.nombre) ASC
+        """, params)
+        clientes_rows = [dict(row) for row in cursor.fetchall()]
+        clientes_display = [procesar_fila_fechas(row) for row in clientes_rows]
+    finally:
+        cursor.close()
+        conn.close()
+
+    return render_template('clientes.html', clientes=clientes_display, q=q)
+
+
+@main_bp.route('/clientes/<int:cliente_id>/actualizar', methods=['POST'])
+@subscription_required
+def actualizar_cliente(cliente_id):
+    uid = session['user_id']
+    try:
+        nombre = limpiar_texto_cliente(request.form.get('nombre'), 120, True, 'Nombre')
+        contacto = limpiar_texto_cliente(request.form.get('contacto'), 60, False, 'Contacto')
+        plataforma = limpiar_texto_cliente(request.form.get('plataforma'), 80, False, 'Origen')
+        notas_cliente = limpiar_texto_cliente(request.form.get('notas_cliente'), 500, False, 'Notas')
+    except ValueError as e:
+        flash(str(e), 'warning')
+        return redirect(url_for('main.clientes', q=request.form.get('q', '').strip()))
+
+    if is_general_customer_name(nombre):
+        flash('"Cliente General" no se guarda como cliente real.', 'warning')
+        return redirect(url_for('main.clientes', q=request.form.get('q', '').strip()))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            UPDATE clientes
+            SET nombre = %s, contacto = %s, plataforma = %s, notas_cliente = %s
+            WHERE id = %s AND user_id = %s
+        """, (nombre, contacto, plataforma, notas_cliente, cliente_id, uid))
+
+        if cursor.rowcount == 0:
+            conn.rollback()
+            flash('Cliente no encontrado.', 'warning')
+            return redirect(url_for('main.clientes'))
+
+        cursor.execute("""
+            UPDATE ventas
+            SET cliente = %s
+            WHERE cliente_id = %s AND user_id = %s
+        """, (nombre, cliente_id, uid))
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo)
+            VALUES (%s, %s, %s)
+        """, (uid, "Actualizó cliente", "Clientes"))
+        conn.commit()
+        flash('Cliente actualizado correctamente.', 'success')
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"CLIENT_UPDATE_ERROR: Usuario {uid} Cliente {cliente_id} - {e}")
+        flash('No se pudo actualizar el cliente.', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('main.clientes', q=request.form.get('q', '').strip()))
+
+
+@main_bp.route('/clientes/<int:cliente_id>/eliminar', methods=['POST'])
+@subscription_required
+def eliminar_cliente(cliente_id):
+    uid = session['user_id']
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute("""
+            SELECT nombre
+            FROM clientes
+            WHERE id = %s AND user_id = %s
+        """, (cliente_id, uid))
+        cliente = cursor.fetchone()
+        if not cliente:
+            flash('Cliente no encontrado.', 'warning')
+            return redirect(url_for('main.clientes'))
+
+        cursor.execute("""
+            UPDATE ventas
+            SET cliente_id = NULL
+            WHERE cliente_id = %s AND user_id = %s
+        """, (cliente_id, uid))
+        cursor.execute("""
+            DELETE FROM clientes
+            WHERE id = %s AND user_id = %s
+        """, (cliente_id, uid))
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo)
+            VALUES (%s, %s, %s)
+        """, (uid, "Eliminó cliente", "Clientes"))
+        conn.commit()
+        flash('Cliente eliminado. Sus folios históricos se conservaron.', 'success')
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"CLIENT_DELETE_ERROR: Usuario {uid} Cliente {cliente_id} - {e}")
+        flash('No se pudo eliminar el cliente.', 'danger')
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('main.clientes', q=request.form.get('q', '').strip()))
+
 # --- TUTORIALES ---
 @main_bp.route('/api/tutorial/completado', methods=['POST'])
 @login_required
 def tutorial_completado():
-    data = request.json
+    data = request.get_json(silent=True) or request.form or {}
     uid = session['user_id']
     u_name = session.get('username', 'Anonimo')
     modulo = data.get('modulo')
-    version = data.get('version')
+    version = parse_optional_int(data.get('version'))
+
+    if modulo not in ('cotizador', 'historial', 'materiales', 'equipos', 'recetas', 'configuracion'):
+        return jsonify({"error": "Módulo inválido"}), 400
+
+    if version is None:
+        version = obtener_version_tutorial(modulo)
 
     conn = get_db()
     cursor = conn.cursor()

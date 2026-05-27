@@ -193,6 +193,8 @@ Entradas principales:
   - Al hacer clic en historial se abre el offcanvas lateral "Logística y Cliente".
   - En móvil, la acción de historial también está disponible desde el nombre del
     cliente y desde el menú "Más" como "Editar Logística".
+  - En /historial, junto al botón Dashboard, existe el acceso a /clientes para
+    administrar las fichas reales de clientes relacionadas con los folios.
 
 Regla especial:
   "Cliente General" es un texto operativo para ventas/cotizaciones sin cliente
@@ -213,6 +215,43 @@ Campos visibles en el offcanvas:
 En la tabla/cards de Historial se muestra un badge compacto con fecha/hora de
 entrega cuando el folio tiene fecha_entrega. El modal de "Ver Detalles" también
 muestra un bloque de logística si existen datos logísticos guardados.
+
+GESTIÓN DE CLIENTES
+-------------------
+Pantalla:
+  GET /clientes
+
+Uso:
+  CRUD compacto de clientes reales del usuario. No reemplaza al input del
+  cotizador; lo complementa para limpiar, corregir o eliminar fichas maestras
+  sin entrar folio por folio.
+
+Acceso:
+  El botón "Clientes" vive en /historial, junto a Dashboard, porque la gestión
+  está directamente relacionada con pedidos, logística y seguimiento.
+
+Operaciones:
+  - Crear cliente:
+      POST /clientes
+      Crea una ficha en clientes con nombre, contacto, plataforma y notas_cliente.
+
+  - Actualizar cliente:
+      POST /clientes/<cliente_id>/actualizar
+      Valida que el cliente pertenezca al usuario. Actualiza la ficha maestra y
+      sincroniza ventas.cliente en folios que tengan ese cliente_id, para que
+      búsquedas, tickets y exportaciones sigan viendo el nombre nuevo.
+
+  - Eliminar cliente:
+      POST /clientes/<cliente_id>/eliminar
+      Valida propiedad por user_id. Antes de borrar, deja ventas.cliente_id en
+      NULL para conservar los folios históricos. El texto ventas.cliente no se
+      borra, así el historial mantiene el nombre que tenía el pedido.
+
+Reglas:
+  - Todas las consultas se filtran por user_id.
+  - "Cliente General" no se permite como ficha real.
+  - Eliminar un cliente no elimina ventas ni venta_detalles.
+  - El CRUD usa POST para cambios de estado y límites de longitud en backend.
 
 MODELO DE DATOS
 ---------------

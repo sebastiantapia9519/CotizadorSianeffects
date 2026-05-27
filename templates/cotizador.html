@@ -1025,9 +1025,40 @@
     // ============================================================================
     // TUTORIAL INTERACTIVO (Driver.js)
     // ============================================================================
+    function marcarTutorialVisto(modulo, version) {
+        const payload = JSON.stringify({ modulo, version });
+        const url = '/api/tutorial/completado';
+
+        try {
+            localStorage.setItem(`tutorial_${modulo}_visto`, String(version));
+        } catch (error) {
+            console.warn('No se pudo guardar tutorial en localStorage:', error);
+        }
+
+        if (navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'application/json' });
+            navigator.sendBeacon(url, blob);
+            return;
+        }
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+            keepalive: true
+        }).catch(e => console.error("Error guardando tutorial:", e));
+    }
+
     {% if mostrar_tour %}
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.driver !== 'undefined') {
+            try {
+                if (localStorage.getItem('tutorial_cotizador_visto') === '{{ version_tour | default(1) }}') {
+                    return;
+                }
+            } catch (error) {
+                console.warn('No se pudo leer tutorial en localStorage:', error);
+            }
             setTimeout(() => {
                 repetirTutorialCotizador();
             }, 800); // 800ms de retraso para que cargue la interfaz bonita antes del tour
@@ -1051,14 +1082,7 @@
             // Conectamos con la base de datos cuando el tour termina o se cierra
             onDestroyed: () => {
                 {% if mostrar_tour %}
-                fetch('/api/tutorial/completado', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        modulo: 'cotizador',
-                        version: {{ version_tour | default(1) }}
-                    })
-                }).catch(e => console.error("Error guardando tutorial:", e));
+                marcarTutorialVisto('cotizador', {{ version_tour | default(1) }});
                 {% endif %}
             },
 

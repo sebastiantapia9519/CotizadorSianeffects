@@ -1,0 +1,458 @@
+{% extends "layout.html" %}
+
+{% block title %}Clientes | Sianeffects{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --clientes-primary: #ff6b81;
+        --clientes-border: #e9edf3;
+        --clientes-muted: #64748b;
+        --clientes-soft: #f8fafc;
+        --clientes-text: #1f2937;
+    }
+
+    .clientes-shell {
+        max-width: 1180px;
+        margin: 0 auto;
+    }
+
+    .clientes-title {
+        letter-spacing: 0;
+        color: var(--clientes-text);
+    }
+
+    .clientes-toolbar {
+        background: #ffffff;
+        border: 1px solid var(--clientes-border);
+        border-radius: 8px;
+        padding: 14px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    }
+
+    .clientes-search {
+        position: relative;
+        flex: 1 1 320px;
+    }
+
+    .clientes-search i {
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #94a3b8;
+    }
+
+    .clientes-search .form-control {
+        padding-left: 40px;
+        min-height: 44px;
+        border-radius: 8px;
+        border-color: var(--clientes-border);
+        background: var(--clientes-soft);
+    }
+
+    .clientes-table-wrap {
+        background: #ffffff;
+        border: 1px solid var(--clientes-border);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    }
+
+    .clientes-table {
+        margin-bottom: 0;
+        vertical-align: middle;
+    }
+
+    .clientes-table thead th {
+        background: var(--clientes-soft);
+        color: #64748b;
+        font-size: 0.76rem;
+        text-transform: uppercase;
+        letter-spacing: 0;
+        border-bottom: 1px solid var(--clientes-border);
+        padding: 13px 16px;
+        white-space: nowrap;
+    }
+
+    .clientes-table tbody td {
+        padding: 14px 16px;
+        border-color: #f1f5f9;
+    }
+
+    .cliente-name {
+        color: var(--clientes-text);
+        font-weight: 800;
+        line-height: 1.15;
+    }
+
+    .cliente-sub {
+        color: var(--clientes-muted);
+        font-size: 0.85rem;
+        margin-top: 2px;
+    }
+
+    .cliente-origin {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 5px 9px;
+        border-radius: 999px;
+        background: #ecfeff;
+        color: #0f766e;
+        font-weight: 800;
+        font-size: 0.78rem;
+        max-width: 180px;
+    }
+
+    .cliente-origin span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .cliente-count {
+        min-width: 38px;
+        border-radius: 999px;
+        background: #f1f5f9;
+        color: #334155;
+        display: inline-flex;
+        justify-content: center;
+        padding: 5px 10px;
+        font-weight: 800;
+    }
+
+    .cliente-action {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .cliente-card {
+        background: #ffffff;
+        border: 1px solid var(--clientes-border);
+        border-radius: 8px;
+        padding: 14px;
+        box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04);
+    }
+
+    .cliente-card + .cliente-card {
+        margin-top: 10px;
+    }
+
+    .cliente-meta-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        margin-top: 12px;
+    }
+
+    .cliente-meta {
+        background: var(--clientes-soft);
+        border: 1px solid #eef2f7;
+        border-radius: 8px;
+        padding: 10px;
+        min-width: 0;
+    }
+
+    .cliente-meta label {
+        display: block;
+        color: #94a3b8;
+        font-size: 0.72rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        margin-bottom: 2px;
+    }
+
+    .cliente-meta div {
+        color: #334155;
+        font-weight: 800;
+        overflow-wrap: anywhere;
+    }
+
+    .empty-clientes {
+        padding: 52px 20px;
+        text-align: center;
+        color: var(--clientes-muted);
+    }
+
+    .empty-clientes i {
+        font-size: 2rem;
+        color: #cbd5e1;
+        margin-bottom: 10px;
+    }
+
+    .clientes-modal .modal-content {
+        border: 0;
+        border-radius: 12px;
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.2);
+    }
+
+    .clientes-modal .form-control {
+        border-radius: 8px;
+        border-color: #dbe3ec;
+        min-height: 44px;
+    }
+
+    .clientes-modal textarea.form-control {
+        min-height: 110px;
+    }
+
+    @media (max-width: 575.98px) {
+        .clientes-toolbar {
+            padding: 12px;
+        }
+
+        .clientes-search {
+            flex-basis: 100%;
+        }
+
+        .cliente-meta-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="clientes-shell">
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h3 class="fw-bold m-0 clientes-title">Clientes</h3>
+            <span class="text-muted text-xs">Fichas vinculadas a cotizaciones e historial.</span>
+        </div>
+
+        <div class="d-flex gap-2 flex-wrap">
+            <a href="{{ url_for('main.historial') }}" class="btn btn-outline-secondary rounded-pill px-3 d-flex align-items-center gap-2">
+                <i class="fas fa-clock-rotate-left"></i>
+                <span>Historial</span>
+            </a>
+            <button class="btn btn-primary rounded-pill px-3 d-flex align-items-center gap-2" type="button" onclick="nuevoCliente()">
+                <i class="fas fa-plus"></i>
+                <span>Nuevo cliente</span>
+            </button>
+        </div>
+    </div>
+
+    <form class="clientes-toolbar d-flex flex-wrap align-items-center gap-2 mb-3" method="GET" action="{{ url_for('main.clientes') }}">
+        <div class="clientes-search">
+            <i class="fas fa-search"></i>
+            <input type="text" name="q" class="form-control" value="{{ q }}" placeholder="Buscar por nombre, telefono u origen" maxlength="120" autocomplete="off">
+        </div>
+        <button type="submit" class="btn btn-dark rounded-pill px-4">
+            Buscar
+        </button>
+        {% if q %}
+        <a href="{{ url_for('main.clientes') }}" class="btn btn-outline-secondary rounded-pill px-3">
+            Limpiar
+        </a>
+        {% endif %}
+    </form>
+
+    <div class="clientes-table-wrap d-none d-md-block">
+        {% if clientes %}
+        <table class="table clientes-table">
+            <thead>
+                <tr>
+                    <th>Cliente</th>
+                    <th>Contacto</th>
+                    <th>Origen</th>
+                    <th class="text-center">Folios</th>
+                    <th>Ultima venta</th>
+                    <th class="text-end">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cliente in clientes %}
+                <tr>
+                    <td>
+                        <div class="cliente-name">{{ cliente.nombre }}</div>
+                        {% if cliente.notas_cliente %}
+                        <div class="cliente-sub">{{ cliente.notas_cliente }}</div>
+                        {% else %}
+                        <div class="cliente-sub">Alta: {{ cliente.fecha_registro or 'Sin fecha' }}</div>
+                        {% endif %}
+                    </td>
+                    <td>{{ cliente.contacto or 'Sin contacto' }}</td>
+                    <td>
+                        {% if cliente.plataforma %}
+                        <span class="cliente-origin"><i class="fas fa-bullhorn"></i><span>{{ cliente.plataforma }}</span></span>
+                        {% else %}
+                        <span class="text-muted">Sin origen</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">
+                        <span class="cliente-count">{{ cliente.ventas_count or 0 }}</span>
+                    </td>
+                    <td>{{ cliente.ultima_venta or 'Sin ventas' }}</td>
+                    <td class="text-end">
+                        <div class="d-inline-flex gap-1">
+                            <button type="button" class="btn btn-light border cliente-action" title="Editar" onclick="editarCliente({{ cliente.id }})">
+                                <i class="fas fa-pen"></i>
+                            </button>
+                            <form method="POST" action="{{ url_for('main.eliminar_cliente', cliente_id=cliente.id) }}" class="m-0" onsubmit="return confirmarEliminarCliente();">
+                                <input type="hidden" name="q" value="{{ q }}">
+                                <button type="submit" class="btn btn-light border text-danger cliente-action" title="Eliminar">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </form>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <div class="empty-clientes">
+            <i class="fas fa-address-book"></i>
+            <div class="fw-bold text-dark">Sin clientes registrados</div>
+            <div class="small">Los clientes reales apareceran aqui cuando los guardes desde cotizador, historial o esta pantalla.</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="d-md-none">
+        {% for cliente in clientes %}
+        <div class="cliente-card">
+            <div class="d-flex justify-content-between align-items-start gap-2">
+                <div class="min-w-0">
+                    <div class="cliente-name">{{ cliente.nombre }}</div>
+                    <div class="cliente-sub">{{ cliente.contacto or 'Sin contacto' }}</div>
+                </div>
+                <div class="d-flex gap-1 flex-shrink-0">
+                    <button type="button" class="btn btn-light border cliente-action" title="Editar" onclick="editarCliente({{ cliente.id }})">
+                        <i class="fas fa-pen"></i>
+                    </button>
+                    <form method="POST" action="{{ url_for('main.eliminar_cliente', cliente_id=cliente.id) }}" class="m-0" onsubmit="return confirmarEliminarCliente();">
+                        <input type="hidden" name="q" value="{{ q }}">
+                        <button type="submit" class="btn btn-light border text-danger cliente-action" title="Eliminar">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="cliente-meta-grid">
+                <div class="cliente-meta">
+                    <label>Origen</label>
+                    <div>{{ cliente.plataforma or 'Sin origen' }}</div>
+                </div>
+                <div class="cliente-meta">
+                    <label>Folios</label>
+                    <div>{{ cliente.ventas_count or 0 }}</div>
+                </div>
+                <div class="cliente-meta">
+                    <label>Ultima venta</label>
+                    <div>{{ cliente.ultima_venta or 'Sin ventas' }}</div>
+                </div>
+                <div class="cliente-meta">
+                    <label>Notas</label>
+                    <div>{{ cliente.notas_cliente or 'Sin notas' }}</div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="cliente-card empty-clientes">
+            <i class="fas fa-address-book"></i>
+            <div class="fw-bold text-dark">Sin clientes registrados</div>
+            <div class="small">Los clientes reales apareceran aqui cuando los guardes desde cotizador, historial o esta pantalla.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="modal fade clientes-modal" id="modalCliente" tabindex="-1" aria-labelledby="modalClienteTitulo" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="POST" id="formCliente" action="{{ url_for('main.clientes') }}">
+                <input type="hidden" name="q" value="{{ q }}">
+                <div class="modal-header border-0 pb-0">
+                    <div>
+                        <h5 class="modal-title fw-bold" id="modalClienteTitulo">Nuevo cliente</h5>
+                        <div class="text-muted small">Datos maestros del cliente.</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="clienteNombre" class="form-label small fw-bold text-uppercase text-muted">Nombre</label>
+                        <input type="text" class="form-control" id="clienteNombre" name="nombre" maxlength="120" required autocomplete="off">
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="clienteContacto" class="form-label small fw-bold text-uppercase text-muted">WhatsApp / Tel</label>
+                            <input type="text" class="form-control" id="clienteContacto" name="contacto" maxlength="60" autocomplete="off">
+                        </div>
+                        <div class="col-md-6">
+                            <label for="clientePlataforma" class="form-label small fw-bold text-uppercase text-muted">Origen</label>
+                            <input type="text" class="form-control" id="clientePlataforma" name="plataforma" maxlength="80" autocomplete="off">
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label for="clienteNotas" class="form-label small fw-bold text-uppercase text-muted">Notas internas</label>
+                        <textarea class="form-control" id="clienteNotas" name="notas_cliente" maxlength="500"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light border rounded-pill px-4" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary rounded-pill px-4">
+                        <i class="fas fa-save me-1"></i> Guardar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% for cliente in clientes %}
+<script type="application/json" id="cliente-json-{{ cliente.id }}">{{ {
+    'id': cliente.id,
+    'nombre': cliente.nombre,
+    'contacto': cliente.contacto or '',
+    'plataforma': cliente.plataforma or '',
+    'notas_cliente': cliente.notas_cliente or ''
+} | tojson }}</script>
+{% endfor %}
+
+<script>
+    const clienteCreateUrl = "{{ url_for('main.clientes') }}";
+    const clienteUpdateBaseUrl = "{{ url_for('main.actualizar_cliente', cliente_id=0) }}";
+    let modalClienteInstance = null;
+
+    function getClienteModal() {
+        const modalEl = document.getElementById('modalCliente');
+        if (!modalClienteInstance) {
+            modalClienteInstance = new bootstrap.Modal(modalEl);
+        }
+        return modalClienteInstance;
+    }
+
+    function nuevoCliente() {
+        document.getElementById('modalClienteTitulo').textContent = 'Nuevo cliente';
+        document.getElementById('formCliente').action = clienteCreateUrl;
+        document.getElementById('formCliente').reset();
+        getClienteModal().show();
+    }
+
+    function editarCliente(id) {
+        const script = document.getElementById(`cliente-json-${id}`);
+        if (!script) return;
+
+        const cliente = JSON.parse(script.textContent);
+        document.getElementById('modalClienteTitulo').textContent = 'Editar cliente';
+        document.getElementById('formCliente').action = clienteUpdateBaseUrl.replace('/0/', `/${cliente.id}/`);
+        document.getElementById('clienteNombre').value = cliente.nombre || '';
+        document.getElementById('clienteContacto').value = cliente.contacto || '';
+        document.getElementById('clientePlataforma').value = cliente.plataforma || '';
+        document.getElementById('clienteNotas').value = cliente.notas_cliente || '';
+        getClienteModal().show();
+    }
+
+    function confirmarEliminarCliente() {
+        return confirm('¿Eliminar este cliente? Sus folios se conservaran pero dejaran de estar vinculados a su ficha.');
+    }
+</script>
+{% endblock %}

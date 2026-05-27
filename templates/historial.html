@@ -64,6 +64,53 @@
         border-left: none;
     }
 
+    .cliente-autocomplete {
+        position: relative;
+    }
+
+    .cliente-suggestions {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        z-index: 1080;
+        background: var(--bs-card-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 12px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+        overflow: hidden;
+        max-height: 260px;
+        overflow-y: auto;
+    }
+
+    .cliente-suggestion-item {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        padding: 10px 14px;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        cursor: pointer;
+        color: var(--bs-body-color);
+    }
+
+    .cliente-suggestion-item:hover {
+        background: rgba(255, 74, 90, 0.08);
+    }
+
+    .cliente-suggestion-name {
+        font-weight: 800;
+        font-size: 0.92rem;
+    }
+
+    .cliente-suggestion-meta {
+        font-size: 0.75rem;
+        color: var(--bs-secondary-color);
+        font-weight: 600;
+    }
+
     @media (max-width: 576px) {
         .offcanvas-custom {
             border-radius: 0;
@@ -1409,6 +1456,11 @@
             <i class="fas fa-chart-pie"></i>
             <span>Dashboard</span>
         </a>
+        <a href="{{ url_for('main.clientes') }}"
+            class="btn btn-outline-custom rounded-pill px-3 shadow-sm d-flex align-items-center justify-content-center gap-2">
+            <i class="fas fa-address-book text-primary"></i>
+            <span>Clientes</span>
+        </a>
     </div>
 </div>
 
@@ -2046,9 +2098,10 @@
             <div class="card border-0 shadow-sm rounded-4 mb-4">
                 <div class="card-body p-4">
                     <h6 class="fw-bold mb-3 text-dark"><i class="fas fa-user-circle text-muted me-2"></i> Datos del Cliente</h6>
-                    <div class="mb-3">
+                    <div class="mb-3 cliente-autocomplete">
                         <label class="form-label text-xs fw-bold text-uppercase text-muted">Nombre del Cliente</label>
-                        <input type="text" class="form-control" id="logistica_cliente" placeholder="Nombre completo" required>
+                        <input type="text" class="form-control" id="logistica_cliente" placeholder="Nombre completo" required autocomplete="off">
+                        <div id="logisticaClienteSuggestions" class="cliente-suggestions d-none"></div>
                     </div>
                     <div class="row gx-3">
                         <div class="col-6 mb-3">
@@ -2178,9 +2231,11 @@
     document.addEventListener('DOMContentLoaded', () => {
         const offcanvasLog = document.getElementById('offcanvasLogistica');
         if (offcanvasLog) document.body.appendChild(offcanvasLog);
-        
+
         const modalDet = document.getElementById('modalDetalle');
         if (modalDet) document.body.appendChild(modalDet);
+
+        inicializarBuscadorClientesLogistica();
     });
 
     document.addEventListener('click', function (e) {
@@ -2606,6 +2661,30 @@
         });
     }
 
+    function marcarTutorialVisto(modulo, version) {
+        const payload = JSON.stringify({ modulo, version });
+        const url = '/api/tutorial/completado';
+
+        try {
+            localStorage.setItem(`tutorial_${modulo}_visto`, String(version));
+        } catch (error) {
+            console.warn('No se pudo guardar tutorial en localStorage:', error);
+        }
+
+        if (navigator.sendBeacon) {
+            const blob = new Blob([payload], { type: 'application/json' });
+            navigator.sendBeacon(url, blob);
+            return;
+        }
+
+        fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: payload,
+            keepalive: true
+        }).catch(e => console.error("Error guardando tutorial:", e));
+    }
+
     function repetirTutorialHistorial() {
         if (typeof window.driver === 'undefined') return;
 
@@ -2615,6 +2694,11 @@
             nextBtnText: 'Siguiente →',
             prevBtnText: '← Atrás',
             allowClose: true,
+            onDestroyed: () => {
+                {% if mostrar_tour %}
+                marcarTutorialVisto('historial', {{ version_tour | default(1) }});
+                {% endif %}
+            },
             steps: [
                 {
                     popover: {
@@ -2677,6 +2761,13 @@
     {% if mostrar_tour %}
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.driver !== 'undefined') {
+            try {
+                if (localStorage.getItem('tutorial_historial_visto') === '{{ version_tour | default(1) }}') {
+                    return;
+                }
+            } catch (error) {
+                console.warn('No se pudo leer tutorial en localStorage:', error);
+            }
             setTimeout(() => {
                 repetirTutorialHistorial();
             }, 800);
@@ -3099,7 +3190,8 @@
                     document.getElementById('logistica_contacto').value = data.contacto || '';
                     document.getElementById('logistica_plataforma').value = data.plataforma || '';
                     document.getElementById('logistica_notas_cliente').value = data.notas_cliente || '';
-                    
+                    ocultarSugerenciasClientesLogistica();
+
                     document.getElementById('logistica_fecha_entrega').value = data.fecha_entrega || '';
                     document.getElementById('logistica_metodo_entrega').value = data.metodo_entrega || '';
                     document.getElementById('logistica_notas_pedido').value = data.notas_pedido || '';
@@ -3122,6 +3214,106 @@
                 Swal.close();
                 Swal.fire('Error', 'Error de red al cargar', 'error');
             });
+    }
+
+    let clientesLogisticaSugeridos = [];
+
+    function inicializarBuscadorClientesLogistica() {
+        const input = document.getElementById('logistica_cliente');
+        const hidden = document.getElementById('logistica_cliente_id');
+        const lista = document.getElementById('logisticaClienteSuggestions');
+        if (!input || !hidden || !lista) return;
+
+        let timer = null;
+        let controller = null;
+
+        input.addEventListener('input', () => {
+            const selectedName = input.dataset.selectedName || '';
+            if (selectedName && input.value !== selectedName) {
+                hidden.value = '';
+                input.dataset.selectedName = '';
+            }
+
+            clearTimeout(timer);
+            const q = input.value.trim();
+            if (q.length < 2 || q.toLowerCase() === 'cliente general') {
+                ocultarSugerenciasClientesLogistica();
+                return;
+            }
+
+            timer = setTimeout(async () => {
+                if (controller) controller.abort();
+                controller = new AbortController();
+
+                try {
+                    const res = await fetch(`/api/buscar_clientes?q=${encodeURIComponent(q)}`, {
+                        signal: controller.signal
+                    });
+                    const data = await res.json();
+                    renderizarSugerenciasClientesLogistica(data.clientes || []);
+                } catch (error) {
+                    if (error.name !== 'AbortError') ocultarSugerenciasClientesLogistica();
+                }
+            }, 220);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('#offcanvasLogistica .cliente-autocomplete')) {
+                ocultarSugerenciasClientesLogistica();
+            }
+        });
+    }
+
+    function renderizarSugerenciasClientesLogistica(clientes) {
+        const lista = document.getElementById('logisticaClienteSuggestions');
+        if (!lista) return;
+
+        if (!clientes.length) {
+            ocultarSugerenciasClientesLogistica();
+            return;
+        }
+
+        clientesLogisticaSugeridos = clientes;
+        lista.innerHTML = clientes.map((c, idx) => {
+            const meta = [c.contacto, c.plataforma].filter(Boolean).join(' - ') || 'Cliente guardado';
+            return `
+                <button type="button" class="cliente-suggestion-item"
+                    onmousedown="seleccionarClienteLogistica(${idx})">
+                    <span class="cliente-suggestion-name">${escapeHTMLHistorial(c.nombre || '')}</span>
+                    <span class="cliente-suggestion-meta">${escapeHTMLHistorial(meta)}</span>
+                </button>`;
+        }).join('');
+
+        lista.classList.remove('d-none');
+    }
+
+    function seleccionarClienteLogistica(index) {
+        const cliente = clientesLogisticaSugeridos[index];
+        if (!cliente) return;
+
+        document.getElementById('logistica_cliente').value = cliente.nombre || '';
+        document.getElementById('logistica_cliente').dataset.selectedName = cliente.nombre || '';
+        document.getElementById('logistica_cliente_id').value = cliente.id || '';
+        document.getElementById('logistica_contacto').value = cliente.contacto || '';
+        document.getElementById('logistica_plataforma').value = cliente.plataforma || '';
+        document.getElementById('logistica_notas_cliente').value = cliente.notas_cliente || '';
+        ocultarSugerenciasClientesLogistica();
+    }
+
+    function ocultarSugerenciasClientesLogistica() {
+        const lista = document.getElementById('logisticaClienteSuggestions');
+        if (!lista) return;
+        lista.innerHTML = '';
+        lista.classList.add('d-none');
+    }
+
+    function escapeHTMLHistorial(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
     }
 
     document.addEventListener('input', function (e) {
