@@ -2,11 +2,43 @@ import json
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 from utils.datetime_utils import ahora_sql, now_utc, utc_to_local
+import pytz
 from flask import Blueprint, jsonify, session, request, current_app
 from db import get_db_connection as get_db
 from helpers import login_required, subscription_required
 
 api_bp = Blueprint('api', __name__)
+
+LOCAL_TIMEZONE = 'America/Mexico_City'
+
+
+def datetime_local_input_to_utc(value):
+    if not value:
+        return None
+
+    local_tz = pytz.timezone(LOCAL_TIMEZONE)
+    local_dt = datetime.strptime(value, '%Y-%m-%dT%H:%M')
+    return local_tz.localize(local_dt).astimezone(pytz.utc)
+
+
+def utc_datetime_to_local_input(value):
+    if not value:
+        return None
+
+    return utc_to_local(value, LOCAL_TIMEZONE).strftime('%Y-%m-%dT%H:%M')
+
+
+def parse_optional_int(value):
+    if value in (None, '', 'null'):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def is_general_customer_name(value):
+    return (value or '').strip().lower() == 'cliente general'
 
 # ==========================================
 # 1. GESTIÓN DE INVENTARIO
@@ -97,6 +129,36 @@ def obtener_receta(id):
 # 2. GESTIÓN DE VENTAS
 # ==========================================
 
+@api_bp.route('/buscar_clientes')
+def buscar_clientes():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'No autorizado'}), 401
+
+    q = (request.args.get('q') or '').strip()
+    if len(q) < 2:
+        return jsonify({'success': True, 'clientes': []})
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        like = f'%{q}%'
+        cursor.execute("""
+            SELECT id, nombre, contacto, plataforma, notas_cliente
+            FROM clientes
+            WHERE user_id = %s
+              AND (
+                TRANSLATE(LOWER(nombre), 'áéíóú', 'aeiou') ILIKE TRANSLATE(LOWER(%s), 'áéíóú', 'aeiou')
+                OR COALESCE(contacto, '') ILIKE %s
+              )
+            ORDER BY LOWER(nombre) ASC
+            LIMIT 8
+        """, (session['user_id'], like, like))
+        clientes = [dict(row) for row in cursor.fetchall()]
+        return jsonify({'success': True, 'clientes': clientes})
+    finally:
+        cursor.close()
+        conn.close()
+
 @api_bp.route('/obtener_detalles/<int:id>')
 def obtener_detalles_venta(id):
     if 'user_id' not in session:
@@ -104,10 +166,13 @@ def obtener_detalles_venta(id):
 
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute(
-        'SELECT * FROM ventas WHERE id = %s AND user_id = %s',
-        (id, session['user_id'])
-    )
+    cursor.execute('''
+        SELECT v.*, 
+               c.nombre as cliente_relacional, c.contacto, c.plataforma, c.notas_cliente
+        FROM ventas v
+        LEFT JOIN clientes c ON v.cliente_id = c.id
+        WHERE v.id = %s AND v.user_id = %s
+    ''', (id, session['user_id']))
     venta = cursor.fetchone()
 
     if not venta:
@@ -137,20 +202,33 @@ def obtener_detalles_venta(id):
         'composicion': d['composicion']
     } for d in detalles]
 
+    # Manejo seguro de la fecha para evitar errores de JSON
+    fecha_entrega_str = None
+    if venta.get('fecha_entrega'):
+        fecha_entrega_str = utc_datetime_to_local_input(venta['fecha_entrega'])
+
     return jsonify({
         'success': True,
         'folio': venta['id'],
-        'cliente': venta['cliente'],
+        # Si ya está vinculado a la tabla clientes, usamos ese nombre. Si no, el texto viejo.
+        'cliente': venta.get('cliente_relacional') or venta.get('cliente'),
+        'cliente_id': venta.get('cliente_id'),
+        'contacto': venta.get('contacto'),
+        'plataforma': venta.get('plataforma'),
+        'notas_cliente': venta.get('notas_cliente'),
+        'fecha_entrega': fecha_entrega_str,
+        'metodo_entrega': venta.get('metodo_entrega'),
+        'notas_pedido': venta.get('notas_pedido'),
         'estado': venta['estado'],
         'total': venta['total'],
         'costo_total': venta['costo_total'],
         'monto_pagado': venta['monto_pagado'],
         'saldo_pendiente': venta['saldo_pendiente'],
-        'descuento_porcentaje': venta['descuento_porcentaje'] if 'descuento_porcentaje' in venta.keys() else 0,
-        'descuento_monto': venta['descuento_monto'] if 'descuento_monto' in venta.keys() else 0,
-        'subtotal': venta['subtotal'] if 'subtotal' in venta.keys() else 0,
-        'impuestos': venta['impuestos'] if 'impuestos' in venta.keys() else 0,
-        'envio': venta['envio'] if 'envio' in venta.keys() else 0,
+        'descuento_porcentaje': venta.get('descuento_porcentaje', 0),
+        'descuento_monto': venta.get('descuento_monto', 0),
+        'subtotal': venta.get('subtotal', 0),
+        'impuestos': venta.get('impuestos', 0),
+        'envio': venta.get('envio', 0),
         'items': items
     })
 
@@ -414,6 +492,101 @@ def cancelar_venta():
         conn.rollback()
         current_app.logger.error(f"SYSTEM_ERROR al cancelar venta {venta_id}: {e}")
         return jsonify({'error': str(e)}), 500
+    finally:
+        cursor.close()
+        conn.close()
+
+@api_bp.route('/actualizar_logistica', methods=['POST'])
+def actualizar_logistica():
+    if 'user_id' not in session:
+        return jsonify({'success': False, 'error': 'No autorizado'}), 401
+
+    data = request.get_json()
+    venta_id = data.get('venta_id')
+    user_id = session['user_id']
+    
+    # Datos recibidos del modal/offcanvas
+    cliente_id_payload = parse_optional_int(data.get('cliente_id'))
+    nombre_cliente = data.get('nombre_cliente', '').strip()
+    contacto = data.get('contacto')
+    plataforma = data.get('plataforma')
+    notas_cliente = data.get('notas_cliente')
+    
+    fecha_entrega = data.get('fecha_entrega') # Formato esperado: YYYY-MM-DDTHH:MM local
+    metodo_entrega = data.get('metodo_entrega')
+    notas_pedido = data.get('notas_pedido')
+
+    try:
+        fecha_entrega_utc = datetime_local_input_to_utc(fecha_entrega)
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Formato de fecha inválido'}), 400
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        # 1. Validar propiedad del folio
+        cursor.execute("SELECT id FROM ventas WHERE id = %s AND user_id = %s", (venta_id, user_id))
+        if not cursor.fetchone():
+            return jsonify({'success': False, 'error': 'Venta no encontrada'}), 404
+
+        cliente_id = None
+
+        # 2. Lógica del Cliente: el nombre nunca decide identidad, solo el ID explícito.
+        if cliente_id_payload:
+            cursor.execute("""
+                SELECT id
+                FROM clientes
+                WHERE id = %s AND user_id = %s
+            """, (cliente_id_payload, user_id))
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
+
+            cliente_id = cliente_id_payload
+            cursor.execute("""
+                UPDATE clientes
+                SET nombre = %s,
+                    contacto = %s,
+                    plataforma = %s,
+                    notas_cliente = %s
+                WHERE id = %s AND user_id = %s
+            """, (nombre_cliente, contacto, plataforma, notas_cliente, cliente_id, user_id))
+        elif nombre_cliente and not is_general_customer_name(nombre_cliente):
+            cursor.execute("""
+                INSERT INTO clientes (user_id, nombre, contacto, plataforma, notas_cliente)
+                VALUES (%s, %s, %s, %s, %s)
+                RETURNING id
+            """, (user_id, nombre_cliente, contacto, plataforma, notas_cliente))
+            cliente_id = cursor.fetchone()['id']
+
+        # 3. Actualizar la venta
+        cursor.execute("""
+            UPDATE ventas 
+            SET cliente_id = %s,
+                fecha_entrega = %s,
+                metodo_entrega = %s,
+                notas_pedido = %s,
+                cliente = %s  -- Actualizamos tambien el viejo por si acaso
+            WHERE id = %s AND user_id = %s
+        """, (cliente_id, fecha_entrega_utc, metodo_entrega, notas_pedido, nombre_cliente, venta_id, user_id))
+
+        # Registrar en bitácora
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo) 
+            VALUES (%s, %s, %s)
+        """, (user_id, f"Actualizó logística y cliente de Venta #{venta_id}", "Ventas"))
+
+        conn.commit()
+        
+        u_name = session.get('username', 'Anonimo')
+        current_app.logger.info(f"LOGISTICS_UPDATED: Usuario '{u_name}' actualizó logística del folio #{venta_id}")
+
+        return jsonify({'success': True, 'message': 'Logística actualizada correctamente'})
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"SYSTEM_ERROR en actualizar_logistica: {str(e)}")
+        return jsonify({'success': False, 'error': 'Error en el servidor al guardar'}), 500
     finally:
         cursor.close()
         conn.close()

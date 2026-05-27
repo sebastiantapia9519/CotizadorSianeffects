@@ -6,11 +6,11 @@ from db import get_db_connection
 # Aquí controlamos qué versión del tutorial está activa.
 # Si mañana cambias el cotizador, le pones un 2 aquí y a todos les volverá a salir.
 VERSIONES_APP = {
-    'cotizador': 1,
+    'cotizador': 2,
     'materiales': 1,
     'equipos': 1,
     'recetas': 1,
-    'historial': 1,       
+    'historial': 2,       
     'configuracion': 1    
 }
 

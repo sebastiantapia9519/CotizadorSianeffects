@@ -1,12 +1,12 @@
 import os
-from dotenv import load_dotenv
-load_dotenv()
-
 import psycopg2
 import psycopg2.extras
-from psycopg2 import pool # Importamos el motor de albercas
+from psycopg2 import pool 
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timezone
+
+from dotenv import load_dotenv
+load_dotenv()
 
 
 
@@ -317,6 +317,18 @@ def init_db():
     # 6. VENTAS
     # =========================
     cursor.execute("""
+    CREATE TABLE IF NOT EXISTS clientes (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER,
+        nombre TEXT NOT NULL,
+        contacto TEXT,
+        plataforma TEXT,
+        notas_cliente TEXT,
+        fecha_registro TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+    )
+    """)
+
+    cursor.execute("""
     CREATE TABLE IF NOT EXISTS ventas (
         id SERIAL PRIMARY KEY,
         user_id INTEGER,
@@ -336,6 +348,10 @@ def init_db():
         tax_engine TEXT DEFAULT 'none',
         impuestos REAL DEFAULT 0,
         envio REAL DEFAULT 0,
+        cliente_id INTEGER REFERENCES clientes(id),
+        fecha_entrega TIMESTAMPTZ,
+        metodo_entrega TEXT,
+        notas_pedido TEXT,
         costo_fijo_prorrateado NUMERIC DEFAULT 0
     )
     """)

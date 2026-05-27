@@ -23,6 +23,53 @@
         background-color: #f1f5f9;
     }
 
+    /* ===================================================
+       🚚 LOGÍSTICA & OFFCANVAS
+       =================================================== */
+    .client-link {
+        color: #1e293b;
+        text-decoration: none;
+        border-bottom: 1px dashed #cbd5e1;
+        cursor: pointer;
+        transition: var(--transition-fast);
+        font-weight: 700;
+    }
+    
+    .client-link:hover {
+        color: var(--sian-primary);
+        border-bottom-color: var(--sian-primary);
+    }
+    
+    .fecha-entrega-badge {
+        font-size: 0.72rem;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 4px 8px;
+        border-radius: 6px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        margin-top: 6px;
+        font-weight: 600;
+    }
+    
+    [data-bs-theme="dark"] .fecha-entrega-badge {
+        background: #1e293b;
+        color: #94a3b8;
+    }
+
+    .offcanvas-custom {
+        border-top-left-radius: 1.5rem;
+        border-bottom-left-radius: 1.5rem;
+        border-left: none;
+    }
+
+    @media (max-width: 576px) {
+        .offcanvas-custom {
+            border-radius: 0;
+            width: 100% !important;
+        }
+    }
 
     /* ===================================================
        🔍 BUSCADOR (Vercel-Style)
@@ -168,7 +215,6 @@
         justify-content: center;
     }
 
-    /* Filas canceladas */
     .row-cancelada {
         background-color: #fdf2f2 !important;
     }
@@ -354,7 +400,6 @@
         flex-shrink: 0;
     }
 
-    /* Estados del pedido */
     .estado-pendiente {
         background: #fef9c3;
         color: #854d0e;
@@ -695,30 +740,35 @@
     }
 
     /* ===================================================
-       📱 VISTA MÓVIL - CARDS
+       📱 VISTA MÓVIL - CARDS (COMPLETAMENTE RESPONSIVE)
        =================================================== */
 
-    /* Contenedor de cards */
     .mobile-card-container {
         display: none;
         flex-direction: column;
         gap: 12px;
+        padding: 0 !important;
+        width: 100%;
+        box-sizing: border-box;
     }
 
-    /* Card individual (móvil) */
     .mobile-venta-card {
         background: white;
         border: 1px solid var(--border-color);
-        border-radius: 12px;
-        padding: 16px;
+        border-radius: 14px;
+        padding: 14px;
         transition: var(--transition-fast);
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
+        box-shadow: var(--shadow-sm);
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .mobile-venta-card:active {
         background-color: #f8fafc;
+        box-shadow: var(--shadow-md);
     }
 
     .mobile-venta-card.row-cancelada {
@@ -726,12 +776,13 @@
         border-color: #fecaca;
     }
 
-    /* Header de card: folio + cliente + checkbox */
+    /* HEADER: FOLIO + CLIENTE + CHECKBOX */
     .card-header-mobile {
         display: flex;
         align-items: flex-start;
         justify-content: space-between;
-        gap: 12px;
+        gap: 10px;
+        width: 100%;
     }
 
     .card-folio-cliente {
@@ -743,7 +794,8 @@
         font-weight: 700;
         color: var(--text-dark);
         font-size: 0.95rem;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
+        line-height: 1.2;
     }
 
     .card-folio.cancelada {
@@ -756,7 +808,13 @@
         color: var(--text-dark);
         font-size: 0.9rem;
         word-break: break-word;
-        margin-bottom: 4px;
+        margin-bottom: 3px;
+        line-height: 1.3;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
     }
 
     .card-cliente.cancelada {
@@ -765,73 +823,131 @@
     }
 
     .card-fecha {
-        font-size: 0.75rem;
+        font-size: 0.72rem;
         color: #94a3b8;
+        line-height: 1.2;
     }
 
     .card-checkbox {
         flex-shrink: 0;
-        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        margin-top: 1px;
     }
 
-    /* Fila de información: Pago + Pedido */
+    .card-checkbox input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    /* FILA DE INFORMACIÓN: PAGO + PEDIDO */
     .card-info-row {
-        display: flex;
-        gap: 12px;
-        flex-wrap: wrap;
-        padding: 12px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 10px;
         background-color: var(--bg-light-gray);
-        border-radius: 8px;
+        border-radius: 10px;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .card-info-item {
-        flex: 1;
-        min-width: 140px;
         display: flex;
         flex-direction: column;
         gap: 4px;
+        min-width: 0;
+        overflow: hidden;
     }
 
     .card-info-label {
         font-size: 0.65rem;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
         color: #64748b;
-        letter-spacing: 0.05em;
+        letter-spacing: 0.02em;
+        line-height: 1.1;
     }
 
     .card-info-value {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
         font-weight: 500;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        align-items: flex-start;
+        min-height: 20px;
+        width: 100%;
+        overflow: hidden;
     }
 
-    /* Monto y estado de pago */
+    .card-info-value .badge {
+        font-size: 0.65rem !important;
+        padding: 3px 6px !important;
+        flex-shrink: 0;
+        white-space: nowrap;
+    }
+
+    .card-info-value .estado-wrapper {
+        width: 100%;
+        position: relative;
+        display: inline-block;
+    }
+
+    .card-info-value .estado-pill {
+        font-size: 0.7rem !important;
+        padding: 4px 8px !important;
+        gap: 4px !important;
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        box-sizing: border-box;
+    }
+
+    .card-info-value .estado-pill .estado-dot {
+        width: 6px !important;
+        height: 6px !important;
+        flex-shrink: 0;
+    }
+
+    /* MONTO + SALDO */
     .card-monto-section {
         display: flex;
         justify-content: space-between;
-        align-items: center;
-        padding: 12px;
+        align-items: flex-start;
+        padding: 10px;
         background-color: #f8fafc;
-        border-radius: 8px;
-        gap: 12px;
+        border-radius: 10px;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+        flex-wrap: wrap;
     }
 
     .card-monto {
         flex: 1;
+        min-width: 100px;
     }
 
     .card-monto-label {
-        font-size: 0.7rem;
+        font-size: 0.68rem;
         color: #64748b;
-        font-weight: 600;
+        font-weight: 700;
         text-transform: uppercase;
         margin-bottom: 2px;
+        letter-spacing: 0.02em;
     }
 
     .card-monto-value {
-        font-size: 1.1rem;
+        font-size: 1.05rem;
         font-weight: 700;
         color: var(--text-dark);
+        line-height: 1.2;
     }
 
     .card-monto-value.cancelada {
@@ -839,32 +955,33 @@
         color: #94a3b8;
     }
 
-    .card-pago-badge {
-        flex-shrink: 0;
-    }
-
-    /* Saldo pendiente (si existe) */
     .card-saldo {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: #dc2626;
-        font-weight: 600;
+        font-weight: 700;
         background: #fee2e2;
-        padding: 4px 8px;
+        padding: 5px 7px;
         border-radius: 6px;
         text-align: center;
+        white-space: nowrap;
+        flex-shrink: 0;
+        line-height: 1.1;
+        align-self: center;
     }
 
-    /* Footer con botones */
+    /* BOTONES DE ACCIÓN */
     .card-footer-mobile {
         display: flex;
         gap: 8px;
         padding-top: 8px;
         border-top: 1px solid var(--border-color);
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .card-btn-small {
         flex: 1;
-        padding: 8px 12px;
+        padding: 8px 10px;
         font-size: 0.75rem;
         border-radius: 8px;
         border: 1px solid var(--border-color);
@@ -873,18 +990,67 @@
         font-weight: 600;
         cursor: pointer;
         transition: var(--transition-fast);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        min-height: 32px;
+        box-sizing: border-box;
     }
 
     .card-btn-small:active {
         background: #f8fafc;
+        border-color: #cbd5e1;
     }
 
-    .card-menu-btn {
-        padding: 8px 12px;
-        background: white;
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-        cursor: pointer;
+    .card-btn-small i {
+        font-size: 0.65rem;
+        flex-shrink: 0;
+    }
+
+    /* ===================================================
+       🌙 DARK MODE OVERRIDES PARA MOBILE CARDS
+       =================================================== */
+    
+    [data-bs-theme="dark"] .mobile-venta-card {
+        background-color: #1e293b !important;
+        border-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .card-folio,
+    [data-bs-theme="dark"] .card-cliente {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .card-fecha,
+    [data-bs-theme="dark"] .card-info-label {
+        color: #94a3b8 !important;
+    }
+
+    [data-bs-theme="dark"] .card-info-row {
+        background-color: #0f172a !important;
+        border-color: #334155 !important;
+    }
+
+    [data-bs-theme="dark"] .card-monto-section {
+        background-color: #0f172a !important;
+    }
+
+    [data-bs-theme="dark"] .card-monto-value {
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .card-btn-small {
+        background: #334155 !important;
+        border-color: #475569 !important;
+        color: #f8fafc !important;
+    }
+
+    [data-bs-theme="dark"] .card-btn-small:active {
+        background: #475569 !important;
     }
 
     /* ===================================================
@@ -1111,7 +1277,6 @@
        📺 MEDIA QUERIES (RESPONSIVE BEHAVIOR)
        =================================================== */
 
-    /* Tablet y arriba: mostrar tabla, ocultar cards */
     @media (min-width: 769px) {
         .desktop-table-container {
             display: block;
@@ -1122,7 +1287,6 @@
         }
     }
 
-    /* Móvil: ocultar tabla, mostrar cards */
     @media (max-width: 768px) {
         .desktop-table-container {
             display: none;
@@ -1153,7 +1317,6 @@
             padding: 12px 16px;
         }
 
-        /* Ocultar filtros Excel en móvil (usamos pills) */
         .filter-header {
             display: none;
         }
@@ -1174,7 +1337,6 @@
         width: 20px;
     }
 
-    /* Animación suave para recargas AJAX */
     .fade-in-quick {
         animation: fadeInQuick 0.2s ease-out;
     }
@@ -1289,18 +1451,11 @@
         <table class="table align-middle" id="tablaVentas">
             <thead>
                 <tr>
-                    <!-- Checkbox maestro -->
                     <th class="ps-3 ps-md-4 col-check">
                         <input type="checkbox" id="check-all" class="form-check-input shadow-sm cursor-pointer">
                     </th>
-
-                    <!-- Folio/Fecha -->
                     <th class="text-nowrap col-folio">Folio/Fecha</th>
-
-                    <!-- Cliente -->
                     <th class="col-cliente">Cliente</th>
-
-                    <!-- Filtro: Estado de Pago (Desktop solo) -->
                     <th class="d-none d-md-table-cell position-relative col-pago">
                         <div class="filter-header" onclick="toggleFilterMenu('filterPago')">
                             Pago
@@ -1317,8 +1472,6 @@
                                 Anulada</label>
                         </div>
                     </th>
-
-                    <!-- Filtro: Estado del Pedido (Desktop solo) -->
                     <th class="d-none d-md-table-cell position-relative col-pedido">
                         <div class="filter-header" onclick="toggleFilterMenu('filterPedido')">
                             Pedido
@@ -1337,11 +1490,7 @@
                                 Cancelado</label>
                         </div>
                     </th>
-
-                    <!-- Monto -->
                     <th class="text-nowrap col-monto">Monto</th>
-
-                    <!-- Acciones -->
                     <th class="text-nowrap col-accion">Acción</th>
                 </tr>
             </thead>
@@ -1350,26 +1499,22 @@
                 <tr class="item-venta {{ 'row-cancelada' if v['estado'] == 'cancelada' else '' }}"
                     data-estado="{{ v['estado'] }}"
                     data-pedido="{{ v['estado_pedido'] if v['estado_pedido'] else 'pendiente' }}">
-                    <!-- Checkbox individual -->
                     <td class="ps-3 ps-md-4 col-check">
                         <input type="checkbox"
                             class="venta-checkbox form-check-input shadow-sm {% if v['estado'] != 'cancelada' %}cursor-pointer{% endif %}"
                             value="{{ v['id'] }}" {% if v['estado']=='cancelada' %}disabled{% endif %}>
                     </td>
-
-                    <!-- Folio + Fecha -->
                     <td class="col-folio">
                         <div class="fw-bold text-dark text-nowrap folio-text">#{{ v['id'] }}</div>
                         <div class="text-muted text-xs mt-1 text-nowrap">
                             {{ v['fecha'].strftime('%d/%m/%Y') if v['fecha'] is not string else v['fecha'][:10] }}
                         </div>
                     </td>
-
-                    <!-- Cliente -->
                     <td class="col-cliente">
-                        <div class="fw-bold text-dark cliente-text" style="word-break: break-word;">{{ v['cliente'] }}
+                        <div class="fw-bold text-dark cliente-text" style="word-break: break-word;">
+                            <a class="client-link" {% if loop.index == 1 %}id="tour-cliente-logistica"{% endif %}
+                                onclick="abrirLogistica({{ v['id'] }})">{{ v['cliente'] }}</a>
                         </div>
-                        <!-- Badge de estado en móvil (solo visible en <768px) -->
                         <div class="d-block d-md-none mt-1">
                             {% if v['estado'] == 'pagado' %}<span class="badge bg-success text-white"
                                 style="font-size: 0.6rem;">PAGADO</span>
@@ -1382,8 +1527,6 @@
                             {% endif %}
                         </div>
                     </td>
-
-                    <!-- Estado Pago (Desktop solo) -->
                     <td class="d-none d-md-table-cell col-pago">
                         {% if v['estado'] == 'pagado' %}
                         <span class="badge badge-status status-pagado"><i class="fas fa-check-circle"></i> PAGADO</span>
@@ -1403,11 +1546,9 @@
                         <span class="badge badge-status bg-light text-dark border">{{ v['estado'] }}</span>
                         {% endif %}
                     </td>
-
-                    <!-- Estado Pedido (Desktop solo) -->
                     <td class="d-none d-md-table-cell col-pedido">
                         {% set est_ped = v['estado_pedido'] if v['estado_pedido'] else 'pendiente' %}
-                        <div class="estado-wrapper">
+                        <div class="estado-wrapper d-flex flex-column align-items-center">
                             <div class="estado-pill
                                 {% if est_ped == 'pendiente' %}estado-pendiente
                                 {% elif est_ped == 'en_proceso' %}estado-proceso
@@ -1416,8 +1557,7 @@
                                 {% elif est_ped == 'cancelado' %}estado-anulado
                                 {% endif %}" {% if v['estado'] !='cancelada' %}
                                 onclick="event.stopPropagation(); toggleEstadoMenu(this)" {% else %}
-                                style="cursor: not-allowed; opacity: 0.7;" {% endif %} data-id="{{ v['id'] }}" {% if
-                                no_es_desktop %} style="font-size: 0.75rem; padding: 5px 10px;" {% endif %}>
+                                style="cursor: not-allowed; opacity: 0.7;" {% endif %} data-id="{{ v['id'] }}">
                                 <span class="estado-dot"></span>
                                 <span>
                                     {% if est_ped == 'pendiente' %}Pendiente
@@ -1428,8 +1568,16 @@
                                     {% endif %}
                                 </span>
                             </div>
+                            
+                            <!-- AQUI ESTÁ EL CAMBIO PARA PARSEAR LA FECHA -->
+                            {% if v['fecha_entrega'] %}
+                            <div class="fecha-entrega-badge">
+                                <i class="fas fa-calendar-check text-primary"></i> 
+                                {{ v['fecha_entrega'].strftime('%d/%m/%Y %H:%M') if v['fecha_entrega'] is not string else v['fecha_entrega'].replace('T', ' ')[:16] }}
+                            </div>
+                            {% endif %}
+                            
                             <div class="estado-menu" onclick="event.stopPropagation()">
-                                
                                 <div class="estado-menu-option" onclick="changeEstadoPedido({{ v['id'] }}, 'pendiente')">
                                     <span class="estado-menu-dot bulk-dot-pendiente"></span> Pendiente
                                 </div>
@@ -1448,8 +1596,6 @@
                             </div>
                         </div>
                     </td>
-
-                    <!-- Monto -->
                     <td class="col-monto">
                         <div class="fw-bold text-dark monto-text">${{ "{:,.2f}".format(v['total']) }}</div>
                         {% if v['impuestos'] and v['impuestos'] > 0 %}
@@ -1461,8 +1607,6 @@
                             Resta: ${{ "{:,.2f}".format(v['saldo_pendiente']) }}</div>
                         {% endif %}
                     </td>
-
-                    <!-- Botón de Acciones (Dropdown) -->
                     <td class="col-accion" {% if loop.index==1 %}id="tour-acciones" {% endif %}>
                         <div class="dropdown">
                             <button class="btn btn-light btn-sm rounded-circle border" type="button"
@@ -1474,6 +1618,12 @@
                                     <button class="dropdown-item d-flex align-items-center gap-2" type="button"
                                         onclick="verDetalles({{ v['id'] }})">
                                         <i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles
+                                    </button>
+                                </li>
+                                <li>
+                                    <button class="dropdown-item d-flex align-items-center gap-2" type="button"
+                                        onclick="abrirLogistica({{ v['id'] }})">
+                                        <i class="fas fa-truck text-success w-20px text-center"></i> Editar Logística
                                     </button>
                                 </li>
                                 {% if v['estado'] != 'cancelada' %}
@@ -1568,7 +1718,6 @@
         </table>
     </div>
 
-    <!-- Paginación (Desktop) -->
     {% if total_pages > 1 %}
     <div id="paginationContainer" class="card-footer py-3 d-flex flex-column align-items-center justify-content-center">
         <nav aria-label="Navegación de historial">
@@ -1609,11 +1758,11 @@
     <div class="mobile-venta-card {% if v['estado'] == 'cancelada' %}row-cancelada{% endif %}"
         data-estado="{{ v['estado'] }}" data-pedido="{{ v['estado_pedido'] if v['estado_pedido'] else 'pendiente' }}">
 
-        <!-- Header: Folio + Cliente + Checkbox -->
         <div class="card-header-mobile">
             <div class="card-folio-cliente">
                 <div class="card-folio {% if v['estado'] == 'cancelada' %}cancelada{% endif %}">#{{ v['id'] }}</div>
-                <div class="card-cliente {% if v['estado'] == 'cancelada' %}cancelada{% endif %}">{{ v['cliente'] }}
+                <div class="card-cliente {% if v['estado'] == 'cancelada' %}cancelada{% endif %}">
+                    <a class="client-link" onclick="abrirLogistica({{ v['id'] }})">{{ v['cliente'] }}</a>
                 </div>
                 <div class="card-fecha">
                     {{ v['fecha'].strftime('%d/%m/%Y') if v['fecha'] is not string else v['fecha'][:10] }}
@@ -1626,9 +1775,7 @@
             </div>
         </div>
 
-        <!-- Fila de Información: Estado Pago + Estado Pedido -->
         <div class="card-info-row">
-            <!-- Estado Pago -->
             <div class="card-info-item">
                 <span class="card-info-label">💳 Pago</span>
                 <div class="card-info-value">
@@ -1646,7 +1793,6 @@
                 </div>
             </div>
 
-            <!-- Estado Pedido -->
             <div class="card-info-item">
                 <span class="card-info-label">📦 Pedido</span>
                 <div class="card-info-value">
@@ -1691,11 +1837,21 @@
                             </div>
                         </div>
                     </div>
+                    
+                    <!-- AQUI ESTÁ EL CAMBIO PARA PARSEAR LA FECHA EN MÓVIL -->
+                    {% if v['fecha_entrega'] %}
+                    <div class="d-block mt-1">
+                        <div class="fecha-entrega-badge" style="font-size: 0.65rem;">
+                            <i class="fas fa-calendar-check text-primary"></i> 
+                            {{ v['fecha_entrega'].strftime('%d/%m/%Y %H:%M') if v['fecha_entrega'] is not string else v['fecha_entrega'].replace('T', ' ')[:16] }}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
                 </div>
             </div>
         </div>
 
-        <!-- Monto + Badge Pago -->
         <div class="card-monto-section">
             <div class="card-monto">
                 <div class="card-monto-label">Total</div>
@@ -1707,7 +1863,6 @@
             {% endif %}
         </div>
 
-        <!-- Botones de Acción (sin dropdown, botones inline) -->
         <div class="card-footer-mobile">
             <button class="card-btn-small" onclick="verDetalles({{ v['id'] }})">
                 <i class="fas fa-eye"></i> Ver
@@ -1720,7 +1875,6 @@
     </div>
     {% endfor %}
     {% else %}
-    <!-- Estado vacío -->
     <div class="text-center py-5"
         style="background: white; border-radius: 12px; border: 1px solid var(--border-color);">
         <div class="opacity-50">
@@ -1731,7 +1885,6 @@
     </div>
     {% endif %}
 
-    <!-- Paginación (Móvil) -->
     {% if total_pages > 1 %}
     <div id="paginationContainerMobile" class="py-3 d-flex flex-column align-items-center justify-content-center">
         <nav aria-label="Navegación de historial">
@@ -1765,7 +1918,6 @@
 
 <!-- ===================================================
      BARRA FLOTANTE DE ACCIONES EN MASA
-     (Funciona en ambos formatos)
      =================================================== -->
 <div id="bulkActionsBar" class="bulk-bar">
     <div class="bulk-bar-inner">
@@ -1813,7 +1965,7 @@
 </div>
 
 <!-- ===================================================
-     💬 MODAL DETALLES (igual al original)
+     💬 MODAL DETALLES
      =================================================== -->
 <div class="modal fade" id="modalDetalle" tabindex="-1">
     <div class="modal-dialog modal-lg modal-dialog-centered">
@@ -1835,6 +1987,9 @@
                     </div>
                     <div id="modalEstadoDiv"></div>
                 </div>
+                
+                <div id="modalLogisticaDiv"></div>
+
                 <h6 class="fw-bold text-dark mb-3">Detalle de Productos</h6>
                 <div class="rounded-4 border mb-4" style="max-height: 320px; overflow-y: auto; overflow-x: auto;">
                     <table class="table table-borderless mb-0 align-middle" style="min-width: 600px;">
@@ -1873,28 +2028,86 @@
     </div>
 </div>
 
+<!-- ===================================================
+     🚚 OFFCANVAS LOGÍSTICA
+     =================================================== -->
+<div class="offcanvas offcanvas-end shadow offcanvas-custom" tabindex="-1" id="offcanvasLogistica" style="width: 420px; max-width: 100vw;">
+    <div class="offcanvas-header border-bottom px-4 pt-4 pb-3">
+        <h5 class="offcanvas-title fw-bold text-dark d-flex align-items-center gap-2">
+            <i class="fas fa-truck text-primary"></i> Logística y Cliente
+        </h5>
+        <button type="button" class="btn-close shadow-none" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-4" style="background-color: var(--bg-light-gray);">
+        <form id="formLogistica">
+            <input type="hidden" id="logistica_venta_id">
+            <input type="hidden" id="logistica_cliente_id">
+            
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3 text-dark"><i class="fas fa-user-circle text-muted me-2"></i> Datos del Cliente</h6>
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-uppercase text-muted">Nombre del Cliente</label>
+                        <input type="text" class="form-control" id="logistica_cliente" placeholder="Nombre completo" required>
+                    </div>
+                    <div class="row gx-3">
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">WhatsApp / Tel</label>
+                            <input type="text" class="form-control" id="logistica_contacto" placeholder="81 1234 5678">
+                        </div>
+                        <div class="col-6 mb-3">
+                            <label class="form-label text-xs fw-bold text-uppercase text-muted">Origen</label>
+                            <input type="text" class="form-control" id="logistica_plataforma" placeholder="Ej. Instagram">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="form-label text-xs fw-bold text-uppercase text-muted">Notas Internas (Cliente)</label>
+                        <textarea class="form-control" id="logistica_notas_cliente" rows="2" placeholder="Cliente frecuente, preferencias..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm rounded-4 mb-4">
+                <div class="card-body p-4">
+                    <h6 class="fw-bold mb-3 text-dark"><i class="fas fa-box-open text-muted me-2"></i> Detalles del Pedido</h6>
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-uppercase text-muted">Fecha y Hora de Entrega</label>
+                        <input type="datetime-local" class="form-control" id="logistica_fecha_entrega">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label text-xs fw-bold text-uppercase text-muted">Método de Entrega</label>
+                        <select class="form-select" id="logistica_metodo_entrega">
+                            <option value="">No especificado</option>
+                            <option value="Local">Recolección Local</option>
+                            <option value="Paquetería">Envío por Paquetería</option>
+                            <option value="Repartidor">Didi / Uber / Repartidor</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label text-xs fw-bold text-uppercase text-muted">Notas para este Pedido</label>
+                        <textarea class="form-control" id="logistica_notas_pedido" rows="2" placeholder="Empaque de regalo, sin cebolla, urge..."></textarea>
+                    </div>
+                </div>
+            </div>
+
+            <button type="button" class="btn btn-primary w-100 rounded-pill fw-bold shadow-sm py-2" onclick="guardarLogistica()">
+                <i class="fas fa-save me-2"></i> Guardar Cambios
+            </button>
+        </form>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
-    /**
-     * ============================================================
-     * 🎯 VARIABLES GLOBALES DE ESTADO
-     * ============================================================
-     */
     let currentStatusFilter = '{{ status | default("all") }}';
 
-    /**
-     * ============================================================
-     * 📡 MOTOR AJAX: Actualizador de Tabla y Cards (sin recargar)
-     * ============================================================
-     */
     async function actualizarTablaAJAX(url) {
         const contenedorDesktop = document.getElementById('tour-tabla-historial');
         const contenedorMovil = document.getElementById('mobile-cards-container');
 
-        // Aplicar efecto visual de carga (fade out)
         if (contenedorDesktop) {
             contenedorDesktop.style.transition = 'opacity 0.2s ease';
             contenedorDesktop.style.opacity = '0.4';
@@ -1907,46 +2120,34 @@
             const parser = new DOMParser();
             const doc = parser.parseFromString(htmlText, 'text/html');
 
-            // Actualizar tabla desktop
             const nuevoContenidoDesktop = doc.getElementById('tour-tabla-historial');
             if (nuevoContenidoDesktop && contenedorDesktop) {
                 contenedorDesktop.innerHTML = nuevoContenidoDesktop.innerHTML;
             }
 
-            // Actualizar cards móvil
             const nuevoContenidoMovil = doc.getElementById('mobile-cards-container');
             if (nuevoContenidoMovil && contenedorMovil) {
                 contenedorMovil.innerHTML = nuevoContenidoMovil.innerHTML;
             }
 
-            // Actualizar historial del navegador (para que el back funcione)
             window.history.pushState({ path: url }, '', url);
 
         } catch (error) {
             console.error('Error al actualizar por AJAX:', error);
-            // Fallback: recarga completa si AJAX falla
             window.location.href = url;
         } finally {
-            // Restaurar opacidad
             if (contenedorDesktop) {
                 contenedorDesktop.style.opacity = '1';
                 contenedorDesktop.style.pointerEvents = 'auto';
             }
 
-            // Limpiar estado de checkboxes y barra flotante
             cancelarSeleccionBulk();
         }
     }
 
-    /**
-     * ============================================================
-     * 🔍 FILTRADO POR PILLS (Estado de Pago)
-     * ============================================================
-     */
     function setStatusFilter(filter) {
         currentStatusFilter = filter;
 
-        // Actualizar estado visual de los pills
         document.querySelectorAll('.btn-filter').forEach(b => {
             b.classList.remove('active');
             if (b.getAttribute('data-filter') === filter) {
@@ -1956,19 +2157,12 @@
         const statusInput = document.querySelector('#formBuscador input[name="status"]');
         if (statusInput) statusInput.value = filter;
 
-        // Construir URL con filtro y buscar
         const q = document.querySelector('.search-input').value;
         const url = `{{ url_for('main.historial') }}?status=${filter}&q=${encodeURIComponent(q)}&page=1`;
 
-        // Actualizar AJAX (sin recargar la página)
         actualizarTablaAJAX(url);
     }
 
-    /**
-     * ============================================================
-     * 🔎 INTERCEPTAR BUSCADOR (Vercel-style)
-     * ============================================================
-     */
     document.addEventListener('DOMContentLoaded', () => {
         const formBusqueda = document.getElementById('formBuscador');
         if (formBusqueda) {
@@ -1981,11 +2175,14 @@
         }
     });
 
-    /**
-     * ============================================================
-     * 📄 INTERCEPTAR PAGINACIÓN (ambos formatos)
-     * ============================================================
-     */
+    document.addEventListener('DOMContentLoaded', () => {
+        const offcanvasLog = document.getElementById('offcanvasLogistica');
+        if (offcanvasLog) document.body.appendChild(offcanvasLog);
+        
+        const modalDet = document.getElementById('modalDetalle');
+        if (modalDet) document.body.appendChild(modalDet);
+    });
+
     document.addEventListener('click', function (e) {
         const linkPaginacion = e.target.closest('.page-link');
         if (linkPaginacion && linkPaginacion.href && !linkPaginacion.href.includes('javascript:')) {
@@ -1994,16 +2191,6 @@
         }
     });
 
-    /**
-     * ============================================================
-     * 📦 LÓGICA DE ESTADOS LOGÍSTICOS (Pedido)
-     * ============================================================
-     */
-    /**
-     * ============================================================
-     * 🛠️ FUNCIÓN MAESTRA ANTI-CORTES (PADDING DINÁMICO)
-     * ============================================================
-     */
     function ajustarEspacioTabla(abierto, pixeles = 260) {
         const contenedor = document.querySelector('.table-responsive');
         if (!contenedor) return;
@@ -2014,7 +2201,6 @@
             contenedor.style.paddingBottom = pixeles + 'px';
         } else {
             setTimeout(() => {
-                // Verificar que no haya NINGÚN menú abierto antes de contraer
                 if (!document.querySelector('.dropdown-menu.show') &&
                     !document.querySelector('.estado-menu.show') &&
                     !document.querySelector('.excel-filter-menu.show')) {
@@ -2024,36 +2210,25 @@
         }
     }
 
-    /**
-     * ============================================================
-     * 📦 LÓGICA DE ESTADOS LOGÍSTICOS (Pedido)
-     * ============================================================
-     */
     function toggleEstadoMenu(el) {
         const menu = el.parentElement.querySelector('.estado-menu');
         const abrir = !menu.classList.contains('show');
 
-        // Cerrar otros menús abiertos
         document.querySelectorAll('.estado-menu.show').forEach(m => m.classList.remove('show'));
 
         if (abrir) {
             menu.classList.add('show');
-            ajustarEspacioTabla(true, 180); // Expande espacio para este menú
+            ajustarEspacioTabla(true, 180);
         } else {
             menu.classList.remove('show');
             ajustarEspacioTabla(false);
         }
     }
 
-    /**
-     * Cambiar estado del pedido vía AJAX (Individual)
-     */
     async function changeEstadoPedido(id, nuevoEstado) {
-        // Cerrar menú y limpiar el padding de la tabla
         document.querySelectorAll('.estado-menu.show').forEach(m => m.classList.remove('show'));
         ajustarEspacioTabla(false);
 
-        // 1. Mostrar Toast de "Cargando..."
         const Toast = Swal.mixin({
             toast: true,
             position: "top-end",
@@ -2078,14 +2253,12 @@
             const data = await response.json();
 
             if (data.success) {
-                // 2. Cambiar Toast a "Éxito"
                 Toast.fire({
                     icon: 'success',
                     title: '✓ Actualización exitosa',
                     timer: 2000
                 });
 
-                // 3. Recargar tabla manteniendo filtros
                 const q = document.querySelector('.search-input').value;
                 const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${encodeURIComponent(q)}&page={{ page }}`;
                 actualizarTablaAJAX(url);
@@ -2098,11 +2271,6 @@
         }
     }
 
-    /**
-     * ============================================================
-     * LÓGICA DE ACCIONES EN MASA (CHECKBOXES)
-     * ============================================================
-     */
     function getVistaActivaBulk() {
         const desktop = document.querySelector('.desktop-table-container');
         const mobile = document.querySelector('#mobile-cards-container');
@@ -2146,6 +2314,7 @@
 
         updateBulkBar();
     }
+
     document.addEventListener('change', function (e) {
         if (e.target.id === 'check-all') {
             const checkboxes = getCheckboxesActivos();
@@ -2172,9 +2341,6 @@
         }
     });
 
-    /**
-     * Mostrar/ocultar barra flotante de acciones en masa
-     */
     function updateBulkBar() {
         const checked = getCheckboxesSeleccionadosActivos();
         const bulkBar = document.getElementById('bulkActionsBar');
@@ -2199,11 +2365,6 @@
         }
     }
 
-    /**
-     * Abrir menú SweetAlert para cambiar estado en masa
-     */
-
-
     function abrirMenuBulkEstado(event) {
         if (event) event.stopPropagation();
 
@@ -2219,20 +2380,15 @@
         }
     }
 
-    /**
-     * Aplicar cambio de estado en masa
-     */
     async function applyBulkEstado(nuevoEstado) {
         const menu = document.getElementById('bulkStateMenu');
         if (menu) menu.classList.remove('show');
 
         if (!nuevoEstado) return;
 
-        // Obtener IDs de ventas seleccionadas
         const checkedBoxes = getCheckboxesSeleccionadosActivos();
         const ids = checkedBoxes.map(cb => parseInt(cb.value));
 
-        // Mostrar indicador de carga
         Swal.fire({
             title: 'Actualizando...',
             allowOutsideClick: false,
@@ -2249,7 +2405,6 @@
             const data = await response.json();
 
             if (data.success) {
-                // Mostrar toast de éxito
                 const Toast = Swal.mixin({
                     toast: true,
                     position: "top-end",
@@ -2262,10 +2417,8 @@
                     title: "✓ Actualización exitosa"
                 });
 
-                // Limpiar check maestro
                 cancelarSeleccionBulk();
 
-                // Recargar tabla
                 const q = document.querySelector('.search-input').value;
                 const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${encodeURIComponent(q)}&page={{ page }}`;
                 actualizarTablaAJAX(url);
@@ -2278,27 +2431,21 @@
         }
     }
 
-/**
-     * ============================================================
-     * 📱 MENÚ DE ACCIONES MÓVIL - VERSIÓN CORRECTA Y COMPLETA
-     * ============================================================
-     */
     function abrirMenuAcciones(btn, id, estado, saldoPendiente, estadoPedido) {
-        // Consultamos la sesión directamente
         const isPro = {{ 'true' if session.get('is_pro_active') or session.get('role', 0) >= 1 else 'false' }};
 
-        // Inicializar opciones con VER DETALLES (siempre disponible)
         const options = [
             { 
                 label: '<i class="fas fa-eye text-primary w-20px text-center"></i> Ver Detalles', 
                 action: () => verDetalles(id) 
             },
+            {
+                label: '<i class="fas fa-truck text-success w-20px text-center"></i> Editar Logística',
+                action: () => abrirLogistica(id)
+            }
         ];
 
-        // Si la venta NO está cancelada, agregar más opciones
         if (estado !== 'cancelada') {
-            
-            // EDITAR
             if (isPro) {
                 options.push({
                     label: '<i class="fas fa-edit text-info w-20px text-center"></i> Editar',
@@ -2311,13 +2458,11 @@
                 });
             }
 
-            // IMPRIMIR TICKET
             options.push({
                 label: '<i class="fas fa-print text-dark w-20px text-center"></i> Imprimir Ticket',
                 action: () => window.open(`/ticket/${id}`, '_blank')
             });
 
-            // ABONAR
             if (saldoPendiente > 0.5) {
                 if (isPro) {
                     options.push({
@@ -2332,7 +2477,6 @@
                 }
             }
 
-            // EXTENDER VIGENCIA
             if (estado === 'cotizacion') {
                 if (isPro) {
                     options.push({
@@ -2347,7 +2491,6 @@
                 }
             }
 
-            // ANULAR VENTA
             if (isPro) {
                 options.push({
                     label: '<i class="fas fa-trash-alt text-danger w-20px text-center"></i> Anular Venta',
@@ -2361,7 +2504,6 @@
             }
         }
 
-        // Mostrar el menú SweetAlert
         Swal.fire({
             title: `Folio #${id}`,
             html: options.map(opt =>
@@ -2381,35 +2523,28 @@
         });
     }
 
-    /**
-     * ============================================================
-     * 📊 MENÚS FILTRO EXCEL (Desktop solo)
-     * ============================================================
-     */
     function toggleFilterMenu(id) {
         const menu = document.getElementById(id);
         const abrir = !menu.classList.contains('show');
 
-        // Cerrar otros menús
         document.querySelectorAll('.excel-filter-menu').forEach(m => m.classList.remove('show'));
 
         if (abrir) {
             menu.classList.add('show');
-            ajustarEspacioTabla(true, 220); // Espacio para que quepan los checkboxes
+            ajustarEspacioTabla(true, 220);
         } else {
             menu.classList.remove('show');
             ajustarEspacioTabla(false);
         }
     }
+
     window.addEventListener('resize', function () {
         cancelarSeleccionBulk();
     });
 
-    // Cerrar menús si hago clic en cualquier parte de la pantalla
     document.addEventListener('click', function (e) {
         let cerroAlgo = false;
 
-        // 1. Cierra los filtros de excel
         if (!e.target.closest('.filter-header') && !e.target.closest('.excel-filter-menu')) {
             document.querySelectorAll('.excel-filter-menu.show').forEach(m => {
                 m.classList.remove('show');
@@ -2417,7 +2552,6 @@
             });
         }
 
-        // 2. Cierra el menú de estatus del pedido
         if (!e.target.closest('.estado-wrapper') && !e.target.closest('.dropdown')) {
             document.querySelectorAll('.estado-menu.show').forEach(m => {
                 m.classList.remove('show');
@@ -2425,20 +2559,17 @@
             });
         }
 
-        // Contrae la tabla solo si se cerró algún menú al dar clic afuera
         if (cerroAlgo) {
             ajustarEspacioTabla(false);
         }
     });
 
-    // Fijar el dropdown de Bootstrap (3 puntitos) cuando se abre
     document.addEventListener('show.bs.dropdown', function (e) {
         if (e.target.closest('.table-responsive')) {
-            ajustarEspacioTabla(true, 260); // Opciones de acciones ocupan más espacio
+            ajustarEspacioTabla(true, 260);
         }
     });
 
-    // Restaurar tabla cuando el dropdown de Bootstrap se cierra
     document.addEventListener('hide.bs.dropdown', function (e) {
         if (e.target.closest('.table-responsive')) {
             ajustarEspacioTabla(false);
@@ -2456,9 +2587,6 @@
         }
     });
 
-    /**
-     * Aplicar filtros Excel a la tabla (ocultar/mostrar filas)
-     */
     function applyTableFilters() {
         const pagos = Array.from(document.querySelectorAll('#filterPago input:checked')).map(cb => cb.value);
         const pedidos = Array.from(document.querySelectorAll('#filterPedido input:checked')).map(cb => cb.value);
@@ -2477,12 +2605,6 @@
             }
         });
     }
-
-    /**
-     * ============================================================
-     * 🎬 FUNCIONES HEREDADAS (Tutorial, Modal, etc.)
-     * ============================================================
-     */
 
     function repetirTutorialHistorial() {
         if (typeof window.driver === 'undefined') return;
@@ -2510,32 +2632,41 @@
                         align: 'start'
                     }
                 },
-                {
-                    element: '#tour-tabla-historial',
-                    popover: {
-                        title: '2. Estados Claros',
-                        description: 'Revisa de un vistazo tu estado financiero y logístico.',
-                        side: "top",
-                        align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-acciones',
-                    popover: {
-                        title: '3. El menú mágico',
-                        description: 'Imprime tickets, cobra y edita.',
-                        side: "left",
-                        align: 'start'
-                    }
-                },
-                {
-                    element: '#tour-btn-dashboard',
-                    popover: {
-                        title: '4. Panel de Finanzas',
-                        description: 'Ve resúmenes y gráficas.',
-                        side: "bottom",
-                        align: 'end'
-                    }
+	                {
+	                    element: '#tour-tabla-historial',
+	                    popover: {
+	                        title: '2. Estados Claros',
+	                        description: 'Revisa de un vistazo el estado de pago, el avance del pedido, el saldo pendiente y la fecha de entrega.',
+	                        side: "top",
+	                        align: 'center'
+	                    }
+	                },
+	                {
+	                    element: '#tour-cliente-logistica',
+	                    popover: {
+	                        title: '3. Cliente y Logística',
+	                        description: 'Haz clic en el nombre del cliente para abrir su panel: contacto, origen, notas, método y fecha de entrega.',
+	                        side: "left",
+	                        align: 'start'
+	                    }
+	                },
+	                {
+	                    element: '#tour-acciones',
+	                    popover: {
+	                        title: '4. Acciones del Folio',
+	                        description: 'Desde aquí puedes ver detalles, editar, imprimir ticket, registrar abonos, extender vigencia o anular el folio.',
+	                        side: "left",
+	                        align: 'start'
+	                    }
+	                },
+	                {
+	                    element: '#tour-btn-dashboard',
+	                    popover: {
+	                        title: '5. Panel de Finanzas',
+	                        description: 'Entra al dashboard para revisar ventas, cobrado, pendientes y utilidad con más contexto.',
+	                        side: "bottom",
+	                        align: 'end'
+	                    }
                 }
             ]
         });
@@ -2552,12 +2683,6 @@
         }
     });
     {% endif %}
-
-    /**
-     * ============================================================
-     * 🔧 FUNCIONES HEREDADAS (Recargar, Abonar, Anular, Extender)
-     * ============================================================
-     */
 
     function recargarCotizacion(id) {
         Swal.fire({
@@ -2577,6 +2702,7 @@
                         if (data.success) {
                             sessionStorage.setItem('recarga_cotizacion', JSON.stringify(data.items));
                             sessionStorage.setItem('recarga_cliente', data.cliente);
+                            sessionStorage.setItem('recarga_cliente_id', data.cliente_id || '');
                             sessionStorage.setItem('recarga_id', id);
                             sessionStorage.setItem('recarga_descuento_porcentaje', data.descuento_porcentaje || 0);
                             sessionStorage.setItem('recarga_envio', data.envio || 0);
@@ -2857,16 +2983,12 @@
         });
     }
 
-    /**
-     * ============================================================
-     * 💬 VER DETALLES DE VENTA (Modal)
-     * ============================================================
-     */
     function verDetalles(id) {
         const modal = new bootstrap.Modal(document.getElementById('modalDetalle'));
         document.getElementById('modalFolio').innerText = id;
         document.getElementById('modalTablaCuerpo').innerHTML = '<tr><td colspan="6" class="text-center py-5 text-muted">Cargando...</td></tr>';
         document.getElementById('panelFinanciero').innerHTML = '';
+        document.getElementById('modalLogisticaDiv').innerHTML = '';
         modal.show();
 
         fetch('/api/obtener_detalles/' + id)
@@ -2895,6 +3017,31 @@
                     }
 
                     estadoDiv.innerHTML = `<span class="badge badge-status ${badgeClass} fs-6 px-3 py-2"><i class="fas fa-${icon}"></i> ${label}</span>`;
+
+                    let logisticInfo = '';
+                    if (data.fecha_entrega || data.metodo_entrega || data.notas_pedido) {
+                        let formattedDate = data.fecha_entrega;
+                        if (data.fecha_entrega && data.fecha_entrega.includes('T')) {
+                            const [datePart, timePart] = data.fecha_entrega.split('T');
+                            const [year, month, day] = datePart.split('-');
+                            const time = timePart.substring(0, 5); // get HH:MM
+                            formattedDate = `${day}/${month}/${year} ${time}`;
+                        }
+                        
+                        let fEnt = data.fecha_entrega ? `<span class="badge bg-primary bg-opacity-10 text-primary border border-primary-subtle me-2 px-2 py-1"><i class="fas fa-calendar-alt"></i> ${formattedDate}</span>` : '';
+                        let mEnt = data.metodo_entrega ? `<span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary-subtle px-2 py-1"><i class="fas fa-truck"></i> ${data.metodo_entrega}</span>` : '';
+                        let nPed = data.notas_pedido ? `<div class="mt-2 text-muted text-sm fst-italic"><i class="fas fa-sticky-note me-1 opacity-50"></i> ${data.notas_pedido}</div>` : '';
+                        
+                        logisticInfo = `
+                        <div class="mb-4 p-3 rounded-4" style="background: rgba(255, 74, 90, 0.03); border: 1px dashed rgba(255, 74, 90, 0.3);">
+                            <div class="d-flex align-items-center mb-1">
+                                <h6 class="fw-bold text-dark m-0 me-3"><i class="fas fa-shipping-fast text-primary me-2"></i> Logística</h6>
+                                ${fEnt} ${mEnt}
+                            </div>
+                            ${nPed}
+                        </div>`;
+                    }
+                    document.getElementById('modalLogisticaDiv').innerHTML = logisticInfo;
 
                     const tbody = document.getElementById('modalTablaCuerpo');
                     tbody.innerHTML = '';
@@ -2934,5 +3081,116 @@
             });
     }
 
+    function abrirLogistica(id) {
+        Swal.fire({
+            title: 'Cargando datos...',
+            didOpen: () => { Swal.showLoading(); },
+            allowOutsideClick: false
+        });
+
+        fetch('/api/obtener_detalles/' + id)
+            .then(r => r.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('logistica_venta_id').value = id;
+                    document.getElementById('logistica_cliente_id').value = data.cliente_id || '';
+                    document.getElementById('logistica_cliente').value = data.cliente || '';
+                    document.getElementById('logistica_cliente').dataset.selectedName = data.cliente || '';
+                    document.getElementById('logistica_contacto').value = data.contacto || '';
+                    document.getElementById('logistica_plataforma').value = data.plataforma || '';
+                    document.getElementById('logistica_notas_cliente').value = data.notas_cliente || '';
+                    
+                    document.getElementById('logistica_fecha_entrega').value = data.fecha_entrega || '';
+                    document.getElementById('logistica_metodo_entrega').value = data.metodo_entrega || '';
+                    document.getElementById('logistica_notas_pedido').value = data.notas_pedido || '';
+
+                    Swal.close();
+
+                    try {
+                        const offcanvasEl = document.getElementById('offcanvasLogistica');
+                        const offcanvas = bootstrap.Offcanvas.getInstance(offcanvasEl) || new bootstrap.Offcanvas(offcanvasEl);
+                        offcanvas.show();
+                    } catch (error) {
+                        console.error("Error al abrir Offcanvas:", error);
+                        Swal.fire('Error visual', 'No se pudo abrir el panel lateral.', 'error');
+                    }
+                } else {
+                    Swal.fire('Error', 'No se pudo cargar la información', 'error');
+                }
+            })
+            .catch(e => {
+                Swal.close();
+                Swal.fire('Error', 'Error de red al cargar', 'error');
+            });
+    }
+
+    document.addEventListener('input', function (e) {
+        if (e.target && e.target.id === 'logistica_cliente') {
+            const selectedName = e.target.dataset.selectedName || '';
+            if (selectedName && e.target.value !== selectedName) {
+                document.getElementById('logistica_cliente_id').value = '';
+                e.target.dataset.selectedName = '';
+            }
+        }
+    });
+
+    function guardarLogistica() {
+        const clienteInput = document.getElementById('logistica_cliente').value.trim();
+        if (!clienteInput) {
+            Swal.fire('Aviso', 'El nombre del cliente no puede estar vacío', 'warning');
+            return;
+        }
+
+        const id = document.getElementById('logistica_venta_id').value;
+        const payload = {
+            venta_id: id,
+            cliente_id: document.getElementById('logistica_cliente_id').value,
+            nombre_cliente: clienteInput,
+            contacto: document.getElementById('logistica_contacto').value,
+            plataforma: document.getElementById('logistica_plataforma').value,
+            notas_cliente: document.getElementById('logistica_notas_cliente').value,
+            fecha_entrega: document.getElementById('logistica_fecha_entrega').value,
+            metodo_entrega: document.getElementById('logistica_metodo_entrega').value,
+            notas_pedido: document.getElementById('logistica_notas_pedido').value
+        };
+
+        const btn = document.querySelector('#formLogistica button');
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span> Guardando...';
+        btn.disabled = true;
+
+        fetch('/api/actualizar_logistica', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(r => r.json())
+        .then(data => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            if(data.success) {
+                var offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasLogistica'));
+                if(offcanvas) offcanvas.hide();
+
+                Swal.fire({
+                    icon: 'success',
+                    title: '✓ Cambios Guardados',
+                    showConfirmButton: false,
+                    timer: 1500
+                }).then(() => {
+                    const q = document.querySelector('.search-input').value;
+                    const url = `{{ url_for('main.historial') }}?status=${currentStatusFilter}&q=${encodeURIComponent(q)}&page={{ page }}`;
+                    actualizarTablaAJAX(url);
+                });
+            } else {
+                Swal.fire('Error', data.error || 'Ocurrió un error', 'error');
+            }
+        })
+        .catch(e => {
+            btn.innerHTML = originalText;
+            btn.disabled = false;
+            Swal.fire('Error', 'Error de conexión', 'error');
+        });
+    }
 </script>
 {% endblock %}

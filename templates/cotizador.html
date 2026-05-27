@@ -84,6 +84,53 @@
         color: white;
     }
 
+    .cliente-autocomplete {
+        position: relative;
+    }
+
+    .cliente-suggestions {
+        position: absolute;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        z-index: 1050;
+        background: var(--bs-card-bg);
+        border: 1px solid var(--bs-border-color);
+        border-radius: 12px;
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.14);
+        overflow: hidden;
+        max-height: 260px;
+        overflow-y: auto;
+    }
+
+    .cliente-suggestion-item {
+        width: 100%;
+        border: 0;
+        background: transparent;
+        padding: 10px 14px;
+        text-align: left;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        cursor: pointer;
+        color: var(--bs-body-color);
+    }
+
+    .cliente-suggestion-item:hover {
+        background: var(--sian-pink-light);
+    }
+
+    .cliente-suggestion-name {
+        font-weight: 800;
+        font-size: 0.92rem;
+    }
+
+    .cliente-suggestion-meta {
+        font-size: 0.75rem;
+        color: var(--bs-secondary-color);
+        font-weight: 600;
+    }
+
     .text-price-main {
         color: var(--sian-teal);
         font-size: 1.2rem;
@@ -199,9 +246,10 @@
 <input type="hidden" id="datoMargen" value="{{ config['margen_ganancia'] }}">
 <input type="hidden" id="datoFactorOperativo" value="{{ config.get('porcentaje_gastos_operativos', 0) }}">
 <input type="hidden" id="datoLaborActiva" value="{{ 'true' if config.get('labor_activa') else 'false' }}">
-<input type="hidden" id="datoSalario" value="{{ config.get('salario_deseado', 15000) }}">
-<input type="hidden" id="datoHoras" value="{{ config.get('horas_semanales', 20) }}">
-<input type="hidden" id="ventaIdEdicion" value="">
+	<input type="hidden" id="datoSalario" value="{{ config.get('salario_deseado', 15000) }}">
+	<input type="hidden" id="datoHoras" value="{{ config.get('horas_semanales', 20) }}">
+	<input type="hidden" id="ventaIdEdicion" value="">
+	<input type="hidden" id="clienteIdSeleccionado" value="">
 
 <select id="masterSelect" class="d-none">
     <option value="0" data-precio="0" data-unidad="pza">-- Seleccionar --</option>
@@ -607,10 +655,11 @@
                     </div>
 
                     <div id="tour-botones-finales">
-                        <div class="mb-3">
-                            <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
-                                placeholder="Nombre del Cliente">
-                        </div>
+	                        <div class="mb-3 cliente-autocomplete" id="tour-cliente-inteligente">
+	                            <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
+	                                placeholder="Nombre del Cliente" autocomplete="off">
+	                            <div id="clienteSuggestions" class="cliente-suggestions d-none"></div>
+	                        </div>
 
                         <div class="row g-2">
                             <div class="col-6">
@@ -834,6 +883,7 @@
 
     let precioUnitarioManual = null;
     let isCargandoReceta = false;
+    let clientesSugeridos = [];
 
 
     // ============================================================================
@@ -870,7 +920,107 @@
 
         // 4. Revisar si hay una cotización en SessionStorage (Recargas o Ediciones)
         recuperarSesionCotizacion();
+        inicializarBuscadorClientes();
     });
+
+    function inicializarBuscadorClientes() {
+        const input = document.getElementById('nombreCliente');
+        const hidden = document.getElementById('clienteIdSeleccionado');
+        const lista = document.getElementById('clienteSuggestions');
+        if (!input || !hidden || !lista) return;
+
+        let timer = null;
+        let controller = null;
+
+        input.addEventListener('input', () => {
+            const selectedName = input.dataset.selectedName || '';
+            if (selectedName && input.value !== selectedName) {
+                hidden.value = '';
+                input.dataset.selectedName = '';
+            }
+
+            clearTimeout(timer);
+            const q = input.value.trim();
+            if (q.length < 2 || q.toLowerCase() === 'cliente general') {
+                ocultarSugerenciasClientes();
+                return;
+            }
+
+            timer = setTimeout(async () => {
+                if (controller) controller.abort();
+                controller = new AbortController();
+
+                try {
+                    const res = await fetch(`/api/buscar_clientes?q=${encodeURIComponent(q)}`, {
+                        signal: controller.signal
+                    });
+                    const data = await res.json();
+                    renderizarSugerenciasClientes(data.clientes || []);
+                } catch (error) {
+                    if (error.name !== 'AbortError') ocultarSugerenciasClientes();
+                }
+            }, 220);
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.cliente-autocomplete')) {
+                ocultarSugerenciasClientes();
+            }
+        });
+    }
+
+    function renderizarSugerenciasClientes(clientes) {
+        const lista = document.getElementById('clienteSuggestions');
+        if (!lista) return;
+
+        if (!clientes.length) {
+            ocultarSugerenciasClientes();
+            return;
+        }
+
+        clientesSugeridos = clientes;
+        lista.innerHTML = clientes.map((c, idx) => {
+            const meta = [c.contacto, c.plataforma].filter(Boolean).join(' - ') || 'Cliente guardado';
+            return `
+                <button type="button" class="cliente-suggestion-item"
+                    onmousedown="seleccionarClienteSugerido(${idx})">
+                    <span class="cliente-suggestion-name">${escapeHTML(c.nombre || '')}</span>
+                    <span class="cliente-suggestion-meta">${escapeHTML(meta)}</span>
+                </button>`;
+        }).join('');
+
+        lista.classList.remove('d-none');
+    }
+
+    function seleccionarClienteSugerido(index) {
+        const cliente = clientesSugeridos[index];
+        if (!cliente) return;
+
+        const input = document.getElementById('nombreCliente');
+        const hidden = document.getElementById('clienteIdSeleccionado');
+        if (!input || !hidden) return;
+
+        input.value = cliente.nombre || '';
+        input.dataset.selectedName = cliente.nombre || '';
+        hidden.value = cliente.id || '';
+        ocultarSugerenciasClientes();
+    }
+
+    function ocultarSugerenciasClientes() {
+        const lista = document.getElementById('clienteSuggestions');
+        if (!lista) return;
+        lista.innerHTML = '';
+        lista.classList.add('d-none');
+    }
+
+    function escapeHTML(value) {
+        return String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+    }
 
     // ============================================================================
     // TUTORIAL INTERACTIVO (Driver.js)
@@ -913,13 +1063,13 @@
             },
 
             steps: [
-                {
-                    popover: {
-                        title: 'Bienvenido al Cotizador 💸',
-                        description: 'Aquí armarás tus precios asegurando que NUNCA pierdas dinero. ¡Demos un paseo rápido de 5 pasos!',
-                        align: 'center'
-                    }
-                },
+	                {
+	                    popover: {
+	                        title: 'Bienvenido al Cotizador 💸',
+	                        description: 'Aquí armarás precios, clientes y cobros sin perder el control. Demos un paseo rápido por las partes clave.',
+	                        align: 'center'
+	                    }
+	                },
                 {
                     element: '#tour-cargar-receta',
                     popover: {
@@ -952,15 +1102,23 @@
                         side: "top", align: 'end'
                     }
                 },
-                {
-                    element: '#tour-botones-finales',
-                    popover: {
-                        title: '5. Cerrando el Trato',
-                        description: 'Ponle nombre a tu cliente. Usa "Solo Cotizar" si apenas le vas a pasar el precio, o "Cobrar" si te está pagando en este momento o dejando anticipo.',
-                        side: "left", align: 'start'
-                    }
-                }
-            ]
+	                {
+	                    element: '#tour-cliente-inteligente',
+	                    popover: {
+	                        title: '5. Cliente Inteligente',
+	                        description: 'Escribe el nombre del cliente. Si ya existe, elige una sugerencia para asociar la venta a su ficha real. Si escribes uno nuevo o usas Cliente General, no se mezcla con clientes guardados.',
+	                        side: "left", align: 'start'
+	                    }
+	                },
+	                {
+	                    element: '#tour-botones-finales',
+	                    popover: {
+	                        title: '6. Cerrando el Trato',
+	                        description: 'Usa "Solo Cotizar" para mandar precio sin cobrar, o "Cobrar" si ya recibiste pago completo o anticipo.',
+	                        side: "left", align: 'start'
+	                    }
+	                }
+	            ]
         });
         driverObj.drive();
     }
@@ -1503,7 +1661,8 @@
             return;
         }
 
-        const cli = document.getElementById('nombreCliente').value || "Cliente General";
+        const cli = document.getElementById('nombreCliente').value.trim() || "Cliente General";
+        const clienteId = document.getElementById('clienteIdSeleccionado').value || null;
 
         let subtotal = 0;
         let costo_total = 0;
@@ -1564,6 +1723,7 @@
             body: JSON.stringify({
                 id: document.getElementById('ventaIdEdicion').value || null,
                 cliente: cli,
+                cliente_id: clienteId,
                 items: carrito.map(i => ({
                     concepto: i.concepto,
                     cantidad: i.cantidad,
@@ -1876,6 +2036,8 @@
                     btn.innerHTML = btn.innerHTML.replace('Solo Cotizar', 'Actualizar Cotización');
                 });
                 document.getElementById('nombreCliente').value = data.cliente;
+                document.getElementById('nombreCliente').dataset.selectedName = data.cliente || '';
+                document.getElementById('clienteIdSeleccionado').value = data.cliente_id || '';
                 document.getElementById('inputDescuento').value = data.descuento_porcentaje;
                 document.getElementById('sliderDescuento').value = data.descuento_porcentaje;
 
@@ -1981,6 +2143,12 @@
             const cliente = sessionStorage.getItem('recarga_cliente');
             if (cliente) {
                 document.getElementById('nombreCliente').value = cliente;
+                document.getElementById('nombreCliente').dataset.selectedName = cliente;
+            }
+
+            const clienteId = sessionStorage.getItem('recarga_cliente_id');
+            if (clienteId !== null) {
+                document.getElementById('clienteIdSeleccionado').value = clienteId;
             }
 
             const descuento = sessionStorage.getItem('recarga_descuento_porcentaje');
@@ -2008,6 +2176,7 @@
             // Limpieza
             sessionStorage.removeItem('recarga_cotizacion');
             sessionStorage.removeItem('recarga_cliente');
+            sessionStorage.removeItem('recarga_cliente_id');
             sessionStorage.removeItem('recarga_id');
             sessionStorage.removeItem('recarga_descuento_porcentaje');
             sessionStorage.removeItem('recarga_envio');

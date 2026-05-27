@@ -18,6 +18,19 @@ main_bp = Blueprint('main', __name__)
 # Definición de estados válidos para la logística de pedidos
 ESTADOS_PERMITIDOS = {'pendiente', 'en_proceso', 'listo', 'entregado', 'cancelado'}
 
+
+def parse_optional_int(value):
+    if value in (None, '', 'null'):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def is_general_customer_name(value):
+    return (value or '').strip().lower() == 'cliente general'
+
 # --- RUTAS DE ACCESO PRINCIPAL (EL PORTERO) ---
 
 @main_bp.route('/')
@@ -73,7 +86,7 @@ def marcar_visto_global(anuncio_id):
 def procesar_fila_fechas(fila_db):
     if not fila_db: return None
     item = dict(fila_db)
-    campos_fecha = ['fecha', 'fecha_vencimiento', 'created_at']
+    campos_fecha = ['fecha', 'fecha_vencimiento', 'created_at', 'fecha_entrega']
     for campo in campos_fecha:
         valor_original = item.get(campo)
         if valor_original:
@@ -255,7 +268,9 @@ def guardar_venta():
         else:
             venta_id = int(venta_id)
 
-        cliente = data.get('cliente', 'Cliente General')
+        cliente = (data.get('cliente') or 'Cliente General').strip() or 'Cliente General'
+        cliente_id_payload = parse_optional_int(data.get('cliente_id'))
+        cliente_id = None
         items = data.get('items', [])
         costo_envio = float(data.get('envio', 0))
         descuento_pct = float(data.get('descuento_porcentaje', 0))
@@ -289,6 +304,28 @@ def guardar_venta():
         """, (u_id,))
         config_row = cursor.fetchone()
         porcentaje_operativo = float(config_row['porcentaje_gastos_operativos']) if config_row and config_row['porcentaje_gastos_operativos'] else 0.0
+
+        if cliente_id_payload:
+            cursor.execute("""
+                SELECT id
+                FROM clientes
+                WHERE id = %s AND user_id = %s
+            """, (cliente_id_payload, u_id))
+            if not cursor.fetchone():
+                return jsonify({'success': False, 'error': 'Cliente no encontrado'}), 404
+            cliente_id = cliente_id_payload
+            cursor.execute("""
+                UPDATE clientes
+                SET nombre = %s
+                WHERE id = %s AND user_id = %s
+            """, (cliente, cliente_id, u_id))
+        elif not is_general_customer_name(cliente):
+            cursor.execute("""
+                INSERT INTO clientes (user_id, nombre)
+                VALUES (%s, %s)
+                RETURNING id
+            """, (u_id, cliente))
+            cliente_id = cursor.fetchone()['id']
 
         for item in items:
             cantidad = float(item.get('cantidad', 0))
@@ -358,13 +395,13 @@ def guardar_venta():
         if venta_id:
             cursor.execute('''
                 UPDATE ventas 
-                SET cliente=%s, subtotal=%s, envio=%s, descuento_porcentaje=%s, descuento_monto=%s,
+                SET cliente=%s, cliente_id=%s, subtotal=%s, envio=%s, descuento_porcentaje=%s, descuento_monto=%s,
                 impuestos=%s, tax_engine=%s,
                 total=%s, costo_total=%s, costo_fijo_prorrateado=%s,
                 estado=%s, monto_pagado=%s, saldo_pendiente=%s, fecha=%s
                 WHERE id=%s AND user_id=%s
             ''', (
-                    cliente, subtotal_calculado, costo_envio, descuento_pct, descuento_monto,
+                    cliente, cliente_id, subtotal_calculado, costo_envio, descuento_pct, descuento_monto,
                     tax_amount_calculado, tax_engine,
                     total_calculado,
                     costo_total_calculado,
@@ -380,19 +417,20 @@ def guardar_venta():
         else:
             cursor.execute('''
                 INSERT INTO ventas (
-                    user_id, fecha, cliente, subtotal, envio, 
+                    user_id, fecha, cliente, cliente_id, subtotal, envio, 
                     descuento_porcentaje, descuento_monto, 
                     impuestos, tax_engine,
                     total, costo_total, costo_fijo_prorrateado,
                     estado, 
                     monto_pagado, saldo_pendiente, fecha_vencimiento
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
             ''', (
                     u_id,
                     fecha_actual,
                     cliente,
+                    cliente_id,
                     subtotal_calculado,
                     costo_envio,
                     descuento_pct,
@@ -620,7 +658,7 @@ def historial():
     total_pages = math.ceil(total_registros / per_page)
 
     # --- 2. QUERY PARA DATOS ---
-    sql = 'SELECT id, cliente, fecha, total, estado, estado_pedido, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine FROM ventas WHERE user_id=%s'
+    sql = 'SELECT id, cliente, fecha, total, estado, estado_pedido, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine, fecha_entrega FROM ventas WHERE user_id=%s'
     params = [uid]
     
     if q:
@@ -737,6 +775,7 @@ def get_cotizacion(id):
             'success': True, 
             'id': venta['id'], 
             'cliente': venta['cliente'],
+            'cliente_id': venta['cliente_id'] if 'cliente_id' in venta.keys() else None,
             'descuento_porcentaje': venta['descuento_porcentaje'], 
             'tax_percent': venta['tax_engine'].replace('IVA ', '').replace('%', '') if venta['tax_engine'] != 'none' else 0,
             'items': items

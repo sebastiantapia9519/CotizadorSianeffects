@@ -1,1243 +1,94 @@
-================================================================================
-                    MANUAL TÉCNICO Y DE NEGOCIO: COTIZADOR SIANEFFECTS
-================================================================================
-Última actualización: Mayo 2026
-Versión: 2.3 — Total Mágico por Descuento, Edición Consistente y Utilidades Admin
-Descripción: Plataforma SaaS (Software as a Service) diseñada para creadores,
-artesanos y agencias. Permite la gestión integral de costos de producción,
-inventarios, creación de "recetas" (productos), cotizaciones, abonos, logística
-de envíos y catálogo público en línea.
-
-================================================================================
-1. ARQUITECTURA TÉCNICA
-================================================================================
-
-STACK PRINCIPAL
----------------
-- Backend:        Python 3.13 con framework Flask
-- Servidor WSGI:  Gunicorn (producción en Railway)
-- Base de Datos:  PostgreSQL (psycopg2 con DictCursor para acceso por nombre de columna)
-- Scheduler:      APScheduler (tareas automáticas en segundo plano)
-- Sesiones:       Nativas de Flask (cookies firmadas del lado del cliente)
-- Email:          Resend API (reemplaza Flask-Mail + SMTP por bloqueo de puertos en Railway)
-- Almacenamiento: Cloudflare R2 (catálogo, logos, invitaciones)
-- Imágenes:       Pillow (PIL) para conversión automática a WebP
-- Logística:      Geopy para cálculo de distancias geodésicas en tiempo real
-
-ENTORNOS SEPARADOS
-------------------
-La aplicación maneja dos entornos completamente aislados mediante variables de entorno:
-
-  Producción (PRD):
-    - Host Railway:    nozomi.proxy.rlwy.net:41370
-    - Variable:        DATABASE_URL_PROD
-    - FLASK_ENV:       production
-
-  Desarrollo (DEV):
-    - Host Railway:    shinkansen.proxy.rlwy.net:28463
-    - Variable:        DATABASE_URL_DEV
-    - FLASK_ENV:       development
-
-El archivo db.py valida el entorno activo y lanza una excepción si detecta que
-DEV apunta a PRD o viceversa, evitando contaminación accidental de datos en producción.
-
-RUTA LOCAL DEL PROYECTO Y EJECUCIÓN
------------------------------------
-Para cambios del cotizador, el proyecto correcto en la máquina de desarrollo es:
-
-  /Users/sebastiantapia/Documents/CotizacionesSianeffects
-
-No usar como referencia la carpeta:
-
-  /Users/sebastiantapia/Documents/Sianeffects Cotizador
-
-Esa carpeta puede existir pero no contiene el proyecto funcional del cotizador.
-
-Comando local habitual:
-
-  cd /Users/sebastiantapia/Documents/CotizacionesSianeffects
-  FLASK_DEBUG=0 PORT=5055 venv/bin/python app.py
-
-Si el puerto 5055 ya está ocupado, usar otro puerto libre:
-
-  FLASK_DEBUG=0 PORT=5057 venv/bin/python app.py
-
-SEGURIDAD DE SESIONES
----------------------
-- SESSION_COOKIE_SECURE=True     → Solo viaja por HTTPS
-- SESSION_COOKIE_HTTPONLY=True   → JavaScript no puede leerla (mitiga XSS)
-- SESSION_COOKIE_SAMESITE='Lax'  → Estabilidad en móviles al cambiar entre apps o redes
-- PERMANENT_SESSION_LIFETIME=31 días
-- Session fixation prevention: session.clear() antes de asignar datos tras login exitoso
-
-DOMINIO Y DNS (sianeffects.com en Namecheap)
---------------------------------------------
-Registro           Host                   Valor                          Propósito
------------        -------------------    ----------------------------   ---------------------------------
-CNAME              www                    7i1w07xf.up.railway.app        Apunta al servidor Railway
-A Record           @                      162.255.119.87                 IP raíz requerida por Apple Mail
-TXT (DKIM)         resend._domainkey      p=MIGfMA0GCSqG...              Firma digital de Resend (Verified)
-TXT (SPF)          send                   v=spf1 include:amazonses...    Autorización de envío de Resend
-TXT (DMARC)        _dmarc                 v=DMARC1; p=quarantine;...     Política anti-spoofing
-MX                 send                   feedback-smtp.us-east-1...     Return-path de rebotes Resend
-MX (@)             @                      mx1/mx2.privateemail.com       Recepción en Private Email
-
-================================================================================
-2. SISTEMA DE CORREO TRANSACCIONAL (RESEND)
-================================================================================
-
-RAZÓN DEL CAMBIO
-----------------
-Railway bloquea el tráfico SMTP saliente (puertos 25, 465, 587) para prevenir
-spam. Flask-Mail aparentaba enviar correos (retornaba True) pero estos nunca
-llegaban. La solución fue migrar a Resend, que opera vía HTTP (puerto 443).
-
-CONFIGURACIÓN
--------------
-- Proveedor:    Resend (resend.com)
-- SDK:          resend (Python)
-- Variable:     RESEND_API_KEY en Railway
-- Dominio:      sianeffects.com (verificado con DKIM)
-- Region:       us-east-1 (Amazon SES como infraestructura de Resend)
-
-FUNCIÓN MAESTRA DE ENVÍO (services/mail_service.py)
-----------------------------------------------------
-enviar_correo_sian(subject, recipient, template, sender_alias, **kwargs)
-
-  - sender_alias: prefijo del remitente ('hola', 'accounts', 'contacto', etc.)
-    El remitente resultante es: Sianeffects <alias@sianeffects.com>
-  - template: nombre del archivo HTML en templates/emails/ (sin extensión)
-  - **kwargs: variables que se inyectan en el template Jinja2
-  - El envío corre en un hilo separado (Thread) para no bloquear el request
-  - Retorna True si el dispatch fue exitoso, False si hubo error de rendering
-
-REGLA CRÍTICA DE ORDEN
------------------------
-En TODOS los flujos de registro y verificación, el correo se envía SIEMPRE
-después del conn.commit(). Nunca antes. Esto garantiza que el usuario existe
-en la BD antes de recibir instrucciones para verificarse.
-
-TEMPLATES DE CORREO (templates/emails/)
-----------------------------------------
-Archivo                           Uso
--------------------------------  -------------------------------------------------
-auth_code.html                   Código de verificación al registrarse
-bienvenida.html                  Correo de bienvenida tras verificar email
-reset_password_mail.html         Link para restablecer contraseña
-recordatorio_verificacion.html   Recordatorio a las 12 hrs sin verificar
-aviso_vencimiento_3.html         Aviso 3 días antes del vencimiento
-aviso_vencimiento_1.html         Último aviso 1 día antes del vencimiento
-
-COMPATIBILIDAD CON PROVEEDORES DE EMAIL
------------------------------------------
-- Gmail:    Entrega inmediata ✅
-- Outlook:  Entrega inmediata ✅
-- iCloud:   Entrega inmediata ✅
-
-================================================================================
-3. AUTENTICACIÓN Y SEGURIDAD (routes/auth.py)
-================================================================================
-
-FLUJO DE REGISTRO
------------------
-1.  Validación de cookie has_free_trial (aviso suave, no bloqueo)
-2.  Validación de formato de username: ^[a-z0-9_]{3,20}$
-3.  Validación de contraseña: mínimo 6 caracteres
-4.  Validación de email: formato + lista de dominios desechables
-5.  Verificación de email único en BD
-6.  INSERT de usuario con RETURNING id (requerido en PostgreSQL/psycopg2)
-7.  INSERT de configuración base y shipping_configs por defecto
-8.  Generación de código de 6 dígitos (expira en 10 minutos)
-9.  conn.commit() — punto de no retorno
-10. Envío de correo con código (después del commit)
-11. Cookie has_free_trial seteada por 1 año en el navegador
-
-FLUJO DE LOGIN
---------------
-1.  Rate limiting: máximo 5 intentos fallidos por IP en 1 minuto
-    (consultando logs_actividad con accion='Login fallido' y detalle=IP)
-2.  Búsqueda del usuario solo por email (LOWER para case-insensitive)
-3.  Verificación de hash de contraseña (werkzeug)
-4.  Portero de verificación: si verificado=FALSE → redirect a verificar_email
-5.  session.clear() → prevención de session fixation
-6.  Asignación de sesión: user_id, username, role
-7.  Log de acceso exitoso en logs_actividad con IP del cliente
-
-VERIFICACIÓN DE EMAIL
----------------------
-- El código debe coincidir, estar sin usar (used=FALSE) y no estar expirado
-- Al verificar: código marcado como used, cuenta activada (verificado=TRUE)
-- Limpieza automática de códigos usados del mismo email (housekeeping)
-- Correo de bienvenida enviado después del commit
-
-RECUPERACIÓN DE CONTRASEÑA
----------------------------
-- Rate limiting: máximo 3 solicitudes por usuario cada 15 minutos
-- Token criptográfico: secrets.token_urlsafe(32)
-- Expiración: 30 minutos
-- Al cambiar contraseña: se invalidan TODOS los tokens activos del usuario
-- Mensaje de respuesta siempre genérico (no revela si el email existe)
-
-PROTECCIONES ADICIONALES
--------------------------
-- Reenvío de código: máximo 1 vez por minuto (HTTP 429 si excede)
-- Logout: session.clear() completo (no pop() individual)
-
-================================================================================
-4. SISTEMA DE ROLES Y CONTROL DE ACCESO
-================================================================================
-
-JERARQUÍA DE ROLES
-------------------
-Nivel  Nombre    Descripción
------  --------  ---------------------------------------------------------------
-0      Usuario   Cliente final del SaaS. Sujeto a suscripción y paywall.
-1      Admin     Personal de soporte (ej. Diana). Acceso al panel administrativo.
-                 No puede asignar roles iguales o superiores al suyo.
-2      Dueño     Acceso total. Nunca sujeto a paywall ni a límites de renovación.
-
-DECORADORES DE PROTECCIÓN (helpers.py)
----------------------------------------
-@login_required
-  Verifica únicamente que haya una sesión activa (user_id en session).
-  Uso: rutas que requieren autenticación pero no suscripción activa
-  (ej. cambio de contraseña, logout, tutoriales).
-
-@subscription_required
-  1. Verifica sesión activa
-  2. Deja pasar a roles >= 1 sin consultar la BD
-  3. Para role=0: consulta subscription_end en BD
-  4. Si venció hace menos de 24 horas → Grace Period (acceso con banner de urgencia)
-  5. Si venció hace más de 24 horas → Redirect a /plan_vencido
-  Uso: todas las rutas funcionales del cotizador, historial, configuración, etc.
-
-@admin_required
-  Verifica que role >= 1. Redirige al cotizador si no cumple.
-  Uso: todas las rutas del blueprint /admin.
-
-GRACE PERIOD (1 día)
---------------------
-Cuando una suscripción vence, el usuario tiene 24 horas adicionales de acceso
-con un banner de urgencia visible en la interfaz. Esto permite que el cliente
-reaccione sin perder acceso abruptamente. Pasadas las 24 horas, el sistema
-bloquea completamente y redirige a /plan_vencido.
-
-La flag session['grace_period'] = True activa el banner en el template base.
-
-================================================================================
-5. REGLAS DE NEGOCIO — SUSCRIPCIONES Y PAGOS
-================================================================================
-
-ONBOARDING
-----------
-- Al registrarse: 7 días de prueba gratuita (subscription_end = created_at + 7 días)
-- Cookie has_free_trial: vigente 1 año, aviso suave en registro desde el mismo navegador
-- El verdadero escudo anti-abuso es la BD: email único garantizado por constraint
-
-ESTADOS DE SUSCRIPCIÓN Y PLANES (DICCIONARIO NORMALIZADO)
----------------------------------------------------------
-El sistema evalúa el acceso (Paywall) y las métricas financieras (MRR en el Dashboard)
-basándose en tres pilares: La Fecha de Vencimiento, el Estado y el Tipo de Plan.
-Para evitar errores de "Case Sensitivity" (mayúsculas/minúsculas) en PostgreSQL, todas
-las consultas analíticas utilizan la función LOWER() sobre estos campos.
-
-1. Columna `estado_suscripcion` (Workflow del Cliente)
-   - 'Trial':         Asignado automáticamente al registrarse. Activa 7 días de prueba.
-   - 'Activo':        Asignado tras un pago exitoso (Stripe o Manual).
-   - 'Cancelado':     El usuario canceló la renovación automática desde el portal (Stripe).
-   - 'Pago Fallido':  El cargo automático fue declinado (Stripe Webhook).
-   - 'Vencido':       La fecha `subscription_end` ya pasó (Asignado dinámicamente).
-
-2. Columna `plan_type` (Clasificación Financiera - MRR)
-   - 'Free':          Plan inicial durante el Trial. No suma al MRR.
-   - 'mensual':       Suma $149 MXN al MRR.
-   - 'anual':         Suma $124.16 MXN al MRR (Costo Anual / 12 meses).
-
-*NOTA DE DISEÑO (Lazy Evaluation):* El guardián de rutas (helpers.py) prioriza la columna
-`subscription_end` sobre las etiquetas de texto. Si el estado dice 'Activo' pero la fecha 
-límite ya fue superada en huso horario de México (America/Mexico_City) + 24 hrs de gracia, 
-el usuario pierde el acceso PRO automáticamente sin necesidad de que una tarea en segundo 
-plano actualice el campo de texto a 'Vencido'.
-
-ESQUEMA DE PAGOS (Fase 1 — Manual)
-------------------------------------
-Los pagos se gestionan externamente (transferencia bancaria o efectivo).
-Una vez confirmado el pago, el Administrador desde el panel /admin puede:
-
-  1. Renovar N meses (renueva desde hoy, subscription_end = hoy + N*30 días)
-  2. Sumar días específicos (suma desde el vencimiento actual si está activo,
-     o desde hoy si ya venció). Registra días acumulados en dias_regalados.
-
-PAYWALL
--------
-@subscription_required protege todas las rutas funcionales:
-  - /cotizador, /guardar_venta, /historial, /api/*
-  - /configuracion y todas sus sub-rutas
-  - /descargar_excel, /materiales, /maquinaria, /productos
-  - /dashboard, /envios
-
-Rutas que NO requieren suscripción activa (solo login):
-  - /configuracion/password (cambio de contraseña)
-  - /verificar-email, /reenviar-codigo
-  - /logout, /ayuda, /terminos, /privacidad
-
-ALERTAS PROACTIVAS EN INTERFAZ
--------------------------------
-obtener_alertas() en helpers.py inyecta en el Navbar:
-  - Stock bajo (danger si stock=0, warning si stock<=minimo)
-  - Aviso de vencimiento si restan 5 días o menos (solo role=0)
-  - Notificaciones manuales del administrador (buzón individual)
-  - Anuncios globales del sistema (para todos los usuarios)
-
-================================================================================
-6. TAREAS AUTOMÁTICAS (SCHEDULER — app.py)
-================================================================================
-
-Job                       Frecuencia              Descripción
-------------------------  ----------------------  ------------------------------------
-Limpieza                  12 AM y 12 PM diario    Borra cotizaciones vencidas,
-                                                  cuentas inactivas +12 meses e
-                                                  invitaciones expiradas +15 días
-                                                  (incluyendo archivos en R2)
-
-LimpiezaCanceladas        Día 1 de cada mes       Purga definitiva de ventas con
-                          a las 3:00 AM           estado 'cancelada' y sus detalles
-
-RecordatorioVerificacion  Cada hora en :30        Correo de recordatorio a usuarios
-                                                  que llevan 12-24 hrs sin verificar
-                                                  su email (flag recordatorio_enviado)
-
-PurgaNoVerificados        Cada hora en punto      Elimina usuarios con más de 24 hrs
-                                                  sin verificar (LFPDPPP México).
-                                                  Libera el email para re-registro.
-                                                  Borra en cascada: auth_codes,
-                                                  logs_actividad, configuracion,
-                                                  shipping_configs, tutoriales_estado
-
-AvisosVencimiento         Cada hora en punto      Envía correo 3 días antes y 1 día
-                                                  antes del vencimiento de suscripción
-                                                  (ventana de 1 hora evita duplicados)
-
-FLUJO COMPLETO DE CICLO DE VIDA DE UN USUARIO NO VERIFICADO
-------------------------------------------------------------
-  Hora 0:   Registro → correo con código de verificación
-  Hora 12:  Recordatorio → correo "¿Olvidaste algo?"
-  Hora 24:  Purga definitiva → cuenta eliminada, email liberado (LFPDPPP)
-
-FLUJO DE AVISOS DE VENCIMIENTO (usuarios activos)
---------------------------------------------------
-  -3 días:  Correo aviso_vencimiento_3.html ("Tu acceso vence en 3 días")
-  -1 día:   Correo aviso_vencimiento_1.html ("Último aviso: vence mañana")
-  Día 0:    Grace period activo (banner en interfaz, acceso permitido)
-  +1 día:   Bloqueo completo → redirect a /plan_vencido
-
-================================================================================
-7. PANEL DE ADMINISTRACIÓN (/admin)
-================================================================================
-
-Acceso requerido: role >= 1
-
-FUNCIONALIDADES
----------------
-Dashboard de usuarios:
-  - Paginación de 20 usuarios por página con búsqueda
-  - Stats globales en SQL: total, activos, vencidos, admins, online hoy, en riesgo
-  - Tiempo relativo de último login (time_ago)
-
-Acciones disponibles:
-  Acción                  Método  Descripción
-  ----------------------  ------  -----------------------------------------------
-  Renovar suscripción     POST    N meses desde hoy. Cambia estado a 'Activo'
-  Sumar días              POST    Suma días al vencimiento actual o desde hoy
-  Cambiar rol             POST    Sujeto a jerarquía (no puedes asignar rol >= tuyo)
-  Reset de contraseña     POST    Invalida todos los tokens de reset activos
-  Modo Fantasma           GET     Impersona a cualquier usuario (util para soporte)
-  Eliminar usuario        POST    Borrado en cascada completo incluyendo R2
-  Exportar CSV            GET     Reporte de todos los usuarios con BOM UTF-8
-  Eliminar folio anulado  POST    Purga manual definitiva por ID, solo estado='cancelada'
-  Monitor de logs         GET     Últimas 100 líneas de limpieza.log en tiempo real
-  Descargar log           GET     Descarga completa del archivo limpieza.log
-  Bitácora por usuario    GET/JSON Últimos 20 eventos de actividad (para modal)
-
-MENÚ UTILIDADES
----------------
-Para reducir ruido visual en el encabezado del panel, las acciones de operación
-menos frecuentes se agrupan en el dropdown "Utilidades":
-  - Reportes:
-      * Exportar usuarios (CSV)
-  - Mantenimiento:
-      * Eliminar folio anulado
-
-El borrado manual de folios anulados vive en /admin/eliminar-cotizacion y exige:
-  1. role >= 1 vía @admin_required
-  2. Método POST
-  3. ID numérico del folio
-  4. Confirmación textual exacta: BORRAR
-  5. Que el registro en ventas tenga estado = 'cancelada'
-
-Si el folio está activo, pagado, con anticipo o como cotización vigente, el backend
-rechaza la operación. Cuando procede, borra primero venta_detalles y después ventas,
-registra un evento en logs_actividad y deja rastro en limpieza.log con prefijo
-QUOTE_DELETED.
-
-PROTECCIONES DEL PANEL
------------------------
-- Todas las operaciones destructivas usan POST (protección CSRF básica)
-- Un admin (role=1) no puede asignar roles >= al suyo
-- No se puede eliminar al propio usuario
-- No se puede eliminar a usuarios de igual o mayor rango (excepto role=2)
-- No se pueden purgar folios no anulados desde Utilidades
-- Cada acción queda registrada en app.logger con formato:
-  "ACCION: Admin 'nombre' (ID:X) operó sobre 'target' (ID:Y) — detalle"
-
-MODO FANTASMA (IMPERSONATE)
-----------------------------
-Permite al administrador ver el sistema exactamente como lo ve un usuario.
-El ID del admin original se guarda en session['original_admin_id'].
-Al salir (/admin/stop_impersonate), se restaura la sesión del admin original.
-
-================================================================================
-8. LOGGING Y MONITOREO
-================================================================================
-
-ARCHIVO DE LOG
---------------
-- Ruta:          limpieza.log (en el root del proyecto)
-- Zona horaria:  América/Monterrey (forzada en logging.Formatter.converter)
-- Rotación:      Máximo 1MB por archivo, conserva 3 copias antiguas
-- Werkzeug:      Silenciado (solo errores) para evitar spam de GET /static/...
-
-NOMENCLATURA DE EVENTOS (estandarizada)
------------------------------------------
-Prefijo                  Significado
------------------------  --------------------------------------------------
-LOGIN_ATTEMPT            Intento de acceso (siempre se registra)
-LOGIN_SUCCESS            Autenticación exitosa con IP del cliente
-LOGIN_FAILED             Credenciales inválidas con IP (alimenta rate limiting)
-RATE_LIMIT               IP bloqueada por exceso de intentos
-REGISTER_SUCCESS         Nuevo usuario creado y código enviado
-REGISTER_ERROR           Fallo crítico durante el registro
-VERIFY_ERROR             Fallo al procesar verificación de email
-RETRY_ERROR              Fallo al reenviar código
-PASSWORD_RESET_REQUESTED Token generado para recuperación
-PASSWORD_RESET_SUCCESS   Contraseña actualizada exitosamente
-LOGOUT                   Cierre de sesión
-IMPERSONATE_START        Admin entró a cuenta de otro usuario
-IMPERSONATE_STOP         Admin salió del modo fantasma
-SUB_RENEWED              Suscripción renovada por admin
-TIME_ADDED               Días sumados a suscripción
-ROLE_CHANGED             Cambio de rol con valores anterior → nuevo
-USER_DELETED             Eliminación permanente con cascada
-QUOTE_DELETED            Purga manual definitiva de folio anulado desde /admin
-EXPORT_DATA              Exportación de CSV o Excel
-R2_CLEANUP               Archivo eliminado de Cloudflare R2
-SALE_SAVED               Venta/cotización guardada
-SALE_PAYMENT             Abono registrado
-TICKET_VIEW              Ticket visualizado o impreso
-DATA_ACCESS              Consulta de datos sensibles
-CONTEXT_ERROR            Fallo en el context processor global
-AVISO_VENCIMIENTO_Xd     Correo de aviso enviado X días antes del vencimiento
-RECORDATORIO_VERIFICACION Recordatorio de verificación enviado
-PURGA_NO_VERIFICADO      Usuario eliminado por LFPDPPP
-CUENTA ELIMINADA         Cuenta eliminada por inactividad de 12 meses
-
-BITÁCORA EN BASE DE DATOS (logs_actividad)
--------------------------------------------
-Columnas: id, user_id (nullable), accion, modulo, detalle, fecha
-
-Registra eventos clave desde la perspectiva del usuario:
-  - Inicios y cierres de sesión
-  - Creación y edición de ventas/cotizaciones
-  - Cambios de contraseña
-  - Verificación de email
-  - Visualización de tickets
-  - Cambios de configuración del negocio
-
-================================================================================
-9. CUMPLIMIENTO LEGAL — LFPDPPP MÉXICO
-================================================================================
-
-La Ley Federal de Protección de Datos Personales en Posesión de los Particulares
-(LFPDPPP) requiere no conservar datos personales más tiempo del necesario.
-
-MEDIDAS IMPLEMENTADAS
----------------------
-1. Purga automática de usuarios no verificados a las 24 horas del registro.
-   Datos eliminados: email, teléfono, contraseña hasheada y todos los datos
-   relacionados. El email queda disponible para re-registro inmediato.
-
-2. Purga de cuentas inactivas tras 12 meses sin renovar suscripción.
-   Se elimina toda la información del usuario y sus datos de negocio.
-
-3. Aviso de privacidad disponible en /privacidad accesible sin login.
-
-4. Términos y condiciones en /terminos con checkbox obligatorio en el registro.
-
-5. El administrador puede eliminar manualmente cualquier cuenta desde el panel
-   con borrado en cascada completo e inmediato.
-
-================================================================================
-10. MOTOR DE COSTOS E INVENTARIO
-================================================================================
-
-INSUMOS Y MATERIALES
----------------------
-- Registro por paquete o pieza con fraccionamiento automático a costo unitario
-- Control de stock con alertas visuales (danger si stock=0, warning si stock<=mínimo)
-- Historial de movimientos (entradas/salidas) con motivo y stock resultante
-
-MAQUINARIA Y DESGASTE
------------------------
-- Registro de equipos con costo fijo por ciclo de uso
-- Se incluye automáticamente en el costo base de cada receta que lo utilice
-
-FACTOR OPERATIVO (Costos Fijos)
--------------------------------
-- Permite aplicar un porcentaje configurable (ej. 10%) directo sobre el costo de producción.
-- Absorbe prorrateadamente gastos indirectos (renta, luz, internet) sin castigar 
-  productos de bajo costo.
-- Desactivable desde configuración para usuarios que no lo requieran.
-
-MANO DE OBRA (El Valor del Tiempo)
-----------------------------------
-Módulo híbrido activable vía UI. Si está encendido:
-- Calcula el valor por minuto del artesano.
-- Fórmula: Sueldo Mensual Deseado / (Horas Semanales × 4.33 semanas) / 60
-- Permite cobrar directamente en base a los minutos de fabricación en el Cotizador.
-Si está apagado:
-- El input en el Cotizador revierte a un "Comodín Financiero" manual ($).
-
-FÓRMULA DE PRECIO DE VENTA (Opción A - Margen Inteligente)
-----------------------------------------------------------
-Para evitar la inflación artificial del precio y proteger la competitividad:
-1. Costo Base = (Materiales + Maquinaria + Factor Operativo)
-2. Monto Ganancia = Costo Base × (Margen % / 100)
-3. Precio Sugerido = Costo Base + Monto Ganancia + Costo de Mano de Obra
-*Nota:* La mano de obra se suma "limpia" al final. No se multiplica por el Margen 
-de Ganancia para evitar el efecto de doble ganancia.
-
-IMPACTO EN INVENTARIO AL VENDER
----------------------------------
-- Al guardar una venta nueva, el sistema desglosa las recetas de cada ítem,
-  agrupa materiales idénticos y ejecuta un solo UPDATE por material
-- Las cancelaciones revierten el stock exacto consumido
-- No permite doble cancelación del mismo ticket
-
-================================================================================
-11. EL COTIZADOR Y PUNTO DE VENTA
-================================================================================
-
-MODOS DE OPERACIÓN
--------------------
-A) Armar Receta:    Carga una receta guardada con su composición de materiales, tiempo 
-                    y margen dinámico.
-B) Venta Rápida:    Concepto libre con precio manual y costo declarado ($0 = ganancia pura)
-
-ESTADOS DE UNA VENTA
----------------------
-Estado      Color       Descripción
------------ ----------  -------------------------------------------------------
-cotizacion  Gris        Temporal, caduca en 48 horas. No afecta inventario
-anticipo    Amarillo    Pago parcial registrado. Genera deuda liquidable
-pagado      Verde       Saldo $0.00 (diferencias < $0.05 se absorben automáticamente)
-cancelada   Rojo        Reintegra materiales al stock. Purga mensual automática
-
-GESTIÓN DE IVA
---------------
-Toggle en el carrito permite sumar el porcentaje configurado (ej. 16%) sobre
-el subtotal + envío. El motor de impuestos registra "IVA 16%" en tax_engine.
-
-DESCUENTO Y "TOTAL MÁGICO" (Mayo 2026)
---------------------------------------
-El total interactuable del carrito permite cuadrar o redondear un ticket sin
-alterar los precios unitarios de los productos.
-
-Regla central:
-  - Los precios unitarios del carrito son fuente de verdad y NO se prorratean.
-  - Si el usuario escribe un total objetivo, el sistema ajusta el porcentaje de
-    descuento para llegar matemáticamente a ese total.
-  - Esto evita que productos como un termo de $265.00 terminen guardados con
-    precios ocultos o alterados.
-
-Flujo frontend (templates/cotizador.html):
-  1. El usuario hace clic sobre el total.
-  2. Ingresa un nuevo total objetivo.
-  3. aplicarMagiaTotal() calcula la diferencia contra el total actual.
-  4. Si quiere cobrar menos, aumenta el descuento.
-  5. Si quiere cobrar más, reduce el descuento.
-  6. Si hay IVA activo, el ajuste de descuento se divide entre factorTax
-     (1 + taxPct/100), porque cada peso modificado en descuento impacta también
-     la base del impuesto.
-  7. El nuevo descuento se escribe en inputDescuento y sliderDescuento con hasta
-     4 decimales para conservar precisión.
-  8. calcularTotal() refresca subtotal, descuento, impuestos y total visible.
-
-Ejemplo:
-  - Subtotal carrito: $2,650.00
-  - Descuento visible: 15%
-  - Descuento original: $397.50
-  - Total matemático: $2,252.50
-  - Total redondeado visible: $2,253.00
-  - Backend absorbe centavos ajustando descuento_monto cuando aplica, sin tocar
-    precio_unitario ni subtotal de los detalles.
-
-Sin IVA:
-  nuevoDescuentoDinero = descuentoActualDinero - diferenciaTotal
-
-Con IVA:
-  nuevoDescuentoDinero = descuentoActualDinero - (diferenciaTotal / factorTax)
-
-Persistencia backend (/guardar_venta en routes/main.py):
-  - Recalcula subtotal_calculado desde items usando precio_unitario * cantidad.
-  - Si descuento_porcentaje > 0, recalcula descuento_monto desde el subtotal.
-  - Limita descuento_monto para que nunca exceda el subtotal.
-  - Calcula base_imponible = subtotal_con_descuento + envio.
-  - Calcula impuestos sobre base_imponible.
-  - Redondea total_calculado hacia arriba con math.ceil().
-  - Si el redondeo cabe dentro del descuento, reduce descuento_monto por
-    diferencia_redondeo / factor_tax para que el ticket cierre sin alterar
-    precios unitarios.
-
-Nota operativa:
-  Si no existe descuento suficiente para absorber el redondeo, el total sigue
-  redondeado hacia arriba y el descuento no se vuelve negativo.
-
-TICKETS Y PDF
--------------
-- El ticket se genera con los datos del negocio del usuario (logo, slogan, web).
-- Notas y Políticas: Incluye bloque dinámico (hasta 150 caracteres) en el footer 
-  para garantías o términos, evitando tickets excesivamente largos.
-- Accesible por URL directa /ticket/<id> (sin requerir login para compartir).
-- El acceso al ticket queda registrado en logs_actividad.
-- En tickets con total mágico, el subtotal de detalles conserva precios unitarios
-  originales; el ajuste se refleja en descuento_monto y descuento_porcentaje.
-
-================================================================================
-12. BITÁCORA Y GESTIÓN DE VENTAS
-================================================================================
-
-BÚSQUEDA INTELIGENTE (TOLERANCIA A ACENTOS)
--------------------------------------------
-Para mejorar la experiencia del usuario (UX) en la barra de búsqueda del Historial,
-se implementó una búsqueda agnóstica de mayúsculas y acentos directamente en SQL
-sin requerir extensiones de base de datos complejas (como unaccent).
-- Se utiliza la combinación de TRANSLATE() y LOWER().
-- El motor convierte "MAMÁ VANE" y "mama vane" a una estructura base "mama vane"
-  para la comparación (ILIKE).
-
-PREVENCIÓN DE "CLIPPING" EN MENÚS FLOTANTES (UX)
-------------------------------------------------
-Las tablas responsivas (.table-responsive) en HTML emplean `overflow-x: auto`,
-lo que por comportamiento nativo en los navegadores corta cualquier elemento que
-exceda el borde vertical.
-- Solución implementada: Expansión dinámica del DOM vía JavaScript.
-- Al abrir un menú desplegable (Bootstrap o SweetAlert anidado), se inyecta
-  temporalmente un `margin-bottom` a la tabla, expandiendo el contenedor blanco
-  físicamente hacia abajo.
-- Al cerrar el menú o hacer clic afuera, el margen regresa a 0px con una 
-  transición CSS fluida (ease), asegurando que ninguna opción quede oculta.
-- Barra flotante de acciones masivas: Al seleccionar uno o más registros, aparece una barra inferior responsive con contador, menú compacto de cambio de estado y botón de cancelar selección. En móvil se comporta como bottom sheet para conservar contexto sin bloquear la pantalla completa.
-
-ACTUALIZACIÓN EN CASCADA Y ACCIONES MASIVAS
--------------------------------------------
-El módulo soporta gestión individual y masiva (Bulk Actions) operado por APIs asíncronas.
-- Anulación en Cascada: Al anular una venta (estado = 'cancelada' en el flujo financiero),
-  el motor SQL ejecuta un UPDATE en cascada para asignar estado_pedido = 'cancelado' 
-  en el flujo logístico, evitando preparación de mercancía errónea.
-- Checkboxes Inteligentes: Los registros cancelados reciben el atributo `disabled` y
-  son excluidos algorítmicamente del selector maestro "Marcar todos".
-- Tiempos de Respuesta: Se emplea SweetAlert2 (toast loading) para retroalimentación
-  visual inmediata mientras la API despacha el cambio en segundo plano.
-
-EDICIÓN DE COTIZACIONES DESDE HISTORIAL
----------------------------------------
-Existen dos rutas de carga hacia el cotizador:
-  A) /cotizador?cargar_cotizacion=<id>
-     - Usa /api/get_cotizacion/<id> en routes/main.py.
-     - Devuelve descuento_porcentaje, tax_percent e items.
-
-  B) Botón "Editar" desde /historial
-     - Usa /api/obtener_detalles/<id> en routes/api.py.
-     - Guarda datos en sessionStorage y redirige a /cotizador.
-     - recuperarSesionCotizacion() reconstruye el carrito.
-
-Corrección Mayo 2026:
-  - /api/obtener_detalles/<id> ahora devuelve:
-      * descuento_porcentaje
-      * descuento_monto
-      * subtotal
-      * impuestos
-      * envio
-  - templates/historial.html guarda recarga_descuento_porcentaje.
-  - templates/cotizador.html restaura ese valor en inputDescuento y sliderDescuento.
-  - Al editar, el botón "Solo Cotizar" cambia a "Actualizar Cotización" y se conserva
-    ventaIdEdicion para actualizar el mismo folio, no crear duplicado.
-
-Corrección post-pull Mayo 2026: precio manual en recetas recuperadas
-  Problema:
-    - Si una receta calculaba precio sugerido de $52.00, el usuario podía ajustar
-      manualmente el precio a $70.00 y agregarla al carrito correctamente.
-    - Al guardar la cotización y luego editarla desde Historial, al hacer clic en el
-      producto del carrito para editar la receta, el cotizador recalculaba y volvía
-      a mostrar $52.00 en vez de conservar los $70.00 guardados.
-    - Después de un git pull, templates/cotizador.html quedó en conflicto (UU) y
-      también había riesgo de romper JavaScript por funciones duplicadas o variables
-      redeclaradas.
-
-  Solución en templates/cotizador.html:
-    - Variable global única:
-        let precioUnitarioManual = null;
-        let isCargandoReceta = false;
-    - normalizarItemCarrito(item):
-        Normaliza precio_unitario, costo_unitario, cantidad y subtotal a Number.
-        Esto evita errores con .toFixed() cuando PostgreSQL/JSON entrega decimales
-        como texto.
-    - cargarCotizacion(id):
-        Reconstruye el carrito con normalizarItemCarrito(item). No debe usar variables
-        inexistentes como concepto, precio, costo, cantidad o fecha.
-    - recuperarSesionCotizacion():
-        Al volver desde /historial usando sessionStorage, también normaliza cada item
-        antes de renderizar el carrito.
-    - cargarRecetaDesdeCarrito(index):
-        Antes de recalcular la receta, rescata:
-          precioUnitarioManual = parseFloat(item.precio_unitario) || null;
-        Con esto el precio guardado en la cotización se conserva al editar el item.
-    - calcularTotal():
-        Si existe precioUnitarioManual, se conserva mientras sea mayor o igual al
-        costo real de producción (costoTotal), no mientras sea mayor al precio sugerido.
-        Esto permite cobrar por debajo del sugerido si sigue siendo rentable.
-    - aplicarAjusteUnitario():
-        Compara contra costoProduccionCalculado, no contra precioVentaCalculado.
-        Mensaje esperado si se intenta vender por debajo del costo real:
-          "No puedes vender por debajo de tu costo real ($X.XX)".
-
-  Verificaciones recomendadas después de tocar este flujo:
-    - venv/bin/python -m py_compile app.py routes/main.py routes/api.py
-    - Renderizar templates/cotizador.html con app.test_request_context('/cotizador').
-    - Extraer los scripts inline y correr:
-        node --check /private/tmp/cotizador-inline.js
-    - Confirmar que solo exista una declaración:
-        let precioUnitarioManual = null;
-    - Confirmar que no queden marcadores de conflicto:
-        <<<<<<<, =======, >>>>>>>
-
-Caso probado:
-  - Folio #217 creado con Venta Rápida.
-  - 10 piezas x $265.00 = $2,650.00.
-  - Descuento 15%.
-  - Total guardado: $2,253.00.
-  - Al editar desde Historial, cargó:
-      * ventaIdEdicion = 217
-      * descuento input/slider = 15
-      * label descuento = -$397.50
-      * total visible = $2,253.00
-  - Al actualizar el cliente, se guardó sobre el mismo folio sin duplicarlo.
-
-================================================================================
-13. LOGÍSTICA DE ENVÍOS
-================================================================================
-
-ESTRATEGIA LOCAL (ÚLTIMA MILLA)
----------------------------------
-- Extracción de coordenadas desde links de Google Maps (incluyendo links cortos goo.gl)
-- Fórmula: [Tarifa Base + (Distancia KM × Costo por KM)] × (1 + Margen%)
-- Diseñado para motos/taxis con domicilio de origen configurable
-
-ESTRATEGIA NACIONAL (VOLUMETRÍA)
-----------------------------------
-- Compara Peso Real vs Peso Volumétrico (L×A×H / 5000), cobra el mayor
-- Sistema de escalones por peso máximo con tarifas zonificadas por estado
-- Zona especial 'ALL' como tarifa general para estados no configurados
-
-================================================================================
-14. PANEL FINANCIERO (DASHBOARD)
-================================================================================
-
-PANEL DEL USUARIO: /mi-panel
-----------------------------
-Archivo principal:
-  - templates/dashboard/mi_panel.html
-Backend:
-  - routes/user_dashboard.py
-
-Objetivo:
-  Mostrar al cliente una lectura honesta de su mes seleccionado, separando dinero
-  cobrado, venta facturada, utilidad estimada, saldos por cobrar y desempeño de
-  productos.
-
-Definiciones de datos mostrados:
-  - Cobrado:
-      SUM(monto_pagado) de ventas con estado `pagado` o `anticipo`.
-      Representa dinero recibido realmente.
-  - Total Ticket:
-      SUM(total) de ventas con estado `pagado` o `anticipo`.
-      Incluye productos, descuento aplicado, envío, impuestos y redondeo.
-  - Venta Neta:
-      SUM(subtotal - descuento_monto) de ventas con estado `pagado` o `anticipo`.
-      Representa productos vendidos después de descuentos, sin envío ni impuestos.
-  - Costos Producto:
-      SUM(costo_total), incluyendo costos registrados en los items y costo operativo
-      prorrateado guardado por guardar_venta().
-  - Utilidad Estimada:
-      SUM((subtotal - descuento_monto) - costo_total).
-      No usa `total - costo_total` porque `total` incluye envío e impuestos y eso
-      inflaría artificialmente la utilidad.
-  - Por Cobrar:
-      SUM(saldo_pendiente) de tickets con anticipo o pendiente.
-      En el flujo normal actual lo más común es `anticipo`.
-  - Tickets Activos:
-      COUNT de folios en estado `pagado` o `anticipo`.
-  - Cotizaciones / Anuladas:
-      Se muestran aparte y no suman a utilidad.
-
-Gráficas:
-  - "Cobros y Utilidad":
-      Serie 1: Cobrado = SUM(monto_pagado).
-      Serie 2: Utilidad Estimada = SUM((subtotal - descuento_monto) - costo_total).
-  - "Radiografía de Ingresos":
-      Dona de Venta Neta separada en Utilidad Estimada y Costo de Producción.
-
-Productos Más Vendidos:
-  - Fuente: venta_detalles unido con ventas.
-  - Solo considera ventas `pagado` o `anticipo` del periodo seleccionado.
-  - Ordena por unidades vendidas y, en empate, por dinero vendido.
-  - Muestra producto, unidades, número de tickets, vendido y utilidad estimada por línea:
-      utilidad_estimada = SUM(subtotal_linea - cantidad * costo_unitario)
-  - Esta vista ayuda a distinguir "se vende mucho" de "deja utilidad".
-
-Responsive móvil:
-  - templates/dashboard/mi_panel.html incluye reglas específicas para pantallas menores
-    a 768px.
-  - Los KPIs reducen padding, tamaño de iconos y tipografía para evitar desbordes.
-  - Las notas/leyendas de KPI (`.kpi-note`) siempre deben permanecer visibles en móvil.
-    En pantallas muy angostas (<380px) solo se reduce la tipografía; no se ocultan.
-  - La tabla de Productos Más Vendidos se oculta en móvil y se reemplaza por tarjetas
-    `.mobile-product-item` con unidades, tickets, vendido, utilidad y promedio.
-  - El calendario reduce gap, padding, tamaño de celda y dots para no romper el grid.
-  - La barra de filtros se convierte en grid de mes, año y botón; el botón Reporte ocupa
-    ancho completo debajo.
-  - En el gráfico "Cobros y Utilidad", el selector Este Mes / Últimos 6 Meses se centra
-    en móvil con ancho máximo. Para el histórico móvil, las etiquetas del eje X usan solo
-    el mes abreviado y rotación ligera para evitar que "Feb 2026 / Abr 2026 / May 2026"
-    se encimen.
-  - En la vista diaria del mismo gráfico, las etiquetas del eje X muestran solo el número
-    de día (01, 02, 15, etc.), sin el prefijo "Día", para evitar amontonamiento visual.
-  - Cuidado Jinja: el bloque `{% block content %}` debe cerrarse antes de abrir
-    `{% block scripts %}`. Si `scripts` queda anidado dentro de `content`, el layout
-    renderiza el JavaScript dos veces y aparece el error:
-      Uncaught SyntaxError: Identifier 'chartData' has already been declared
-    Verificación rápida:
-      render_template('dashboard/mi_panel.html', ...).count('const chartData') debe ser 1.
-
-Reporte Excel del botón "Reporte":
-  - Ruta: /descargar_excel en routes/main.py.
-  - Es global, no filtrado por el mes del panel.
-  - Genera workbook .xlsx con:
-      * Resumen: totales globales de tickets activos, cotizaciones, anuladas,
-        total ticket, cobrado, por cobrar, costo, utilidad estimada, descuentos,
-        envíos, impuestos y margen estimado.
-      * Tickets: un folio por fila con fechas, cliente, estado, subtotal,
-        descuento, envío, impuestos, total, cobrado, por cobrar, costo total,
-        utilidad estimada e impuesto aplicado.
-      * Productos: líneas de venta con cantidad, precio unitario, subtotal,
-        costo unitario, costo de línea y utilidad antes de descuento global.
-  - Fechas convertidas a hora local antes de exportar.
-  - El archivo ajusta anchos de columna y congela encabezados.
-
-KPIs PRINCIPALES
------------------
-- Ingreso mensual esperado: se calcula desde usuarios activos con plan de pago.
-  Fuente: tabla `usuarios`, filtrando `subscription_end > now_utc()`.
-  Fórmula: (mensuales activos * $149) + (anuales activos * $1490 / 12).
-- MRR estimado: misma base del ingreso mensual esperado; no usa logs de pago para evitar
-  duplicados por activaciones/verificaciones instantáneas.
-- Nuevos PRO: activaciones únicas detectadas en `logs_actividad` con `modulo = 'Pagos'`.
-- Bajas: usuarios con `estado_suscripcion` cancelado/cancelada.
-- Clientes totales, activos, vencidos y próximos a vencer: derivados de `usuarios` y
-  `subscription_end`.
-
-SUSCRIPCIONES QUE EXPLICAN LA CIFRA
------------------------------------
-La tabla principal de suscripciones usa únicamente usuarios activos con `plan_type` mensual
-o anual. Muestra:
-- Cliente / email
-- Plan
-- Fecha de suscripción: primer log de pago del usuario; si no existe, `usuarios.created_at`
-- Fecha de vencimiento (`subscription_end`)
-- Cobro del plan
-- Aporte mensual estimado
-
-IMPORTANTE: esta tabla no usa `origen_registro` ni `utm_campaign`. Esa medición quedó fuera
-del dashboard hasta que el tracking de origen sea confiable.
-
-RESUMEN DE PLANES ACTIVOS
--------------------------
-- Suscripciones pagadas: mensual + anual activos.
-- Mensual: usuarios activos con `plan_type = 'mensual'`.
-- Anual: usuarios activos con `plan_type = 'anual'`.
-- Free / Trial: usuarios activos cuyo `plan_type` NO es mensual ni anual. Este conteo se
-  basa en `subscription_end > now_utc()` y no depende de que `estado_suscripcion` sea
-  'Activo', porque los trials suelen conservar estado 'Trial'.
-
-COMPARATIVA DE REGISTROS
-------------------------
-El dashboard muestra los últimos 12 meses de registros de usuarios:
-- Total de usuarios registrados por mes (`usuarios.created_at`)
-- Diferencia contra el mes anterior
-- Porcentaje de crecimiento o caída
-
-Ejemplo: Abril 50 registros, Mayo 65 registros → +15 usuarios, +30%.
-
-VISUALIZACIONES (Chart.js)
---------------------------
-- Gráfica de barras: registros de usuarios por mes en los últimos 12 meses.
-- Gráfica de dona: distribución de suscripciones activas por plan (mensual, anual, free/trial).
-- Gráfica de barras horizontal: perfil de uso por cantidad de cotizaciones.
-
-EXPORTACIÓN
------------
-- Reporte Excel (Pandas + openpyxl) con todos los folios, costos, impuestos y deudas
-- Fechas convertidas de UTC a hora local de Monterrey en el export
-- BOM UTF-8 en CSV para compatibilidad con Excel en español
-
-================================================================================
-15. CATÁLOGO PÚBLICO
-================================================================================
-
-- Almacenamiento de imágenes en Cloudflare R2 (conversión automática a WebP)
-- Acceso público sin login para visualización del catálogo del negocio
-- Organización por categorías con orden configurable
-
-================================================================================
-16. MÓDULO DE INVITACIONES DIGITALES
-================================================================================
-
-FUNCIONALIDADES
----------------
-- Invitaciones personalizadas con foto de portada, fondo, galería de fotos
-- Sistema de pases con código QR único por familia
-- Módulo de RSVP y confirmación de asistencia
-- Gestión de mesas con capacidad y ocupación en tiempo real
-- Muro de buenos deseos
-- Música de fondo configurable
-- Soporte para múltiples tipos de evento (boda, quinceañera, etc.)
-
-CICLO DE VIDA
--------------
-- Las invitaciones se crean con fecha de vigencia
-- A los 15 días del vencimiento, la tarea de limpieza elimina la invitación
-  y todos sus archivos de Cloudflare R2 (portada, fondo, galería, fotos de cámara)
-
-PLANNERS
---------
-- Sistema de acceso para wedding planners con código único
-- Paquetes de invitaciones con cantidad total y usada
-- Portal de cliente separado para gestión de sus invitaciones
-
-================================================================================
-17. INFRAESTRUCTURA DE PRODUCCIÓN (RAILWAY)
-================================================================================
-
-SERVICIOS ACTIVOS
------------------
-Servicio                Descripción
-----------------------  --------------------------------------------------------
-CotizadorSianeffects    Aplicación Flask principal (Gunicorn, Puerto 8080)
-cotizador-prd           Base de datos PostgreSQL de producción
-cotizador-dev           Base de datos PostgreSQL de desarrollo (aislada)
-
-VARIABLES DE ENTORNO REQUERIDAS EN RAILWAY
--------------------------------------------
-SECRET_KEY              Clave de sesión Flask
-FLASK_ENV               'production'
-FLASK_DEBUG             '0'
-PORT                    '8080'
-DATABASE_URL_PROD       URL de conexión PostgreSQL de producción
-RESEND_API_KEY          Clave API de Resend para envío de correos
-R2_ACCESS_KEY           Credencial Cloudflare R2
-R2_SECRET_KEY           Credencial Cloudflare R2
-R2_ENDPOINT_URL         Endpoint del bucket R2
-R2_BUCKET_NAME          Nombre del bucket R2
-R2_PUBLIC_URL           URL pública del bucket R2
-TIMEZONE                'America/Mexico_City'
-STRIPE_SECRET_KEY       Clave secreta de producción (sk_live_...)
-STRIPE_WEBHOOK_SECRET   Firma de seguridad para recibir webhooks (whsec_...)
-STRIPE_PRICE_MENSUAL    ID del producto mensual en modo Live (price_...)
-STRIPE_PRICE_ANUAL      ID del producto anual en modo Live (price_...)
-
-DOMINIO
--------
-- Dominio principal: www.sianeffects.com (CNAME → Railway)
-- SSL:               Gestionado automáticamente por Railway
-- Health check:      GET /health → responde "OK" 200
-
-BACKUP Y RESTORE
-----------------
-- Backups generados como archivos .backup de PostgreSQL
-- Script restore_dev.bat con doble confirmación antes de ejecutar:
-  1. Confirmación textual "SI"
-  2. El operador debe escribir el nombre exacto del archivo de backup
-- Los backups apuntan únicamente al entorno DEV para proteger producción
-
-================================================================================
-18. ONBOARDING Y SOPORTE AL USUARIO
-================================================================================
-
-CENTRO DE CAPACITACIÓN (/ayuda)
----------------------------------
-Manual interactivo dividido en 7 capítulos:
-  1. Inventario       4. Historial
-  2. Cotizador        5. Reportes
-  3. Ventas           6. Stock
-                      7. Envíos
-
-- Auto-scroll suave en pantallas < 768px para lectura vertical en celulares
-- FAQs en acordeón para resolver dudas comunes sin soporte humano
-
-TUTORIALES INTERACTIVOS
-------------------------
-- Sistema de tours guiados por módulo (cotizador, historial, configuración)
-- Estado por usuario en tabla tutoriales_estado (user_id, modulo, version_vista)
-- Se muestran una vez y se marcan como vistos tras completarse
-- Versionados: si se lanza un tutorial nuevo, reaparece aunque ya lo vieron
-
-SISTEMA DE NOTIFICACIONES
---------------------------
-Cuatro tipos de notificaciones en el Navbar:
-  1. Automáticas: Stock bajo, vencimiento próximo
-  2. Manuales:    Mensajes directos del admin al usuario (buzón individual)
-  3. Globales:    Anuncios del sistema para todos los usuarios
-  4. Grace period: Banner de urgencia cuando la suscripción venció ese día
-
-================================================================================
-19. ASISTENTE INTELIGENTE DE COSTOS (CHATBOT IA)
-================================================================================
-
-PROPÓSITO
----------
-Asistente conversacional integrado en el módulo de Equipos (/equipos) que ayuda
-a los usuarios a calcular el costo de desgaste correcto para su maquinaria,
-considerando consumo eléctrico, vida útil y mantenimiento prorrateado.
-
-ARQUITECTURA TÉCNICA
---------------------
-- Backend:        Flask Blueprint (routes/chatbot_equipos.py)
-- Proveedor IA:   Google Gemini 2.5 Flash (google-genai SDK)
-- Modelo:         gemini-2.5-flash (API HTTP, puerto 443)
-- Contexto:       Conversacional con historial en Flask session
-- Interfaz:       Widget flotante (HTML/CSS/JS vanilla, sin dependencias)
-- Rate Limiting:  10 mensajes por minuto por sesión (protección anti-spam)
-- Timeout:        10 segundos máximo por respuesta
-
-STACK ESPECÍFICO
-----------------
-Componente              Detalle
-----------------------  -------------------------------------------------------
-SDK Python              google-genai (v0.8+)
-Variable de entorno     GEMINI_API_KEY (obtenida en ai.google.dev)
-Endpoint                /api/chat-equipos (POST)
-Reset de sesión         /api/chat-equipos/reset (POST)
-Almacenamiento          Flask session (historial últimos 20 mensajes)
-Renderizado UI          Solo visible en template equipos.html
-
-CONFIGURACIÓN EN RAILWAY
--------------------------
-Variable              Valor
-----------------------  -------------------------------------------------------
-GEMINI_API_KEY          Clave API de Google AI Studio (gratuita hasta 1,500 req/día)
-
-LÍMITES DE LA API GRATUITA
----------------------------
-- Requests diarios:     1,500 (suficiente para ~100 usuarios/día con 15 msg c/u)
-- Tokens por minuto:    1,000,000 (entrada + salida)
-- Requests por minuto:  15 (por proyecto, no por usuario)
-- Costo si se excede:   $0.075 USD por 1M tokens (Gemini Flash)
-
-PROMPT ENGINEERING Y REGLAS DE NEGOCIO
----------------------------------------
-El sistema prompt (SYSTEM_PROMPT) define el comportamiento del asistente:
-
-Directivas clave:
-  - Máximo 4 líneas de respuesta (evita verbosidad)
-  - Respuesta directa al precio sugerido en MXN (ej: "$5-8 MXN/uso")
-  - Solo 2-3 bullets explicativos (luz, desgaste, setup si aplica)
-  - Asume uso moderado de 50-100 piezas/mes sin preguntar
-  - NO incluir materiales consumibles (film, vinil, tinta) en el costo
-  - Distribuir desgaste del equipo entre 100-300 piezas/mes (costo bajo por pieza)
-  - Nunca negar la existencia de modelos nuevos (estimar basado en similares)
-  - Soporte multiidioma y conversión automática de moneda (MXN + USD/EUR si aplica)
-  - Temperatura 0.5 (balance entre creatividad y consistencia)
-  - Max output tokens: sin límite estricto (controlado por el prompt)
-
-Ejemplo de interacción esperada:
-  Usuario:   "Tengo una Cricut Maker 4"
-  Asistente: "Cricut Maker 4: $8-12 MXN/uso
-              • Luz: ~$2
-              • Desgaste cuchilla: ~$6
-              • Tapete: ~$2
-              ¿Ok o ajustamos?"
-
-FLUJO DE CONVERSACIÓN
-----------------------
-1. Usuario hace clic en botón flotante (icono de robot, esquina inferior derecha)
-2. Panel de chat se despliega (380px × 550px, responsive en móviles)
-3. Mensaje de bienvenida predefinido con ejemplo de uso
-4. Usuario escribe consulta (ej: "Tengo una plancha de calor Cricut")
-5. Frontend muestra indicador "Pensando..."
-6. Backend consulta Gemini con historial de últimos 6 mensajes
-7. Respuesta se agrega al chat y al historial de sesión
-8. Usuario puede continuar preguntando o cerrar el widget
-
-GESTIÓN DE HISTORIAL Y CONTEXTO
----------------------------------
-- session['chat_history']: Lista de diccionarios [{role, content}, ...]
-- Roles: 'Usuario' y 'Asistente'
-- Ventana de contexto: Últimos 6 mensajes (3 intercambios) enviados a Gemini
-- Capacidad total: 20 mensajes almacenados (10 intercambios), rotación FIFO
-- Limpieza: POST /api/chat-equipos/reset borra el historial completo
-- Persistencia: Durante la sesión Flask (31 días si permanente)
+Ejemplo esperado:
+  Cobrado es el dinero que ya entró a tu caja. Utilidad estimada es la ganancia
+  calculada después de restar costos.
+  Si la utilidad se ve mayor que lo cobrado, normalmente hay ventas registradas
+  con saldo pendiente por cobrar.
+
+Temperatura actual:
+  - temperature: 0.15
+  - max_output_tokens: 220
 
 ARQUITECTURA DEL WIDGET (FRONTEND)
------------------------------------
+----------------------------------
 Componente              Descripción
 ----------------------  -------------------------------------------------------
-chatbot-toggle          Botón flotante con gradiente sian-primary (60×60px)
-chatbot-panel           Panel de chat desplegable (380px ancho, responsive)
-chatbot-header          Barra superior con título y botón de cierre
-chatbot-messages        Área scrollable de mensajes (flex-grow, fondo #f8f9fa)
+chatbot-container       Contenedor fijo del widget
+chatbot-toggle          Botón flotante con icono de robot
+chatbot-panel           Panel desplegable responsive
+chatbot-header          Barra superior con título SianBot y botón de cierre
+chatbot-messages        Área scrollable de mensajes
 chatbot-input-area      Input de texto + botón de envío
-message-content         Burbujas de chat (blancas para bot, primary para usuario)
+message-content         Burbujas de chat para bot/usuario
 
-Estados visuales:
-  - Bot escribiendo:    Mensaje temporal "Pensando..." (se reemplaza al recibir respuesta)
-  - Auto-scroll:        chatMessages.scrollTop = scrollHeight (siempre al último mensaje)
-  - Modo oscuro:        Soporte completo con [data-bs-theme="dark"]
-
-MANEJO DE ERRORES Y TIMEOUT
------------------------------
-Tipo de error                   Respuesta                                  Código HTTP
-------------------------------  -------------------------------------------  -----------
-Mensaje vacío                   {'error': 'Mensaje vacío'}                   400
-Timeout de API (>10s)           "❌ No pude conectar, intenta de nuevo"      500
-Cuota excedida (Gemini)         "Límite de API alcanzado. Intenta más tarde" 429
-Error de configuración          "Configuración de API inválida"              500
-Error genérico                  "Error del servidor. Intenta de nuevo"       500
-
-Todos los errores se registran en:
-  - app.logger (para Railway logs)
-  - print() para debug local
-
-INTEGRACIÓN CON EL MÓDULO DE EQUIPOS
---------------------------------------
-El chatbot NO auto-rellena el formulario de equipos (por diseño).
-Flujo recomendado:
-  1. Usuario consulta: "¿Cuánto cobrar por mi Cricut Maker 4?"
-  2. Bot responde: "$8-12 MXN/uso" con desglose
-  3. Usuario cierra el chat
-  4. Usuario hace clic en "Nuevo Equipo"
-  5. Usuario ingresa manualmente el costo sugerido
-
-Posible mejora futura (no implementada):
-  - Botón "Usar este precio" en el chat que pre-llene el formulario
-  - Requiere JavaScript adicional para comunicar datos entre widget y modal
+Comportamiento:
+  - Botón flotante en esquina inferior derecha
+  - Mensaje de bienvenida por módulo
+  - Indicador temporal: "Pensando...", "Analizando..." o similar
+  - Auto-scroll al último mensaje
+  - Conversión básica de **texto** a <strong> en dashboard para evitar asteriscos
+  - Soporte de modo oscuro con [data-bs-theme="dark"]
+  - Responsive en móvil: panel casi pantalla completa
 
 SEGURIDAD Y PRIVACIDAD
 ----------------------
-- API Key nunca expuesta al frontend (server-side only)
-- Historial NO se almacena en BD (solo en session, volátil)
-- No se registra contenido de mensajes en logs_actividad (LFPDPPP)
-- Rate limiting básico: máximo 10 mensajes por minuto por sesión
-  (implementable con session['last_requests'] y datetime.timedelta)
+  - GEMINI_API_KEY nunca se expone al frontend
+  - Historial de chat vive en Flask session, no en BD
+  - No se registran mensajes completos del usuario en logs_actividad
+  - Los endpoints de dashboard requieren login_required
+  - El contexto de dashboard enviado al bot contiene datos visibles del panel
+    actual, no consultas adicionales fuera del módulo
 
-MODO OSCURO
------------
-Soporte completo con selectores CSS:
-  [data-bs-theme="dark"] .chatbot-panel { background: #1e293b; }
-  [data-bs-theme="dark"] .message-content { background: #334155; color: #f8fafc; }
-  [data-bs-theme="dark"] .user-message .message-content { background: var(--sian-primary); }
-
-RESPONSIVIDAD (MOBILE-FIRST)
------------------------------
-@media (max-width: 576px):
-  - Panel ocupa casi pantalla completa: calc(100vw - 20px) × calc(100vh - 100px)
-  - Botón flotante en esquina inferior derecha (bottom: 10px, right: 10px)
-  - Input con padding táctil (10px vertical mínimo)
-  - Auto-scroll suave en iOS (scroll-behavior: smooth)
-
-DEPENDENCIAS EXTERNAS
-----------------------
-Ninguna. El widget usa:
-  - Font Awesome (ya cargado en layout.html para iconos)
-  - Bootstrap 5 (ya cargado, para clases de utilidad)
-  - Fetch API nativa (sin Axios ni jQuery)
-
-ESCALABILIDAD Y ROADMAP
-------------------------
-Fase actual (MVP):
-  - Solo en módulo de Equipos
-  - Gratis hasta 1,500 requests/día
-  - Sin persistencia de conversaciones
-
-Fase 2 (Expansión):
-  - Extender a Materiales y Recetas
-  - Historial persistente en BD (tabla chat_history)
-  - Analytics: equipos más consultados, precios promedio sugeridos
-
-Fase 3 (Monetización):
-  - Upgrade a Gemini Pro para respuestas más complejas
-  - Assistant API de OpenAI para lógica de costos avanzada
-  - Auto-fill del formulario desde el chat
-
-LOGS Y MONITOREO
-----------------
-Eventos registrados en app.logger:
-  CHATBOT_REQUEST       Usuario envió mensaje (solo timestamp, no contenido)
-  CHATBOT_ERROR         Fallo de API, timeout o error de parsing
-  CHATBOT_QUOTA         Cuota de Gemini excedida (trigger de alerta)
-
-No se registran mensajes de usuario ni respuestas del bot para cumplir LFPDPPP.
-
-COMANDOS DE DEBUG
+MANEJO DE ERRORES
 -----------------
-Endpoint de reset manual (útil para pruebas):
-  curl -X POST http://localhost:5000/api/chat-equipos/reset \
-    -H "Cookie: session=YOUR_SESSION_COOKIE"
+Tipo de error                   Respuesta/API                              Código
+------------------------------  ------------------------------------------  ------
+Mensaje vacío                   {'error': 'Mensaje vacío'}                  400
+Error Gemini/API                {'error': str(e)}                           500
+Fallo frontend                  "No pude conectar con el servidor"          UI
+Respuesta sin reply             "No pude analizar/procesar..."              UI
 
-Verificar historial de sesión (Python shell):
-  from flask import session
-  print(session.get('chat_history', []))
+Nota:
+  El manejo actual es simple y se apoya en current_app.logger.error().
+  No hay rate limiting implementado en routes/chatbot.py.
 
-CASOS DE USO CUBIERTOS
------------------------
-1. Usuario nuevo sin conocimientos técnicos
-   → "Tengo una plancha de calor, ¿cuánto cobro?"
-   → Bot da precio estimado con desglose simple
+CRITERIOS DE QA ANTES DE LANZAR
+-------------------------------
+Dashboard:
+  1. ¿Cuál es la diferencia entre cobrado y utilidad estimada?
+  2. ¿Por qué mi utilidad estimada puede ser mayor que lo cobrado?
+  3. ¿Qué decisión puedo tomar hoy gracias a este dashboard?
+  4. ¿Cómo me ayuda este panel a no perder dinero aunque venda mucho?
+  5. ¿Este dashboard me dice cuánto dinero tengo en banco?
 
-2. Usuario experto quiere validar su cálculo
-   → "Cobro $15 por uso de mi Cricut, ¿está bien?"
-   → Bot valida y sugiere ajuste si aplica
+Configuración:
+  1. ¿Por qué debo configurar mi mano de obra?
+  2. ¿Qué pasa si dejo mi factor operativo en cero?
+  3. ¿Dónde configuro mis costos de envío?
+  4. ¿Cómo me ayuda Sianeffects a no calcular precios a ojo?
 
-3. Equipo desconocido o muy nuevo
-   → "Tengo una Cricut Maker 4" (modelo 2024)
-   → Bot NO niega existencia, estima basado en Maker 3
+Equipos:
+  1. Tengo una Cricut Maker 4, ¿cuánto cobro por uso?
+  2. Tengo una plancha de calor, ¿cuánto debo sumar por desgaste?
+  3. ¿Ese costo incluye vinil o consumibles?
+  4. ¿Por qué debo registrar mis equipos?
 
-4. Usuario en otro país
-   → "I have a heat press" (inglés)
-   → Bot responde en inglés con MXN + USD
-
-5. Consulta fuera de alcance
-   → "¿Es buena marca Cricut?"
-   → Bot declina amablemente y redirige al tema de costos
+Respuestas aceptables:
+  - Claras para usuarios no técnicos
+  - Accionables, cortas y sin asteriscos visibles
+  - No inventan funciones ni rutas
+  - Refuerzan que Sianeffects ayuda a decidir con datos
+  - Evitan euforia financiera cuando hay dinero pendiente
 
 TROUBLESHOOTING COMÚN
-----------------------
+---------------------
 Síntoma                         Causa probable                  Solución
 ------------------------------  ------------------------------  ------------------------------
 Bot no responde                 GEMINI_API_KEY no configurada   Verificar variable en Railway
-"Pensando..." infinito          Timeout de API >10s             Revisar conectividad/firewall
-Respuestas en inglés            Prompt no cargado correctamente Verificar SYSTEM_PROMPT
-Historial no persiste           session.modified = True falta   Ya implementado en código actual
-Cuota excedida                  >1,500 requests en 24 hrs       Esperar reset diario o pagar
+"Pensando..." infinito          Error API o JS                  Revisar consola y logs Flask
+Respuestas con asteriscos       Modelo mandó markdown           Prompt + sanitizado frontend
+Respuestas largas               Prompt no cargado o temperatura Revisar SYSTEM_PROMPT_* y temp
+Historial mezclado              Session key incorrecta          Verificar chat_history/coach/dashboard
+Endpoint 404                    Blueprint no registrado         Verificar app.register_blueprint(chatbot_bp)
 
 ================================================================================
 20. PASARELA DE PAGOS AUTOMATIZADA (STRIPE)
@@ -1320,6 +171,271 @@ para abrir un túnel inverso que permita recibir los webhooks:
 
 Alternativas de Stripe en Local
 - stripe config --set api_key sk_test_TU_LLAVE_AQUI
+
+================================================================================
+21. CLIENTES Y LOGÍSTICA DESDE HISTORIAL
+================================================================================
+
+PROPÓSITO
+---------
+La sección de Historial ahora permite administrar datos básicos del cliente y
+datos logísticos del pedido directamente desde cada folio. La intención es que
+el historial deje de ser solo una lista financiera y funcione también como una
+bitácora operativa: quién compró, de dónde llegó, cómo contactarlo, cuándo se
+entrega y qué notas internas deben respetarse.
+
+EXPERIENCIA DE USUARIO
+----------------------
+Entradas principales:
+  - En /cotizador, el input "Nombre del Cliente" funciona como buscador
+    inteligente de clientes guardados.
+  - En /historial, el nombre del cliente aparece como enlace.
+  - Al hacer clic en historial se abre el offcanvas lateral "Logística y Cliente".
+  - En móvil, la acción de historial también está disponible desde el nombre del
+    cliente y desde el menú "Más" como "Editar Logística".
+
+Regla especial:
+  "Cliente General" es un texto operativo para ventas/cotizaciones sin cliente
+  real. No debe crear un registro en la tabla clientes ni asociarse por cliente_id.
+
+Campos visibles en el offcanvas:
+  Datos del cliente:
+    - Nombre del cliente
+    - WhatsApp / Tel
+    - Origen o plataforma (ej. Instagram, Facebook, WhatsApp)
+    - Notas internas del cliente
+
+  Detalles del pedido:
+    - Fecha y hora de entrega
+    - Método de entrega (Local, Paquetería, Repartidor, etc.)
+    - Notas para este pedido
+
+En la tabla/cards de Historial se muestra un badge compacto con fecha/hora de
+entrega cuando el folio tiene fecha_entrega. El modal de "Ver Detalles" también
+muestra un bloque de logística si existen datos logísticos guardados.
+
+MODELO DE DATOS
+---------------
+Tabla clientes:
+  Campo             Uso
+  ----------------  -------------------------------------------------------------
+  id                Identificador interno del cliente
+  user_id           Dueño del cliente; siempre debe filtrarse por sesión
+  nombre            Nombre visible y llave de búsqueda por usuario
+  contacto          WhatsApp/teléfono
+  plataforma        Origen comercial del cliente
+  notas_cliente     Notas generales del cliente, no del pedido
+  fecha_registro    Alta del cliente
+
+Campos nuevos o relacionados en ventas:
+  Campo             Uso
+  ----------------  -------------------------------------------------------------
+  cliente           Texto histórico del cliente; se mantiene por compatibilidad
+  cliente_id        Relación opcional a clientes.id
+  fecha_entrega     Fecha/hora de entrega del pedido
+  metodo_entrega    Forma de entrega
+  notas_pedido      Notas específicas de ese folio
+
+Regla de compatibilidad:
+  ventas.cliente sigue siendo importante. Aunque exista cliente_id, el sistema
+  mantiene actualizado el texto cliente para búsquedas, historial, ticket,
+  exportaciones y compatibilidad con folios anteriores.
+
+IDENTIDAD DEL CLIENTE: TEXTO VS ID
+----------------------------------
+El nombre escrito en el input NO define identidad. La identidad real del cliente
+es clientes.id y viaja en un input oculto del frontend.
+
+Problema que resuelve:
+  Dos personas pueden llamarse "Jose Madero". Si el backend decide por texto,
+  puede actualizar el teléfono del Jose equivocado o asociar una venta al cliente
+  incorrecto.
+
+Regla correcta:
+  - Si el usuario elige una sugerencia, el frontend guarda clientes.id en un
+    campo oculto y la venta se asocia a ese ID.
+  - Si el usuario escribe un nombre y NO elige sugerencia, cliente_id va vacío.
+    Aunque exista otro cliente con el mismo nombre, el backend crea un cliente
+    nuevo y lo asocia al folio.
+  - Si el usuario selecciona una sugerencia y luego modifica cualquier letra del
+    nombre, el frontend borra automáticamente el cliente_id oculto.
+  - Si el nombre queda vacío, se guarda como "Cliente General" sin cliente_id.
+
+FLUJO DE LECTURA
+----------------
+1. En /cotizador, al escribir 2 o más letras se llama GET /api/buscar_clientes.
+2. El endpoint busca coincidencias por nombre o contacto del usuario actual y
+   devuelve máximo 8 clientes con id, nombre, contacto, plataforma y notas.
+3. Si se elige una sugerencia, el input visible recibe el nombre y el input
+   oculto recibe cliente_id.
+4. En /historial, el usuario hace clic en un cliente dentro del folio.
+5. Frontend llama GET /api/obtener_detalles/<id>.
+6. routes/api.py consulta ventas con LEFT JOIN clientes:
+     SELECT v.*, c.nombre as cliente_relacional, c.contacto, c.plataforma,
+            c.notas_cliente
+     FROM ventas v
+     LEFT JOIN clientes c ON v.cliente_id = c.id
+     WHERE v.id = %s AND v.user_id = %s
+7. La respuesta JSON prioriza cliente_relacional si existe; si no, usa
+   ventas.cliente.
+8. El offcanvas se llena con cliente, cliente_id, contacto, plataforma, notas_cliente,
+   fecha_entrega, metodo_entrega y notas_pedido.
+
+FLUJO DE GUARDADO
+-----------------
+Endpoint:
+  GET /api/buscar_clientes?q=<texto>
+
+Uso:
+  Autocompletado del input "Nombre del Cliente" en /cotizador.
+
+Respuesta:
+  {
+    success: true,
+    clientes: [
+      {id, nombre, contacto, plataforma, notas_cliente}
+    ]
+  }
+
+Endpoint:
+  POST /guardar_venta
+
+Payload relacionado con clientes:
+  {
+    cliente,
+    cliente_id
+  }
+
+Reglas de /guardar_venta:
+  1. Si cliente_id viene lleno, valida que pertenezca al usuario y asocia la
+     venta a ese cliente.
+  2. Si cliente_id viene vacío y cliente != "Cliente General", crea un cliente
+     nuevo aunque ya exista otro con el mismo nombre.
+  3. Si cliente está vacío o es "Cliente General", guarda ventas.cliente como
+     "Cliente General" y deja cliente_id vacío.
+
+Endpoint:
+  POST /api/actualizar_logistica
+
+Payload esperado:
+  {
+    venta_id,
+    cliente_id,
+    nombre_cliente,
+    contacto,
+    plataforma,
+    notas_cliente,
+    fecha_entrega,
+    metodo_entrega,
+    notas_pedido
+  }
+
+Reglas del backend:
+  1. Exige sesión activa con user_id.
+  2. Valida que el folio pertenezca al usuario:
+       SELECT id FROM ventas WHERE id = %s AND user_id = %s
+  3. Si cliente_id viene lleno, valida que ese cliente pertenezca al usuario.
+  4. Si cliente_id viene lleno, actualiza nombre/contacto/plataforma/notas_cliente.
+  5. Si cliente_id viene vacío y nombre_cliente != "Cliente General", crea un
+     cliente nuevo aunque exista otro homónimo.
+  6. Actualiza ventas con cliente_id, fecha_entrega, metodo_entrega,
+     notas_pedido y cliente.
+  7. Registra evento en logs_actividad.
+
+ZONA HORARIA Y FECHA DE ENTREGA
+-------------------------------
+El input datetime-local del navegador NO incluye zona horaria. Por ejemplo:
+  2026-05-31T20:00
+
+Por eso el backend debe tratar ese valor como hora local del negocio
+(America/Mexico_City), convertirlo a UTC y guardarlo así en PostgreSQL.
+
+Funciones de apoyo en routes/api.py:
+  - datetime_local_input_to_utc(value)
+  - utc_datetime_to_local_input(value)
+
+Flujo correcto:
+  Offcanvas: 2026-05-31T20:00 local
+  Backend:   convierte a 2026-06-01T02:00:00+00:00 UTC
+  BD:        guarda UTC en fecha_entrega
+  Historial: procesar_fila_fechas convierte UTC a local para mostrar 31/05/2026 20:00
+  Offcanvas: GET /api/obtener_detalles devuelve otra vez 2026-05-31T20:00
+
+Si se guarda directo el valor del input en una columna TIMESTAMPTZ, Postgres puede
+interpretarlo como UTC y la tabla mostrará un desfase de horas. Este fue el origen
+del bug donde el panel mostraba 08:00 p.m. y el badge mostraba 14:00.
+
+FRONTEND Y BOOTSTRAP OFFCANVAS
+------------------------------
+El panel vive en templates/historial.html con id:
+  #offcanvasLogistica
+
+Funciones principales:
+  - inicializarBuscadorClientes(): activa el autocomplete de /cotizador.
+  - seleccionarClienteSugerido(index): llena nombre y cliente_id oculto.
+  - abrirLogistica(id): carga detalles del folio y abre el offcanvas.
+  - guardarLogistica(): valida nombre de cliente y manda POST /api/actualizar_logistica.
+
+Importante:
+  En templates/layout.html existía CSS global para ".offcanvas" usado por el menú
+  móvil principal. Ese CSS debe permanecer acotado a #miMenuMobile, porque si se
+  aplica globalmente rompe cualquier otro offcanvas: Bootstrap crea el backdrop
+  oscuro, pero el panel no aparece o queda fuera de su comportamiento normal.
+
+Regla segura:
+  - CSS del menú principal: #miMenuMobile.offcanvas
+  - CSS del panel de logística: #offcanvasLogistica o .offcanvas-custom
+  - No usar reglas globales ".offcanvas" salvo que deban aplicar a todos los
+    paneles Bootstrap del sistema.
+
+CONSIDERACIONES PARA FUTUROS CAMBIOS
+------------------------------------
+1. Multiusuario:
+   Toda consulta de clientes debe incluir user_id. Dos negocios pueden tener un
+   cliente con el mismo nombre y no deben mezclarse.
+
+2. Normalización de nombres:
+   La búsqueda de sugerencias usa coincidencia por texto, pero el guardado no.
+   No volver a usar nombre ILIKE para decidir identidad del cliente.
+
+3. Historial financiero:
+   Cambiar datos de cliente/logística no debe alterar total, monto_pagado,
+   saldo_pendiente, estado ni venta_detalles.
+
+4. Folios antiguos:
+   Puede haber ventas sin cliente_id. En esos casos el sistema debe seguir usando
+   ventas.cliente como fallback.
+
+5. Exportaciones y tickets:
+   Si se decide mostrar contacto, método de entrega o notas en ticket/Excel,
+   agregar esos campos explícitamente en las consultas correspondientes. No asumir
+   que ya aparecen solo porque existen en ventas/clientes.
+
+6. Migraciones:
+   En esquemas nuevos, la tabla clientes debe existir antes de crear una foreign
+   key desde ventas.cliente_id hacia clientes.id. Si se usa CREATE TABLE IF NOT
+   EXISTS en una BD limpia, revisar el orden de creación.
+
+7. Privacidad:
+   contacto y notas_cliente pueden contener datos personales. Evitar imprimirlos
+   en logs. logs_actividad debe registrar la acción, no el contenido sensible.
+
+CHECKLIST DE QA
+---------------
+1. En /cotizador, escribir 2 letras y confirmar que aparecen sugerencias.
+2. Seleccionar una sugerencia y confirmar que la venta se guarda con cliente_id.
+3. Seleccionar una sugerencia, modificar una letra y confirmar que se crea cliente nuevo.
+4. Escribir "Cliente General" o dejar vacío y confirmar que no se crea cliente maestro.
+5. Abrir /historial y hacer clic en el nombre de un cliente.
+6. Confirmar que el offcanvas abre sin dejar solo el fondo oscuro.
+7. Guardar nombre, contacto, plataforma y notas.
+8. Reabrir el mismo folio y confirmar que los datos persisten.
+9. Guardar fecha/hora de entrega y confirmar que:
+   - el input muestra la misma hora al reabrir,
+   - el badge de la tabla muestra la misma hora local,
+   - el modal "Ver Detalles" muestra logística correcta.
+10. Confirmar que buscar por cliente sigue funcionando después de editar el nombre.
+11. Confirmar que otro usuario no puede consultar ni modificar el folio.
 
 ================================================================================
 FIN DEL MANUAL
