@@ -2,6 +2,7 @@ from google.genai._interactions.types import interaction_create_params
 from flask import Blueprint, render_template, request, redirect, url_for, flash, session, send_file, jsonify, send_from_directory, abort, current_app
 from werkzeug.security import generate_password_hash
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 import pandas as pd
 import io
 import json
@@ -17,6 +18,7 @@ main_bp = Blueprint('main', __name__)
 
 # Definición de estados válidos para la logística de pedidos
 ESTADOS_PERMITIDOS = {'pendiente', 'en_proceso', 'listo', 'entregado', 'cancelado'}
+ENTREGA_FILTROS_PERMITIDOS = {'all', 'today', 'tomorrow', 'week', 'next7', 'overdue', 'unscheduled'}
 
 
 def parse_optional_int(value):
@@ -39,6 +41,35 @@ def limpiar_texto_cliente(value, max_len, required=False, field_name='Campo'):
     if len(value) > max_len:
         raise ValueError(f'{field_name} no puede superar {max_len} caracteres')
     return value
+
+
+def entrega_filter_sql(entrega_filter):
+    tz_local = ZoneInfo('America/Mexico_City')
+    hoy = datetime.now(tz_local).replace(hour=0, minute=0, second=0, microsecond=0)
+
+    def to_utc(dt):
+        return dt.astimezone(timezone.utc)
+
+    if entrega_filter == 'today':
+        return " AND fecha_entrega >= %s AND fecha_entrega < %s", [to_utc(hoy), to_utc(hoy + timedelta(days=1))]
+    if entrega_filter == 'tomorrow':
+        inicio = hoy + timedelta(days=1)
+        return " AND fecha_entrega >= %s AND fecha_entrega < %s", [to_utc(inicio), to_utc(inicio + timedelta(days=1))]
+    if entrega_filter == 'week':
+        dias_hasta_lunes = 7 - hoy.weekday()
+        fin_semana = hoy + timedelta(days=dias_hasta_lunes)
+        return " AND fecha_entrega >= %s AND fecha_entrega < %s", [to_utc(hoy), to_utc(fin_semana)]
+    if entrega_filter == 'next7':
+        return " AND fecha_entrega >= %s AND fecha_entrega < %s", [to_utc(hoy), to_utc(hoy + timedelta(days=7))]
+    if entrega_filter == 'overdue':
+        return """
+            AND fecha_entrega < %s
+            AND COALESCE(estado_pedido, 'pendiente') NOT IN ('entregado', 'cancelado')
+            AND estado != 'cancelada'
+        """, [to_utc(hoy)]
+    if entrega_filter == 'unscheduled':
+        return " AND fecha_entrega IS NULL", []
+    return "", []
 
 # --- RUTAS DE ACCESO PRINCIPAL (EL PORTERO) ---
 
@@ -831,9 +862,13 @@ def historial():
     # --- CAPTURA DE PARÁMETROS ---
     q = request.args.get('q', '').strip()
     status = request.args.get('status', 'all')
-    page = request.args.get('page', 1, type=int) 
-    per_page = 20 
-    offset = (page - 1) * per_page 
+    entrega_filter = request.args.get('entrega', 'all')
+    if entrega_filter not in ENTREGA_FILTROS_PERMITIDOS:
+        entrega_filter = 'all'
+    page = request.args.get('page', 1, type=int)
+    per_page = 20
+    offset = (page - 1) * per_page
+    entrega_sql, entrega_params = entrega_filter_sql(entrega_filter)
 
     # --- 1. QUERY PARA CONTEO ---
     sql_count = "SELECT COUNT(*) FROM ventas WHERE user_id=%s"
@@ -847,6 +882,10 @@ def historial():
     if status != 'all':
         sql_count += " AND estado = %s"
         params_count.append(status)
+
+    if entrega_sql:
+        sql_count += entrega_sql
+        params_count.extend(entrega_params)
 
     cursor.execute(sql_count, params_count)
     total_registros = cursor.fetchone()[0]
@@ -864,6 +903,10 @@ def historial():
     if status != 'all':
         sql += " AND estado = %s"
         params.append(status)
+
+    if entrega_sql:
+        sql += entrega_sql
+        params.extend(entrega_params)
         
     sql += " ORDER BY id DESC LIMIT %s OFFSET %s"
     params.extend([per_page, offset])
@@ -883,7 +926,8 @@ def historial():
                            total_pages=total_pages, 
                            q=q,
                            status=status,
-                           mostrar_tour=mostrar_tour, 
+                           entrega_filter=entrega_filter,
+                           mostrar_tour=mostrar_tour,
                            version_tour=version_tour)
 
 
