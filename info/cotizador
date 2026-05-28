@@ -1,8 +1,1219 @@
+================================================================================
+MANUAL TECNICO CENTRAL - SIANEFFECTS COTIZADOR
+================================================================================
+
+Ultima actualizacion documentada:
+  2026-05-28
+
+Proposito de este archivo:
+  Este archivo es la memoria tecnica del cotizador y de las piezas conectadas
+  con el flujo comercial de Sianeffects. Debe explicar como funciona la app,
+  que formulas aplica, que tablas usa, que rutas participan y que reglas no se
+  deben romper al modificar codigo.
+
+Regla de mantenimiento:
+  - Agregar informacion nueva sin borrar contexto anterior.
+  - Si una regla cambia en codigo, actualizar este manual en la misma tarea.
+  - Documentar formulas con nombres de campos reales cuando sea posible.
+  - No guardar secretos, tokens, llaves API ni datos personales reales.
+
+================================================================================
+1. ARQUITECTURA GENERAL
+================================================================================
+
+Stack principal:
+  - Backend: Flask.
+  - Base de datos: PostgreSQL via psycopg2/RealDictCursor.
+  - Frontend: templates Jinja + Bootstrap + JavaScript vanilla.
+  - Graficas: ApexCharts en dashboards.
+  - Pagos: Stripe Checkout + Webhooks.
+  - Archivos/imagenes: Cloudflare R2/S3 compatible.
+  - Geocoding/envios: geopy + Nominatim + reglas propias.
+  - Correos: services/mail_service.py.
+
+Punto de entrada:
+  - app.py crea la app Flask, carga .env, configura sesiones, logging,
+    scheduler, blueprints, healthcheck, manifest y error 404.
+
+Blueprints registrados en app.py:
+  - routes.auth -> login, registro, verificacion, reset password.
+  - routes.main -> cotizador, clientes, historial, tickets, Excel.
+  - routes.inventory -> materiales, equipos, recetas, stock.
+  - routes.admin -> administracion interna.
+  - routes.api -> endpoints auxiliares de materiales, recetas, clientes,
+    detalles, abonos, cancelaciones y logistica.
+  - routes.catalogo -> catalogo publico/admin.
+  - routes.shipping -> cotizacion de envio local/nacional.
+  - routes.invitaciones_* -> modulo de invitaciones/planners.
+  - routes.dashboard -> dashboard administrativo global.
+  - routes.configuracion_bp -> configuracion de negocio, perfil, envios.
+  - routes.user_dashboard -> /mi-panel del usuario.
+  - routes.chatbot -> SianBot/equipos/configuracion/dashboard.
+  - routes.payments -> Stripe Checkout, webhooks y resultados de pago.
+
+Rutas globales de app.py:
+  - GET /health: responde OK para Railway/monitoreo.
+  - GET /manifest.json: PWA manifest.
+  - GET /apple-touch-icon.png: icono iOS.
+  - 404: template 404.html.
+
+Anti-cache:
+  app.py agrega headers anti-cache para evitar que paginas con sesion/roles se
+  queden guardadas en el navegador despues de logout o cambio de usuario.
+
+Logging:
+  - app.py configura RotatingFileHandler hacia limpieza.log.
+  - El timezone visible del logger se fuerza a America/Monterrey.
+  - Los logs operativos usan prefijos como DATA_ACCESS, SALE_ERROR,
+    SHIPPING_QUOTED, PAYMENT_SUCCESS, etc.
+
+================================================================================
+2. SEGURIDAD, SESIONES Y SUSCRIPCION
+================================================================================
+
+Decoradores principales en helpers.py:
+  login_required:
+    - Exige session['user_id'].
+    - En cada peticion sincroniza role, subscription_end y estado_suscripcion
+      desde usuarios.
+    - Admin role >= 1 siempre se considera PRO activo.
+    - Usuarios role 0 son PRO si estado_suscripcion esta en trial/activo y
+      subscription_end no ha pasado.
+    - Existe regla de gracia: todo el dia siguiente al vencimiento se permite
+      como grace_period.
+
+  subscription_required:
+    - Exige usuario logueado y session['is_pro_active'].
+    - Si falla en AJAX/JSON responde 403 con code SUBSCRIPTION_REQUIRED.
+    - Si falla en navegacion normal redirige a /plan_vencido.
+
+  admin_required:
+    - Exige session['role'] >= 1.
+    - Si falla redirige al cotizador.
+
+Login en routes/auth.py:
+  - POST /login busca usuario por LOWER(email).
+  - Rate limit: bloquea si hay 5+ "Login fallido" desde la misma IP en 1 minuto.
+  - Verifica password con check_password_hash.
+  - Si verificado=False, manda a /verificar-email.
+  - Limpia session antes de asignar user_id para prevenir session fixation.
+  - Guarda en sesion: user_id, username, role, is_pro_active.
+  - Registra logs_actividad con modulo Acceso.
+
+Registro en routes/auth.py:
+  - GET /registro captura UTM en session.
+  - POST valida password, email real y dominio no desechable.
+  - Crea usuario con 7 dias de trial.
+  - Inserta configuracion por defecto:
+      margen_ganancia=100
+      porcentaje_gastos_operativos=0
+      inventario_activo=False
+      ticket_bw=False
+      nombre_empresa=company_name
+  - Inserta shipping_configs por defecto:
+      local_base_rate=35
+      local_km_rate=8
+      safety_margin_percent=10
+  - Genera codigo de verificacion de 6 digitos, expira en 10 minutos.
+  - Hace commit antes de enviar correo.
+  - Setea cookie has_free_trial por 1 anio.
+
+================================================================================
+3. MODELO DE DATOS PRINCIPAL
+================================================================================
+
+Tablas base de usuarios:
+  usuarios:
+    - id, username, email, password, telefono, company_name.
+    - role: 0 usuario, 1 admin, 2 superadmin.
+    - subscription_end, estado_suscripcion, plan_type, stripe_customer_id.
+    - created_at, last_login, origen_registro, utm_campaign.
+    - verificado y tutorial_visto.
+
+  configuracion:
+    - Una fila por user_id.
+    - margen_ganancia: porcentaje usado para precio sugerido.
+    - porcentaje_gastos_operativos: porcentaje adicional sobre costo base.
+    - nombre_empresa, slogan, website, icono_empresa, logo_empresa.
+    - inventario_activo, ticket_bw, mostrar_ayuda, modo_oscuro.
+    - notas_ticket.
+    - labor_activa, salario_deseado, horas_semanales.
+
+  gastos_fijos:
+    - Gastos mensuales activos/inactivos del usuario.
+    - Actualmente se administran desde Configuracion.
+    - Campo activo permite mantener historial sin borrar necesariamente.
+
+Inventario y recetas:
+  materiales:
+    - nombre, es_paquete, precio_compra, cantidad_paquete.
+    - precio_unitario = precio_compra / cantidad_paquete cuando aplica.
+    - unidad_medida, stock_actual, stock_minimo.
+
+  maquinaria:
+    - Equipos del usuario.
+    - costo_desgaste = costo fijo por uso que entra al calculo del producto.
+
+  productos:
+    - Recetas guardadas por usuario.
+    - items guarda JSON/texto serializado para compatibilidad.
+
+  producto_detalles:
+    - Relacion producto -> material.
+    - cantidad indica cuanto material usa una unidad de la receta.
+
+  producto_maquinaria:
+    - Relacion producto -> maquinaria usada.
+
+  movimientos_inventario:
+    - Auditoria de entradas/salidas de stock.
+    - tipo, cantidad, motivo, stock_resultante, fecha.
+    - Se inserta en compras, mermas, ventas y cancelaciones con devolucion.
+
+Ventas:
+  ventas:
+    - Tabla central de documentos comerciales.
+    - Guarda cotizaciones, tickets pagados, tickets con anticipo y anuladas.
+    - Campos financieros:
+        subtotal, descuento_porcentaje, descuento_monto, envio, impuestos,
+        total, costo_total, costo_fijo_prorrateado, monto_pagado,
+        saldo_pendiente, tax_engine.
+    - Estado comercial:
+        estado puede ser cotizacion, pagado, anticipo, cancelada/cancelado.
+    - Cliente/logistica:
+        cliente texto historico, cliente_id opcional, fecha_entrega,
+        metodo_entrega, notas_pedido.
+    - fecha_vencimiento se usa para cotizaciones.
+
+  venta_detalles:
+    - Lineas de cada venta/cotizacion.
+    - concepto, cantidad, precio_unitario, costo_unitario, subtotal.
+    - composicion: JSON con materiales, maquinaria, costo extra o tiempo.
+
+Clientes:
+  clientes:
+    - Directorio real por usuario.
+    - nombre, contacto, plataforma, notas_cliente.
+    - ventas.cliente_id apunta aqui, pero ventas.cliente sigue siendo texto
+      historico y fallback para folios antiguos.
+
+Envios:
+  shipping_configs:
+    - origin_address, origin_lat, origin_lng.
+    - local_base_rate, local_km_rate, safety_margin_percent.
+
+  shipping_zones:
+    - Zonas nacionales por estados.
+    - states_included guarda JSON de estados o ['ALL'] para general.
+
+  shipping_rates:
+    - Tarifas por zone_id y max_weight_kg.
+
+Pagos y seguridad:
+  auth_codes:
+    - Codigos de verificacion de email.
+
+  password_resets:
+    - Tokens temporales para reset password.
+
+  logs_actividad:
+    - Auditoria de acciones.
+    - No debe guardar contenido sensible del usuario.
+
+Catalogo e invitaciones:
+  categorias, catalogo_productos:
+    - Catalogo publico/admin de productos/templates.
+
+  invitaciones, fotos_invitados, pases_invitados, buenos_deseos:
+    - Modulo de invitaciones/planners.
+
+  planners, planner_paquetes:
+    - Usuarios tipo planner y sus paquetes de invitaciones.
+
+  anuncios_globales, anuncios_vistos, notificaciones_manuales:
+    - Comunicacion interna y alertas de sistema.
+
+Inicializacion de BD:
+  - db.py contiene init_db(app).
+  - Usa CREATE TABLE IF NOT EXISTS para permitir arranque idempotente.
+  - Usa CREATE INDEX IF NOT EXISTS para indices frecuentes.
+  - Orden importante de creacion:
+      usuarios -> configuracion/tutoriales/password/auth
+      materiales/maquinaria -> productos -> detalles/maquinaria
+      clientes -> ventas -> venta_detalles
+      shipping_configs -> shipping_zones -> shipping_rates
+      invitaciones -> fotos/pases/buenos_deseos
+  - En una BD limpia, las tablas padre deben existir antes de las FK.
+  - No asumir cascadas si el codigo borra manualmente tablas hijas primero:
+      venta_detalles antes de ventas,
+      producto_detalles/producto_maquinaria antes de productos,
+      shipping_rates antes de shipping_zones.
+
+Indices criticos:
+  - usuarios.email y usuarios.username para login/admin.
+  - usuarios.stripe_customer_id para webhooks Stripe.
+  - ventas.user_id, ventas.estado, ventas.fecha DESC.
+  - ventas(user_id, estado) para historial/dashboard.
+  - ventas.cliente_id para JOIN con clientes.
+  - venta_detalles.venta_id para tickets y reportes.
+  - materiales.user_id y materiales.nombre para catalogo/autocomplete.
+  - movimientos_inventario(user_id, material_id, fecha DESC).
+  - invitaciones.slug y pases_invitados.codigo_qr_unique para acceso publico.
+
+Migraciones defensivas:
+  - El codigo tiene defaults para usuarios viejos sin campos nuevos.
+  - En templates se usa config.get(...) cuando un campo puede no existir.
+  - Cuando se agregue columna nueva, documentar aqui:
+      nombre de columna,
+      tabla,
+      default,
+      donde se escribe,
+      donde se lee,
+      impacto en reportes.
+
+================================================================================
+4. FLUJO PRINCIPAL DEL COTIZADOR
+================================================================================
+
+Vista:
+  - GET /cotizador en routes/main.py.
+  - Requiere login_required.
+  - Actualiza usuarios.last_login.
+  - Carga configuracion, materiales, productos/recetas y equipos del usuario.
+  - Renderiza templates/cotizador.html.
+
+Frontend:
+  - El usuario arma un producto con materiales, maquinaria y mano de obra.
+  - Puede cargar una receta existente desde productos.
+  - Puede guardar recetas nuevas via /guardar_receta.
+  - Puede agregar producto al carrito.
+  - Puede agregar "venta rapida" con concepto/precio/costo/cantidad manual.
+  - Puede aplicar descuento, envio e impuestos.
+  - Puede guardar como:
+      Solo Cotizar -> estado='cotizacion', pago_inicial=0.
+      Cobrar completo -> estado='pagado', pago_inicial=total.
+      Anticipo -> estado='anticipo' si pago_inicial < total, pagado si cubre todo.
+
+Endpoint final:
+  - POST /guardar_venta en routes/main.py.
+  - Requiere subscription_required.
+  - Recalcula en backend los importes criticos para no confiar solo en JS.
+  - Inserta/actualiza ventas y venta_detalles.
+  - Descuenta inventario si inventario_activo=True y es documento nuevo.
+  - Registra logs_actividad.
+  - Devuelve {success: true, ticket_id}.
+
+Regla de edicion:
+  - Si payload trae id, se actualiza ventas y se borran/reinsertan venta_detalles.
+  - En edicion no se descuenta inventario otra vez.
+  - monto_pagado_total = monto_pagado historico + pago_inicial nuevo.
+
+Vencimiento de cotizaciones:
+  - Al guardar se calcula fecha_vencimiento = fecha_actual + 2 dias.
+  - /api/actualizar_expiracion_cotizacion permite extender fecha si sigue
+    siendo estado='cotizacion'.
+
+================================================================================
+5. FORMULAS DEL COTIZADOR
+================================================================================
+
+Costo unitario de material:
+  precio_unitario = precio_compra / cantidad_paquete
+  Si cantidad_paquete <= 0, se usa 0 o fallback defensivo segun contexto.
+
+Costo de materiales de una receta:
+  subtotal_material_linea = precio_unitario_material * cantidad_usada
+  totalCostosMat = suma(subtotal_material_linea)
+
+Costo de maquinaria:
+  totalMaquinaria = suma(costo_desgaste de equipos seleccionados)
+
+Costo de mano de obra:
+  Si labor_activa=False:
+    extra = valor capturado en inputManoObra
+    El input representa dinero directo.
+
+  Si labor_activa=True:
+    horasMes = horas_semanales * 4.33
+    costoMinuto = (salario_deseado / horasMes) / 60
+    extra = minutos_capturados * costoMinuto
+    El input representa minutos de fabricacion.
+
+Costo operativo:
+  costoBase = totalCostosMat + totalMaquinaria + extra
+  costoOperativoCalculado = costoBase * (porcentaje_gastos_operativos / 100)
+
+Costo total real de produccion:
+  costoTotal = costoBase + costoOperativoCalculado
+
+Base para ganancia:
+  baseParaGanancia = totalCostosMat + totalMaquinaria + costoOperativoCalculado
+  Importante: extra/mano de obra queda fuera de la base de ganancia para que el
+  sueldo sea limpio y no se multiplique como margen.
+
+Ganancia sugerida:
+  montoGanancia = baseParaGanancia * (margen_ganancia / 100)
+
+Precio sugerido:
+  precioSugerido = baseParaGanancia + montoGanancia + extra
+
+Precio manual unitario:
+  - Se permite si precioUnitarioManual >= costoTotal.
+  - Si el costoTotal supera el precio manual, se invalida y vuelve al sugerido.
+
+Subtotal carrito:
+  subtotalCarrito = suma(item.subtotal)
+  item.subtotal = precio_unitario * cantidad
+
+Descuento:
+  descuentoMonto = subtotalCarrito * (descuentoPct / 100)
+  subtotalConDescuento = subtotalCarrito - descuentoMonto
+
+Envio:
+  baseImponible = subtotalConDescuento + costoEnvio
+
+Impuestos:
+  Si taxSwitch=True:
+    impuestosMonto = baseImponible * (taxPercent / 100)
+    tax_engine = 'IVA N%'
+  Si taxSwitch=False:
+    impuestosMonto = 0
+    tax_engine = 'none'
+
+Total final:
+  totalFinalBruto = baseImponible + impuestosMonto
+  totalLimpio = round(totalFinalBruto, 2)
+  totalFinal = ceil(totalLimpio)
+
+Ajuste magico de total:
+  - El usuario puede escribir un total deseado.
+  - No se alteran precios unitarios.
+  - Se ajusta el descuento porcentual para que el total cuadre.
+  - Si hay impuestos:
+      factorTax = 1 + (taxPct / 100)
+      nuevoDescuentoDinero = descuentoDineroActual - (diferencia / factorTax)
+  - nuevoDescPct = (nuevoDescuentoDinero / subtotalActualCarrito) * 100
+  - Se limita entre 0 y 100.
+
+Backend /guardar_venta recalcula:
+  subtotal_calculado = suma(cantidad * precio_unitario)
+  costo_total_calculado = suma(cantidad * costo_unitario)
+  descuento_monto = subtotal_calculado * descuento_pct / 100 si descuento_pct > 0
+  descuento_monto no puede ser mayor que subtotal_calculado
+  subtotal_con_descuento = subtotal_calculado - descuento_monto
+  base_imponible = subtotal_con_descuento + envio
+  tax_amount_calculado = base_imponible * tax_percent / 100
+  costo_operativo_de_esta_venta = costo_total_calculado * porcentaje_operativo / 100
+  costo_total_calculado += costo_operativo_de_esta_venta
+  total_calculado = ceil(base_imponible + tax_amount_calculado)
+
+Ajuste backend de redondeo:
+  diferencia_redondeo = total_calculado - total_calculado_exacto
+  factor_tax = 1 + tax_percent / 100
+  ajuste_descuento = diferencia_redondeo / factor_tax
+  Si diferencia_redondeo > 0 y descuento_monto >= ajuste_descuento:
+    descuento_monto -= ajuste_descuento
+    se recalculan subtotal_con_descuento, base_imponible e impuestos.
+
+Saldo y estado:
+  monto_pagado_real = min(monto_pagado_historico + pago_inicial, total_calculado)
+  saldo_pendiente_real = total_calculado - monto_pagado_real
+  Si saldo_pendiente_real < 0.05:
+    saldo_pendiente_real = 0
+    estado = 'pagado'
+  Si monto_pagado_real > 0 y aun queda saldo:
+    estado = 'anticipo'
+
+Utilidad estimada:
+  utilidad_estimada = (subtotal - descuento_monto) - costo_total
+  Importante: envio e impuestos no forman parte de utilidad de productos.
+
+================================================================================
+6. INVENTARIO, MATERIALES, EQUIPOS Y RECETAS
+================================================================================
+
+Materiales:
+  - GET /materiales lista materiales del usuario.
+  - POST /materiales crea/edita material.
+  - Bloquea cambios si usuario role 0 no tiene PRO activo.
+  - Valida duplicados por LOWER(nombre) + user_id.
+  - precio_unitario se recalcula desde precio_compra/cantidad_paquete.
+  - stock_minimo default 5.
+
+Eliminar material:
+  - GET /materiales/eliminar/<id>.
+  - Bloquea si el material esta usado en producto_detalles.
+  - Si no hay dependencias, elimina por id + user_id.
+
+Equipos:
+  - GET/POST /equipos.
+  - costo_desgaste entra como costo fijo por uso en el cotizador.
+  - Valida duplicados por usuario.
+  - Eliminar equipo se bloquea si producto_maquinaria lo usa.
+
+Recetas:
+  - GET /recetas lista productos del usuario con detalle de materiales.
+  - POST /guardar_receta crea/edita receta por JSON.
+  - productos guarda nombre + items JSON.
+  - producto_detalles guarda materiales/cantidades.
+  - producto_maquinaria guarda equipos asociados.
+  - Al editar receta se borran detalles anteriores y se insertan los nuevos.
+
+Stock por compra:
+  - POST /api/registrar_compra.
+  - Si tipo_ingreso='paquete' y material.es_paquete=True:
+      cantidad_a_sumar = cantidad_compra * cantidad_paquete
+    Si no:
+      cantidad_a_sumar = cantidad_compra
+  - Si nuevo_precio > 0:
+      paquete: precio_unitario = nuevo_precio / cantidad_paquete
+      pieza:   precio_unitario = nuevo_precio
+  - Inserta movimiento tipo 'entrada' con motivo Compra / Ajuste.
+
+Stock por merma:
+  - POST /api/registrar_merma.
+  - Valida stock suficiente.
+  - Resta stock_actual.
+  - Inserta movimiento tipo 'salida' con motivo Merma / Ajuste Manual.
+
+Stock por venta:
+  - En /guardar_venta, si inventario_activo=True y es venta nueva:
+      por cada item.composicion tipo material:
+        cantidad_requerida = comp.cantidad * cantidad_producto
+      se agrupa por material_id.
+      materiales.stock_actual -= total_descuento
+      movimientos_inventario registra salida.
+
+Stock por cancelacion:
+  - POST /api/cancelar_venta.
+  - Si inventario_activo=True:
+      lee venta_detalles.composicion.
+      devuelve materiales usados al stock.
+      registra movimientos de inventario.
+  - Cambia ventas.estado='cancelada' y estado_pedido='cancelado'.
+
+================================================================================
+7. CLIENTES, HISTORIAL Y LOGISTICA
+================================================================================
+
+Cliente General:
+  - Texto operativo para documentos sin cliente real.
+  - No debe crear fila en clientes.
+  - No debe asociarse por cliente_id.
+
+Identidad real:
+  - La identidad de cliente es clientes.id.
+  - El nombre escrito no debe usarse para decidir identidad porque puede haber
+    homonimos.
+  - Si el usuario selecciona sugerencia, viaja cliente_id oculto.
+  - Si modifica el nombre despues de seleccionar, el frontend borra cliente_id.
+  - Si escribe nombre sin sugerencia, backend crea cliente nuevo.
+
+Endpoints:
+  - GET /clientes: CRUD de fichas reales.
+  - POST /clientes: crea cliente.
+  - POST /clientes/<id>/actualizar: actualiza ficha y sincroniza ventas.cliente.
+  - POST /clientes/<id>/eliminar: deja ventas.cliente_id NULL y conserva texto.
+  - GET /api/buscar_clientes?q=: autocomplete max 8.
+  - GET /api/obtener_detalles/<venta_id>: detalle para offcanvas/logistica.
+  - POST /api/actualizar_logistica: guarda cliente/logistica de un folio.
+
+Historial:
+  - GET /historial.
+  - Filtros:
+      q por folio o cliente, ignorando acentos con TRANSLATE.
+      status por estado.
+      entrega por filtros permitidos de entrega.
+  - Paginacion: 20 registros por pagina.
+  - Orden: id DESC.
+
+Ticket:
+  - GET /ticket/<id>.
+  - Carga ventas, venta_detalles y configuracion del dueño del ticket.
+  - Registra log de visualizacion/impresion.
+
+Estados de pedido/logistica:
+  - PATCH /api/ventas/<venta_id>/estado-pedido.
+  - POST /api/ventas/bulk-estado-pedido.
+  - Se usan para seguimiento operativo, separado del estado financiero.
+
+Fechas de entrega:
+  - datetime-local no trae zona horaria.
+  - Backend debe interpretar como hora local del negocio y convertir a UTC.
+  - Al mostrar, convertir UTC a local.
+
+================================================================================
+8. ENVIOS
+================================================================================
+
+Configuracion:
+  - GET /configuracion carga shipping_configs, shipping_zones y shipping_rates.
+  - POST /configuracion/logistica/base guarda:
+      origin_address, origin_lat, origin_lng,
+      local_base_rate, local_km_rate, safety_margin_percent.
+  - Si origin_address es link corto de Google, intenta resolver redireccion y
+    extraer coordenadas @lat,lng.
+
+Zonas y tarifas:
+  - POST /configuracion/logistica/zona/crear:
+      guarda zone_name y states_included.
+      Si texto contiene TODOS o ALL, guarda ['ALL'].
+  - POST /configuracion/logistica/zona/eliminar:
+      borra tarifas de la zona y luego la zona.
+  - POST /configuracion/logistica/tarifa/crear:
+      guarda max_weight_kg y price.
+  - POST /configuracion/logistica/tarifa/eliminar:
+      elimina tarifa.
+
+Cotizacion local:
+  Endpoint:
+    POST /api/cotizar-envio con tipo='local'.
+  Inputs:
+    lat/lng destino o link de Google Maps.
+  Resolucion:
+    si faltan coordenadas y hay link, intenta obtenerlas con
+    obtener_coordenadas_universales().
+  Formula:
+    distancia_km = geodesic(origen, destino).km
+    costo_puro = local_base_rate + distancia_km * local_km_rate
+    margen = 1 + safety_margin_percent / 100
+    costo_sugerido = costo_puro * margen
+
+Descifrado de links de Google Maps:
+  Funcion:
+    services/shipping_service.py -> obtener_coordenadas_universales(url_input)
+
+  Objetivo:
+    Convertir links copiados desde Google Maps, apps moviles o URLs largas en
+    coordenadas lat/lng confiables para cotizacion local.
+
+  Flujo:
+    1. Si no hay input, devuelve (None, None).
+    2. Si el link contiene maps.app.goo.gl o goo.gl:
+         url_input = url_input.split('?')[0]
+       Esto limpia parametros basura agregados por apps moviles.
+    3. Si el dominio parece link corto o contenido de Google:
+         goo.gl, maps.app, googleusercontent.com
+       hace request con requests.Session(), allow_redirects=True y timeout=10.
+    4. Usa User-Agent de escritorio:
+         Mozilla/5.0 Windows Chrome
+       Razon: Google suele devolver HTML/redirect distinto para iPhone/app movil.
+    5. Guarda:
+         url_final = res.url
+         html_content = res.text
+    6. Primero intenta regex directo sobre url_final:
+         @lat,lng
+         q=lat,lng
+         ll=lat,lng
+         !3dlat!4dlng
+    7. Si no encuentra coordenadas directas, parsea query params:
+         daddr=<direccion>
+         q=<direccion>
+       Si q no es "lat,lng", geocodifica la direccion.
+    8. geocodificar(direccion):
+         limpia + y %20,
+         usa cache_geo en memoria,
+         intenta Nominatim con direccion completa,
+         si falla y hay comas, quita el primer segmento y reintenta.
+       Incluye time.sleep(1) para no pegarle demasiado rapido a Nominatim.
+    9. Si aun no hay coordenadas, busca dentro del HTML:
+         center=lat%2Clng
+         markers=lat%2Clng
+         [null,null,lat,lng]
+    10. Si todo falla, loggea warning y devuelve (None, None).
+
+  Frontend:
+    templates/cotizador.html intenta extraer coordenadas del input con regex:
+      @lat,lng
+      q=lat,lng
+    Si no puede pero detecta link de Google, deja que backend intente resolverlo.
+
+  Endpoint auxiliar:
+    POST /api/resolver-mapa
+    Recibe {url}, llama obtener_coordenadas_universales y devuelve lat/lng.
+
+Cotizacion nacional:
+  Endpoint:
+    POST /api/cotizar-envio con tipo nacional.
+  Inputs:
+    peso, largo, ancho, alto, estado.
+  Formula:
+    peso_volumetrico = (largo * ancho * alto) / 5000
+    peso_cobrable = max(peso_kg, peso_volumetrico)
+  Regla:
+    busca zona por estado; si no hay, busca zona ALL.
+    busca primera tarifa donde max_weight_kg cubre peso_cobrable.
+
+================================================================================
+9. MI PANEL DEL USUARIO
+================================================================================
+
+Ruta:
+  - GET /mi-panel en routes/user_dashboard.py.
+  - Requiere login_required.
+  - Template: templates/dashboard/mi_panel.html.
+
+Filtro:
+  - mes y anio por querystring.
+  - Default: mes/anio local actual.
+  - periodo_str = YYYY-MM.
+
+KPIs del periodo:
+  total_facturado:
+    SUM(total) para estado IN ('pagado', 'anticipo')
+
+  venta_neta_productos:
+    SUM(subtotal - descuento_monto) para pagado/anticipo
+
+  ingresos_cobrados:
+    SUM(monto_pagado) para pagado/anticipo
+
+  ganancia_neta:
+    SUM((subtotal - descuento_monto) - costo_total) para pagado/anticipo
+
+  costos_produccion:
+    SUM(costo_total) para pagado/anticipo
+
+  dinero_calle:
+    SUM(saldo_pendiente) para estado IN ('pendiente', 'anticipo')
+
+  total_ventas:
+    COUNT para pagado/anticipo
+
+  total_cotizaciones:
+    COUNT estado='cotizacion'
+
+  total_canceladas:
+    COUNT estado='cancelada'
+
+Graficas:
+  - Diario: por YYYY-MM-DD del periodo, ingresos=monto_pagado, ganancia=(subtotal-descuento)-costo_total.
+  - Historico: ultimos 6 meses desde el mes seleccionado, no desde hoy.
+
+Top productos:
+  - venta_detalles JOIN ventas.
+  - Solo estados pagado/anticipo del periodo.
+  - Agrupa por concepto.
+  - Ordena por cantidad_vendida DESC, total_generado DESC.
+  - Limite 5.
+
+Stock bajo:
+  - Solo si inventario_activo=True.
+  - Materiales donde stock_actual <= stock_minimo.
+  - Limite 5.
+
+Contador de logro de cotizaciones:
+  - Cuenta registros en ventas del usuario excepto estados anulados:
+      estado NOT IN ('cancelada', 'cancelado')
+  - Visualmente habla de cotizaciones para ser claro para el usuario.
+  - Internamente incluye documentos convertidos a ticket pagado/anticipo.
+  - Excluye anuladas/canceladas.
+
+Niveles:
+  - 0: Primer paso. Meta 1.
+  - 1-4: Arranque. Meta 5.
+  - 5-14: Constancia. Meta 15.
+  - 15-49: En crecimiento. Meta 50.
+  - 50-99: Pro. Meta 100.
+  - 100-249: Operacion solida. Meta 250.
+  - 250-499: Negocio activo. Meta 500.
+  - 500-999: Alto volumen. Meta 1000.
+  - 1000+: Leyenda. Sin meta siguiente.
+
+Chatbot del dashboard:
+  - El frontend manda dashboardChatContext con kpis, top_productos, stock_bajo,
+    inventario_activo, chart_data y logro_cotizaciones.
+  - POST /api/chat-dashboard usa solo ese contexto visible.
+
+================================================================================
+10. DASHBOARD ADMINISTRATIVO
+================================================================================
+
+Ruta:
+  - GET /dashboard en routes/dashboard.py.
+  - Requiere admin_required.
+
+Precios internos:
+  - PRECIO_MENSUAL = 149.
+  - PRECIO_ANUAL = 1490.
+
+Metricas:
+  - total_usuarios: usuarios role <= 1.
+  - activos: subscription_end > now.
+  - vencidos: total - activos.
+  - proximos_a_vencer: subscription_end entre ahora y +7 dias.
+  - nuevos usuarios por periodo.
+  - desglose de planes activo/mensual/anual/free.
+  - MRR:
+      mensual suma 149 por usuario.
+      anual suma 1490/12 por usuario.
+  - suscripciones activas con fecha_suscripcion real inferida desde logs.
+  - pagos/nuevos_pro/renovaciones desde logs_actividad modulo Pagos.
+  - churn desde usuarios estado_suscripcion cancelada/cancelado.
+  - top_leales por cantidad de ventas/cotizaciones.
+  - segmentos:
+      Sin uso (0-2)
+      En adopcion (3-14)
+      Power users (15+)
+
+================================================================================
+11. PAGOS STRIPE
+================================================================================
+
+Ruta base:
+  - Blueprint payments con url_prefix /payments.
+
+Checkout:
+  - POST /payments/create-checkout-session.
+  - Requiere login_required.
+  - Recibe price_id.
+  - Si usuarios.stripe_customer_id existe, reutiliza customer.
+  - mode='subscription'.
+  - allow_promotion_codes=True.
+  - Metadatos:
+      user_id
+      plan_type = anual si price_id contiene '1490', si no mensual.
+  - success_url -> /payments/pago-exitoso?session_id={CHECKOUT_SESSION_ID}
+  - cancel_url -> /payments/pago-cancelado
+
+Webhook:
+  - POST /payments/webhook.
+  - Valida Stripe-Signature con STRIPE_WEBHOOK_SECRET.
+  - Eventos:
+      checkout.session.completed -> procesar_pago_exitoso.
+      customer.subscription.deleted -> procesar_cancelacion.
+      invoice.payment_failed -> procesar_pago_fallido.
+      invoice.paid con billing_reason subscription_cycle -> procesar_resurreccion.
+
+Activacion:
+  - Si usuario sigue activo, suma desde current subscription_end.
+  - Si vencio, suma desde now_utc().
+  - Plan anual suma 1 anio con relativedelta.
+  - Plan mensual suma 1 mes con relativedelta.
+  - Fuerza hora 23:59:59.
+  - Actualiza:
+      subscription_end, estado_suscripcion='Activo',
+      stripe_customer_id, plan_type.
+  - Registra logs_actividad modulo Pagos.
+  - Envia correo pago_confirmado.
+
+Pago exitoso inmediato:
+  - GET /payments/pago-exitoso tambien verifica checkout_session en Stripe.
+  - Actualiza BD y session['is_pro_active']=True.
+  - Sirve como refresco instantaneo aunque el webhook tarde.
+
+Cancelacion Stripe:
+  - Evento customer.subscription.deleted.
+  - Busca usuario por usuarios.stripe_customer_id.
+  - Actualiza:
+      estado_suscripcion='Cancelado'
+      fecha_cancelacion=now_utc()
+  - Registra log:
+      accion='Suscripción Finalizada'
+      modulo='Pagos'
+      detalle='Cancelación procesada vía Webhook'
+  - No borra subscription_end; el control de acceso depende de estado y fecha.
+
+Pago fallido:
+  - Evento invoice.payment_failed.
+  - Busca usuario por stripe_customer_id.
+  - Actualiza estado_suscripcion='Pago Fallido'.
+  - Registra log 'Fallo de Pago'.
+  - Intenta enviar correo template pago_fallido con sender_alias='pagos'.
+  - Nota tecnica: si no existe templates/emails/pago_fallido.html, el servicio
+    de correo loggea error de render y devuelve False.
+
+Renovacion/resurreccion:
+  - Evento invoice.paid.
+  - Solo procesa si invoice_obj.billing_reason == 'subscription_cycle'.
+  - Toma period.end desde invoice_obj.lines.data[0].period.end.
+  - Convierte Unix timestamp a datetime UTC.
+  - Actualiza:
+      estado_suscripcion='Activo'
+      subscription_end=nueva_fecha_fin
+  - Registra log 'Renovación Automática Exitosa'.
+
+Portal de cliente:
+  - payments.py tiene flujo hacia Stripe Billing Portal para administrar
+    suscripcion cuando aplique.
+  - Usa stripe_customer_id del usuario.
+
+Variables requeridas:
+  - STRIPE_SECRET_KEY.
+  - STRIPE_WEBHOOK_SECRET.
+  - STRIPE_PRICE_MENSUAL.
+  - STRIPE_PRICE_ANUAL.
+
+================================================================================
+12. CHATBOTS
+================================================================================
+
+Proveedor:
+  - Google Gemini via client.models.generate_content.
+  - Modelo actual: models/gemini-2.5-flash-lite.
+
+Endpoints:
+  - POST /api/chat-equipos:
+      historial session['chat_history'].
+      system prompt SYSTEM_PROMPT_EQUIPOS.
+      temperature=0.2, max_output_tokens=350.
+
+  - POST /api/chat-configuracion:
+      historial session['coach_history'].
+      system prompt SYSTEM_PROMPT_CONFIGURACION.
+      temperature=0.15, max_output_tokens=100.
+
+  - POST /api/chat-dashboard:
+      requiere login_required.
+      historial session['dashboard_history'].
+      recibe dashboard_context visible del panel.
+      system prompt SYSTEM_PROMPT_DASHBOARD.
+      temperature=0.15, max_output_tokens=220.
+
+Privacidad:
+  - GEMINI_API_KEY no se expone al frontend.
+  - No registrar mensajes completos del usuario en logs_actividad.
+  - Dashboard bot solo debe usar contexto visible recibido del panel.
+
+================================================================================
+13. CORREOS TRANSACCIONALES
+================================================================================
+
+Servicio:
+  - services/mail_service.py.
+  - Usa Resend.
+  - Variable requerida:
+      RESEND_API_KEY
+
+Funcion maestra:
+  enviar_correo_sian(subject, recipient, template, sender_alias="hola", **kwargs)
+
+Flujo:
+  1. Toma current_app real con current_app._get_current_object().
+  2. Construye remitente:
+       sender_email = "{sender_alias}@sianeffects.com"
+       full_sender = "Sianeffects <alias@sianeffects.com>"
+  3. Renderiza Jinja:
+       templates/emails/{template}.html
+     con kwargs.
+  4. Construye params:
+       from, to, subject, html.
+  5. Envia en Thread separado para no bloquear request.
+  6. _send_async abre app_context y llama resend.Emails.send(params).
+
+Templates de correo presentes:
+  - auth_code.html: codigo de verificacion.
+  - bienvenida.html: bienvenida tras verificar email.
+  - reset_password_mail.html: link de recuperacion.
+  - pago_confirmado.html: pago/PRO confirmado.
+  - aviso_vencimiento_3.html: aviso 3 dias antes.
+  - aviso_vencimiento_1.html: aviso 1 dia antes.
+  - recordatorio_verificacion.html: cuenta sin verificar.
+
+Correos por flujo:
+  Registro:
+    - POST /registro crea auth_codes y manda auth_code.
+    - Commit ocurre antes del envio.
+
+  Reenviar codigo:
+    - POST /reenviar-codigo.
+    - Rate limit: 1 reenvio por minuto.
+    - Marca codigos anteriores used=TRUE.
+    - Genera nuevo codigo, expira en 10 minutos.
+
+  Verificacion exitosa:
+    - POST /verificar-email.
+    - Marca codigo usado, usuario verificado.
+    - Borra codigos usados del email.
+    - Manda bienvenida.
+
+  Reset password:
+    - POST /forgot-password.
+    - Mensaje generico aunque email no exista.
+    - Rate limit: max 3 solicitudes por usuario en 15 minutos.
+    - Token secrets.token_urlsafe(32), expira en 30 minutos.
+    - Manda reset_password_mail con reset_link absoluto.
+
+  Pagos:
+    - procesar_pago_exitoso manda pago_confirmado.
+    - procesar_pago_fallido intenta mandar pago_fallido.
+
+  Jobs:
+    - tarea_avisos_vencimiento manda aviso_vencimiento_3 y aviso_vencimiento_1.
+    - tarea_recordatorio_verificacion manda recordatorio_verificacion.
+
+Reglas:
+  - Si falla render del template, se loggea y no se envia.
+  - Si falla Resend en thread, se loggea pero no rompe el request.
+  - No mandar datos sensibles completos en subject ni logs.
+
+================================================================================
+14. JOBS PROGRAMADOS (APScheduler)
+================================================================================
+
+Scheduler:
+  - app.py crea APScheduler(), init_app(app), start().
+  - Jobs se registran con scheduler.add_job si no existe scheduler.get_job(id).
+  - Todos corren con app.app_context().
+  - Optimizacion indicada en codigo:
+      antes ~72 ejecuciones/dia,
+      ahora ~6 ejecuciones/dia.
+
+Job Limpieza:
+  id='Limpieza'
+  trigger cron: hour=0, minute=0
+  frecuencia: diario a medianoche.
+  Funcion: tarea_limpieza().
+  Hace:
+    1. Borra cotizaciones vencidas:
+         ventas.estado='cotizacion'
+         fecha_vencimiento < now_utc()
+       Borra venta_detalles y ventas.
+    2. Borra cuentas role=0 con subscription_end < now_utc()-365 dias.
+       Borra tablas hijas/manuales:
+         venta_detalles, producto_detalles, producto_maquinaria,
+         shipping_rates,
+         configuracion, maquinaria, materiales, movimientos_inventario,
+         productos, ventas, shipping_configs, shipping_zones,
+         tutoriales_estado, usuarios.
+    3. Purga invitaciones con vigencia < now_utc()-15 dias.
+       Borra archivos R2:
+         foto_portada_url, url_fondo, fotos_json, fotos_invitados.url.
+       Borra fotos_invitados, pases_invitados, buenos_deseos, invitaciones.
+
+Job LimpiezaCanceladas:
+  id='LimpiezaCanceladas'
+  trigger cron: day=1, hour=3, minute=0
+  frecuencia: mensual, dia 1 a las 3 AM.
+  Funcion: tarea_canceladas().
+  Hace:
+    - Busca ventas estado='cancelada'.
+    - Borra venta_detalles y ventas permanentemente.
+
+Job RecordatorioVerificacion:
+  id='RecordatorioVerificacion'
+  trigger cron: hour='10,20', minute=0
+  frecuencia: 10 AM y 8 PM.
+  Funcion: tarea_recordatorio_verificacion().
+  Hace:
+    - Busca usuarios verificado=FALSE, recordatorio_enviado=FALSE.
+    - Ventana:
+        created_at <= now_utc()-12h
+        created_at > now_utc()-24h
+    - Manda correo recordatorio_verificacion.
+    - Marca recordatorio_enviado=TRUE.
+
+Job PurgaNoVerificados:
+  id='PurgaNoVerificados'
+  trigger cron: hour=3, minute=0
+  frecuencia: diario 3 AM.
+  Funcion: tarea_purga_no_verificados().
+  Hace:
+    - Busca usuarios verificado=FALSE y created_at < now_utc()-24h.
+    - Borra auth_codes, logs_actividad, configuracion, shipping_configs,
+      tutoriales_estado y usuarios.
+    - Libera email para re-registro y evita cuentas zombie.
+
+Job AvisosVencimiento:
+  id='AvisosVencimiento'
+  trigger cron: hour='9,18', minute=0
+  frecuencia: 9 AM y 6 PM.
+  Funcion: tarea_avisos_vencimiento().
+  Hace:
+    - Para dias=3 y dias=1:
+        ventana_inicio = now_utc() + dias
+        ventana_fin = ventana_inicio + 12h
+      Busca usuarios role=0 con subscription_end dentro de la ventana.
+    - Manda:
+        dias=3 -> aviso_vencimiento_3
+        dias=1 -> aviso_vencimiento_1
+
+Notas operativas:
+  - Los jobs usan logging.* ademas de app.logger.
+  - Cualquier job nuevo debe documentar:
+      id, horario, funcion, tablas que toca, correo que manda, si borra datos.
+  - Jobs destructivos deben borrar tablas hijas antes que padres.
+
+================================================================================
+15. REPORTES Y EXPORTACION
+================================================================================
+
+Excel:
+  - GET /descargar_excel.
+  - Requiere subscription_required.
+  - Genera tres hojas:
+      Resumen
+      Tickets
+      Productos
+  - Usa pandas + openpyxl.
+
+Resumen global:
+  tickets_activos = Estado in ['pagado', 'anticipo']
+  Cotizaciones = count Estado == 'cotizacion'
+  Anuladas = count Estado == 'cancelada'
+  Total_Ticket = suma Total_Ticket de tickets_activos
+  Cobrado = suma Cobrado
+  Por_Cobrar = suma Por_Cobrar
+  Costo_Total = suma Costo_Total
+  Utilidad_Estimada = suma Utilidad_Estimada
+  Margen_Estimado_% = Utilidad_Estimada / Total_Ticket * 100
+
+Fechas:
+  - Convierte fechas UTC a local antes de exportar.
+
+================================================================================
+16. TUTORIALES Y AYUDAS
+================================================================================
+
+utils/tutorial_utils.py:
+  Versiones actuales por modulo:
+    cotizador, historial, materiales, equipos, recetas, configuracion.
+
+Flujo:
+  - Cada vista carga debe_mostrar_tutorial(user_id, modulo).
+  - El frontend marca completado con POST /api/tutorial/completado.
+  - tutoriales_estado guarda version_vista por user_id + modulo.
+  - Si se sube version de modulo, el tutorial vuelve a aparecer.
+
+Configuracion:
+  - mostrar_ayuda controla si se muestran ayudas/guias.
+
+================================================================================
+17. ALERTAS Y NOTIFICACIONES
+================================================================================
+
+helpers.obtener_alertas(user_id):
+  - Alertas automaticas de stock bajo si inventario_activo=True.
+  - Alertas de suscripcion si role 0 y vence en 0-5 dias.
+  - Notificaciones manuales no leidas desde notificaciones_manuales.
+  - Anuncios globales activos no vistos desde anuncios_globales/anuncios_vistos.
+
+Acciones:
+  - /marcar-leida/<notif_id> marca notificacion manual.
+  - /marcar-visto-global/<anuncio_id> marca anuncio global.
+
+================================================================================
+18. REGLAS IMPORTANTES PARA FUTUROS CAMBIOS
+================================================================================
+
+Multiusuario:
+  - Toda consulta de datos del negocio debe filtrar por user_id.
+  - No usar IDs sin verificar propiedad.
+  - Especialmente: ventas, materiales, maquinaria, productos, clientes,
+    shipping configs/zones/rates.
+
+Estados:
+  - Dashboard financiero considera pagado/anticipo como ventas activas.
+  - Cotizaciones no suman a utilidad ni ingresos.
+  - Anuladas/canceladas no deben inflar contadores de logro.
+  - Cuidar inconsistencia historica entre 'cancelada' y 'cancelado'.
+
+Dinero:
+  - Frontend puede mostrar calculos, pero backend debe recalcular totales.
+  - Nunca confiar en subtotal/total/costo_total enviado sin validar.
+  - Utilidad de producto no debe incluir envio ni impuestos.
+
+Inventario:
+  - Descontar stock solo al crear documento nuevo.
+  - No volver a descontar al editar.
+  - Cancelar venta debe devolver stock si inventario_activo=True.
+  - No permitir eliminar materiales/equipos usados por recetas.
+
+Clientes:
+  - No identificar cliente por nombre; usar cliente_id.
+  - Cliente General no es cliente real.
+  - Al borrar cliente, conservar ventas historicas.
+
+Tiempo:
+  - Guardar timestamps reales en UTC cuando sea operativo.
+  - Convertir a zona local al mostrar.
+  - Inputs datetime-local requieren conversion manual.
+
+Archivos:
+  - Logos se suben a Cloudflare R2.
+  - Al cambiar de logo a emoji, borrar logo anterior si pertenece a PUBLIC_URL.
+
+Privacidad:
+  - No loggear contactos, notas_cliente, notas_pedido ni mensajes de chatbot.
+  - logs_actividad debe indicar accion, no contenido sensible.
+
+Manual:
+  - Cualquier nueva formula debe agregarse aqui.
+  - Cualquier cambio en estados o dashboards debe agregarse aqui.
+  - Cualquier nueva tabla o relacion importante debe agregarse aqui.
+
+================================================================================
+19. CHECKLIST DE QA FUNCIONAL
+================================================================================
+
+Cotizador:
+  1. Crear cotizacion sin pago y confirmar estado='cotizacion'.
+  2. Cobrar completo y confirmar estado='pagado', saldo=0.
+  3. Cobrar anticipo menor al total y confirmar estado='anticipo'.
+  4. Aplicar descuento e IVA y confirmar total igual en UI/ticket/BD.
+  5. Ajustar total magico y confirmar que cambia descuento, no precios unitarios.
+  6. Cargar cotizacion existente y editar sin duplicar stock.
+
+Inventario:
+  1. Crear material paquete y validar precio_unitario.
+  2. Registrar compra por paquete y por pieza.
+  3. Registrar merma sin permitir stock negativo.
+  4. Vender receta con inventario activo y confirmar descuento de stock.
+  5. Cancelar venta y confirmar devolucion de stock.
+
+Clientes/logistica:
+  1. Buscar cliente en cotizador y seleccionar sugerencia.
+  2. Modificar nombre tras seleccionar y confirmar cliente_id se limpia.
+  3. Guardar Cliente General y confirmar que no se crea cliente real.
+  4. Editar logistica desde historial y confirmar persistencia.
+
+Dashboards:
+  1. Mi Panel debe separar cobrado, utilidad, por cobrar y tickets.
+  2. Cotizaciones y anuladas no suman utilidad.
+  3. Contador de logro excluye canceladas/cancelado.
+  4. Top productos debe verse sin scroll horizontal en movil.
+  5. Dashboard admin debe calcular MRR mensual/anual correctamente.
+
+Pagos:
+  1. Checkout crea sesion con metadata user_id/plan_type.
+  2. Webhook valida firma.
+  3. Pago exitoso activa PRO y actualiza sesion.
+  4. Renovacion suma desde fecha vigente si aun no vence.
+
+================================================================================
+CONTENIDO HISTORICO EXISTENTE
+================================================================================
+
 Ejemplo esperado:
   Cobrado es el dinero que ya entró a tu caja. Utilidad estimada es la ganancia
   calculada después de restar costos.
   Si la utilidad se ve mayor que lo cobrado, normalmente hay ventas registradas
   con saldo pendiente por cobrar.
+
+CONTADOR DE LOGRO EN MI PANEL
+-----------------------------
+Ubicación:
+  - Ruta: /mi-panel
+  - Backend: routes/user_dashboard.py
+  - Template: templates/dashboard/mi_panel.html
+
+Qué cuenta:
+  - Total histórico de registros del usuario en ventas.
+  - Incluye cotizaciones vigentes, tickets pagados y tickets con anticipo.
+  - Excluye estados anulados/cancelados: 'cancelada' y 'cancelado'.
+  - Aunque internamente el contador considera tickets ya convertidos, el texto
+    visible habla de "cotizaciones" para mantenerlo claro para el usuario.
+
+Niveles actuales:
+  - 0: Primer paso. Meta siguiente: 1.
+  - 1-4: Arranque. Meta siguiente: 5.
+  - 5-14: Constancia. Meta siguiente: 15.
+  - 15-49: En crecimiento. Meta siguiente: 50.
+  - 50-99: Pro. Meta siguiente: 100.
+  - 100-249: Operación sólida. Meta siguiente: 250.
+  - 250-499: Negocio activo. Meta siguiente: 500.
+  - 500-999: Alto volumen. Meta siguiente: 1000.
+  - 1000+: Leyenda. Sin meta siguiente.
 
 Temperatura actual:
   - temperature: 0.15

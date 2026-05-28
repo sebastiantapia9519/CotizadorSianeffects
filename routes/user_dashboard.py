@@ -63,6 +63,79 @@ def mi_panel():
             'total_cotizaciones': 0, 'total_canceladas': 0
         }
 
+        # --- 2.5 LOGRO HISTÓRICO DE DOCUMENTOS CREADOS DESDE EL COTIZADOR ---
+        cursor.execute("""
+            SELECT COUNT(*) as total_cotizaciones_creadas
+            FROM ventas
+            WHERE user_id = %s AND estado NOT IN ('cancelada', 'cancelado')
+        """, (user_id,))
+        cotizaciones_row = cursor.fetchone()
+        total_cotizaciones_creadas = int(cotizaciones_row['total_cotizaciones_creadas']) if cotizaciones_row else 0
+
+        if total_cotizaciones_creadas == 0:
+            logro_cotizaciones = {
+                'titulo': 'Tu primer documento está esperando',
+                'mensaje': 'Cuando guardes tu primera cotización o ticket, este contador empezará a celebrar tu avance.',
+                'nivel': 'Primer paso',
+                'siguiente_meta': 1
+            }
+        elif total_cotizaciones_creadas < 5:
+            logro_cotizaciones = {
+                'titulo': 'Buen arranque, ya estás cotizando',
+                'mensaje': 'Cada cotización o ticket guardado te ayuda a responder más rápido y vender con más claridad.',
+                'nivel': 'Arranque',
+                'siguiente_meta': 5
+            }
+        elif total_cotizaciones_creadas < 15:
+            logro_cotizaciones = {
+                'titulo': 'Ya agarraste ritmo',
+                'mensaje': 'Tu historial empieza a tomar forma. Sigue así: estás construyendo una base real para vender mejor.',
+                'nivel': 'Constancia',
+                'siguiente_meta': 15
+            }
+        elif total_cotizaciones_creadas < 50:
+            logro_cotizaciones = {
+                'titulo': 'Cotizas como negocio en movimiento',
+                'mensaje': 'Ya tienes suficiente recorrido para detectar clientes, productos y oportunidades con más seguridad.',
+                'nivel': 'En crecimiento',
+                'siguiente_meta': 50
+            }
+        elif total_cotizaciones_creadas < 100:
+            logro_cotizaciones = {
+                'titulo': 'Tu historial ya pesa',
+                'mensaje': 'Este volumen empieza a revelar patrones reales: productos fuertes, clientes frecuentes y oportunidades por cerrar.',
+                'nivel': 'Pro',
+                'siguiente_meta': 100
+            }
+        elif total_cotizaciones_creadas < 250:
+            logro_cotizaciones = {
+                'titulo': 'Cotizas con ritmo de operación',
+                'mensaje': 'Ya no es solo actividad: tienes una base sólida para medir, dar seguimiento y decidir con más confianza.',
+                'nivel': 'Operación sólida',
+                'siguiente_meta': 250
+            }
+        elif total_cotizaciones_creadas < 500:
+            logro_cotizaciones = {
+                'titulo': 'Tu cotizador ya es parte del negocio',
+                'mensaje': 'Con este historial puedes leer tendencias, afinar precios y convertir más oportunidades sin empezar de cero.',
+                'nivel': 'Negocio activo',
+                'siguiente_meta': 500
+            }
+        elif total_cotizaciones_creadas < 1000:
+            logro_cotizaciones = {
+                'titulo': 'Máquina de cotizaciones encendida',
+                'mensaje': 'Tu operación ya tiene mucho aprendizaje acumulado. Este historial es una ventaja para vender mejor.',
+                'nivel': 'Alto volumen',
+                'siguiente_meta': 1000
+            }
+        else:
+            logro_cotizaciones = {
+                'titulo': 'Nivel leyenda: operación imparable',
+                'mensaje': 'Más de mil documentos creados. Tu historial ya es un mapa completo de clientes, ventas y decisiones.',
+                'nivel': 'Leyenda',
+                'siguiente_meta': None
+            }
+
         # --- 3. GRÁFICA 1: DIARIA (PROTECCIÓN DE NULOS EN COSTOS) ---
         cursor.execute("""
             SELECT to_char(fecha, 'YYYY-MM-DD') as dia, 
@@ -147,6 +220,13 @@ def mi_panel():
             'costos_produccion': 0, 'dinero_calle': 0, 'total_ventas': 0,
             'total_cotizaciones': 0, 'total_canceladas': 0
         }
+        total_cotizaciones_creadas = 0
+        logro_cotizaciones = {
+            'titulo': 'Tu avance de cotizaciones no está disponible',
+            'mensaje': 'Intenta recargar el panel para volver a calcular tu contador.',
+            'nivel': 'Sin datos',
+            'siguiente_meta': None
+        }
         fechas_diarias, ing_diarios, gan_diarias, meses_hist, ing_hist, gan_hist, top_productos, stock_bajo = [], [], [], [], [], [], [], []
         inventario_activo = False
     finally:
@@ -165,6 +245,8 @@ def mi_panel():
         top_productos=[dict(p) for p in top_productos],
         stock_bajo=[dict(s) for s in stock_bajo],
         inventario_activo=inventario_activo,
+        total_cotizaciones_creadas=total_cotizaciones_creadas,
+        logro_cotizaciones=logro_cotizaciones,
         mes_sel=mes_sel, anio_sel=anio_sel,
         lista_meses=lista_meses, lista_anios=lista_anios
     )

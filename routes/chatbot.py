@@ -2,12 +2,75 @@ from flask import Blueprint, request, jsonify, session, current_app
 from google import genai
 from google.genai import types
 import os
+import re
 from helpers import login_required
 
 chatbot_bp = Blueprint('chatbot', __name__)
 
 # Configurar Gemini con el nuevo SDK
 client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
+
+
+def extraer_monto_salario(mensaje):
+    match_mil = re.search(r'\$?\s*(\d+(?:[.,]\d+)?)\s*mil\b', mensaje, re.IGNORECASE)
+    if match_mil:
+        return int(float(match_mil.group(1).replace(',', '.')) * 1000)
+
+    match_monto = re.search(r'\$?\s*(\d{4,6}(?:[,.]\d{3})*)', mensaje)
+    if match_monto:
+        return int(match_monto.group(1).replace(',', '').replace('.', ''))
+
+    return None
+
+
+def extraer_horas_semanales(mensaje):
+    match = re.search(r'(\d{1,2})\s*(?:h|hr|hrs|horas)', mensaje, re.IGNORECASE)
+    if match:
+        return int(match.group(1))
+
+    return None
+
+
+def respuesta_salario_configuracion(mensaje_usuario, contexto_reciente=''):
+    """Da una guía concreta cuando el usuario no sabe qué sueldo mensual poner."""
+    mensaje = mensaje_usuario.lower()
+    contexto = contexto_reciente.lower()
+    habla_de_salario = any(palabra in mensaje for palabra in [
+        'salario', 'sueldo', 'ganar', 'ingreso', 'cobrar', 'valor de mi tiempo',
+        'valor de tu tiempo', 'mano de obra'
+    ]) or any(palabra in contexto for palabra in ['salario', 'sueldo', 'valor de tu tiempo', 'mano de obra'])
+    pide_guia = any(frase in mensaje for frase in [
+        'no se', 'no sé', 'que valor', 'qué valor', 'cuanto pongo', 'cuánto pongo',
+        'que pongo', 'qué pongo', 'ayudame', 'ayúdame', 'calcular',
+        'que valores', 'qué valores', 'valores debo poner'
+    ])
+    salario = extraer_monto_salario(mensaje_usuario)
+    horas = extraer_horas_semanales(mensaje_usuario) or 40
+
+    if salario and habla_de_salario:
+        horas_mes = horas * 4.33
+        costo_hora = salario / horas_mes if horas_mes else 0
+        texto_horas = (
+            "Si trabajas otra cantidad de horas, cambia ese campo y Sianeffects recalcula tu hora."
+            if extraer_horas_semanales(mensaje_usuario)
+            else "Usé 40 hrs/semana como referencia; si trabajas menos, cambia ese campo y tu hora sube."
+        )
+        return (
+            f"Perfecto. Pon Sueldo Deseado: ${salario:,.0f} MXN y Horas por semana: {horas}.\n"
+            f"Así tu hora vale aprox. ${costo_hora:,.2f} MXN.\n"
+            f"{texto_horas}\n"
+            "📍 CONFIGURACIÓN → MI NEGOCIO → El Valor de tu Tiempo."
+        )
+
+    if not habla_de_salario or not pide_guia:
+        return None
+
+    return (
+        "No lo pongas a ojo. Empieza con lo que quieres ganar al mes.\n"
+        "Ejemplo: si quieres $20,000 MXN y trabajas 40 hrs/semana, tu hora vale aprox. $115.47.\n"
+        "Guía rápida: extra $12k-$15k, vivir del negocio $18k-$25k, crecer $30k+.\n"
+        "📍 CONFIGURACIÓN → MI NEGOCIO → El Valor de tu Tiempo: pon Sueldo Deseado y Horas por semana."
+    )
 
 
 # ==============================================================================
@@ -113,7 +176,7 @@ Usa estas rutas exactas para guiar al usuario a las herramientas:
 📍 EN "CONFIGURACIÓN → MI NEGOCIO":
 - Identidad: Logo, ícono, nombre, slogan, web y Notas del Ticket (Políticas).
 - Ajustes del Sistema: Control de inventario, ticket térmico (B/N), mostrar guías y modo oscuro.
-- Finanzas: Margen de Ganancia Base (multiplica solo costo base) y Factor Operativo (% extra para gastos fijos).
+- Margen de Ganancia Base: Margen de Ganancia Base (multiplica solo costo base) y Factor Operativo (% extra para gastos fijos).
 - El Valor de tu Tiempo (Mano de Obra): Se calcula con Sueldo Deseado y Horas por semana.
 - Costos Operativos del Negocio: Lista para agregar gastos fijos mensuales (renta, luz, etc).
 
@@ -148,6 +211,10 @@ REGLAS IMPORTANTES
 SÍ:
 - Sé extremadamente breve y responde directo.
 - Usa ejemplos reales y haz cálculos si los piden.
+- Si no saben qué sueldo poner, NO respondas "piensa en tus gastos" solamente. Da una guía práctica:
+  extra $12,000-$15,000 MXN/mes; vivir del negocio $18,000-$25,000 MXN/mes; crecer $30,000+ MXN/mes.
+  Ejemplo obligatorio: $20,000 al mes / 173.2 horas = $115.47 por hora.
+  Diles que pongan el sueldo mensual deseado y sus horas por semana en la ruta exacta.
 - Indica siempre la ruta exacta basada en las ubicaciones arriba mencionadas.
 - Motiva a mejorar ganancias.
 - Si piden "vender más" o "ganar más", explícales que la clave es no regalar su trabajo. 
@@ -333,12 +400,22 @@ def chat_configuracion():
         
         if not mensaje_usuario:
             return jsonify({'error': 'Mensaje vacío'}), 400
-        
+
         # Usamos una variable de sesión separada para el Coach
         if 'coach_history' not in session:
             session['coach_history'] = []
-        
+
         historial = session['coach_history']
+        contexto_reciente = " ".join(msg.get('content', '') for msg in historial[-4:])
+        respuesta_guiada = respuesta_salario_configuracion(mensaje_usuario, contexto_reciente)
+        if respuesta_guiada:
+            historial.append({'role': 'Usuario', 'content': mensaje_usuario})
+            historial.append({'role': 'Asistente', 'content': respuesta_guiada})
+            session['coach_history'] = historial[-6:]
+            session.modified = True
+
+            return jsonify({'reply': respuesta_guiada, 'status': 'success'})
+
         contents = []
 
         for msg in historial[-6:]:
