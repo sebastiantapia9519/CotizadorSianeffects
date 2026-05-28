@@ -1326,10 +1326,7 @@
 
         if (laborActiva) {
             // El input son MINUTOS. Calculamos cuánto vale el minuto.
-            const salario = parseFloat(document.getElementById('datoSalario').value) || 0;
-            const horasSemana = parseFloat(document.getElementById('datoHoras').value) || 0;
-            const horasMes = horasSemana * 4.33;
-            const costoMinuto = horasMes > 0 ? (salario / horasMes) / 60 : 0;
+            const costoMinuto = obtenerCostoMinutoFabricacion();
 
             extra = inputMano * costoMinuto;
 
@@ -1441,6 +1438,13 @@
 
         const modalTotal = document.getElementById('modalTotalPago');
         if (modalTotal) modalTotal.innerText = formatMoney(totalFinal);
+    }
+
+    function obtenerCostoMinutoFabricacion() {
+        const salario = parseFloat(document.getElementById('datoSalario').value) || 0;
+        const horasSemana = parseFloat(document.getElementById('datoHoras').value) || 0;
+        const horasMes = horasSemana * 4.33;
+        return horasMes > 0 ? (salario / horasMes) / 60 : 0;
     }
 
     function formatMoney(amount) {
@@ -1606,6 +1610,15 @@
                 costo: parseFloat(chk.value)
             });
         });
+
+        const valorManoObra = parseFloat(document.getElementById('inputManoObra').value) || 0;
+        if (valorManoObra > 0) {
+            composicionActual.push({
+                tipo: document.getElementById('datoLaborActiva').value === 'true' ? 'tiempo_fabricacion' : 'costo_extra',
+                nombre: document.getElementById('datoLaborActiva').value === 'true' ? 'Tiempo de Fabricación' : 'Costo Extra',
+                valor: valorManoObra
+            });
+        }
 
         carrito.push({
             concepto: nom,
@@ -2120,11 +2133,17 @@
         // Rescatamos el precio unitario guardado para no volver al sugerido calculado.
         precioUnitarioManual = parseFloat(item.precio_unitario) || null;
 
+        let tieneManoObraGuardada = false;
+
         compArray.forEach(c => {
             if (c.tipo === 'material') agregarFila(c.id, c.cantidad);
             if (c.tipo === 'maquinaria') {
                 const chk = document.querySelector(`.check-maquinaria-input[data-id="${c.id}"]`);
                 if (chk) chk.checked = true;
+            }
+            if (c.tipo === 'tiempo_fabricacion' || c.tipo === 'costo_extra') {
+                tieneManoObraGuardada = true;
+                document.getElementById('inputManoObra').value = parseFloat(c.valor) || 0;
             }
         });
 
@@ -2139,8 +2158,17 @@
             let costoCalculadoSinExtra = costoProduccionCalculado;
             let diferenciaExtra = item.costo_unitario - costoCalculadoSinExtra;
 
-            if (diferenciaExtra > 0.05) {
-                document.getElementById('inputManoObra').value = diferenciaExtra.toFixed(2);
+            if (!tieneManoObraGuardada && diferenciaExtra > 0.05) {
+                const factorOperativo = parseFloat(document.getElementById('datoFactorOperativo').value) || 0;
+                const extraSinOperativos = diferenciaExtra / (1 + (factorOperativo / 100));
+                const laborActiva = document.getElementById('datoLaborActiva').value === 'true';
+                if (laborActiva) {
+                    const costoMinuto = obtenerCostoMinutoFabricacion();
+                    const minutos = costoMinuto > 0 ? extraSinOperativos / costoMinuto : 0;
+                    document.getElementById('inputManoObra').value = minutos.toFixed(2);
+                } else {
+                    document.getElementById('inputManoObra').value = extraSinOperativos.toFixed(2);
+                }
                 calcularTotal();
             }
         }, 300);
