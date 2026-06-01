@@ -568,10 +568,13 @@ def stop_impersonate():
             session['role']     = admin_user['role']
             session.pop('original_admin_id', None)
 
-            current_app.logger.info(
-                f"IMPERSONATE_STOP: Admin '{admin_user['username']}' (ID:{original_id}) "
-                f"salió del modo fantasma (estaba en cuenta de '{current_impersonated}')."
-            )
+            # Solo se loguea si el rol del admin original es menor a 2 (es decir, 1)
+            if admin_user['role'] < 2:
+                current_app.logger.info(
+                    f"IMPERSONATE_STOP: Admin '{admin_user['username']}' (ID:{original_id}) "
+                    f"salió del modo fantasma (estaba en cuenta de '{current_impersonated}')."
+                )
+                
             flash('Modo Fantasma finalizado. Bienvenido de vuelta, Jefe.', 'success')
             return redirect(url_for('admin.dashboard'))
 
