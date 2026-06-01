@@ -736,7 +736,11 @@ def add_header(response):
     - no-store: No guardar en disco
     - must-revalidate: Forzar validación si está expirado
     """
-    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    if request.path.startswith('/static/'):
+        response.headers["Cache-Control"] = "public, max-age=86400"
+    else:
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+
     return response
 
 
