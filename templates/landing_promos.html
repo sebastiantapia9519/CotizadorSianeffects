@@ -4,24 +4,69 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sianeffects - Cotiza con ganancia real</title>
+    <title>Sianeffects - Cotiza, cobra y gestiona con ganancia real</title>
+    <meta name="description" content="Sianeffects es el cotizador para negocios personalizados: calcula costos, materiales, maquinaria, mano de obra, envíos, IVA, clientes, pedidos, inventario y chatbots con IA para ayudarte a decidir mejor.">
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f8fafc;
-        }
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
         :root {
             --sian-pink: #E89292;
             --sian-mint: #7CD1C4;
             --sian-dark: #1e293b;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        .sian-gradient {
+            background:
+                radial-gradient(circle at top left, rgba(124, 209, 196, 0.25), transparent 32%),
+                radial-gradient(circle at top right, rgba(232, 146, 146, 0.20), transparent 28%),
+                linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(12px);
+        }
+
+        .feature-card {
+            transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 18px 45px rgba(15, 23, 42, 0.10);
+            border-color: rgba(124, 209, 196, 0.70);
+        }
+
+        .dot.active {
+            background: #7CD1C4;
+            border-color: #7CD1C4;
+            transform: scale(1.15);
+        }
+
+        .mobile-menu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .25s ease;
+        }
+
+        .mobile-menu.open {
+            max-height: 520px;
         }
     </style>
 </head>
@@ -29,376 +74,666 @@
 <body>
 
     <!-- NAVBAR -->
-    <nav class="w-full bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
-
-        <!-- Logo -->
-        <div class="flex items-center gap-2">
-            <img src="{{ url_for('static', filename='images/sianeffects_logo.png') }}"
-                alt="Sianeffects" 
-                class="h-12 md:h-20 w-auto transition-transform hover:scale-105">
-        </div>
-
-        <!-- Acciones -->
-        <div class="flex items-center gap-6">
-            <a href="/login" class="text-slate-600 font-medium hover:text-black">
-                Iniciar sesión
+    <nav class="sticky top-0 z-50 w-full bg-white/90 backdrop-blur border-b border-slate-200">
+        <div class="max-w-7xl mx-auto px-4 md:px-6 py-3 flex items-center justify-between gap-4">
+            <a href="#inicio" class="flex items-center gap-2" aria-label="Sianeffects inicio">
+                <img src="{{ url_for('static', filename='images/sianeffects_logo.png') }}" alt="Sianeffects"
+                    class="h-12 md:h-16 w-auto transition-transform hover:scale-105">
             </a>
 
-            <a href="/registro?plan=7days_free"
-                class="bg-[#1e293b] text-white px-5 py-2 rounded-lg font-semibold hover:bg-[#7CD1C4] transition">
-                Empezar gratis
-            </a>
+            <div class="hidden lg:flex items-center gap-7 text-sm font-semibold text-slate-600">
+                <a href="#para-quien" class="hover:text-slate-950 transition">Para quién es</a>
+                <a href="#como-funciona" class="hover:text-slate-950 transition">Cómo funciona</a>
+                <a href="#herramientas" class="hover:text-slate-950 transition">Herramientas</a>
+                <a href="#ia" class="hover:text-slate-950 transition">IA</a>
+                <a href="#precio" class="hover:text-slate-950 transition">Precio</a>
+                <a href="#faq" class="hover:text-slate-950 transition">FAQ</a>
+            </div>
+
+            <div class="hidden md:flex items-center gap-4">
+                <a href="/login" class="text-slate-600 font-semibold hover:text-black transition">Iniciar sesión</a>
+                <a href="/registro?plan=7days_free"
+                    class="bg-[#1e293b] text-white px-5 py-3 rounded-xl font-bold hover:bg-[#7CD1C4] hover:text-slate-900 transition shadow-sm">
+                    Probar gratis
+                </a>
+            </div>
+
+            <button type="button" class="md:hidden text-slate-900 text-2xl" onclick="toggleMobileMenu()" aria-label="Abrir menú">
+                <i class="fas fa-bars"></i>
+            </button>
         </div>
 
+        <div id="mobileMenu" class="mobile-menu md:hidden bg-white border-t border-slate-100">
+            <div class="px-6 py-5 space-y-4 text-slate-700 font-semibold">
+                <a href="#para-quien" onclick="toggleMobileMenu(false)" class="block">Para quién es</a>
+                <a href="#como-funciona" onclick="toggleMobileMenu(false)" class="block">Cómo funciona</a>
+                <a href="#herramientas" onclick="toggleMobileMenu(false)" class="block">Herramientas</a>
+                <a href="#ia" onclick="toggleMobileMenu(false)" class="block">IA y SianBot</a>
+                <a href="#precio" onclick="toggleMobileMenu(false)" class="block">Precio</a>
+                <a href="#faq" onclick="toggleMobileMenu(false)" class="block">FAQ</a>
+                <div class="pt-3 flex flex-col gap-3">
+                    <a href="/login" class="text-center border border-slate-200 py-3 rounded-xl">Iniciar sesión</a>
+                    <a href="/registro?plan=7days_free" class="text-center bg-[#1e293b] text-white py-3 rounded-xl font-bold">Probar gratis 7 días</a>
+                </div>
+            </div>
+        </div>
     </nav>
 
     <!-- HERO -->
-    <header class="py-20 px-6 text-center bg-white">
+    <header id="inicio" class="sian-gradient py-16 md:py-24 px-6 overflow-hidden">
+        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+            <div class="text-center lg:text-left">
+                <div class="inline-flex items-center gap-2 bg-white border border-slate-200 rounded-full px-4 py-2 shadow-sm text-sm font-bold text-slate-700 mb-6">
+                    <span class="w-2.5 h-2.5 rounded-full bg-[#7CD1C4]"></span>
+                    7 días gratis · Sin tarjeta · Soporte por WhatsApp
+                </div>
 
+                <h1 class="text-4xl md:text-6xl font-black text-slate-950 leading-[1.05] tracking-tight">
+                    Cotiza, cobra y gestiona tus pedidos con
+                    <span class="text-[#7CD1C4]">ganancia real.</span>
+                </h1>
 
+                <p class="mt-6 text-lg md:text-xl text-slate-600 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
+                    Sianeffects te ayuda a calcular materiales, maquinaria, mano de obra, descuentos, envíos e IVA para crear cotizaciones profesionales sin depender de Excel ni de precios “a ojo”.
+                </p>
 
-        <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 mt-8 md:mt-0">
-            Deja de cobrar al tanteo. <br>
-            <span class="text-[#7CD1C4]">Cada venta mal calculada es dinero que ya perdiste.</span>
-        </h1>
-        <p class="mt-6 text-lg text-slate-500 max-w-2xl mx-auto">
-            No es Excel. Es la diferencia entre ganar dinero o trabajar en vano.
-        </p>
-        <a href="/registro?plan=7days_free"
-            class="mt-10 inline-block bg-[#1e293b] text-white px-8 py-4 rounded-xl text-lg font-bold hover:bg-[#7CD1C4] transition">
-            PROBAR GRATIS 7 DÍAS
-        </a>
+                <div class="mt-9 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+                    <a href="/registro?plan=7days_free"
+                        class="inline-flex justify-center items-center gap-3 bg-[#1e293b] text-white px-8 py-4 rounded-2xl text-lg font-black hover:bg-[#7CD1C4] hover:text-slate-900 transition shadow-xl shadow-slate-300/40">
+                        Probar gratis 7 días
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+
+                    <a href="#como-funciona"
+                        class="inline-flex justify-center items-center gap-3 bg-white text-slate-900 border border-slate-200 px-8 py-4 rounded-2xl text-lg font-black hover:border-[#7CD1C4] hover:bg-slate-50 transition">
+                        Ver cómo funciona
+                        <i class="fas fa-play-circle text-[#7CD1C4]"></i>
+                    </a>
+                </div>
+
+                <div class="mt-8 grid grid-cols-3 gap-3 max-w-xl mx-auto lg:mx-0">
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                        <p class="text-2xl font-black text-slate-950">$149</p>
+                        <p class="text-xs text-slate-500 font-semibold">mensual</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                        <p class="text-2xl font-black text-slate-950">$1,490</p>
+                        <p class="text-xs text-slate-500 font-semibold">anual</p>
+                    </div>
+                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                        <p class="text-2xl font-black text-slate-950">PRO</p>
+                        <p class="text-xs text-slate-500 font-semibold">desde el trial</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="relative">
+                <div class="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#7CD1C4]/25 blur-2xl"></div>
+                <div class="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-[#E89292]/25 blur-2xl"></div>
+
+                <div class="relative glass-card border border-white rounded-[2rem] shadow-2xl p-4 md:p-5">
+                    <div class="rounded-[1.5rem] overflow-hidden bg-slate-950 border-[8px] border-slate-900">
+                        <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/main.png"
+                            alt="Vista principal de Sianeffects"
+                            class="w-full h-[280px] md:h-[420px] object-contain bg-black p-3">
+                    </div>
+
+                    <div class="grid sm:grid-cols-2 gap-3 mt-4">
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-calculator text-[#7CD1C4] text-xl"></i>
+                                <p class="font-black text-slate-900">Precio sugerido</p>
+                            </div>
+                            <p class="text-sm text-slate-500 mt-1">Con costos y margen reales.</p>
+                        </div>
+                        <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4">
+                            <div class="flex items-center gap-3">
+                                <i class="fas fa-chart-pie text-[#7CD1C4] text-xl"></i>
+                                <p class="font-black text-slate-900">Utilidad estimada</p>
+                            </div>
+                            <p class="text-sm text-slate-500 mt-1">Sin contar envío ni impuestos como ganancia.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </header>
 
-    <!-- DOLOR -->
-    <section class="py-16 px-6 bg-slate-50 text-center">
-        <h2 class="text-3xl font-bold text-slate-800 mb-8">
-            Si haces esto, estás perdiendo dinero:
-        </h2>
-        <div class="space-y-4 text-lg text-slate-600">
-            <p>❌ Sacar precios “a ojo”</p>
-            <p>❌ No considerar todos tus costos</p>
-            <p>❌ Bajar precios por miedo a no vender</p>
-        </div>
-        <p class="mt-8 text-xl font-semibold text-slate-800">
-            No necesitas trabajar más… necesitas cotizar mejor.
-        </p>
-    </section>
-
-    <section class="bg-slate-50 py-8">
-        <div class="max-w-4xl mx-auto px-6 text-center">
-
-            <p class="text-sm text-slate-500 mb-2">
-                Cada vez más negocios dejan de perder dinero con Sianeffects
-            </p>
-
-            <p class="text-lg font-semibold text-slate-800">
-                La pregunta es… ¿vas a seguir calculando a ciegas?
-            </p>
-
-        </div>
-    </section>
-
-    <!-- BENEFICIOS -->
-    <section class="py-20 px-6 bg-white text-center">
-        <h2 class="text-3xl font-bold mb-12">Lo que obtienes con Sianeffects</h2>
-        <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <div class="p-6 bg-slate-50 rounded-2xl">
-                <i class="fas fa-calculator text-3xl text-[#7CD1C4]"></i>
-                <h3 class="mt-4 font-bold text-lg">Precios claros</h3>
-                <p class="text-slate-500">Sabes exactamente cuánto cobrar.</p>
-            </div>
-            <div class="p-6 bg-slate-50 rounded-2xl">
-                <i class="fas fa-chart-line text-3xl text-[#7CD1C4]"></i>
-                <h3 class="mt-4 font-bold text-lg">Ganancia real</h3>
-                <p class="text-slate-500">Dejas de perder dinero sin darte cuenta.</p>
-            </div>
-            <div class="p-6 bg-slate-50 rounded-2xl">
-                <i class="fas fa-file-invoice text-3xl text-[#7CD1C4]"></i>
-                <h3 class="mt-4 font-bold text-lg">Cotizaciones pro</h3>
-                <p class="text-slate-500">Listas para enviar a clientes.</p>
-            </div>
-        </div>
-    </section>
-
-    <!-- FEATURES VISUALES / CARRUSEL -->
-    <section class="py-16 md:py-20 bg-slate-50">
-        <div class="max-w-6xl mx-auto px-4 md:px-6">
-
-            <h2 class="text-3xl md:text-5xl font-black text-center mb-10 md:mb-14 text-slate-900 leading-tight">
-                Así funciona Sianeffects por dentro
+    <!-- PAIN -->
+    <section class="py-16 md:py-20 px-6 bg-white">
+        <div class="max-w-6xl mx-auto text-center">
+            <h2 class="text-3xl md:text-5xl font-black text-slate-950 tracking-tight">
+                El problema no es vender más. <br class="hidden md:block">
+                Es vender sin saber si ganaste.
             </h2>
+            <p class="mt-5 text-lg text-slate-500 max-w-3xl mx-auto">
+                Cuando cotizas productos personalizados, cada pedido cambia: materiales, cantidades, procesos, descuentos, envíos, IVA y fechas de entrega. Si lo haces a memoria, el margen se va de vacaciones sin avisar.
+            </p>
 
-            <div
-                class="relative rounded-[1.5rem] md:rounded-[2rem] shadow-2xl overflow-hidden border-[6px] md:border-[10px] border-slate-900">
+            <div class="grid md:grid-cols-3 gap-5 mt-12 text-left">
+                <div class="feature-card bg-slate-50 border border-slate-200 rounded-3xl p-6">
+                    <div class="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mb-5">
+                        <i class="fas fa-times text-red-500 text-xl"></i>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-950">Precios al tanteo</h3>
+                    <p class="mt-3 text-slate-500 leading-relaxed">Cobras “más o menos” y después descubres que el pedido dejó menos de lo esperado.</p>
+                </div>
 
-                <!-- VIEWPORT -->
-                <div class="carousel-viewport overflow-hidden relative h-[280px] sm:h-[360px] md:h-[520px]">
+                <div class="feature-card bg-slate-50 border border-slate-200 rounded-3xl p-6">
+                    <div class="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mb-5">
+                        <i class="fas fa-receipt text-red-500 text-xl"></i>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-950">Costos invisibles</h3>
+                    <p class="mt-3 text-slate-500 leading-relaxed">Olvidas maquinaria, desgaste, mano de obra, gasto operativo, comisiones o envío.</p>
+                </div>
 
+                <div class="feature-card bg-slate-50 border border-slate-200 rounded-3xl p-6">
+                    <div class="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center mb-5">
+                        <i class="fas fa-box-open text-red-500 text-xl"></i>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-950">Pedidos desordenados</h3>
+                    <p class="mt-3 text-slate-500 leading-relaxed">Clientes, fechas de entrega, saldos y notas quedan perdidos entre WhatsApp, Excel y memoria.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- PARA QUIEN -->
+    <section id="para-quien" class="py-16 md:py-20 px-6 bg-slate-50">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center max-w-3xl mx-auto">
+                <span class="text-[#7CD1C4] font-black uppercase tracking-widest text-sm">Para negocios personalizados</span>
+                <h2 class="text-3xl md:text-5xl font-black text-slate-950 mt-3">Hecho para quien vende por pedido, no para quien vende “todo igual”.</h2>
+                <p class="mt-5 text-lg text-slate-500">Si tus productos cambian según materiales, tamaño, diseño, tiempo o entrega, Sianeffects te ayuda a cobrar con números claros.</p>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
+                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Sublimación</div>
+                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Personalizados</div>
+                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Regalos</div>
+                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Manualidades</div>
+                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Impresión</div>
+                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Repostería</div>
+                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Vinil / Corte</div>
+                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Emprendimientos</div>
+            </div>
+        </div>
+    </section>
+
+    <!-- COMO FUNCIONA -->
+    <section id="como-funciona" class="py-16 md:py-24 px-6 bg-white">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center max-w-3xl mx-auto">
+                <span class="text-[#7CD1C4] font-black uppercase tracking-widest text-sm">Flujo simple</span>
+                <h2 class="text-3xl md:text-5xl font-black text-slate-950 mt-3">De tus costos al precio final, sin hacer maromas en Excel.</h2>
+                <p class="mt-5 text-lg text-slate-500">La app recalcula los importes importantes en backend, para que tus totales, costos y utilidad no dependan solo de lo que haga el navegador.</p>
+            </div>
+
+            <div class="grid md:grid-cols-3 gap-6 mt-14">
+                <div class="relative bg-slate-50 border border-slate-200 rounded-3xl p-8">
+                    <div class="absolute -top-5 left-8 w-10 h-10 bg-[#1e293b] text-white rounded-2xl flex items-center justify-center font-black">1</div>
+                    <i class="fas fa-boxes text-4xl text-[#7CD1C4] mt-4"></i>
+                    <h3 class="text-2xl font-black mt-5">Carga tus costos</h3>
+                    <p class="text-slate-500 mt-3 leading-relaxed">Registra materiales, paquetes, precios unitarios, maquinaria, desgaste, mano de obra y gasto operativo.</p>
+                </div>
+
+                <div class="relative bg-slate-50 border border-slate-200 rounded-3xl p-8">
+                    <div class="absolute -top-5 left-8 w-10 h-10 bg-[#1e293b] text-white rounded-2xl flex items-center justify-center font-black">2</div>
+                    <i class="fas fa-calculator text-4xl text-[#7CD1C4] mt-4"></i>
+                    <h3 class="text-2xl font-black mt-5">Cotiza con margen</h3>
+                    <p class="text-slate-500 mt-3 leading-relaxed">Arma productos, usa recetas, agrega descuento, envío e IVA. El sistema calcula precio sugerido, total y utilidad.</p>
+                </div>
+
+                <div class="relative bg-slate-50 border border-slate-200 rounded-3xl p-8">
+                    <div class="absolute -top-5 left-8 w-10 h-10 bg-[#1e293b] text-white rounded-2xl flex items-center justify-center font-black">3</div>
+                    <i class="fas fa-clipboard-check text-4xl text-[#7CD1C4] mt-4"></i>
+                    <h3 class="text-2xl font-black mt-5">Gestiona el pedido</h3>
+                    <p class="text-slate-500 mt-3 leading-relaxed">Guarda como cotización, anticipo o pagado. Controla cliente, fecha de entrega, saldo pendiente, historial y ticket.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SCREENSHOTS / CARRUSEL -->
+    <section class="py-16 md:py-24 bg-slate-50">
+        <div class="max-w-6xl mx-auto px-4 md:px-6">
+            <div class="text-center max-w-3xl mx-auto">
+                <span class="text-[#7CD1C4] font-black uppercase tracking-widest text-sm">Por dentro</span>
+                <h2 class="text-3xl md:text-5xl font-black text-slate-950 mt-3 leading-tight">Así se ve trabajar con números claros.</h2>
+                <p class="mt-5 text-lg text-slate-500">Pantallas reales para cotizar, guardar recetas, controlar historial, configurar envíos y registrar costos de producción.</p>
+            </div>
+
+            <div class="relative rounded-[1.5rem] md:rounded-[2rem] shadow-2xl overflow-hidden border-[6px] md:border-[10px] border-slate-900 mt-12">
+                <div class="carousel-viewport overflow-hidden relative h-[280px] sm:h-[360px] md:h-[540px] bg-black">
                     <div id="slider" class="flex transition-transform duration-500 ease-in-out h-full">
-
                         <div class="min-w-full flex items-center justify-center bg-black">
-                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/main.png"
-                                class="h-full w-full object-contain p-2 md:p-4">
+                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/main.png" alt="Panel principal" class="h-full w-full object-contain p-2 md:p-4">
                         </div>
-
                         <div class="min-w-full flex items-center justify-center bg-black">
-                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/cotizacion.png"
-                                class="h-full w-full object-contain p-2 md:p-4">
+                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/cotizacion.png" alt="Cotización" class="h-full w-full object-contain p-2 md:p-4">
                         </div>
-
                         <div class="min-w-full flex items-center justify-center bg-black">
-                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/ajustes_configurar_envio.png"
-                                class="h-full w-full object-contain p-2 md:p-4">
+                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/ajustes_configurar_envio.png" alt="Configuración de envíos" class="h-full w-full object-contain p-2 md:p-4">
                         </div>
-
                         <div class="min-w-full flex items-center justify-center bg-black">
-                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/historialventas.png"
-                                class="h-full w-full object-contain p-2 md:p-4">
+                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/historialventas.png" alt="Historial de ventas" class="h-full w-full object-contain p-2 md:p-4">
                         </div>
-
                         <div class="min-w-full flex items-center justify-center bg-black">
-                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/maquinariayprocesos.png"
-                                class="h-full w-full object-contain p-2 md:p-4">
+                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/maquinariayprocesos.png" alt="Maquinaria y procesos" class="h-full w-full object-contain p-2 md:p-4">
                         </div>
-
                         <div class="min-w-full flex items-center justify-center bg-black">
-                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/recetas.png"
-                                class="h-full w-full object-contain p-2 md:p-4">
+                            <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/recetas.png" alt="Recetas" class="h-full w-full object-contain p-2 md:p-4">
                         </div>
-
                     </div>
 
-                    <!-- DOTS -->
-                    <div class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                        <div class="dot w-3 h-3 rounded-full bg-white/40 border border-white cursor-pointer"
-                            onclick="goToSlide(0)"></div>
-                        <div class="dot w-3 h-3 rounded-full bg-white/40 border border-white cursor-pointer"
-                            onclick="goToSlide(1)"></div>
-                        <div class="dot w-3 h-3 rounded-full bg-white/40 border border-white cursor-pointer"
-                            onclick="goToSlide(2)"></div>
-                        <div class="dot w-3 h-3 rounded-full bg-white/40 border border-white cursor-pointer"
-                            onclick="goToSlide(3)"></div>
-                        <div class="dot w-3 h-3 rounded-full bg-white/40 border border-white cursor-pointer"
-                            onclick="goToSlide(4)"></div>
-                        <div class="dot w-3 h-3 rounded-full bg-white/40 border border-white cursor-pointer"
-                            onclick="goToSlide(5)"></div>
-                    </div>
+                    <div id="dots" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2"></div>
 
-                    <!-- BOTONES -->
-                    <button onclick="prevSlide()"
-                        class="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-[#7CD1C4] p-3 md:p-4 rounded-full text-white">
+                    <button type="button" onclick="prevSlide()" class="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-black/55 hover:bg-[#7CD1C4] p-3 md:p-4 rounded-full text-white hover:text-slate-900 transition" aria-label="Anterior">
                         <i class="fas fa-chevron-left"></i>
                     </button>
 
-                    <button onclick="nextSlide()"
-                        class="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-[#7CD1C4] p-3 md:p-4 rounded-full text-white">
+                    <button type="button" onclick="nextSlide()" class="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-black/55 hover:bg-[#7CD1C4] p-3 md:p-4 rounded-full text-white hover:text-slate-900 transition" aria-label="Siguiente">
                         <i class="fas fa-chevron-right"></i>
                     </button>
                 </div>
 
-                <!-- TEXTO -->
-                <div class="bg-slate-900 py-3 md:py-5 px-4 text-center">
-                    <p id="slide-text" class="text-[#7CD1C4] font-medium text-sm md:text-lg">
-                        Interfaz limpia e intuitiva para tu negocio
-                    </p>
+                <div class="bg-slate-900 py-5 md:py-7 px-5 text-center">
+                    <p id="slide-title" class="text-white font-black text-lg md:text-2xl">Panel principal</p>
+                    <p id="slide-text" class="text-[#7CD1C4] font-semibold text-sm md:text-base mt-1">Accesos rápidos para administrar tu negocio desde un solo lugar.</p>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- COMPARATIVA -->
-    <section class="py-20 px-6 bg-slate-900 text-white">
-        <h2 class="text-3xl font-bold text-center mb-12">La diferencia es clara</h2>
-        <div class="max-w-4xl mx-auto overflow-hidden rounded-2xl border border-slate-700">
-            <table class="w-full text-left">
-                <thead class="bg-slate-800">
-                    <tr>
-                        <th class="p-4">Función</th>
-                        <th class="p-4 text-red-400">Excel</th>
-                        <th class="p-4 text-[#7CD1C4]">Sianeffects</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr class="border-t border-slate-700">
-                        <td class="p-4">Cálculo</td>
-                        <td class="p-4">Te tardas y te equivocas</td>
-                        <td class="p-4 text-[#7CD1C4] font-bold">Automático</td>
-                    </tr>
-                    <tr class="border-t border-slate-700">
-                        <td class="p-4">Ganancia</td>
-                        <td class="p-4 italic">"Creo que sí le gané"</td>
-                        <td class="p-4 text-[#7CD1C4] font-bold">Ganancia real</td>
-                    </tr>
-                    <tr class="border-t border-slate-700">
-                        <td class="p-4">Escalabilidad</td>
-                        <td class="p-4">Se vuelve un caos</td>
-                        <td class="p-4 text-[#7CD1C4] font-bold">Pensado para negocio</td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- HERRAMIENTAS -->
+    <section id="herramientas" class="py-16 md:py-24 px-6 bg-white">
+        <div class="max-w-7xl mx-auto">
+            <div class="text-center max-w-3xl mx-auto">
+                <span class="text-[#7CD1C4] font-black uppercase tracking-widest text-sm">Más que un cotizador</span>
+                <h2 class="text-3xl md:text-5xl font-black text-slate-950 mt-3">Todo lo que tu negocio necesita para cotizar y dar seguimiento.</h2>
+                <p class="mt-5 text-lg text-slate-500">Sianeffects conecta la parte financiera con la parte operativa: precios, clientes, entregas, inventario, dashboard y tickets.</p>
+            </div>
+
+            <div class="grid lg:grid-cols-3 gap-6 mt-14">
+                <div class="feature-card border border-slate-200 bg-slate-50 rounded-3xl p-7">
+                    <div class="w-14 h-14 rounded-2xl bg-[#7CD1C4]/20 flex items-center justify-center mb-5">
+                        <i class="fas fa-calculator text-[#1e293b] text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-950">Cotización inteligente</h3>
+                    <ul class="mt-5 space-y-3 text-slate-600">
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Materiales, paquetes y precio unitario.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Maquinaria, desgaste y procesos.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Mano de obra por monto o por tiempo.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Descuentos, envío, IVA y redondeo.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Precio sugerido y utilidad estimada.</span></li>
+                    </ul>
+                </div>
+
+                <div class="feature-card border border-slate-200 bg-slate-50 rounded-3xl p-7">
+                    <div class="w-14 h-14 rounded-2xl bg-[#7CD1C4]/20 flex items-center justify-center mb-5">
+                        <i class="fas fa-clipboard-list text-[#1e293b] text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-950">Pedidos y clientes</h3>
+                    <ul class="mt-5 space-y-3 text-slate-600">
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Guarda cotizaciones, anticipos y ventas pagadas.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Historial con folios, cliente y estado.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Directorio de clientes reales.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Fecha de entrega, método y notas del pedido.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Saldos pendientes y seguimiento operativo.</span></li>
+                    </ul>
+                </div>
+
+                <div class="feature-card border border-slate-200 bg-slate-50 rounded-3xl p-7">
+                    <div class="w-14 h-14 rounded-2xl bg-[#7CD1C4]/20 flex items-center justify-center mb-5">
+                        <i class="fas fa-chart-line text-[#1e293b] text-2xl"></i>
+                    </div>
+                    <h3 class="text-2xl font-black text-slate-950">Control del negocio</h3>
+                    <ul class="mt-5 space-y-3 text-slate-600">
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Inventario con entradas, mermas y salidas.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Recetas reutilizables para cotizar más rápido.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Dashboard con ventas, cobrado, utilidad y por cobrar.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Configuración de envíos locales y nacionales.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Tickets, reportes y exportación a Excel.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check text-[#7CD1C4] mt-1"></i><span>Chatbots con IA para configuración, equipos y dashboard.</span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- IA / SIANBOT -->
+    <section id="ia" class="py-16 md:py-24 px-6 bg-slate-50">
+        <div class="max-w-7xl mx-auto grid lg:grid-cols-2 gap-10 items-center">
+            <div>
+                <span class="text-[#7CD1C4] font-black uppercase tracking-widest text-sm">IA integrada</span>
+                <h2 class="text-3xl md:text-5xl font-black text-slate-950 mt-3">SianBot te ayuda a entender tus números y configurar mejor tu negocio.</h2>
+                <p class="mt-5 text-lg text-slate-500 leading-relaxed">
+                    Además del cotizador, Sianeffects incluye asistentes con IA pensados para ayudarte dentro de la app: configuración del negocio, equipos/maquinaria y análisis del dashboard. No es IA de adorno; es una ayuda para tomar mejores decisiones sin perderte entre números.
+                </p>
+
+                <div class="mt-8 flex flex-col sm:flex-row gap-4">
+                    <a href="/registro?plan=7days_free" class="inline-flex justify-center items-center gap-3 bg-[#1e293b] text-white px-7 py-4 rounded-2xl font-black hover:bg-[#7CD1C4] hover:text-slate-900 transition">
+                        Probar Sianeffects gratis
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                    <a href="#como-funciona" class="inline-flex justify-center items-center gap-3 bg-white border border-slate-200 text-slate-800 px-7 py-4 rounded-2xl font-black hover:border-[#7CD1C4] transition">
+                        Ver cómo funciona
+                    </a>
+                </div>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-5">
+                <div class="feature-card bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                    <div class="w-14 h-14 rounded-2xl bg-[#7CD1C4]/20 flex items-center justify-center mb-5">
+                        <i class="fas fa-robot text-[#1e293b] text-2xl"></i>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-950">IA en configuración</h3>
+                    <p class="text-slate-500 mt-2">Te orienta sobre mano de obra, costos operativos, envíos y ajustes del negocio.</p>
+                </div>
+
+                <div class="feature-card bg-white border border-slate-200 rounded-3xl p-6 shadow-sm">
+                    <div class="w-14 h-14 rounded-2xl bg-[#7CD1C4]/20 flex items-center justify-center mb-5">
+                        <i class="fas fa-screwdriver-wrench text-[#1e293b] text-2xl"></i>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-950">IA para equipos</h3>
+                    <p class="text-slate-500 mt-2">Ayuda a aterrizar costos de uso, desgaste y procesos de maquinaria.</p>
+                </div>
+
+                <div class="feature-card bg-white border border-slate-200 rounded-3xl p-6 shadow-sm sm:col-span-2">
+                    <div class="w-14 h-14 rounded-2xl bg-[#7CD1C4]/20 flex items-center justify-center mb-5">
+                        <i class="fas fa-chart-pie text-[#1e293b] text-2xl"></i>
+                    </div>
+                    <h3 class="font-black text-xl text-slate-950">IA en tu dashboard</h3>
+                    <p class="text-slate-500 mt-2">Analiza el contexto visible de tu panel para explicar cobrado, utilidad, saldos pendientes, productos destacados y decisiones que puedes tomar.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- DIFERENCIADORES -->
+    <section class="py-16 md:py-24 px-6 bg-slate-900 text-white">
+        <div class="max-w-6xl mx-auto">
+            <div class="text-center max-w-3xl mx-auto">
+                <span class="text-[#7CD1C4] font-black uppercase tracking-widest text-sm">La diferencia</span>
+                <h2 class="text-3xl md:text-5xl font-black mt-3">Excel calcula. Sianeffects entiende tu flujo de venta.</h2>
+                <p class="mt-5 text-lg text-slate-400">Porque una cotización no termina en el precio: también hay cliente, anticipo, entrega, stock, ticket y utilidad.</p>
+            </div>
+
+            <div class="max-w-5xl mx-auto overflow-hidden rounded-3xl border border-slate-700 mt-12 bg-slate-950/30">
+                <table class="w-full text-left">
+                    <thead class="bg-slate-800">
+                        <tr>
+                            <th class="p-4 md:p-5">Cuando lo haces en Excel/notas</th>
+                            <th class="p-4 md:p-5 text-[#7CD1C4]">Cuando lo haces en Sianeffects</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm md:text-base">
+                        <tr class="border-t border-slate-700">
+                            <td class="p-4 md:p-5 text-slate-300">Puedes olvidar costos pequeños que se comen tu margen.</td>
+                            <td class="p-4 md:p-5 font-bold text-[#7CD1C4]">Calculas materiales, procesos, maquinaria, mano de obra y gastos.</td>
+                        </tr>
+                        <tr class="border-t border-slate-700">
+                            <td class="p-4 md:p-5 text-slate-300">El descuento se aplica “a ver si sale”.</td>
+                            <td class="p-4 md:p-5 font-bold text-[#7CD1C4]">Ves total, utilidad y saldo antes de vender.</td>
+                        </tr>
+                        <tr class="border-t border-slate-700">
+                            <td class="p-4 md:p-5 text-slate-300">Tus clientes y pedidos quedan regados.</td>
+                            <td class="p-4 md:p-5 font-bold text-[#7CD1C4]">Tienes historial, clientes, fechas de entrega y notas.</td>
+                        </tr>
+                        <tr class="border-t border-slate-700">
+                            <td class="p-4 md:p-5 text-slate-300">No sabes cuánto cobraste vs cuánto falta por cobrar.</td>
+                            <td class="p-4 md:p-5 font-bold text-[#7CD1C4]">Controlas pagado, anticipo y saldo pendiente.</td>
+                        </tr>
+                        <tr class="border-t border-slate-700">
+                            <td class="p-4 md:p-5 text-slate-300">El inventario se descuenta “cuando te acuerdas”.</td>
+                            <td class="p-4 md:p-5 font-bold text-[#7CD1C4]">Puedes descontar stock y registrar movimientos.</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+
+    <!-- CONFIANZA -->
+    <section class="py-16 md:py-20 px-6 bg-white">
+        <div class="max-w-6xl mx-auto grid lg:grid-cols-2 gap-8 items-center">
+            <div>
+                <span class="text-[#7CD1C4] font-black uppercase tracking-widest text-sm">Confianza</span>
+                <h2 class="text-3xl md:text-5xl font-black text-slate-950 mt-3">Pensado para negocios reales, no para hojas de cálculo bonitas.</h2>
+                <p class="mt-5 text-lg text-slate-500 leading-relaxed">Sianeffects separa lo cobrado, lo pendiente, los costos y la utilidad estimada. Así puedes tomar decisiones sin confundir dinero recibido con ganancia.</p>
+            </div>
+
+            <div class="grid sm:grid-cols-2 gap-4">
+                <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6">
+                    <i class="fas fa-lock text-[#7CD1C4] text-3xl"></i>
+                    <h3 class="font-black text-xl mt-4">Acceso PRO controlado</h3>
+                    <p class="text-slate-500 mt-2">Trial, suscripción activa y validación de acceso desde sesión.</p>
+                </div>
+                <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6">
+                    <i class="fas fa-credit-card text-[#7CD1C4] text-3xl"></i>
+                    <h3 class="font-black text-xl mt-4">Pagos flexibles</h3>
+                    <p class="text-slate-500 mt-2">Puedes activar PRO con tarjeta, depósito en tiendas de conveniencia o transferencia bancaria.</p>
+                </div>
+                <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6">
+                    <i class="fas fa-envelope-open-text text-[#7CD1C4] text-3xl"></i>
+                    <h3 class="font-black text-xl mt-4">Correos automáticos</h3>
+                    <p class="text-slate-500 mt-2">Verificación, bienvenida, pagos y avisos de vencimiento.</p>
+                </div>
+                <div class="bg-slate-50 border border-slate-200 rounded-3xl p-6">
+                    <i class="fas fa-robot text-[#7CD1C4] text-3xl"></i>
+                    <h3 class="font-black text-xl mt-4">Chatbots con IA</h3>
+                    <p class="text-slate-500 mt-2">Asistentes para equipos, configuración y dashboard dentro de la app.</p>
+                </div>
+            </div>
         </div>
     </section>
 
     <!-- PRECIO -->
-    <section class="py-24 px-6 text-center bg-slate-50">
-        <div class="max-w-5xl mx-auto">
+    <section id="precio" class="py-16 md:py-24 px-6 bg-slate-50">
+        <div class="max-w-6xl mx-auto text-center">
+            <span class="text-[#7CD1C4] font-black uppercase tracking-widest text-sm">Precio simple</span>
+            <h2 class="text-3xl md:text-5xl font-black text-slate-950 mt-3">Empieza gratis. Quédate cuando veas tus números claros.</h2>
+            <p class="mt-5 text-lg text-slate-500 max-w-3xl mx-auto">Con una sola cotización bien calculada puedes recuperar el mes. El Excel no se ofende, pero sí se jubila.</p>
 
-            <div class="bg-white p-10 md:p-14 rounded-3xl shadow-2xl border-t-8 border-[#7CD1C4]">
-
-                <h3 class="text-3xl font-extrabold text-slate-900">Plan PRO</h3>
-
-                <p class="text-6xl font-black my-6 text-slate-900">$149</p>
-
-                <p class="text-[#7CD1C4] font-semibold mb-10 text-lg">
-                    Lo recuperas con UNA sola venta bien cotizada.
-                </p>
-
-                <!-- GRID CORRECTO -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 text-left">
-
-                    <!-- FEATURES -->
-                    <div class="bg-slate-50 rounded-2xl p-6 md:p-8 border border-slate-200 space-y-5">
-
-                        <h4 class="text-slate-900 font-bold text-sm uppercase tracking-widest text-center mb-4">
-                            Lo que incluye
-                        </h4>
-
-                        <div class="flex items-start gap-3">
-                            <i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i>
-                            <span class="text-slate-700">Cotizador ilimitado</span>
-                        </div>
-
-                        <div class="flex items-start gap-3">
-                            <i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i>
-                            <span class="text-slate-700">Cálculo de ganancia real</span>
-                        </div>
-
-
-                        <div class="flex items-start gap-3">
-                            <i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i>
-                            <span class="text-slate-700">Control de inventario</span>
-                        </div>
-
-                        <div class="flex items-start gap-3">
-                            <i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i>
-                            <span class="text-slate-700">IVA, descuentos y envíos</span>
-                        </div>
-
-                        <div class="flex items-start gap-3">
-                            <i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i>
-                            <span class="text-slate-700">Inventario + recetas</span>
-                        </div>
-
-                        <div class="flex items-start gap-3">
-                            <i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i>
-                            <span class="text-slate-700">PDFs profesionales</span>
-                        </div>
-
-                        <div class="flex items-start gap-3">
-                            <i class="fas fa-star text-amber-400 mt-1"></i>
-                            <span class="text-slate-800 font-semibold">Soporte por WhatsApp</span>
-                        </div>
-
+            <div class="grid lg:grid-cols-2 gap-6 mt-12 text-left">
+                <div class="bg-white rounded-[2rem] border border-slate-200 p-8 md:p-10 shadow-lg">
+                    <h3 class="text-2xl font-black text-slate-950">Plan mensual</h3>
+                    <div class="mt-6 flex items-end gap-2">
+                        <p class="text-6xl font-black text-slate-950">$149</p>
+                        <p class="text-slate-500 font-bold mb-2">MXN / mes</p>
                     </div>
-
-                    <!-- RESULTADOS (NECESIDAD) -->
-                    <div class="bg-white rounded-2xl p-6 md:p-8 border border-slate-200 shadow-sm space-y-6">
-
-                        <h4 class="text-slate-900 font-bold text-sm uppercase tracking-widest text-center">
-                            Lo que pasa cuando NO lo usas
-                        </h4>
-
-                        <div class="space-y-5">
-
-                            <div>
-                                <p class="font-semibold text-slate-800">Sigues adivinando precios</p>
-                                <p class="text-slate-500 text-sm">y perdiendo dinero sin darte cuenta</p>
-                            </div>
-
-                            <div>
-                                <p class="font-semibold text-slate-800">No sabes si ganaste</p>
-                                <p class="text-slate-500 text-sm">solo esperas que “salga algo”</p>
-                            </div>
-
-                            <div>
-                                <p class="font-semibold text-slate-800">Trabajas más por menos</p>
-                                <p class="text-slate-500 text-sm">porque tus números están mal</p>
-                            </div>
-
-                        </div>
-
-                        <!-- GOLPE -->
-                        <div class="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
-                            <p class="text-red-600 font-semibold text-sm">
-                                Cada cotización mal hecha = dinero perdido
-                            </p>
-                        </div>
-
-                    </div>
-
+                    <p class="text-slate-500 mt-4">Ideal para empezar, probar el flujo completo y ordenar tus cotizaciones.</p>
+                    <ul class="mt-8 space-y-4 text-slate-700">
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Cotizador con ganancia real.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Materiales, recetas, maquinaria e inventario.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Historial, clientes, pedidos y entregas.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Dashboard, tickets y exportación.</span></li>
+                    </ul>
+                    <a href="/registro?plan=7days_free" class="mt-9 block text-center bg-[#1e293b] text-white py-5 rounded-2xl text-lg font-black hover:bg-[#7CD1C4] hover:text-slate-900 transition">Probar gratis 7 días</a>
                 </div>
 
-                <!-- CTA -->
-                <p class="text-sm text-slate-500 mt-6">
-                    Si hoy haces 1 cotización mal… probablemente ya perdiste más de $149
-                </p>
-                <a href="/registro?plan=7days_free"
-                    class="mt-12 block bg-[#1e293b] text-white py-5 rounded-xl text-lg font-bold hover:bg-[#7CD1C4] transition">
-                    PROBAR GRATIS Y DEJAR DE PERDER DINERO
-                </a>
+                <div class="relative bg-slate-900 rounded-[2rem] border-4 border-[#7CD1C4] p-8 md:p-10 shadow-2xl text-white overflow-hidden">
+                    <div class="absolute top-5 right-5 bg-[#7CD1C4] text-slate-950 rounded-full px-4 py-2 text-sm font-black">Mejor valor</div>
+                    <h3 class="text-2xl font-black">Plan anual</h3>
+                    <div class="mt-6 flex items-end gap-2">
+                        <p class="text-6xl font-black">$1,490</p>
+                        <p class="text-slate-300 font-bold mb-2">MXN / año</p>
+                    </div>
+                    <p class="text-slate-300 mt-4">Para trabajar todo el año con tus cotizaciones, pedidos y números bajo control.</p>
+                    <ul class="mt-8 space-y-4 text-slate-200">
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Todo lo del plan mensual.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Pagas menos que 12 meses separados.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Ideal si ya cotizas todos los días.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Soporte por WhatsApp.</span></li>
+                    </ul>
+                    <a href="/registro?plan=7days_free" class="mt-9 block text-center bg-[#7CD1C4] text-slate-950 py-5 rounded-2xl text-lg font-black hover:bg-white transition">Empezar gratis y elegir plan</a>
+                </div>
+            </div>
 
-                <p class="text-sm text-slate-400 mt-4">Sin tarjeta</p>
+            <p class="text-sm text-slate-400 mt-6">El trial se crea por 7 días al registrarte. Después puedes activar PRO con plan mensual o anual pagando con tarjeta, depósito en tiendas de conveniencia o transferencia bancaria.</p>
+        </div>
+    </section>
 
+    <!-- FAQ -->
+    <section id="faq" class="py-16 md:py-24 px-6 bg-white">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center mb-12">
+                <span class="text-[#7CD1C4] font-black uppercase tracking-widest text-sm">Preguntas frecuentes</span>
+                <h2 class="text-3xl md:text-5xl font-black text-slate-950 mt-3">Lo básico antes de entrarle.</h2>
+            </div>
+
+            <div class="space-y-4">
+                <details class="group bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                    <summary class="cursor-pointer font-black text-slate-950 flex justify-between gap-4">¿Necesito saber usar Excel? <i class="fas fa-chevron-down group-open:rotate-180 transition"></i></summary>
+                    <p class="mt-4 text-slate-500 leading-relaxed">No. La idea es que captures tus costos y el sistema te guíe para calcular precios, totales, utilidad, descuentos, IVA y envío sin depender de fórmulas manuales.</p>
+                </details>
+
+                <details class="group bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                    <summary class="cursor-pointer font-black text-slate-950 flex justify-between gap-4">¿Puedo guardar productos que vendo seguido? <i class="fas fa-chevron-down group-open:rotate-180 transition"></i></summary>
+                    <p class="mt-4 text-slate-500 leading-relaxed">Sí. Puedes guardar recetas con materiales y equipos para reutilizarlas en nuevas cotizaciones y no empezar desde cero cada vez.</p>
+                </details>
+
+                <details class="group bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                    <summary class="cursor-pointer font-black text-slate-950 flex justify-between gap-4">¿También controla pedidos y clientes? <i class="fas fa-chevron-down group-open:rotate-180 transition"></i></summary>
+                    <p class="mt-4 text-slate-500 leading-relaxed">Sí. Puedes guardar clientes, historial de ventas, folios, estados, anticipos, saldos pendientes, fecha de entrega, método de entrega y notas del pedido.</p>
+                </details>
+
+                <details class="group bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                    <summary class="cursor-pointer font-black text-slate-950 flex justify-between gap-4">¿El inventario es obligatorio? <i class="fas fa-chevron-down group-open:rotate-180 transition"></i></summary>
+                    <p class="mt-4 text-slate-500 leading-relaxed">No. Puedes usar el cotizador sin inventario activo. Si lo activas, Sianeffects puede registrar entradas, mermas, salidas por venta y devoluciones al cancelar.</p>
+                </details>
+
+                <details class="group bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                    <summary class="cursor-pointer font-black text-slate-950 flex justify-between gap-4">¿Qué hacen los chatbots con IA? <i class="fas fa-chevron-down group-open:rotate-180 transition"></i></summary>
+                    <p class="mt-4 text-slate-500 leading-relaxed">SianBot puede ayudarte a entender tu dashboard, configurar mejor tus costos y aterrizar el uso de equipos o maquinaria. Usa el contexto visible dentro de cada módulo para darte respuestas más útiles.</p>
+                </details>
+
+                <details class="group bg-slate-50 border border-slate-200 rounded-2xl p-6">
+                    <summary class="cursor-pointer font-black text-slate-950 flex justify-between gap-4">¿Qué pasa cuando termina la prueba gratis? <i class="fas fa-chevron-down group-open:rotate-180 transition"></i></summary>
+                    <p class="mt-4 text-slate-500 leading-relaxed">Puedes activar PRO con plan mensual o anual. Aceptamos pago con tarjeta, depósito en tiendas de conveniencia o transferencia bancaria, y la app maneja el estado de suscripción para liberar las herramientas según tu plan.</p>
+                </details>
             </div>
         </div>
     </section>
 
     <!-- CIERRE -->
-    <section class="py-20 px-6 bg-slate-900 text-white text-center">
-        <h2 class="text-3xl font-bold mb-6">
-            Si no sabes cuánto ganas… no tienes un negocio.
-        </h2>
-        <p class="text-slate-400 mb-8">Tienes una apuesta.</p>
-        <a href="/registro?plan=7days_free" class="bg-[#7CD1C4] px-10 py-4 rounded-xl font-bold">
-            Empezar gratis y dejar de perder dinero
-        </a>
+    <section class="py-16 md:py-24 px-6 bg-slate-900 text-white text-center">
+        <div class="max-w-4xl mx-auto">
+            <h2 class="text-3xl md:text-6xl font-black leading-tight">Deja de cotizar con miedo. Empieza a vender con números claros.</h2>
+            <p class="text-slate-400 mt-6 text-lg md:text-xl">Prueba Sianeffects gratis por 7 días y descubre cuánto deberías estar cobrando realmente por tus productos.</p>
+            <a href="/registro?plan=7days_free" class="mt-10 inline-flex items-center gap-3 bg-[#7CD1C4] text-slate-950 px-10 py-5 rounded-2xl font-black text-lg hover:bg-white transition">
+                Empezar gratis
+                <i class="fas fa-arrow-right"></i>
+            </a>
+            <p class="text-slate-500 mt-5 text-sm">Sin tarjeta para probar · Pago con tarjeta, depósito en tiendas o transferencia · Soporte por WhatsApp</p>
+        </div>
     </section>
 
+    <!-- FOOTER -->
+    <footer class="bg-slate-950 text-slate-400 px-6 py-10">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between gap-6 items-center text-center md:text-left">
+            <div>
+                <img src="{{ url_for('static', filename='images/sianeffects_logo.png') }}" alt="Sianeffects" class="h-12 w-auto mx-auto md:mx-0 bg-white rounded-xl p-1">
+                <p class="mt-3 text-sm">Cotiza, cobra y gestiona con ganancia real.</p>
+            </div>
+            <div class="flex flex-wrap justify-center gap-5 text-sm font-semibold">
+                <a href="#inicio" class="hover:text-white transition">Inicio</a>
+                <a href="#para-quien" class="hover:text-white transition">Para quién es</a>
+                <a href="#herramientas" class="hover:text-white transition">Herramientas</a>
+                <a href="#ia" class="hover:text-white transition">IA</a>
+                <a href="#precio" class="hover:text-white transition">Precio</a>
+                <a href="/login" class="hover:text-white transition">Iniciar sesión</a>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        let currentIdx = 0;
+        const slider = document.getElementById('slider');
+        const slideTitle = document.getElementById('slide-title');
+        const slideText = document.getElementById('slide-text');
+        const dotsContainer = document.getElementById('dots');
+
+        const slides = [
+            {
+                title: "Panel principal",
+                text: "Accesos rápidos para administrar tu negocio desde un solo lugar."
+            },
+            {
+                title: "Cotizaciones con costos reales",
+                text: "Materiales, cantidades, descuento, IVA, envío y ganancia en un mismo flujo."
+            },
+            {
+                title: "Configuración de envíos",
+                text: "Define costos locales, zonas nacionales y márgenes para no regalar entregas."
+            },
+            {
+                title: "Historial de ventas y pedidos",
+                text: "Consulta folios, clientes, estados, fechas de entrega y saldos pendientes."
+            },
+            {
+                title: "Maquinaria y procesos",
+                text: "Suma desgaste y procesos para que tu equipo también cuente en el precio."
+            },
+            {
+                title: "Recetas reutilizables",
+                text: "Guarda productos frecuentes y cotízalos más rápido sin rehacer todo."
+            }
+        ];
+
+        function renderDots() {
+            if (!dotsContainer) return;
+            dotsContainer.innerHTML = '';
+            slides.forEach((_, index) => {
+                const dot = document.createElement('button');
+                dot.type = 'button';
+                dot.className = 'dot w-3 h-3 rounded-full bg-white/40 border border-white cursor-pointer transition';
+                dot.setAttribute('aria-label', `Ir al slide ${index + 1}`);
+                dot.onclick = () => goToSlide(index);
+                dotsContainer.appendChild(dot);
+            });
+        }
+
+        function updateSlider() {
+            if (!slider) return;
+            slider.style.transform = `translateX(-${currentIdx * 100}%)`;
+            slideTitle.textContent = slides[currentIdx].title;
+            slideText.textContent = slides[currentIdx].text;
+
+            document.querySelectorAll('.dot').forEach((dot, index) => {
+                dot.classList.toggle('active', index === currentIdx);
+            });
+        }
+
+        function nextSlide() {
+            currentIdx = (currentIdx + 1) % slides.length;
+            updateSlider();
+        }
+
+        function prevSlide() {
+            currentIdx = (currentIdx - 1 + slides.length) % slides.length;
+            updateSlider();
+        }
+
+        function goToSlide(i) {
+            currentIdx = i;
+            updateSlider();
+        }
+
+        function toggleMobileMenu(forceState) {
+            const menu = document.getElementById('mobileMenu');
+            if (!menu) return;
+            if (typeof forceState === 'boolean') {
+                menu.classList.toggle('open', forceState);
+            } else {
+                menu.classList.toggle('open');
+            }
+        }
+
+        renderDots();
+        updateSlider();
+        setInterval(nextSlide, 5500);
+    </script>
 </body>
-<script>
-    let currentIdx = 0;
-    const slider = document.getElementById('slider');
-    const texts = [
-        "Aquí dejas de adivinar precios",
-        "Cada costo calculado automáticamente",
-        "Envíos sin perder dinero",
-        "Control total de tus ventas",
-        "Tu maquinaria también cuenta (y cuesta)",
-        "Cotiza en segundos, no en horas"
-    ];
-
-    function updateSlider() {
-        slider.style.transform = `translateX(-${currentIdx * 100}%)`;
-        document.getElementById('slide-text').textContent = texts[currentIdx];
-    }
-
-    function nextSlide() {
-        currentIdx = (currentIdx + 1) % texts.length;
-        updateSlider();
-    }
-
-    function prevSlide() {
-        currentIdx = (currentIdx - 1 + texts.length) % texts.length;
-        updateSlider();
-    }
-
-    function goToSlide(i) {
-        currentIdx = i;
-        updateSlider();
-    }
-
-    setInterval(nextSlide, 5000);
-</script>
 
 </html>
