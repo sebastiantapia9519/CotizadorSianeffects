@@ -169,13 +169,21 @@ def tarea_avisos_vencimiento():
     
     Lógica:
     1. Busca usuarios cuya suscripción vence en exactamente 3 días o 1 día
-    2. Usa ventana de 12 horas para evitar duplicados entre ejecuciones
-    3. Manda correo personalizado según días restantes
+    2. Usa ventana de 12 horas para capturar candidatos
+    3. Registra una llave unica en logs_actividad para evitar duplicados
+    4. Manda correo personalizado según días restantes
     """
     with app.app_context():
         conn = get_db_connection()
         cursor = conn.cursor()
         try:
+            cursor.execute("""
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_aviso_vencimiento_unico
+                ON logs_actividad (user_id, modulo, detalle)
+                WHERE modulo = 'AvisosVencimiento'
+            """)
+            conn.commit()
+
             ahora = now_utc()
 
             # Iteramos sobre 2 tipos de avisos: 3 días y 1 día antes
@@ -183,19 +191,37 @@ def tarea_avisos_vencimiento():
                 (3, "⏳ Tu acceso a Sianeffects vence en 3 días", "aviso_vencimiento_3"),
                 (1, "🚨 Último aviso: tu acceso vence mañana", "aviso_vencimiento_1"),
             ]:
-                # Ventana de 12 horas (ajustada porque el job corre 2x/día)
-                # Esto evita que un usuario reciba el mismo correo dos veces
+                # Ventana de 12 horas para capturar vencimientos cercanos.
+                # La deduplicacion real se hace con logs_actividad antes de enviar.
                 ventana_inicio = ahora + timedelta(days=dias)
                 ventana_fin = ventana_inicio + timedelta(hours=12)
 
                 cursor.execute("""
-                    SELECT id, email, username FROM usuarios
+                    SELECT id, email, username, subscription_end FROM usuarios
                     WHERE role = 0
                       AND subscription_end >= %s
                       AND subscription_end < %s
                 """, (ventana_inicio, ventana_fin))
 
                 for u in cursor.fetchall():
+                    aviso_key = f"aviso_vencimiento_{dias}d:{u['subscription_end'].isoformat()}"
+                    cursor.execute("""
+                        INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
+                        VALUES (%s, %s, %s, %s)
+                        ON CONFLICT DO NOTHING
+                        RETURNING id
+                    """, (
+                        u['id'],
+                        f"Aviso de vencimiento {dias} días enviado",
+                        "AvisosVencimiento",
+                        aviso_key
+                    ))
+
+                    if cursor.fetchone() is None:
+                        logging.info(f"AVISO_VENCIMIENTO_{dias}D_DUPLICADO: Saltado para {u['email']}")
+                        continue
+
+                    conn.commit()
                     enviar_correo_sian(
                         subject=subject,
                         recipient=u['email'],
