@@ -280,12 +280,18 @@ def index():
         top_leales = cursor.fetchall()
 
         meses_labels, usuarios_data, comparativa_registros = [], [], []
+        comparativa_mensual_admin = []
         total_mes_anterior = None
         for i in range(-11, 1):
             fecha_dt = ahora_sql(meses=i, as_string=False)
             y, m = str(fecha_dt.year), f"{fecha_dt.month:02d}"
             mes_label = f"{nombres_meses[int(m) - 1]} {y}"
             meses_labels.append(mes_label)
+            inicio_mes = fecha_dt.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+            if fecha_dt.month == 12:
+                fin_mes = fecha_dt.replace(year=fecha_dt.year + 1, month=1, day=1, hour=0, minute=0, second=0, microsecond=0)
+            else:
+                fin_mes = fecha_dt.replace(month=fecha_dt.month + 1, day=1, hour=0, minute=0, second=0, microsecond=0)
 
             cursor.execute("""
                 SELECT COUNT(id) as total
@@ -309,6 +315,84 @@ def index():
             })
             total_mes_anterior = total_mes
 
+            cursor.execute("""
+                SELECT
+                    COUNT(*) FILTER (
+                        WHERE l.modulo = 'Pagos'
+                          AND l.accion ILIKE 'Activación PRO%%'
+                    ) as nuevos_pro,
+                    COUNT(*) FILTER (
+                        WHERE l.modulo = 'Pagos'
+                          AND (
+                            l.accion ILIKE 'Renovación PRO%%'
+                            OR l.accion ILIKE 'Renovación %%exitosa'
+                            OR l.accion ILIKE 'Renovación Automática Exitosa'
+                          )
+                    ) as renovaciones
+                FROM logs_actividad l
+                WHERE l.created_at >= %s AND l.created_at < %s
+            """, (inicio_mes, fin_mes))
+            pagos_mes = cursor.fetchone() or {}
+
+            cursor.execute("""
+                SELECT COUNT(id) as total
+                FROM usuarios
+                WHERE role <= 1
+                  AND LOWER(COALESCE(estado_suscripcion, '')) IN ('cancelada', 'cancelado')
+                  AND fecha_cancelacion >= %s
+                  AND fecha_cancelacion < %s
+            """, (inicio_mes, fin_mes))
+            bajas_mes = cursor.fetchone()['total'] or 0
+
+            cursor.execute("""
+                SELECT
+                    COUNT(id) FILTER (WHERE subscription_end >= %s) as activos_cierre,
+                    COUNT(id) FILTER (WHERE subscription_end < %s OR subscription_end IS NULL) as vencidos_cierre,
+                    COUNT(id) FILTER (
+                        WHERE subscription_end >= %s
+                          AND LOWER(COALESCE(plan_type, 'free')) = 'mensual'
+                    ) as mensual_cierre,
+                    COUNT(id) FILTER (
+                        WHERE subscription_end >= %s
+                          AND LOWER(COALESCE(plan_type, 'free')) = 'anual'
+                    ) as anual_cierre
+                FROM usuarios
+                WHERE role <= 1
+                  AND created_at < %s
+            """, (fin_mes, fin_mes, fin_mes, fin_mes, fin_mes))
+            snapshot_mes = cursor.fetchone() or {}
+
+            cursor.execute("""
+                SELECT COUNT(v.id) as total
+                FROM ventas v
+                JOIN usuarios u ON u.id = v.user_id
+                WHERE u.role <= 1
+                  AND v.fecha >= %s
+                  AND v.fecha < %s
+            """, (inicio_mes, fin_mes))
+            cotizaciones_mes = cursor.fetchone()['total'] or 0
+
+            mensual_cierre = snapshot_mes.get('mensual_cierre') or 0
+            anual_cierre = snapshot_mes.get('anual_cierre') or 0
+            mrr_estimado_mes = round(
+                (mensual_cierre * PRECIO_MENSUAL) + (anual_cierre * (PRECIO_ANUAL / 12)),
+                2
+            )
+            comparativa_mensual_admin.append({
+                'mes': mes_label,
+                'periodo': f"{y}-{m}",
+                'registros': total_mes,
+                'nuevos_pro': pagos_mes.get('nuevos_pro') or 0,
+                'renovaciones': pagos_mes.get('renovaciones') or 0,
+                'bajas': bajas_mes,
+                'activos_cierre': snapshot_mes.get('activos_cierre') or 0,
+                'vencidos_cierre': snapshot_mes.get('vencidos_cierre') or 0,
+                'mensual_cierre': mensual_cierre,
+                'anual_cierre': anual_cierre,
+                'mrr_estimado_cierre': mrr_estimado_mes,
+                'cotizaciones': cotizaciones_mes,
+            })
+
         segmentos = {"Sin uso (0-2)": 0, "En adopción (3-14)": 0, "Power users (15+)": 0}
         query_segmentos = """
             SELECT COUNT(v.id) as total_v
@@ -330,6 +414,70 @@ def index():
                 segmentos["En adopción (3-14)"] += 1
             else:
                 segmentos["Power users (15+)"] += 1
+
+        admin_dashboard_context = {
+            'periodo': periodo_label,
+            'metricas': {
+                'total_usuarios': total_usuarios,
+                'activos': activos,
+                'vencidos': vencidos,
+                'proximos_a_vencer_7_dias': proximos_a_vencer,
+                'mrr_estimado': round(mrr_total, 2),
+                'ingreso_mensual_esperado': round(ingresos_brutos, 2),
+                'nuevos_pro': nuevos_pro,
+                'renovaciones': renovaciones,
+                'bajas': churn_total,
+                'nuevos_usuarios': nuevos_usuarios_total,
+            },
+            'planes_activos': {
+                'mensual': planes_dict['mensual'],
+                'anual': planes_dict['anual'],
+                'free_trial': planes_dict['free'],
+            },
+            'segmentos_uso': segmentos,
+            'registros_ultimos_12_meses': comparativa_registros,
+            'comparativa_mensual_admin': comparativa_mensual_admin,
+            'usuarios_mas_activos': [
+                {
+                    'empresa': row.get('company_name') or row.get('username'),
+                    'usuario': row.get('username'),
+                    'cotizaciones': int(row.get('total_cotizaciones') or 0),
+                    'suscripcion_activa': bool(row.get('suscripcion_activa')),
+                    'vence': row.get('subscription_end').strftime('%Y-%m-%d') if row.get('subscription_end') else None,
+                }
+                for row in top_leales
+            ],
+            'nuevos_usuarios_recientes': [
+                {
+                    'empresa': row.get('company_name') or row.get('username'),
+                    'usuario': row.get('username'),
+                    'plan': row.get('plan_type') or 'free',
+                    'estado': row.get('estado_suscripcion'),
+                    'creado': row.get('created_at').strftime('%Y-%m-%d') if row.get('created_at') else None,
+                    'vence': row.get('subscription_end').strftime('%Y-%m-%d') if row.get('subscription_end') else None,
+                }
+                for row in nuevos_usuarios[:10]
+            ],
+            'suscripciones_activas': [
+                {
+                    'empresa': row.get('company_name') or row.get('username'),
+                    'usuario': row.get('username'),
+                    'plan': row.get('plan_type'),
+                    'aporte_mensual': float(row.get('aporte_mensual') or 0),
+                    'vence': row.get('subscription_end').strftime('%Y-%m-%d') if row.get('subscription_end') else None,
+                }
+                for row in suscripciones_activas[:20]
+            ],
+            'bajas_recientes': [
+                {
+                    'empresa': row.get('company_name') or row.get('username'),
+                    'usuario': row.get('username'),
+                    'plan': row.get('plan_type'),
+                    'fecha_cancelacion': row.get('fecha_cancelacion').strftime('%Y-%m-%d') if row.get('fecha_cancelacion') else None,
+                }
+                for row in churn_reciente[:10]
+            ],
+        }
 
         return render_template(
             'dashboard/index.html',
@@ -360,7 +508,8 @@ def index():
             pagos_total=nuevos_pro,
             nuevos_usuarios=nuevos_usuarios,
             nuevos_usuarios_total=nuevos_usuarios_total,
-            precios_plan={'mensual': PRECIO_MENSUAL, 'anual': PRECIO_ANUAL}
+            precios_plan={'mensual': PRECIO_MENSUAL, 'anual': PRECIO_ANUAL},
+            admin_dashboard_context=admin_dashboard_context
         )
 
     except Exception as e:

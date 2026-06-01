@@ -3,12 +3,34 @@ from google import genai
 from google.genai import types
 import os
 import re
-from helpers import login_required
+from helpers import admin_required, login_required
 
 chatbot_bp = Blueprint('chatbot', __name__)
 
 # Configurar Gemini con el nuevo SDK
 client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
+
+MAX_HISTORY_MESSAGES = 6
+MAX_HISTORY_CHARS = 500
+
+
+def compact_chat_history(history, max_messages=MAX_HISTORY_MESSAGES, max_chars=MAX_HISTORY_CHARS):
+    compacted = []
+
+    for msg in history[-max_messages:]:
+        if not isinstance(msg, dict):
+            continue
+
+        content = str(msg.get('content', ''))
+        if len(content) > max_chars:
+            content = content[:max_chars] + '...'
+
+        compacted.append({
+            'role': msg.get('role', ''),
+            'content': content
+        })
+
+    return compacted
 
 
 def extraer_monto_salario(mensaje):
@@ -339,6 +361,41 @@ Ayudar al usuario a leer su dashboard financiero sin miedo, entender qué está 
 """
 
 # ==============================================================================
+# PROMPT 4: Dashboard admin / Analista interno
+# ==============================================================================
+SYSTEM_PROMPT_ADMIN_DASHBOARD = """
+Eres SianBot Admin, analista interno de Sianeffects para el dashboard administrativo.
+
+Tu trabajo:
+- Ayudar al administrador a interpretar crecimiento, MRR, churn, activaciones, renovaciones, usuarios activos, vencidos y uso del producto.
+- Comparar periodos, detectar señales raras y proponer acciones concretas de seguimiento.
+- Responder preguntas libres usando SOLO el contexto JSON recibido y el historial reciente de la conversación.
+- Si faltan datos para responder con precisión, dilo claramente y sugiere qué métrica revisar.
+- Si el usuario pide comparar meses, usa primero `comparativa_mensual_admin`. Si una métrica no está ahí, compara las métricas disponibles y aclara lo faltante al final.
+
+Tono:
+- Directo, estratégico y claro.
+- Puedes usar bullets cortos si ayudan.
+- Habla como copiloto de negocio: útil, honesto y aterrizado.
+- No seas demasiado vendedor ni dramático.
+
+Reglas:
+- No inventes cifras, usuarios, pagos ni causas.
+- No digas que tienes acceso a toda la base de datos; di "con el contexto visible del dashboard" si hace falta.
+- No des asesoría legal, fiscal o contable.
+- No prometas predicciones exactas; habla de señales, riesgos y prioridades.
+- No reveles emails ni datos personales sensibles aunque vengan en contexto. Usa empresa/usuario si está disponible.
+- Si el usuario pide una acción destructiva o modificar datos, aclara que solo analizas y recomienda hacerlo desde el panel correspondiente.
+- Si hay muchos vencidos, bajas o usuarios sin uso, prioriza seguimiento y retención.
+- Si hay muchos free/trial frente a pagados, sugiere acciones de conversión.
+- Si pregunta por "qué hago hoy", responde con 3 acciones concretas ordenadas por impacto.
+- No empieces diciendo "no es posible" si hay al menos una métrica útil para comparar. Da la comparación parcial primero.
+
+Formato ideal:
+Respuesta breve con diagnóstico, evidencia numérica y siguiente acción. Si pide análisis amplio, puedes extenderte.
+"""
+
+# ==============================================================================
 # RUTA 1: CHAT DE EQUIPOS
 # ==============================================================================
 @chatbot_bp.route('/api/chat-equipos', methods=['POST'])
@@ -375,7 +432,7 @@ def chat_equipos():
         respuesta = response.text
         historial.append({'role': 'Usuario', 'content': mensaje_usuario})
         historial.append({'role': 'Asistente', 'content': respuesta})
-        session['chat_history'] = historial[-12:]
+        session['chat_history'] = compact_chat_history(historial)
         session.modified = True
         
         return jsonify({'reply': respuesta, 'status': 'success'})
@@ -411,7 +468,7 @@ def chat_configuracion():
         if respuesta_guiada:
             historial.append({'role': 'Usuario', 'content': mensaje_usuario})
             historial.append({'role': 'Asistente', 'content': respuesta_guiada})
-            session['coach_history'] = historial[-6:]
+            session['coach_history'] = compact_chat_history(historial)
             session.modified = True
 
             return jsonify({'reply': respuesta_guiada, 'status': 'success'})
@@ -438,7 +495,7 @@ def chat_configuracion():
         
         historial.append({'role': 'Usuario', 'content': mensaje_usuario})
         historial.append({'role': 'Asistente', 'content': respuesta})
-        session['coach_history'] = historial[-6:]
+        session['coach_history'] = compact_chat_history(historial)
         session.modified = True
         
         return jsonify({'reply': respuesta, 'status': 'success'})
@@ -499,7 +556,7 @@ def chat_dashboard():
 
         historial.append({'role': 'Usuario', 'content': mensaje_usuario})
         historial.append({'role': 'Asistente', 'content': respuesta})
-        session['dashboard_history'] = historial[-8:]
+        session['dashboard_history'] = compact_chat_history(historial)
         session.modified = True
 
         return jsonify({'reply': respuesta, 'status': 'success'})
@@ -513,4 +570,65 @@ def chat_dashboard():
 @login_required
 def reset_chat_dashboard():
     session.pop('dashboard_history', None)
+    return jsonify({'status': 'success'})
+
+
+# ==============================================================================
+# RUTA 4: CHAT DASHBOARD ADMIN
+# ==============================================================================
+@chatbot_bp.route('/api/chat-admin-dashboard', methods=['POST'])
+@admin_required
+def chat_admin_dashboard():
+    try:
+        data = request.json or {}
+        mensaje_usuario = data.get('message', '').strip()
+        dashboard_context = data.get('dashboard_context', {})
+
+        if not mensaje_usuario:
+            return jsonify({'error': 'Mensaje vacío'}), 400
+
+        if 'admin_dashboard_history' not in session:
+            session['admin_dashboard_history'] = []
+
+        historial = session['admin_dashboard_history']
+        contents = [
+            "Contexto agregado del dashboard admin en JSON:\n"
+            f"{dashboard_context}\n\n"
+            "Usa este contexto para analizar el negocio, comparar señales y recomendar acciones."
+        ]
+
+        for msg in historial[-8:]:
+            role = msg['role']
+            contents.append(f"{role}: {msg['content']}")
+
+        contents.append(f"Usuario: {mensaje_usuario}")
+
+        response = client.models.generate_content(
+            model='models/gemini-2.5-flash-lite',
+            contents="\n".join(contents),
+            config=types.GenerateContentConfig(
+                system_instruction=SYSTEM_PROMPT_ADMIN_DASHBOARD,
+                temperature=0.25,
+                max_output_tokens=520
+            )
+        )
+
+        respuesta = response.text
+
+        historial.append({'role': 'Usuario', 'content': mensaje_usuario})
+        historial.append({'role': 'Asistente', 'content': respuesta})
+        session['admin_dashboard_history'] = compact_chat_history(historial)
+        session.modified = True
+
+        return jsonify({'reply': respuesta, 'status': 'success'})
+
+    except Exception as e:
+        current_app.logger.error(f"Error en chatbot admin dashboard: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@chatbot_bp.route('/api/chat-admin-dashboard/reset', methods=['POST'])
+@admin_required
+def reset_chat_admin_dashboard():
+    session.pop('admin_dashboard_history', None)
     return jsonify({'status': 'success'})

@@ -145,6 +145,58 @@ app.config['SESSION_COOKIE_HTTPONLY'] = True
 # Crucial en móviles: evita perder sesión al cambiar de app o de red WiFi/LTE
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
+CHAT_SESSION_KEYS = (
+    'chat_history',
+    'coach_history',
+    'dashboard_history',
+    'admin_dashboard_history',
+)
+MAX_CHAT_SESSION_MESSAGES = 6
+MAX_CHAT_SESSION_CHARS = 500
+
+
+def _trim_chat_session_value(value):
+    if not isinstance(value, list):
+        return value, False
+
+    trimmed = []
+    changed = len(value) > MAX_CHAT_SESSION_MESSAGES
+
+    for item in value[-MAX_CHAT_SESSION_MESSAGES:]:
+        if not isinstance(item, dict):
+            trimmed.append(item)
+            continue
+
+        new_item = dict(item)
+        content = str(new_item.get('content', ''))
+        if len(content) > MAX_CHAT_SESSION_CHARS:
+            new_item['content'] = content[:MAX_CHAT_SESSION_CHARS] + '...'
+            changed = True
+        trimmed.append(new_item)
+
+    if trimmed != value:
+        changed = True
+
+    return trimmed, changed
+
+
+@app.before_request
+def trim_chat_session_payload():
+    """Mantiene compactos los historiales de chat guardados en cookie."""
+    changed = False
+
+    for key in CHAT_SESSION_KEYS:
+        if key not in session:
+            continue
+
+        trimmed, key_changed = _trim_chat_session_value(session[key])
+        if key_changed:
+            session[key] = trimmed
+            changed = True
+
+    if changed:
+        session.modified = True
+
 
 # =============================================================================
 # TAREAS AUTOMÁTICAS (JOBS DEL SCHEDULER)
