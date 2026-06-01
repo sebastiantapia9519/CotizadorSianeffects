@@ -33,6 +33,124 @@ def compact_chat_history(history, max_messages=MAX_HISTORY_MESSAGES, max_chars=M
     return compacted
 
 
+def normalize_chat_message(message):
+    return re.sub(r'[^\wáéíóúüñ\s]', '', message.lower()).strip()
+
+
+def is_simple_greeting(message):
+    normalized = normalize_chat_message(message)
+    if not normalized:
+        return False
+
+    greeting_phrases = {
+        'hola',
+        'holaa',
+        'buenos dias',
+        'buen dia',
+        'buenas tardes',
+        'buenas noches',
+        'saludame',
+        'salúdame',
+        'saludos',
+        'hey',
+        'hello',
+        'hi',
+    }
+
+    return normalized in greeting_phrases
+
+
+def get_social_reply(message, bot_type):
+    normalized = normalize_chat_message(message)
+
+    replies = {
+        'equipos': {
+            'greeting': (
+                "¡Hola! Qué gusto verte por aquí 😊\n"
+                "Cuando quieras, dime qué equipo estás usando y lo calculamos juntas."
+            ),
+            'how_are_you': (
+                "Estoy bien, lista para ayudarte a cobrar mejor tus equipos sin complicarte 😊\n"
+                "¿Qué tienes en mente hoy?"
+            ),
+            'thanks': "Con gusto 😊 Aquí estoy cuando quieras revisar un equipo o costo.",
+        },
+        'configuracion': {
+            'greeting': (
+                "¡Hola! Qué bueno tenerte por aquí 😊\n"
+                "Cuéntame qué quieres ajustar y lo vemos paso a paso."
+            ),
+            'how_are_you': (
+                "Estoy bien, lista para ayudarte a ordenar costos, precios o configuración 😊\n"
+                "¿Qué quieres revisar primero?"
+            ),
+            'thanks': "Con gusto 😊 Cuando quieras seguimos afinando tu configuración.",
+        },
+        'dashboard': {
+            'greeting': (
+                "¡Hola! Qué gusto leerte 😊\n"
+                "Estoy aquí contigo para revisar el panel sin hacerlo pesado."
+            ),
+            'how_are_you': (
+                "Estoy bien, gracias por preguntar 😊\n"
+                "Lista para ayudarte a entender qué está pasando con tus ventas, con calma y sin enredos."
+            ),
+            'thanks': "Con gusto 😊 Aquí sigo si quieres revisar ventas, utilidad o algo que se vea raro en tu panel.",
+        },
+        'admin': {
+            'greeting': (
+                "¡Hola, Jefe! Ya estoy aquí 😊\n"
+                "Podemos revisar crecimiento, riesgos o prioridades del día cuando quieras."
+            ),
+            'how_are_you': (
+                "Estoy bien, Jefe, con el tablero listo para pensar contigo 😊\n"
+                "¿Quieres que revisemos crecimiento, conversión o riesgos primero?"
+            ),
+            'thanks': "Con gusto, Jefe 😊 Cuando quieras seguimos con el análisis.",
+        },
+    }
+
+    how_are_you_phrases = {
+        'como estas',
+        'cómo estás',
+        'como andas',
+        'que tal',
+        'qué tal',
+        'todo bien',
+        'how are you',
+    }
+    thanks_phrases = {
+        'gracias',
+        'muchas gracias',
+        'mil gracias',
+        'thanks',
+        'thank you',
+    }
+
+    greeting_with_how_are_you = (
+        normalized.startswith('hola como estas')
+        or normalized.startswith('hola cómo estás')
+        or normalized.startswith('hola que tal')
+        or normalized.startswith('hola qué tal')
+    )
+
+    if normalized in how_are_you_phrases or greeting_with_how_are_you:
+        return replies[bot_type]['how_are_you']
+    if normalized in thanks_phrases:
+        return replies[bot_type]['thanks']
+    if is_simple_greeting(message):
+        return replies[bot_type]['greeting']
+
+    return None
+
+
+def store_chat_reply(session_key, history, user_message, reply):
+    history.append({'role': 'Usuario', 'content': user_message})
+    history.append({'role': 'Asistente', 'content': reply})
+    session[session_key] = compact_chat_history(history)
+    session.modified = True
+
+
 def extraer_monto_salario(mensaje):
     match_mil = re.search(r'\$?\s*(\d+(?:[.,]\d+)?)\s*mil\b', mensaje, re.IGNORECASE)
     if match_mil:
@@ -377,6 +495,7 @@ Tono:
 - Directo, estratégico y claro.
 - Puedes usar bullets cortos si ayudan.
 - Habla como copiloto de negocio: útil, honesto y aterrizado.
+- Dirígete al usuario como "Jefe" de forma natural y ocasional, especialmente al abrir la respuesta o cerrar una recomendación.
 - No seas demasiado vendedor ni dramático.
 
 Reglas:
@@ -412,6 +531,13 @@ def chat_equipos():
             session['chat_history'] = []
         
         historial = session['chat_history']
+
+        respuesta_social = get_social_reply(mensaje_usuario, 'equipos')
+        if respuesta_social:
+            respuesta = respuesta_social
+            store_chat_reply('chat_history', historial, mensaje_usuario, respuesta)
+            return jsonify({'reply': respuesta, 'status': 'success'})
+
         contents = []
 
         for msg in historial[-6:]:
@@ -430,10 +556,7 @@ def chat_equipos():
         )
         
         respuesta = response.text
-        historial.append({'role': 'Usuario', 'content': mensaje_usuario})
-        historial.append({'role': 'Asistente', 'content': respuesta})
-        session['chat_history'] = compact_chat_history(historial)
-        session.modified = True
+        store_chat_reply('chat_history', historial, mensaje_usuario, respuesta)
         
         return jsonify({'reply': respuesta, 'status': 'success'})
     
@@ -463,14 +586,17 @@ def chat_configuracion():
             session['coach_history'] = []
 
         historial = session['coach_history']
+
+        respuesta_social = get_social_reply(mensaje_usuario, 'configuracion')
+        if respuesta_social:
+            respuesta = respuesta_social
+            store_chat_reply('coach_history', historial, mensaje_usuario, respuesta)
+            return jsonify({'reply': respuesta, 'status': 'success'})
+
         contexto_reciente = " ".join(msg.get('content', '') for msg in historial[-4:])
         respuesta_guiada = respuesta_salario_configuracion(mensaje_usuario, contexto_reciente)
         if respuesta_guiada:
-            historial.append({'role': 'Usuario', 'content': mensaje_usuario})
-            historial.append({'role': 'Asistente', 'content': respuesta_guiada})
-            session['coach_history'] = compact_chat_history(historial)
-            session.modified = True
-
+            store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
             return jsonify({'reply': respuesta_guiada, 'status': 'success'})
 
         contents = []
@@ -493,10 +619,7 @@ def chat_configuracion():
         
         respuesta = response.text
         
-        historial.append({'role': 'Usuario', 'content': mensaje_usuario})
-        historial.append({'role': 'Asistente', 'content': respuesta})
-        session['coach_history'] = compact_chat_history(historial)
-        session.modified = True
+        store_chat_reply('coach_history', historial, mensaje_usuario, respuesta)
         
         return jsonify({'reply': respuesta, 'status': 'success'})
     
@@ -527,6 +650,13 @@ def chat_dashboard():
             session['dashboard_history'] = []
 
         historial = session['dashboard_history']
+
+        respuesta_social = get_social_reply(mensaje_usuario, 'dashboard')
+        if respuesta_social:
+            respuesta = respuesta_social
+            store_chat_reply('dashboard_history', historial, mensaje_usuario, respuesta)
+            return jsonify({'reply': respuesta, 'status': 'success'})
+
         contents = []
 
         contexto_texto = (
@@ -554,10 +684,7 @@ def chat_dashboard():
 
         respuesta = response.text
 
-        historial.append({'role': 'Usuario', 'content': mensaje_usuario})
-        historial.append({'role': 'Asistente', 'content': respuesta})
-        session['dashboard_history'] = compact_chat_history(historial)
-        session.modified = True
+        store_chat_reply('dashboard_history', historial, mensaje_usuario, respuesta)
 
         return jsonify({'reply': respuesta, 'status': 'success'})
 
@@ -591,6 +718,13 @@ def chat_admin_dashboard():
             session['admin_dashboard_history'] = []
 
         historial = session['admin_dashboard_history']
+
+        respuesta_social = get_social_reply(mensaje_usuario, 'admin')
+        if respuesta_social:
+            respuesta = respuesta_social
+            store_chat_reply('admin_dashboard_history', historial, mensaje_usuario, respuesta)
+            return jsonify({'reply': respuesta, 'status': 'success'})
+
         contents = [
             "Contexto agregado del dashboard admin en JSON:\n"
             f"{dashboard_context}\n\n"
@@ -615,10 +749,7 @@ def chat_admin_dashboard():
 
         respuesta = response.text
 
-        historial.append({'role': 'Usuario', 'content': mensaje_usuario})
-        historial.append({'role': 'Asistente', 'content': respuesta})
-        session['admin_dashboard_history'] = compact_chat_history(historial)
-        session.modified = True
+        store_chat_reply('admin_dashboard_history', historial, mensaje_usuario, respuesta)
 
         return jsonify({'reply': respuesta, 'status': 'success'})
 
