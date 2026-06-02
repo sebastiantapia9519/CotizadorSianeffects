@@ -231,10 +231,10 @@ def respuesta_margen_configuracion(mensaje_usuario, contexto_reciente=''):
         return None
 
     return (
-        "Sí. Si vienes de cobrar bajo, empieza con 20% como margen base y sube después.\n"
+        "Sí. Si vienes de cobrar bajo, pon 20% como margen base y úsalo fijo por una etapa.\n"
         "Guía rápida: 15%-20% para ajuste suave, 25%-35% para pedidos normales, 40%+ si es personalizado o urgente.\n"
         "No incluye tu mano de obra; esa va aparte en El Valor de tu Tiempo.\n"
-        "Si el precio final se dispara, ajusta por etapas; no borres tus costos reales.\n"
+        "No lo cambies en cada cotización; revísalo cuando tengas datos reales o cambie tu estrategia de precios.\n"
         "📍 CONFIGURACIÓN → MI NEGOCIO → Margen de Ganancia Base."
     )
 
@@ -256,10 +256,10 @@ def respuesta_factor_operativo_configuracion(mensaje_usuario, contexto_reciente=
         return None
 
     return (
-        "Sí. Si tus precios ya suben mucho, empieza con 5% de Factor Operativo y ajústalo poco a poco.\n"
+        "Sí. Si tus precios ya suben mucho, pon 5% de Factor Operativo como base fija para empezar.\n"
         "Guía rápida: 3%-5% para ajuste suave, 8%-12% si pagas luz, internet o herramientas, 15%+ si tienes renta o taller.\n"
         "Esto ayuda a que cada cotización cargue una parte de tus gastos fijos.\n"
-        "La idea es dejar de absorber gastos, pero sin dar un salto imposible de vender.\n"
+        "No lo cambies por cotización; revísalo por temporada o cuando ya tengas tus gastos fijos mejor medidos.\n"
         "📍 CONFIGURACIÓN → MI NEGOCIO → Factor Operativo."
     )
 
@@ -433,11 +433,13 @@ SÍ:
   Da el ejemplo de $20,000 al mes y 40 hrs/semana = aprox. $115.47 por hora.
 - Si no saben qué porcentaje poner en Margen de Ganancia Base, NO respondas "piensa cuánto quieres ganar" solamente. Da una guía concreta:
   15%-20% si vienen de cobrar muy bajo o compiten por precio, 25%-35% para pedidos normales, 40%+ si es personalizado, urgente o de alto valor.
-  Recomienda empezar con 20% si no tienen referencia o si sus precios actuales están muy bajos, y ajustar después con resultados reales.
+  Recomienda empezar con 20% si no tienen referencia o si sus precios actuales están muy bajos.
+  Aclara que Margen Base es una configuración general: no se cambia en cada cotización; se deja fijo por una etapa y se revisa cuando tengan datos reales o cambie su estrategia.
   Aclara que la mano de obra NO va dentro del margen base; se configura aparte en "El Valor de tu Tiempo".
 - Si no saben qué porcentaje poner en Factor Operativo, NO respondas genérico. Da una guía concreta:
   3%-5% si vienen de cobrar bajo o trabajan desde casa con pocos gastos, 8%-12% si tienen luz, internet, herramientas o empaques recurrentes, 15%+ si pagan renta, taller o gastos fijos fuertes.
   Recomienda empezar con 5% si sus cotizaciones suben mucho, o con 10% si ya tienen precios más sanos.
+  Aclara que Factor Operativo también es una base general: no se cambia por cotización; se revisa por temporada o cuando midan mejor sus gastos fijos.
   Explica que el Factor Operativo reparte gastos fijos entre cotizaciones, no reemplaza margen ni mano de obra.
 - Si el usuario dice que sus cotizaciones suben mucho, responde con calma: "eso puede revelar que antes estabas absorbiendo costos". Recomienda ajustar por etapas:
   primero costos reales, luego mano de obra mínima, luego margen base 15%-20%, luego factor operativo 3%-5%.
