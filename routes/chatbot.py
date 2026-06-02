@@ -177,7 +177,7 @@ def respuesta_salario_configuracion(mensaje_usuario, contexto_reciente=''):
     contexto = contexto_reciente.lower()
     habla_de_salario = any(palabra in mensaje for palabra in [
         'salario', 'sueldo', 'ganar', 'ingreso', 'cobrar', 'valor de mi tiempo',
-        'valor de tu tiempo', 'mano de obra'
+        'valor de tu tiempo', 'mano de obra', 'hora', 'costo por hora'
     ]) or any(palabra in contexto for palabra in ['salario', 'sueldo', 'valor de tu tiempo', 'mano de obra'])
     pide_guia = any(frase in mensaje for frase in [
         'no se', 'no sé', 'que valor', 'qué valor', 'cuanto pongo', 'cuánto pongo',
@@ -206,10 +206,82 @@ def respuesta_salario_configuracion(mensaje_usuario, contexto_reciente=''):
         return None
 
     return (
-        "No lo pongas a ojo. Empieza con lo que quieres ganar al mes.\n"
-        "Ejemplo: si quieres $20,000 MXN y trabajas 40 hrs/semana, tu hora vale aprox. $115.47.\n"
-        "Guía rápida: extra $12k-$15k, vivir del negocio $18k-$25k, crecer $30k+.\n"
-        "📍 CONFIGURACIÓN → MI NEGOCIO → El Valor de tu Tiempo: pon Sueldo Deseado y Horas por semana."
+        "Sí. Para mano de obra, empieza gradual: si hoy cobras muy bajo, usa una meta realista y súbela por etapas.\n"
+        "Guía rápida: ajuste suave $8k-$12k, ingreso extra $12k-$15k, vivir del negocio $18k-$25k.\n"
+        "Ejemplo: $20,000 al mes y 40 hrs/semana = aprox. $115.47 por hora.\n"
+        "Si tus cotizaciones suben demasiado, baja la meta inicial, no elimines tu mano de obra.\n"
+        "📍 CONFIGURACIÓN → MI NEGOCIO → El Valor de tu Tiempo."
+    )
+
+
+def respuesta_margen_configuracion(mensaje_usuario, contexto_reciente=''):
+    """Da una guía concreta cuando el usuario no sabe qué margen base poner."""
+    texto = f"{contexto_reciente} {mensaje_usuario}".lower()
+    habla_de_margen = any(palabra in texto for palabra in [
+        'margen base', 'margen de ganancia', 'margen', 'ganancia base',
+        'porcentaje', 'por ciento', '%'
+    ])
+    pide_guia = any(frase in texto for frase in [
+        'no se', 'no sé', 'que porcentaje', 'qué porcentaje', 'cuanto pongo',
+        'cuánto pongo', 'que pongo', 'qué pongo', 'ayudame', 'ayúdame',
+        'definirlo', 'recomiendas', 'recomiendas poner', 'empezar'
+    ])
+
+    if not habla_de_margen or not pide_guia:
+        return None
+
+    return (
+        "Sí. Si vienes de cobrar bajo, empieza con 20% como margen base y sube después.\n"
+        "Guía rápida: 15%-20% para ajuste suave, 25%-35% para pedidos normales, 40%+ si es personalizado o urgente.\n"
+        "No incluye tu mano de obra; esa va aparte en El Valor de tu Tiempo.\n"
+        "Si el precio final se dispara, ajusta por etapas; no borres tus costos reales.\n"
+        "📍 CONFIGURACIÓN → MI NEGOCIO → Margen de Ganancia Base."
+    )
+
+
+def respuesta_factor_operativo_configuracion(mensaje_usuario, contexto_reciente=''):
+    """Da una guía concreta cuando el usuario no sabe qué factor operativo poner."""
+    texto = f"{contexto_reciente} {mensaje_usuario}".lower()
+    habla_de_factor = any(palabra in texto for palabra in [
+        'factor operativo', 'gastos operativos', 'gastos fijos', 'operativo',
+        'renta', 'luz', 'internet', 'agua'
+    ])
+    pide_guia = any(frase in texto for frase in [
+        'no se', 'no sé', 'que porcentaje', 'qué porcentaje', 'cuanto pongo',
+        'cuánto pongo', 'que pongo', 'qué pongo', 'ayudame', 'ayúdame',
+        'definirlo', 'recomiendas', 'recomiendas poner', 'empezar'
+    ])
+
+    if not habla_de_factor or not pide_guia:
+        return None
+
+    return (
+        "Sí. Si tus precios ya suben mucho, empieza con 5% de Factor Operativo y ajústalo poco a poco.\n"
+        "Guía rápida: 3%-5% para ajuste suave, 8%-12% si pagas luz, internet o herramientas, 15%+ si tienes renta o taller.\n"
+        "Esto ayuda a que cada cotización cargue una parte de tus gastos fijos.\n"
+        "La idea es dejar de absorber gastos, pero sin dar un salto imposible de vender.\n"
+        "📍 CONFIGURACIÓN → MI NEGOCIO → Factor Operativo."
+    )
+
+
+def respuesta_precio_alto_configuracion(mensaje_usuario, contexto_reciente=''):
+    """Acompaña cuando el usuario siente que sus cotizaciones subieron demasiado."""
+    texto = f"{contexto_reciente} {mensaje_usuario}".lower()
+    habla_de_precio_alto = any(frase in texto for frase in [
+        'sube mucho', 'subió mucho', 'subio mucho', 'muy caro', 'se disparó',
+        'se disparo', 'precio alto', 'precios altos', 'cotizacion alta',
+        'cotización alta', 'cotizaciones altas', 'me sube bastante',
+        'sube bastante', 'demasiado caro'
+    ])
+
+    if not habla_de_precio_alto:
+        return None
+
+    return (
+        "Sí, puede pasar. Muchas veces el precio sube porque antes estabas absorbiendo mano de obra, gastos fijos o margen sin darte cuenta.\n"
+        "Hazlo por etapas: costos reales primero, mano de obra mínima, margen 15%-20% y factor operativo 3%-5%.\n"
+        "Cuando tus clientes se acostumbren y tengas más claridad, sube poco a poco.\n"
+        "La meta no es encarecer de golpe; es dejar de vender con pérdida."
     )
 
 
@@ -355,6 +427,21 @@ SÍ:
   extra $12,000-$15,000 MXN/mes; vivir del negocio $18,000-$25,000 MXN/mes; crecer $30,000+ MXN/mes.
   Ejemplo obligatorio: $20,000 al mes / 173.2 horas = $115.47 por hora.
   Diles que pongan el sueldo mensual deseado y sus horas por semana en la ruta exacta.
+- Si no saben qué poner en Mano de Obra o El Valor de tu Tiempo, NO respondas genérico. Diles que el campo parte de dos datos:
+  sueldo mensual deseado y horas reales por semana.
+  Recomienda empezar con $8k-$12k si vienen de cobrar muy bajo, $12k-$15k si es ingreso extra, $18k-$25k si quieren vivir del negocio, $30k+ si quieren crecer.
+  Da el ejemplo de $20,000 al mes y 40 hrs/semana = aprox. $115.47 por hora.
+- Si no saben qué porcentaje poner en Margen de Ganancia Base, NO respondas "piensa cuánto quieres ganar" solamente. Da una guía concreta:
+  15%-20% si vienen de cobrar muy bajo o compiten por precio, 25%-35% para pedidos normales, 40%+ si es personalizado, urgente o de alto valor.
+  Recomienda empezar con 20% si no tienen referencia o si sus precios actuales están muy bajos, y ajustar después con resultados reales.
+  Aclara que la mano de obra NO va dentro del margen base; se configura aparte en "El Valor de tu Tiempo".
+- Si no saben qué porcentaje poner en Factor Operativo, NO respondas genérico. Da una guía concreta:
+  3%-5% si vienen de cobrar bajo o trabajan desde casa con pocos gastos, 8%-12% si tienen luz, internet, herramientas o empaques recurrentes, 15%+ si pagan renta, taller o gastos fijos fuertes.
+  Recomienda empezar con 5% si sus cotizaciones suben mucho, o con 10% si ya tienen precios más sanos.
+  Explica que el Factor Operativo reparte gastos fijos entre cotizaciones, no reemplaza margen ni mano de obra.
+- Si el usuario dice que sus cotizaciones suben mucho, responde con calma: "eso puede revelar que antes estabas absorbiendo costos". Recomienda ajustar por etapas:
+  primero costos reales, luego mano de obra mínima, luego margen base 15%-20%, luego factor operativo 3%-5%.
+  Nunca le digas que elimine mano de obra, margen o factor; sugiere bajar el punto inicial y subir gradualmente.
 - Indica siempre la ruta exacta basada en las ubicaciones arriba mencionadas.
 - Motiva a mejorar ganancias.
 - Si piden "vender más" o "ganar más", explícales que la clave es no regalar su trabajo. 
@@ -594,7 +681,22 @@ def chat_configuracion():
             return jsonify({'reply': respuesta, 'status': 'success'})
 
         contexto_reciente = " ".join(msg.get('content', '') for msg in historial[-4:])
+        respuesta_guiada = respuesta_precio_alto_configuracion(mensaje_usuario, contexto_reciente)
+        if respuesta_guiada:
+            store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
+            return jsonify({'reply': respuesta_guiada, 'status': 'success'})
+
         respuesta_guiada = respuesta_salario_configuracion(mensaje_usuario, contexto_reciente)
+        if respuesta_guiada:
+            store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
+            return jsonify({'reply': respuesta_guiada, 'status': 'success'})
+
+        respuesta_guiada = respuesta_margen_configuracion(mensaje_usuario, contexto_reciente)
+        if respuesta_guiada:
+            store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
+            return jsonify({'reply': respuesta_guiada, 'status': 'success'})
+
+        respuesta_guiada = respuesta_factor_operativo_configuracion(mensaje_usuario, contexto_reciente)
         if respuesta_guiada:
             store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
             return jsonify({'reply': respuesta_guiada, 'status': 'success'})
