@@ -175,6 +175,12 @@ def respuesta_salario_configuracion(mensaje_usuario, contexto_reciente=''):
     """Da una guía concreta cuando el usuario no sabe qué sueldo mensual poner."""
     mensaje = mensaje_usuario.lower()
     contexto = contexto_reciente.lower()
+    habla_de_otro_campo = any(palabra in mensaje for palabra in [
+        'margen', 'margen base', 'margen de ganancia', 'factor operativo'
+    ])
+    if habla_de_otro_campo:
+        return None
+
     habla_de_salario = any(palabra in mensaje for palabra in [
         'salario', 'sueldo', 'ganar', 'ingreso', 'cobrar', 'valor de mi tiempo',
         'valor de tu tiempo', 'mano de obra', 'hora', 'costo por hora'
@@ -216,7 +222,7 @@ def respuesta_salario_configuracion(mensaje_usuario, contexto_reciente=''):
 
 def respuesta_margen_configuracion(mensaje_usuario, contexto_reciente=''):
     """Da una guía concreta cuando el usuario no sabe qué margen base poner."""
-    texto = f"{contexto_reciente} {mensaje_usuario}".lower()
+    texto = mensaje_usuario.lower()
     habla_de_margen = any(palabra in texto for palabra in [
         'margen base', 'margen de ganancia', 'margen', 'ganancia base',
         'porcentaje', 'por ciento', '%'
@@ -232,16 +238,16 @@ def respuesta_margen_configuracion(mensaje_usuario, contexto_reciente=''):
 
     return (
         "Sí. Si vienes de cobrar bajo, pon 20% como margen base y úsalo fijo por una etapa.\n"
-        "Guía rápida: 15%-20% para ajuste suave, 25%-35% para pedidos normales, 40%+ si es personalizado o urgente.\n"
+        "Guía rápida: 15%-20% si estás corrigiendo precios, 25%-30% si ya vendes estable, 35%+ si tu mercado ya acepta precios más altos.\n"
         "No incluye tu mano de obra; esa va aparte en El Valor de tu Tiempo.\n"
-        "No lo cambies en cada cotización; revísalo cuando tengas datos reales o cambie tu estrategia de precios.\n"
+        "Elige uno y déjalo como regla general; no lo cambies por pedido. Revísalo solo cuando tengas datos reales o cambie tu estrategia.\n"
         "📍 CONFIGURACIÓN → MI NEGOCIO → Margen de Ganancia Base."
     )
 
 
 def respuesta_factor_operativo_configuracion(mensaje_usuario, contexto_reciente=''):
     """Da una guía concreta cuando el usuario no sabe qué factor operativo poner."""
-    texto = f"{contexto_reciente} {mensaje_usuario}".lower()
+    texto = mensaje_usuario.lower()
     habla_de_factor = any(palabra in texto for palabra in [
         'factor operativo', 'gastos operativos', 'gastos fijos', 'operativo',
         'renta', 'luz', 'internet', 'agua'
@@ -432,9 +438,10 @@ SÍ:
   Recomienda empezar con $8k-$12k si vienen de cobrar muy bajo, $12k-$15k si es ingreso extra, $18k-$25k si quieren vivir del negocio, $30k+ si quieren crecer.
   Da el ejemplo de $20,000 al mes y 40 hrs/semana = aprox. $115.47 por hora.
 - Si no saben qué porcentaje poner en Margen de Ganancia Base, NO respondas "piensa cuánto quieres ganar" solamente. Da una guía concreta:
-  15%-20% si vienen de cobrar muy bajo o compiten por precio, 25%-35% para pedidos normales, 40%+ si es personalizado, urgente o de alto valor.
+  15%-20% si vienen de cobrar muy bajo o están corrigiendo precios, 25%-30% si ya venden estable, 35%+ si su mercado ya acepta precios más altos.
   Recomienda empezar con 20% si no tienen referencia o si sus precios actuales están muy bajos.
-  Aclara que Margen Base es una configuración general: no se cambia en cada cotización; se deja fijo por una etapa y se revisa cuando tengan datos reales o cambie su estrategia.
+  Aclara que Margen Base es una configuración general: se elige un porcentaje y se deja como regla base; no se cambia por pedido, urgencia o tipo de cliente.
+  Solo se revisa cuando tengan datos reales, cambie su mercado o decidan una nueva estrategia de precios.
   Aclara que la mano de obra NO va dentro del margen base; se configura aparte en "El Valor de tu Tiempo".
 - Si no saben qué porcentaje poner en Factor Operativo, NO respondas genérico. Da una guía concreta:
   3%-5% si vienen de cobrar bajo o trabajan desde casa con pocos gastos, 8%-12% si tienen luz, internet, herramientas o empaques recurrentes, 15%+ si pagan renta, taller o gastos fijos fuertes.
@@ -688,17 +695,17 @@ def chat_configuracion():
             store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
             return jsonify({'reply': respuesta_guiada, 'status': 'success'})
 
-        respuesta_guiada = respuesta_salario_configuracion(mensaje_usuario, contexto_reciente)
-        if respuesta_guiada:
-            store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
-            return jsonify({'reply': respuesta_guiada, 'status': 'success'})
-
         respuesta_guiada = respuesta_margen_configuracion(mensaje_usuario, contexto_reciente)
         if respuesta_guiada:
             store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
             return jsonify({'reply': respuesta_guiada, 'status': 'success'})
 
         respuesta_guiada = respuesta_factor_operativo_configuracion(mensaje_usuario, contexto_reciente)
+        if respuesta_guiada:
+            store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
+            return jsonify({'reply': respuesta_guiada, 'status': 'success'})
+
+        respuesta_guiada = respuesta_salario_configuracion(mensaje_usuario, contexto_reciente)
         if respuesta_guiada:
             store_chat_reply('coach_history', historial, mensaje_usuario, respuesta_guiada)
             return jsonify({'reply': respuesta_guiada, 'status': 'success'})
