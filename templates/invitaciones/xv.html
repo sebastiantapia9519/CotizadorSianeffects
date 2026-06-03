@@ -7,7 +7,6 @@
     <title>Mis XV Años - {{ datos['novios'] }}</title>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.css" />
-    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
@@ -1696,7 +1695,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/swiper@12/swiper-bundle.min.js"></script>
-    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 
@@ -1758,6 +1758,152 @@
             if (audio) { audio.play().catch(e => console.log("Autoplay bloqueado")); }
         }
 
+        let scrollAnimationsReady = false;
+
+        function iniciarAnimacionesScroll() {
+            const animatedBlocks = Array.from(document.querySelectorAll('#main-content [data-aos]'));
+
+            if (!window.gsap || !window.ScrollTrigger) {
+                animatedBlocks.forEach((el) => {
+                    el.style.opacity = '1';
+                    el.style.transform = 'none';
+                    el.style.filter = 'none';
+                    el.style.clipPath = 'none';
+                });
+                return;
+            }
+
+            gsap.registerPlugin(ScrollTrigger);
+
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+                gsap.set(animatedBlocks, { autoAlpha: 1, clearProps: 'transform,filter,clipPath' });
+                ScrollTrigger.refresh();
+                return;
+            }
+
+            if (scrollAnimationsReady) {
+                ScrollTrigger.refresh();
+                return;
+            }
+
+            scrollAnimationsReady = true;
+
+            animatedBlocks.forEach((el) => {
+                const type = el.dataset.aos || 'fade-up';
+                const delay = Math.min(Number(el.dataset.aosDelay || 0) / 1000, 0.35);
+                const start = {
+                    autoAlpha: 0,
+                    x: 0,
+                    y: 34,
+                    scale: 0.985,
+                    filter: 'blur(10px)',
+                    clipPath: 'inset(10% 0% 0% 0% round 18px)'
+                };
+
+                if (type.includes('zoom')) {
+                    start.y = 12;
+                    start.scale = 0.94;
+                    start.clipPath = 'inset(8% 8% 8% 8% round 24px)';
+                } else if (type.includes('left')) {
+                    start.x = -30;
+                    start.y = 8;
+                } else if (type.includes('right')) {
+                    start.x = 30;
+                    start.y = 8;
+                }
+
+                gsap.fromTo(el, start, {
+                    autoAlpha: 1,
+                    x: 0,
+                    y: 0,
+                    scale: 1,
+                    filter: 'blur(0px)',
+                    clipPath: 'inset(0% 0% 0% 0% round 0px)',
+                    duration: 1.18,
+                    delay,
+                    ease: 'expo.out',
+                    scrollTrigger: {
+                        trigger: el,
+                        start: 'top 84%',
+                        end: 'bottom 16%',
+                        toggleActions: 'play reverse play reverse'
+                    }
+                });
+
+                const copyItems = el.querySelectorAll('h2, h3, .historia-header-title, .historia-header-subtitle, .ticket-header');
+                if (copyItems.length) {
+                    gsap.fromTo(copyItems, {
+                        autoAlpha: 0,
+                        y: 16,
+                        letterSpacing: '0.04em'
+                    }, {
+                        autoAlpha: 1,
+                        y: 0,
+                        letterSpacing: '0em',
+                        duration: 0.95,
+                        ease: 'power3.out',
+                        stagger: 0.06,
+                        scrollTrigger: {
+                            trigger: el,
+                            start: 'top 80%',
+                            end: 'bottom 18%',
+                            toggleActions: 'play reverse play reverse'
+                        }
+                    });
+                }
+
+                const layeredItems = el.querySelectorAll('.premium-card, .time-unit, .ticket-grid > div, .timeline-content, .qr-container-modern');
+                if (layeredItems.length > 1) {
+                    gsap.fromTo(layeredItems, {
+                        autoAlpha: 0,
+                        y: 18,
+                        scale: 0.985,
+                        filter: 'blur(6px)'
+                    }, {
+                        autoAlpha: 1,
+                        y: 0,
+                        scale: 1,
+                        filter: 'blur(0px)',
+                        duration: 0.82,
+                        ease: 'power3.out',
+                        stagger: { each: 0.075, from: 'start' },
+                        scrollTrigger: {
+                            trigger: el,
+                            start: 'top 78%',
+                            end: 'bottom 16%',
+                            toggleActions: 'play reverse play reverse'
+                        }
+                    });
+                }
+            });
+
+            gsap.utils.toArray('.anim-iglesia, .anim-copas, .anim-mapa').forEach((icon) => {
+                gsap.fromTo(icon, {
+                    autoAlpha: 0,
+                    y: 14,
+                    rotate: -3,
+                    scale: 0.92,
+                    filter: 'blur(5px)'
+                }, {
+                    autoAlpha: 1,
+                    y: 0,
+                    rotate: 0,
+                    scale: 1,
+                    filter: 'blur(0px)',
+                    duration: 0.9,
+                    ease: 'back.out(1.35)',
+                    scrollTrigger: {
+                        trigger: icon,
+                        start: 'top 86%',
+                        end: 'bottom 18%',
+                        toggleActions: 'play reverse play reverse'
+                    }
+                });
+            });
+
+            ScrollTrigger.refresh();
+        }
+
         function mostrarInvitacion(content) {
             content.style.visibility = 'visible';
             content.style.opacity = '1';
@@ -1794,7 +1940,7 @@
                     });
                 }
 
-                AOS.init({ duration: 1200, once: true, mirror: false });
+                iniciarAnimacionesScroll();
             }, 200);
         }
 
