@@ -773,6 +773,7 @@ from routes.configuracion_bp import config_bp
 from routes.user_dashboard import user_dash_bp
 from routes.chatbot import chatbot_bp
 from routes.payments import payments_bp
+from routes.whatsapp_bot import whatsapp_bot_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
@@ -789,7 +790,7 @@ app.register_blueprint(config_bp)
 app.register_blueprint(user_dash_bp)
 app.register_blueprint(chatbot_bp)
 app.register_blueprint(payments_bp, url_prefix='/payments')
-
+app.register_blueprint(whatsapp_bot_bp, url_prefix='/whatsapp')
 
 # =============================================================================
 # MIDDLEWARE — Anti-caché
