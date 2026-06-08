@@ -106,6 +106,10 @@ def webhook():
                     # Solo procesar mensajes de texto
                     if 'text' in mensaje_info:
                         texto_mensaje = mensaje_info['text']['body'].strip()
+
+                        # Si el número es de México y trae el '1' interno de WhatsApp (13 dígitos), se lo quitamos
+                        if numero_remitente.startswith("521") and len(numero_remitente) == 13:
+                            numero_remitente = "52" + numero_remitente[3:]
                         
                         print(f"WA -> Recibido de {numero_remitente}: {texto_mensaje}")
 
