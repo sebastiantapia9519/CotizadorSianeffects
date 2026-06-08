@@ -5,7 +5,7 @@ from google import genai
 from google.genai import types
 
 # 1. Crear el Blueprint para mantener tu código ordenado
-whatsapp_bp = Blueprint('whatsapp', __name__)
+whatsapp_bot_bp = Blueprint('whatsapp', __name__)
 
 # 2. Configurar Variables de Entorno (Asegúrate de tenerlas en tu servidor o archivo .env)
 # La API key de Gemini ya la tenías
@@ -73,7 +73,7 @@ def send_whatsapp_message(to_number, text_body):
             print(f"Detalle: {response.text}")
 
 
-@whatsapp_bp.route('/webhook', methods=['GET', 'POST'])
+@whatsapp_bot_bp.route('/webhook', methods=['GET', 'POST'])
 def webhook():
     # --- PASO 1: Verificación de Meta ---
     if request.method == 'GET':
