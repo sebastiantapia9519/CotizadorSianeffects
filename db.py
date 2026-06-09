@@ -1478,7 +1478,58 @@ def init_db():
     """)
 
     # =============================
-    # 4.33 CREAR USUARIO ADMIN
+    # 4.33 TABLAS: WHATSAPP BOT
+    # =============================
+    """
+    Bandeja de entrada para WhatsApp Business.
+
+    conversaciones:
+      - Una fila por número de cliente.
+      - bot_activo controla el handover humano/IA.
+
+    mensajes_whatsapp:
+      - Historial completo por conversación.
+      - whatsapp_message_id evita procesar duplicados enviados por Meta.
+    """
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS conversaciones (
+            id SERIAL PRIMARY KEY,
+            numero_cliente VARCHAR(32) NOT NULL UNIQUE,
+            nombre_cliente VARCHAR(255),
+            bot_activo BOOLEAN DEFAULT TRUE,
+            ultima_actividad TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    print("  ✓ Tabla: conversaciones")
+
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS mensajes_whatsapp (
+            id SERIAL PRIMARY KEY,
+            conversacion_id INTEGER NOT NULL,
+            remitente VARCHAR(20) NOT NULL CHECK (remitente IN ('cliente', 'bot', 'agente')),
+            texto TEXT NOT NULL,
+            whatsapp_message_id VARCHAR(255) UNIQUE,
+            fecha_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (conversacion_id) REFERENCES conversaciones(id) ON DELETE CASCADE
+        )
+    """)
+    print("  ✓ Tabla: mensajes_whatsapp")
+
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_conversaciones_numero_cliente ON conversaciones(numero_cliente)
+    """)
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_conversaciones_ultima_actividad ON conversaciones(ultima_actividad DESC)
+    """)
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_mensajes_whatsapp_conversacion_fecha ON mensajes_whatsapp(conversacion_id, fecha_envio ASC)
+    """)
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_mensajes_whatsapp_message_id ON mensajes_whatsapp(whatsapp_message_id) WHERE whatsapp_message_id IS NOT NULL
+    """)
+
+    # =============================
+    # 4.34 CREAR USUARIO ADMIN
     # =============================
     """
     Crea usuario admin por defecto (seed data).
@@ -1547,7 +1598,7 @@ def init_db():
         print("  ✓ Usuario admin ya existe")
 
     # =============================
-    # 4.34 GUARDAR CAMBIOS Y CERRAR
+    # 4.35 GUARDAR CAMBIOS Y CERRAR
     # =============================
     """
     commit(): guardar TODOS los cambios (CREATE TABLE, CREATE INDEX, INSERT)
