@@ -77,7 +77,14 @@ def extract_text_message(body):
 
 def send_whatsapp_message(to_number, text_body):
     if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
-        raise RuntimeError('Faltan WHATSAPP_TOKEN o WHATSAPP_PHONE_ID en variables de entorno.')
+        raise RuntimeError('Faltan WHATSAPP_TOKEN o WHATSAPP_PHONE_ID en variables de entorno.')}
+    
+    print('================ WHATSAPP DEBUG ================')
+    print('WHATSAPP_PHONE_ID usado:', WHATSAPP_PHONE_ID)
+    print('URL usada:', url)
+    print('Número destino:', to_number)
+    print('Token existe:', bool(WHATSAPP_TOKEN))
+    print('================================================')
 
     url = f'https://graph.facebook.com/v18.0/{WHATSAPP_PHONE_ID}/messages'
     headers = {
