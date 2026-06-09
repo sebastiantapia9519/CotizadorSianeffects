@@ -69,6 +69,124 @@
         .mobile-menu.open {
             max-height: 520px;
         }
+
+        .animate-ready {
+            opacity: 0;
+            transform: translateY(18px);
+            transition: opacity .65s ease, transform .65s ease;
+            transition-delay: var(--delay, 0ms);
+            will-change: opacity, transform;
+        }
+
+        .animate-ready.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hero-visual {
+            animation: softFloat 7s ease-in-out infinite;
+            transform-origin: center;
+        }
+
+        .hero-glow {
+            animation: glowDrift 9s ease-in-out infinite;
+        }
+
+        .hero-glow:nth-child(2) {
+            animation-delay: -3s;
+        }
+
+        .metric-card,
+        .pill-card {
+            transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease;
+        }
+
+        .metric-card:hover,
+        .pill-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 16px 32px rgba(15, 23, 42, 0.08);
+            border-color: rgba(124, 209, 196, 0.75);
+        }
+
+        .cta-anim {
+            position: relative;
+            overflow: hidden;
+            transition: transform .2s ease, box-shadow .2s ease, background-color .2s ease, color .2s ease, border-color .2s ease;
+        }
+
+        .cta-anim:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.14);
+        }
+
+        .cta-anim::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(110deg, transparent 0%, rgba(255,255,255,.32) 42%, transparent 58%);
+            transform: translateX(-120%);
+            transition: transform .65s ease;
+            pointer-events: none;
+        }
+
+        .cta-anim:hover::after {
+            transform: translateX(120%);
+        }
+
+        .feature-card i,
+        .icon-lift i {
+            transition: transform .22s ease;
+        }
+
+        .feature-card:hover i,
+        .icon-lift:hover i {
+            transform: translateY(-2px) scale(1.06);
+        }
+
+        .carousel-viewport {
+            isolation: isolate;
+        }
+
+        .carousel-viewport::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,.08) 45%, transparent 60%);
+            transform: translateX(-115%);
+            animation: screenSheen 7.5s ease-in-out infinite;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        @keyframes softFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        @keyframes glowDrift {
+            0%, 100% { transform: translate3d(0, 0, 0) scale(1); opacity: .9; }
+            50% { transform: translate3d(8px, -6px, 0) scale(1.08); opacity: .65; }
+        }
+
+        @keyframes screenSheen {
+            0%, 35% { transform: translateX(-115%); }
+            55%, 100% { transform: translateX(115%); }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+
+            .animate-ready,
+            .animate-ready.is-visible,
+            .hero-visual,
+            .hero-glow,
+            .carousel-viewport::after {
+                animation: none !important;
+                opacity: 1 !important;
+                transform: none !important;
+                transition: none !important;
+            }
+        }
     </style>
 </head>
 
@@ -94,7 +212,7 @@
             <div class="hidden md:flex items-center gap-4">
                 <a href="/login" class="text-slate-600 font-semibold hover:text-black transition">Iniciar sesión</a>
                 <a href="/registro?plan=7days_free"
-                    class="bg-[#1e293b] text-white px-5 py-3 rounded-xl font-bold hover:bg-[#7CD1C4] hover:text-slate-900 transition shadow-sm">
+                    class="cta-anim bg-[#1e293b] text-white px-5 py-3 rounded-xl font-bold hover:bg-[#7CD1C4] hover:text-slate-900 transition shadow-sm">
                     Probar gratis
                 </a>
             </div>
@@ -114,7 +232,7 @@
                 <a href="#faq" onclick="toggleMobileMenu(false)" class="block">FAQ</a>
                 <div class="pt-3 flex flex-col gap-3">
                     <a href="/login" class="text-center border border-slate-200 py-3 rounded-xl">Iniciar sesión</a>
-                    <a href="/registro?plan=7days_free" class="text-center bg-[#1e293b] text-white py-3 rounded-xl font-bold">Probar gratis 7 días</a>
+                    <a href="/registro?plan=7days_free" class="cta-anim text-center bg-[#1e293b] text-white py-3 rounded-xl font-bold">Probar gratis 7 días</a>
                 </div>
             </div>
         </div>
@@ -140,28 +258,28 @@
 
                 <div class="mt-9 flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                     <a href="/registro?plan=7days_free"
-                        class="inline-flex justify-center items-center gap-3 bg-[#1e293b] text-white px-8 py-4 rounded-2xl text-lg font-black hover:bg-[#7CD1C4] hover:text-slate-900 transition shadow-xl shadow-slate-300/40">
+                        class="cta-anim inline-flex justify-center items-center gap-3 bg-[#1e293b] text-white px-8 py-4 rounded-2xl text-lg font-black hover:bg-[#7CD1C4] hover:text-slate-900 transition shadow-xl shadow-slate-300/40">
                         Probar gratis 7 días
                         <i class="fas fa-arrow-right"></i>
                     </a>
 
                     <a href="#como-funciona"
-                        class="inline-flex justify-center items-center gap-3 bg-white text-slate-900 border border-slate-200 px-8 py-4 rounded-2xl text-lg font-black hover:border-[#7CD1C4] hover:bg-slate-50 transition">
+                        class="cta-anim inline-flex justify-center items-center gap-3 bg-white text-slate-900 border border-slate-200 px-8 py-4 rounded-2xl text-lg font-black hover:border-[#7CD1C4] hover:bg-slate-50 transition">
                         Ver cómo funciona
                         <i class="fas fa-play-circle text-[#7CD1C4]"></i>
                     </a>
                 </div>
 
                 <div class="mt-8 grid grid-cols-3 gap-3 max-w-xl mx-auto lg:mx-0">
-                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                    <div class="metric-card bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
                         <p class="text-2xl font-black text-slate-950">$149</p>
                         <p class="text-xs text-slate-500 font-semibold">mensual</p>
                     </div>
-                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                    <div class="metric-card bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
                         <p class="text-2xl font-black text-slate-950">$1,490</p>
                         <p class="text-xs text-slate-500 font-semibold">anual</p>
                     </div>
-                    <div class="bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
+                    <div class="metric-card bg-white rounded-2xl p-4 border border-slate-200 shadow-sm">
                         <p class="text-2xl font-black text-slate-950">PRO</p>
                         <p class="text-xs text-slate-500 font-semibold">desde el trial</p>
                     </div>
@@ -169,10 +287,10 @@
             </div>
 
             <div class="relative">
-                <div class="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#7CD1C4]/25 blur-2xl"></div>
-                <div class="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-[#E89292]/25 blur-2xl"></div>
+                <div class="hero-glow absolute -top-8 -right-8 w-32 h-32 rounded-full bg-[#7CD1C4]/25 blur-2xl"></div>
+                <div class="hero-glow absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-[#E89292]/25 blur-2xl"></div>
 
-                <div class="relative glass-card border border-white rounded-[2rem] shadow-2xl p-4 md:p-5">
+                <div class="hero-visual relative glass-card border border-white rounded-[2rem] shadow-2xl p-4 md:p-5">
                     <div class="rounded-[1.5rem] overflow-hidden bg-slate-950 border-[8px] border-slate-900">
                         <img src="https://pub-d954f01e33ff457ba37d3ede2d956690.r2.dev/promos/main.png"
                             alt="Vista principal de Sianeffects"
@@ -249,14 +367,14 @@
             </div>
 
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mt-12">
-                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Sublimación</div>
-                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Personalizados</div>
-                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Regalos</div>
-                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Manualidades</div>
-                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Impresión</div>
-                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Repostería</div>
-                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Vinil / Corte</div>
-                <div class="bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Emprendimientos</div>
+                <div class="pill-card bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Sublimación</div>
+                <div class="pill-card bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Personalizados</div>
+                <div class="pill-card bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Regalos</div>
+                <div class="pill-card bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Manualidades</div>
+                <div class="pill-card bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Impresión</div>
+                <div class="pill-card bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Repostería</div>
+                <div class="pill-card bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Vinil / Corte</div>
+                <div class="pill-card bg-white rounded-3xl border border-slate-200 p-5 text-center font-bold text-slate-700">Emprendimientos</div>
             </div>
         </div>
     </section>
@@ -543,14 +661,14 @@
                         <p class="text-6xl font-black text-slate-950">$149</p>
                         <p class="text-slate-500 font-bold mb-2">MXN / mes</p>
                     </div>
-                    <p class="text-slate-500 mt-4">Ideal para empezar, probar el flujo completo y ordenar tus cotizaciones.</p>
+                    <p class="text-slate-500 mt-4">Acceso completo para cotizar, vender y controlar tus números con toda la potencia de Sianeffects, sin compromisos largos.</p>
                     <ul class="mt-8 space-y-4 text-slate-700">
-                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Cotizador con ganancia real.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Cotizaciones ilimitadas con ganancia real.</span></li>
                         <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Materiales, recetas, maquinaria e inventario.</span></li>
                         <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Historial, clientes, pedidos y entregas.</span></li>
                         <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Dashboard, tickets y exportación.</span></li>
                     </ul>
-                    <a href="/registro?plan=7days_free" class="mt-9 block text-center bg-[#1e293b] text-white py-5 rounded-2xl text-lg font-black hover:bg-[#7CD1C4] hover:text-slate-900 transition">Probar gratis 7 días</a>
+                    <a href="/registro?plan=7days_free" class="cta-anim mt-9 block text-center bg-[#1e293b] text-white py-5 rounded-2xl text-lg font-black hover:bg-[#7CD1C4] hover:text-slate-900 transition">Probar gratis 7 días</a>
                 </div>
 
                 <div class="relative bg-slate-900 rounded-[2rem] border-4 border-[#7CD1C4] p-8 md:p-10 shadow-2xl text-white overflow-hidden">
@@ -560,14 +678,14 @@
                         <p class="text-6xl font-black">$1,490</p>
                         <p class="text-slate-300 font-bold mb-2">MXN / año</p>
                     </div>
-                    <p class="text-slate-300 mt-4">Para trabajar todo el año con tus cotizaciones, pedidos y números bajo control.</p>
+                    <p class="text-slate-300 mt-4">La forma más inteligente de asegurar un año completo de control, claridad y crecimiento para tu negocio.</p>
                     <ul class="mt-8 space-y-4 text-slate-200">
                         <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Todo lo del plan mensual.</span></li>
-                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Pagas menos que 12 meses separados.</span></li>
-                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Ideal si ya cotizas todos los días.</span></li>
-                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Soporte por WhatsApp.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Ahorra frente al pago mensual y mantén tu operación siempre lista.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Una inversión anual para vender con más seguridad, aunque apenas estés empezando.</span></li>
+                        <li class="flex gap-3"><i class="fas fa-check-circle text-[#7CD1C4] mt-1"></i><span>Soporte por WhatsApp para avanzar con confianza.</span></li>
                     </ul>
-                    <a href="/registro?plan=7days_free" class="mt-9 block text-center bg-[#7CD1C4] text-slate-950 py-5 rounded-2xl text-lg font-black hover:bg-white transition">Empezar gratis y elegir plan</a>
+                    <a href="/registro?plan=7days_free" class="cta-anim mt-9 block text-center bg-[#7CD1C4] text-slate-950 py-5 rounded-2xl text-lg font-black hover:bg-white transition">Empezar gratis y elegir plan</a>
                 </div>
             </div>
 
@@ -622,7 +740,7 @@
         <div class="max-w-4xl mx-auto">
             <h2 class="text-3xl md:text-6xl font-black leading-tight">Deja de cotizar con miedo. Empieza a vender con números claros.</h2>
             <p class="text-slate-400 mt-6 text-lg md:text-xl">Prueba Sianeffects gratis por 7 días y descubre cuánto deberías estar cobrando realmente por tus productos.</p>
-            <a href="/registro?plan=7days_free" class="mt-10 inline-flex items-center gap-3 bg-[#7CD1C4] text-slate-950 px-10 py-5 rounded-2xl font-black text-lg hover:bg-white transition">
+            <a href="/registro?plan=7days_free" class="cta-anim mt-10 inline-flex items-center gap-3 bg-[#7CD1C4] text-slate-950 px-10 py-5 rounded-2xl font-black text-lg hover:bg-white transition">
                 Empezar gratis
                 <i class="fas fa-arrow-right"></i>
             </a>
@@ -730,6 +848,35 @@
                 menu.classList.toggle('open');
             }
         }
+
+        function initScrollAnimations() {
+            const animatedItems = document.querySelectorAll(
+                'section > div, .feature-card, .pill-card, .metric-card, details'
+            );
+
+            animatedItems.forEach((item, index) => {
+                item.classList.add('animate-ready');
+                item.style.setProperty('--delay', `${Math.min(index % 6, 5) * 55}ms`);
+            });
+
+            if (!('IntersectionObserver' in window)) {
+                animatedItems.forEach(item => item.classList.add('is-visible'));
+                return;
+            }
+
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('is-visible');
+                        observer.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
+
+            animatedItems.forEach(item => observer.observe(item));
+        }
+
+        initScrollAnimations();
 
         renderDots();
         updateSlider();
