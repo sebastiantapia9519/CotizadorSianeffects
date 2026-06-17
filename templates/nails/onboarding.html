@@ -2,111 +2,432 @@
 
 {% block title %}Configurar salón | Sianeffects Nails{% endblock %}
 {% block page_title %}Configura tu salón{% endblock %}
-{% block page_subtitle %}Primero necesitamos los datos básicos de tu negocio.{% endblock %}
+{% block page_subtitle %}Completa lo básico para activar tu agenda, catálogo y horarios.{% endblock %}
 
 {% block content %}
+{% set prefill = prefill or {} %}
+{% set day_labels = {
+    'monday': 'Lunes',
+    'tuesday': 'Martes',
+    'wednesday': 'Miércoles',
+    'thursday': 'Jueves',
+    'friday': 'Viernes',
+    'saturday': 'Sábado',
+    'sunday': 'Domingo'
+} %}
 
-<div class="row g-4 align-items-stretch">
-    <div class="col-lg-5">
-        <div class="nails-card h-100">
-            <h2 class="mb-3">Tu espacio Nails</h2>
-            <p class="text-muted mb-4">
-                Esta información aparecerá en tu panel, tickets y catálogo público.
-            </p>
+<style>
+    .onboarding-shell {
+        max-width: 1120px;
+        margin: 0 auto;
+    }
 
-            <div class="report-line">
-                <span>Agenda y ventas</span>
-                <strong>Listo</strong>
-            </div>
-            <div class="report-line">
-                <span>Catálogo público</span>
-                <strong>Incluido</strong>
-            </div>
-            <div class="report-line">
-                <span>Colores de marca</span>
-                <strong>Editable</strong>
+    .wizard-card {
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(148, 99, 158, 0.18);
+        border-radius: 8px;
+        box-shadow: 0 18px 45px rgba(31, 41, 55, 0.08);
+        overflow: hidden;
+    }
+
+    .wizard-steps {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-bottom: 1px solid #ece3ef;
+        background: #fffafd;
+    }
+
+    .wizard-step-tab {
+        border: 0;
+        background: transparent;
+        padding: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 900;
+        color: #7d7083;
+        text-align: left;
+    }
+
+    .wizard-step-tab span {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #f4e7f7;
+        color: #91489d;
+        flex: 0 0 auto;
+    }
+
+    .wizard-step-tab.is-active {
+        color: #2a2230;
+        background: #ffffff;
+    }
+
+    .wizard-step-tab.is-active span {
+        background: #91489d;
+        color: #fff;
+    }
+
+    .wizard-body {
+        padding: 26px;
+    }
+
+    .wizard-pane {
+        display: none;
+    }
+
+    .wizard-pane.is-active {
+        display: block;
+    }
+
+    .wizard-side {
+        background: linear-gradient(180deg, #fff7fd 0%, #ffffff 100%);
+        border: 1px solid #efd8f1;
+        border-radius: 8px;
+        padding: 22px;
+        height: 100%;
+    }
+
+    .wizard-preview-logo {
+        width: 62px;
+        height: 62px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: var(--preview-primary, #d946ef);
+        color: #fff;
+        font-size: 1.4rem;
+        box-shadow: 0 14px 30px rgba(145, 72, 157, 0.18);
+    }
+
+    .wizard-summary-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        padding: 12px 0;
+        border-bottom: 1px solid #f0e7f2;
+        color: #6f6576;
+        font-weight: 800;
+    }
+
+    .wizard-summary-line strong {
+        color: #2a2230;
+        text-align: right;
+    }
+
+    .hours-row {
+        display: grid;
+        grid-template-columns: 110px 1fr 1fr 120px;
+        gap: 10px;
+        align-items: center;
+        padding: 10px;
+        border: 1px solid #eaddec;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .hours-grid {
+        display: grid;
+        gap: 10px;
+    }
+
+    .wizard-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 26px;
+        border-top: 1px solid #ece3ef;
+        background: #fffafd;
+    }
+
+    .wizard-actions .btn {
+        min-width: 150px;
+    }
+
+    @media (max-width: 768px) {
+        .wizard-steps {
+            grid-template-columns: 1fr;
+        }
+
+        .wizard-step-tab {
+            padding: 12px 16px;
+        }
+
+        .wizard-body {
+            padding: 18px;
+        }
+
+        .hours-row {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .hours-row .day-name {
+            grid-column: span 2;
+        }
+
+        .wizard-actions {
+            padding: 14px 18px;
+        }
+
+        .wizard-actions .btn {
+            min-width: 0;
+            flex: 1;
+        }
+    }
+</style>
+
+<div class="onboarding-shell">
+    <form method="POST" class="wizard-card" id="nailsOnboardingWizard">
+        <div class="wizard-steps" role="tablist" aria-label="Pasos de configuración">
+            <button type="button" class="wizard-step-tab is-active" data-step-tab="1">
+                <span>1</span> Datos
+            </button>
+            <button type="button" class="wizard-step-tab" data-step-tab="2">
+                <span>2</span> Catálogo
+            </button>
+            <button type="button" class="wizard-step-tab" data-step-tab="3">
+                <span>3</span> Horarios
+            </button>
+        </div>
+
+        <div class="wizard-body">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <section class="wizard-pane is-active" data-step-pane="1">
+                        <h2 class="mb-1">Datos del salón</h2>
+                        <p class="text-muted fw-bold mb-4">Esto aparecerá en tu panel y en el catálogo público.</p>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="onboardingName">Nombre del salón</label>
+                                <input type="text" name="name" id="onboardingName" class="form-control"
+                                    value="{{ prefill.get('name', '') }}" placeholder="Ej. Garritas Studio" required>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label" for="onboardingWhatsapp">WhatsApp</label>
+                                <input type="text" name="whatsapp" id="onboardingWhatsapp" class="form-control"
+                                    value="{{ prefill.get('whatsapp', '') }}" placeholder="8112345678">
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label" for="onboardingInstagram">Instagram</label>
+                                <input type="text" name="instagram" id="onboardingInstagram" class="form-control"
+                                    value="{{ prefill.get('instagram', '') }}" placeholder="@tusalon">
+                            </div>
+
+                            <div class="col-12">
+                                <label class="form-label" for="onboardingAddress">Dirección / ciudad</label>
+                                <input type="text" name="address" id="onboardingAddress" class="form-control"
+                                    value="{{ prefill.get('address', '') }}" placeholder="Apodaca, Nuevo León">
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="wizard-pane" data-step-pane="2">
+                        <h2 class="mb-1">Catálogo y marca</h2>
+                        <p class="text-muted fw-bold mb-4">Define cómo se ve tu salón hacia tus clientas.</p>
+
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label" for="onboardingTagline">Frase del catálogo</label>
+                                <input type="text" name="catalog_tagline" id="onboardingTagline" class="form-control"
+                                    value="{{ prefill.get('catalog_tagline', 'Uñas que expresan tu estilo, hechas con amor y detalle.') }}"
+                                    maxlength="240">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label" for="primaryColor">Color principal</label>
+                                <input type="color" name="primary_color" id="primaryColor"
+                                    class="form-control form-control-color w-100"
+                                    value="{{ prefill.get('primary_color', '#d946ef') }}">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label" for="secondaryColor">Color secundario</label>
+                                <input type="color" name="secondary_color" id="secondaryColor"
+                                    class="form-control form-control-color w-100"
+                                    value="{{ prefill.get('secondary_color', '#fce7f3') }}">
+                            </div>
+
+                            <div class="col-md-4">
+                                <label class="form-label" for="accentColor">Color acento</label>
+                                <input type="color" name="accent_color" id="accentColor"
+                                    class="form-control form-control-color w-100"
+                                    value="{{ prefill.get('accent_color', '#f0abfc') }}">
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="wizard-pane" data-step-pane="3">
+                        <h2 class="mb-1">Horarios de trabajo</h2>
+                        <p class="text-muted fw-bold mb-4">Estos horarios se usarán para mostrar espacios disponibles al agendar.</p>
+
+                        <div class="hours-grid">
+                            {% for day_key, label in day_labels.items() %}
+                            {% set controls = (business_hours_controls or {}).get(day_key, {}) %}
+                            <div class="hours-row">
+                                <strong class="day-name">{{ label }}</strong>
+                                <input type="time" class="form-control" name="{{ day_key }}_open"
+                                    value="{{ controls.get('open', '') }}">
+                                <input type="time" class="form-control" name="{{ day_key }}_close"
+                                    value="{{ controls.get('close', '') }}">
+                                <label class="form-check form-switch m-0 d-flex align-items-center gap-2">
+                                    <input class="form-check-input" type="checkbox" name="{{ day_key }}_closed"
+                                        {% if controls.get('closed') %}checked{% endif %}>
+                                    <span class="fw-bold text-muted">Cerrado</span>
+                                </label>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </section>
+                </div>
+
+                <div class="col-lg-4">
+                    <aside class="wizard-side">
+                        <div class="d-flex align-items-center gap-3 mb-4">
+                            <div class="wizard-preview-logo" id="wizardPreviewLogo">
+                                <i class="fa-solid fa-hand-sparkles"></i>
+                            </div>
+                            <div>
+                                <h3 class="mb-0" id="previewName">{{ prefill.get('name', 'Tu salón') or 'Tu salón' }}</h3>
+                                <p class="text-muted fw-bold mb-0">Panel Nails</p>
+                            </div>
+                        </div>
+
+                        <div class="wizard-summary-line">
+                            <span>WhatsApp</span>
+                            <strong id="previewWhatsapp">{{ prefill.get('whatsapp', 'Sin capturar') or 'Sin capturar' }}</strong>
+                        </div>
+                        <div class="wizard-summary-line">
+                            <span>Instagram</span>
+                            <strong id="previewInstagram">{{ prefill.get('instagram', 'Sin capturar') or 'Sin capturar' }}</strong>
+                        </div>
+                        <div class="wizard-summary-line">
+                            <span>Zona</span>
+                            <strong id="previewAddress">{{ prefill.get('address', 'Sin capturar') or 'Sin capturar' }}</strong>
+                        </div>
+                        <div class="wizard-summary-line">
+                            <span>Catálogo</span>
+                            <strong>Activado</strong>
+                        </div>
+
+                        <p class="text-muted fw-bold small mt-4 mb-0">
+                            Después podrás cambiar colores, políticas, logo y horarios desde Configuración.
+                        </p>
+                    </aside>
+                </div>
             </div>
         </div>
-    </div>
 
-    <div class="col-lg-7">
-        <div class="nails-card">
-            <h2 class="mb-3">Datos iniciales</h2>
-
-            <form method="POST" class="row g-3">
-                <div class="col-12">
-                    <label class="form-label">Nombre del salón</label>
-                    <input 
-                        type="text" 
-                        name="name" 
-                        class="form-control" 
-                        placeholder="Ej. Nails Studio Diana"
-                        value="{{ (prefill or {}).get('name', '') }}"
-                        required
-                    >
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">WhatsApp</label>
-                    <input 
-                        type="text" 
-                        name="whatsapp" 
-                        class="form-control" 
-                        placeholder="Ej. 8112345678"
-                        value="{{ (prefill or {}).get('whatsapp', '') }}"
-                    >
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Instagram</label>
-                    <input 
-                        type="text" 
-                        name="instagram" 
-                        class="form-control" 
-                        placeholder="Ej. @nailsdiana"
-                        value="{{ (prefill or {}).get('instagram', '') }}"
-                    >
-                </div>
-
-                <div class="col-12">
-                    <label class="form-label">Dirección</label>
-                    <input 
-                        type="text" 
-                        name="address" 
-                        class="form-control" 
-                        placeholder="Ej. Apodaca, Nuevo León"
-                        value="{{ (prefill or {}).get('address', '') }}"
-                    >
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Color principal</label>
-                    <input 
-                        type="color" 
-                        name="primary_color" 
-                        class="form-control form-control-color" 
-                        value="#ff6b81"
-                    >
-                </div>
-
-                <div class="col-md-6">
-                    <label class="form-label">Color secundario</label>
-                    <input 
-                        type="color" 
-                        name="secondary_color" 
-                        class="form-control form-control-color" 
-                        value="#fff0f3"
-                    >
-                </div>
-
-                <div class="col-12 mt-2">
-                    <button type="submit" class="btn btn-primary">
-                        Crear mi salón
-                    </button>
-                </div>
-            </form>
+        <div class="wizard-actions">
+            <button type="button" class="btn btn-outline-secondary" id="wizardBack" disabled>
+                <i class="fa-solid fa-arrow-left me-2"></i> Atrás
+            </button>
+            <button type="button" class="btn btn-primary" id="wizardNext">
+                Siguiente <i class="fa-solid fa-arrow-right ms-2"></i>
+            </button>
+            <button type="submit" class="btn btn-primary d-none" id="wizardSubmit">
+                <i class="fa-solid fa-circle-check me-2"></i> Crear mi salón
+            </button>
         </div>
-    </div>
+    </form>
 </div>
 
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const wizard = document.getElementById("nailsOnboardingWizard");
+    if (!wizard) return;
+
+    const tabs = Array.from(wizard.querySelectorAll("[data-step-tab]"));
+    const panes = Array.from(wizard.querySelectorAll("[data-step-pane]"));
+    const backBtn = document.getElementById("wizardBack");
+    const nextBtn = document.getElementById("wizardNext");
+    const submitBtn = document.getElementById("wizardSubmit");
+    let currentStep = 1;
+
+    function setStep(step) {
+        currentStep = Math.max(1, Math.min(3, step));
+        tabs.forEach(function (tab) {
+            tab.classList.toggle("is-active", Number(tab.dataset.stepTab) === currentStep);
+        });
+        panes.forEach(function (pane) {
+            pane.classList.toggle("is-active", Number(pane.dataset.stepPane) === currentStep);
+        });
+        backBtn.disabled = currentStep === 1;
+        nextBtn.classList.toggle("d-none", currentStep === 3);
+        submitBtn.classList.toggle("d-none", currentStep !== 3);
+    }
+
+    function currentPaneIsValid() {
+        const pane = wizard.querySelector(`[data-step-pane="${currentStep}"]`);
+        const fields = Array.from(pane.querySelectorAll("input, select, textarea"));
+        for (const field of fields) {
+            if (!field.checkValidity()) {
+                field.reportValidity();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    tabs.forEach(function (tab) {
+        tab.addEventListener("click", function () {
+            const targetStep = Number(tab.dataset.stepTab);
+            if (targetStep > currentStep && !currentPaneIsValid()) return;
+            setStep(targetStep);
+        });
+    });
+
+    nextBtn.addEventListener("click", function () {
+        if (!currentPaneIsValid()) return;
+        setStep(currentStep + 1);
+    });
+
+    backBtn.addEventListener("click", function () {
+        setStep(currentStep - 1);
+    });
+
+    const previewMap = [
+        ["onboardingName", "previewName", "Tu salón"],
+        ["onboardingWhatsapp", "previewWhatsapp", "Sin capturar"],
+        ["onboardingInstagram", "previewInstagram", "Sin capturar"],
+        ["onboardingAddress", "previewAddress", "Sin capturar"]
+    ];
+
+    previewMap.forEach(function ([inputId, previewId, fallback]) {
+        const input = document.getElementById(inputId);
+        const preview = document.getElementById(previewId);
+        if (!input || !preview) return;
+        input.addEventListener("input", function () {
+            preview.textContent = input.value.trim() || fallback;
+        });
+    });
+
+    const primaryColor = document.getElementById("primaryColor");
+    const previewLogo = document.getElementById("wizardPreviewLogo");
+    if (primaryColor && previewLogo) {
+        primaryColor.addEventListener("input", function () {
+            previewLogo.style.setProperty("--preview-primary", primaryColor.value);
+        });
+        previewLogo.style.setProperty("--preview-primary", primaryColor.value);
+    }
+
+    wizard.querySelectorAll(".hours-row").forEach(function (row) {
+        const closed = row.querySelector('input[type="checkbox"]');
+        const times = Array.from(row.querySelectorAll('input[type="time"]'));
+        function syncClosed() {
+            times.forEach(function (input) {
+                input.disabled = closed.checked;
+                input.required = !closed.checked;
+            });
+        }
+        closed.addEventListener("change", syncClosed);
+        syncClosed();
+    });
+});
+</script>
 {% endblock %}

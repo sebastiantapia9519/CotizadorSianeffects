@@ -131,8 +131,11 @@ def login():
                 # Limpiamos cualquier sesión anterior ANTES de asignar la nueva.
                 # Esto evita que alguien que obtuvo un session_id antes del login
                 # lo use para acceder con los datos del usuario recién autenticado.
+                nails_onboarding_prefill = session.get('nails_onboarding_prefill')
                 session.clear()
                 session.permanent = True  # La sesión dura lo configurado en PERMANENT_SESSION_LIFETIME
+                if nails_onboarding_prefill and (user.get('active_module') or '').strip().lower() == 'nails':
+                    session['nails_onboarding_prefill'] = nails_onboarding_prefill
 
                 # Guardamos solo lo esencial en sesión (nunca datos sensibles como la contraseña)
                 session['user_id'] = user['id']

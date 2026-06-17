@@ -1813,10 +1813,34 @@ def onboarding():
         address         = clean_text(request.form.get("address"), 240)
         primary_color   = clean_hex_color(request.form.get("primary_color"),   DEFAULT_PRIMARY_COLOR)
         secondary_color = clean_hex_color(request.form.get("secondary_color"), DEFAULT_SECONDARY_COLOR)
+        accent_color    = clean_hex_color(request.form.get("accent_color"),    DEFAULT_ACCENT_COLOR)
+        catalog_tagline = clean_text(request.form.get("catalog_tagline"), 240)
 
         if not name:
             flash("El nombre del salón es obligatorio.", "warning")
-            return render_template("nails/onboarding.html", business=None, prefill=prefill)
+            return render_template(
+                "nails/onboarding.html",
+                business=None,
+                prefill=prefill,
+                business_hours_controls=build_business_hours_controls({}),
+            )
+
+        try:
+            business_hours_json = normalize_business_hours_from_form(request.form)
+        except ValueError as e:
+            flash(str(e), "warning")
+            return render_template(
+                "nails/onboarding.html",
+                business=None,
+                prefill={
+                    "name": name,
+                    "whatsapp": whatsapp,
+                    "instagram": instagram,
+                    "address": address,
+                    "catalog_tagline": catalog_tagline,
+                },
+                business_hours_controls=build_business_hours_controls({}),
+            )
 
         base_slug = generate_slug(name)
         slug      = base_slug
@@ -1843,13 +1867,16 @@ def onboarding():
                 """
                 INSERT INTO nails_businesses (
                     user_id, name, slug, whatsapp, instagram,
-                    address, primary_color, secondary_color, join_code
+                    address, primary_color, secondary_color, accent_color,
+                    catalog_tagline, business_hours_json, join_code
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 RETURNING id
                 """,
                 (user_id, name, slug, whatsapp, instagram,
-                 address, primary_color, secondary_color, join_code),
+                 address, primary_color, secondary_color, accent_color,
+                 catalog_tagline or 'Uñas que expresan tu estilo, hechas con amor y detalle.',
+                 json.dumps(business_hours_json, ensure_ascii=False), join_code),
             )
             business_id = cur.fetchone()["id"]
 
@@ -1880,7 +1907,12 @@ def onboarding():
         except Exception as e:
             conn.rollback()
             flash(f"No se pudo crear el salón: {e}", "danger")
-            return render_template("nails/onboarding.html", business=None, prefill=prefill)
+            return render_template(
+                "nails/onboarding.html",
+                business=None,
+                prefill=prefill,
+                business_hours_controls=build_business_hours_controls({}),
+            )
 
         finally:
             cur.close()
@@ -1909,7 +1941,21 @@ def onboarding():
             cur.close()
             conn.close()
 
-    return render_template("nails/onboarding.html", business=None, prefill=prefill)
+    default_business_hours = {
+        "monday": "09:00 - 18:00",
+        "tuesday": "09:00 - 18:00",
+        "wednesday": "09:00 - 18:00",
+        "thursday": "09:00 - 18:00",
+        "friday": "09:00 - 18:00",
+        "saturday": "10:00 - 16:00",
+        "sunday": "Cerrado",
+    }
+    return render_template(
+        "nails/onboarding.html",
+        business=None,
+        prefill=prefill,
+        business_hours_controls=build_business_hours_controls(default_business_hours),
+    )
 
 
 # =========================================================
