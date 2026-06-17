@@ -648,7 +648,7 @@
 </main>
 
 <div class="ticket-actions">
-    <button id="btnShare" onclick="generarYCompartir()" class="btn-accion btn-share">
+    <button id="btnShare" type="button" onclick="generarYCompartir()" class="btn-accion btn-share" disabled>
         <i class="fa-solid fa-share-nodes"></i> Compartir
     </button>
 
@@ -663,6 +663,8 @@
 
 <script>
     let ticketPreparado = null;
+    let ticketPreparando = null;
+    let ticketError = null;
 
     function esperarImagenes(elemento) {
         const imagenes = Array.from(elemento.querySelectorAll("img"));
@@ -670,9 +672,18 @@
         return Promise.all(imagenes.map(function (img) {
             if (img.complete) return Promise.resolve();
 
+            let timer = null;
             return new Promise(function (resolve) {
-                img.onload = resolve;
-                img.onerror = resolve;
+                const finish = function () {
+                    if (timer) window.clearTimeout(timer);
+                    resolve();
+                };
+                timer = window.setTimeout(finish, 3500);
+                img.onload = finish;
+                img.onerror = finish;
+            }).finally(function () {
+                img.onload = null;
+                img.onerror = null;
             });
         }));
     }
@@ -690,6 +701,26 @@
         }
     }
 
+    function actualizarBotonCompartir(estado) {
+        const boton = document.getElementById("btnShare");
+        if (!boton) return;
+
+        if (estado === "preparando") {
+            boton.disabled = true;
+            boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparando...';
+            return;
+        }
+
+        if (estado === "error") {
+            boton.disabled = false;
+            boton.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Reintentar';
+            return;
+        }
+
+        boton.disabled = false;
+        boton.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Compartir';
+    }
+
     function cerrarTicket() {
         window.close();
 
@@ -700,56 +731,117 @@
         }, 180);
     }
 
-    window.addEventListener("DOMContentLoaded", async function () {
-        try {
+    function canvasToBlob(canvas) {
+        return new Promise(function (resolve, reject) {
+            if (!canvas || !canvas.toBlob) {
+                reject(new Error("El navegador no pudo crear la imagen del ticket."));
+                return;
+            }
+
+            canvas.toBlob(function (blob) {
+                if (!blob) {
+                    reject(new Error("No se pudo convertir el ticket a imagen."));
+                    return;
+                }
+                resolve(blob);
+            }, "image/png");
+        });
+    }
+
+    function conTimeout(promesa, ms, mensaje) {
+        return Promise.race([
+            promesa,
+            new Promise(function (_, reject) {
+                window.setTimeout(function () {
+                    reject(new Error(mensaje));
+                }, ms);
+            })
+        ]);
+    }
+
+    async function prepararTicket() {
+        if (ticketPreparado) return ticketPreparado;
+        if (ticketPreparando) return ticketPreparando;
+
+        ticketError = null;
+        actualizarBotonCompartir("preparando");
+
+        ticketPreparando = (async function () {
             const ticket = document.getElementById("ticketVisual");
 
-            if (!ticket || !window.html2canvas) {
-                return;
+            if (!ticket) {
+                throw new Error("No se encontró el ticket en pantalla.");
+            }
+
+            if (!window.html2canvas) {
+                throw new Error("No cargó el generador de imagen del ticket.");
             }
 
             await esperarImagenes(ticket);
 
-            const canvas = await html2canvas(ticket, {
-                scale: 2,
+            const canvas = await conTimeout(html2canvas(ticket, {
+                scale: Math.min(2, window.devicePixelRatio || 2),
                 backgroundColor: "#ffffff",
-                useCORS: true
-            });
+                useCORS: true,
+                allowTaint: false,
+                imageTimeout: 5000,
+                logging: false
+            }), 12000, "La imagen del ticket tardó demasiado en generarse.");
 
-            canvas.toBlob(function (blob) {
-                if (!blob) return;
-                ticketPreparado = new File(
-                    [blob],
-                    "ticket_nails_{{ sale.sale_number or sale.id }}.png",
-                    { type: "image/png" }
-                );
-            }, "image/png");
+            const blob = await canvasToBlob(canvas);
+            ticketPreparado = new File(
+                [blob],
+                "ticket_nails_{{ sale.sale_number or sale.id }}.png",
+                { type: "image/png" }
+            );
+            actualizarBotonCompartir("listo");
+            return ticketPreparado;
+        })();
+
+        try {
+            return await ticketPreparando;
         } catch (error) {
             console.error("Error preparando el ticket Nails:", error);
+            ticketError = error;
+            ticketPreparando = null;
+            actualizarBotonCompartir("error");
+            throw error;
         }
+    }
+
+    window.addEventListener("DOMContentLoaded", function () {
+        prepararTicket().catch(function () {
+            // El botón queda como Reintentar y el mensaje detallado se muestra al tocarlo.
+        });
     });
 
     async function generarYCompartir() {
-        if (!ticketPreparado) {
-            avisarTicket(
-                "info",
-                "Procesando...",
-                "Dame un segundito, estoy terminando de preparar la imagen del ticket."
-            );
-            return;
+        let archivo = ticketPreparado;
+
+        if (!archivo) {
+            try {
+                archivo = await prepararTicket();
+            } catch (error) {
+                avisarTicket(
+                    "error",
+                    "No se pudo preparar",
+                    "No pude crear la imagen del ticket en este navegador. Usa Imprimir o intenta de nuevo."
+                );
+                return;
+            }
         }
 
         try {
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [ticketPreparado] })) {
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivo] })) {
                 await navigator.share({
-                    files: [ticketPreparado],
+                    files: [archivo],
                     title: "Ticket {{ (business.name or 'Sianeffects Nails')|upper }}",
                     text: "Aquí tienes tu comprobante."
                 });
             } else {
                 const a = document.createElement("a");
-                a.href = URL.createObjectURL(ticketPreparado);
-                a.download = ticketPreparado.name;
+                a.href = URL.createObjectURL(archivo);
+                a.download = archivo.name;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
