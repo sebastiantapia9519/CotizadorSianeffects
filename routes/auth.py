@@ -411,13 +411,13 @@ def registro_nails():
             session['utm_campaign'] = request.args.get('utm_campaign').lower()
         return render_template('nails/registro_nails.html', join_code=(request.args.get('codigo') or '').strip().upper())
 
-    username = request.form['username'].lower().strip()
+    username = request.form['username'].strip().upper()
     email = request.form['email'].lower().strip()
     password = request.form['password']
     confirm_password = request.form['confirm_password']
     telefono = request.form.get('phone', '').strip()
     join_code = (request.form.get('join_code') or '').strip().upper()
-    salon_name = (request.form.get('salon_name') or '').strip()
+    salon_name = (request.form.get('salon_name') or '').strip().upper()
     instagram = (request.form.get('instagram') or '').strip()
     address = (request.form.get('address') or '').strip()
     company_name = salon_name or 'Sianeffects Nails'

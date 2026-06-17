@@ -509,7 +509,7 @@
 {% endblock %}
 
 {% block content %}
-{% set greeting_name = (session.get('username') or business.name or 'Equipo').split(' ')[0] %}
+{% set greeting_name = (session.get('username') or business.name or 'Equipo').split(' ')[0]|upper %}
 {% set weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'] %}
 {% set months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'] %}
 {% set confirmed_pct = ((stats.confirmed_today or 0) * 100 / (stats.appointments_today or 1))|round(0, 'floor') %}
@@ -527,7 +527,7 @@
         <div class="home-user">
             <div class="home-user-avatar">{{ greeting_name[0]|upper }}</div>
             <div>
-                <div class="home-name">{{ session.get('username') or business.name }}</div>
+                <div class="home-name">{{ (session.get('username') or business.name)|upper }}</div>
                 <div class="home-sub">{{ current_nails_role or 'Usuario Nails' }}</div>
             </div>
         </div>
@@ -606,7 +606,7 @@
                     </div>
                     <div class="home-sub text-end">{{ appointment.duration_minutes }} min</div>
                     <div><span class="home-status" style="{{ status_style }}">{{ appointment.status|replace('_', ' ')|title }}</span></div>
-                    <div class="home-sub text-end">{{ appointment.staff_name or 'Sin técnica' }}</div>
+                    <div class="home-sub text-end">{{ (appointment.staff_name or 'Sin técnica')|upper }}</div>
                 </div>
                 {% endfor %}
             </div>
@@ -639,7 +639,7 @@
                 </div>
                 <div class="home-next-meta">
                     {% if next_appointment.client_phone %}<span><i class="fa-brands fa-whatsapp"></i> {{ next_appointment.client_phone }}</span>{% endif %}
-                    {% if next_appointment.staff_name %}<span><i class="fa-regular fa-user"></i> {{ next_appointment.staff_name }}</span>{% endif %}
+                    {% if next_appointment.staff_name %}<span><i class="fa-regular fa-user"></i> {{ next_appointment.staff_name|upper }}</span>{% endif %}
                     <span><i class="fa-regular fa-clock"></i> {{ next_appointment.start_time_formatted }}</span>
                 </div>
                 <div class="d-grid gap-2">

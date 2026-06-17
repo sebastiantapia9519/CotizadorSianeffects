@@ -1807,7 +1807,7 @@ def onboarding():
         return redirect(url_for("nails.dashboard"))
 
     if request.method == "POST":
-        name            = clean_text(request.form.get("name"), 120)
+        name            = clean_text(request.form.get("name"), 120).upper()
         whatsapp        = clean_text(request.form.get("whatsapp"), 40)
         instagram       = clean_text(request.form.get("instagram"), 80)
         address         = clean_text(request.form.get("address"), 240)
@@ -5109,7 +5109,7 @@ def editar_personal(staff_id):
             flash("Solo la jefa puede editar personal.", "warning")
             return redirect(url_for("nails.personal"))
 
-        name = clean_text(request.form.get("name"), 120)
+        name = clean_text(request.form.get("name"), 120).upper()
         email = clean_text(request.form.get("email"), 120).lower()
         phone = clean_text(request.form.get("phone"), 40)
         role = clean_text(request.form.get("role"), 40) or "staff"
@@ -5287,7 +5287,7 @@ def configuracion():
 
     try:
         if request.method == "POST":
-            name                = clean_text(request.form.get("name"), 120)
+            name                = clean_text(request.form.get("name"), 120).upper()
             whatsapp            = clean_text(request.form.get("whatsapp"), 40)
             instagram           = clean_text(request.form.get("instagram"), 80)
             address             = clean_text(request.form.get("address"), 240)

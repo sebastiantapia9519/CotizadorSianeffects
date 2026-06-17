@@ -293,7 +293,7 @@
                                 <i class="fa-solid fa-hand-sparkles"></i>
                             </div>
                             <div>
-                                <h3 class="mb-0" id="previewName">{{ prefill.get('name', 'Tu salón') or 'Tu salón' }}</h3>
+                                <h3 class="mb-0" id="previewName">{{ (prefill.get('name', 'Tu salón') or 'Tu salón')|upper }}</h3>
                                 <p class="text-muted fw-bold mb-0">Panel Nails</p>
                             </div>
                         </div>
@@ -403,7 +403,8 @@ document.addEventListener("DOMContentLoaded", function () {
         const preview = document.getElementById(previewId);
         if (!input || !preview) return;
         input.addEventListener("input", function () {
-            preview.textContent = input.value.trim() || fallback;
+            const value = input.value.trim() || fallback;
+            preview.textContent = inputId === "onboardingName" ? value.toUpperCase() : value;
         });
     });
 
