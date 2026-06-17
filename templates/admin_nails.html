@@ -489,6 +489,24 @@
                                             </button>
                                         </form>
                                     </li>
+                                    {% if session.get('role', 0) == 2 and user.id != session.get('user_id') %}
+                                    <li><hr class="dropdown-divider my-1"></li>
+                                    <li><h6 class="dropdown-header">PRUEBAS</h6></li>
+                                    <li>
+                                        <form method="POST" action="{{ url_for('admin.delete_user') }}" class="m-0 p-0 require-confirm"
+                                            data-title="¿Eliminar cuenta Nails?"
+                                            data-text="Esto borra permanentemente la cuenta y sus datos relacionados. Úsalo solo para cuentas de prueba en PRD."
+                                            data-icon="error"
+                                            data-btn-color="#d33"
+                                            data-btn-text="Sí, eliminar cuenta">
+                                            <input type="hidden" name="user_id" value="{{ user.id }}">
+                                            <input type="hidden" name="redirect_to" value="admin.nails_dashboard">
+                                            <button type="submit" class="dropdown-item text-danger text-start">
+                                                <i class="fas fa-trash-alt opacity-75 me-1"></i> Eliminar cuenta
+                                            </button>
+                                        </form>
+                                    </li>
+                                    {% endif %}
                                 </ul>
                             </div>
                         </td>

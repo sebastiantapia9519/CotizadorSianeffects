@@ -978,10 +978,16 @@ def delete_user():
     admin_id   = session.get('user_id')
     admin_name = session.get('username', 'Admin_Desconocido')
     admin_role = session.get('role', 0)
+    redirect_to = request.form.get('redirect_to', 'admin.dashboard')
+    redirect_endpoint = 'admin.nails_dashboard' if redirect_to == 'admin.nails_dashboard' else 'admin.dashboard'
 
     if not user_id or str(user_id) == str(admin_id):
         flash('No puedes borrarte a ti mismo.', 'danger')
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for(redirect_endpoint))
+
+    if admin_role < 2:
+        flash('Solo un superadmin puede eliminar cuentas permanentemente.', 'danger')
+        return redirect(url_for(redirect_endpoint))
 
     conn   = get_db()
     cursor = conn.cursor()
@@ -992,14 +998,14 @@ def delete_user():
 
         if not target:
             flash('El usuario no existe.', 'danger')
-            return redirect(url_for('admin.dashboard'))
+            return redirect(url_for(redirect_endpoint))
 
         target_name = target['username']
         target_role = target['role']
 
         if admin_role < 2 and target_role >= admin_role:
             flash('No puedes eliminar a un usuario de tu mismo rango o superior.', 'danger')
-            return redirect(url_for('admin.dashboard'))
+            return redirect(url_for(redirect_endpoint))
 
         # Limpieza de archivos R2
         cursor.execute('SELECT logo_empresa FROM configuracion WHERE user_id = %s', (user_id,))
@@ -1015,6 +1021,7 @@ def delete_user():
         cursor.execute('DELETE FROM auth_codes WHERE user_id = %s', (user_id,))
         cursor.execute('DELETE FROM password_resets WHERE user_id = %s', (user_id,))
         cursor.execute('DELETE FROM logs_actividad WHERE user_id = %s', (user_id,))
+        cursor.execute('DELETE FROM nails_staff WHERE user_id = %s', (user_id,))
         cursor.execute('DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id = %s)', (user_id,))
         cursor.execute('DELETE FROM ventas WHERE user_id = %s', (user_id,))
         cursor.execute('DELETE FROM movimientos_inventario WHERE user_id = %s', (user_id,))
@@ -1049,7 +1056,7 @@ def delete_user():
         cursor.close()
         conn.close()
 
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for(redirect_endpoint))
 
 
 # =============================================================================

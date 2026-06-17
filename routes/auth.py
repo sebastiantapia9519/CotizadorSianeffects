@@ -23,8 +23,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from db import get_db_connection as get_db
 from datetime import timedelta
 import re
-import secrets
-import uuid
 
 # Utilidades y servicios del proyecto
 from utils.email_validators import is_disposable_email
@@ -34,30 +32,6 @@ from utils.datetime_utils import now_utc
 
 # Registramos el Blueprint de autenticación (sin prefijo de URL, rutas directas)
 auth_bp = Blueprint('auth', __name__)
-
-
-def _nails_slug(value):
-    text = (value or '').lower().strip()
-    text = re.sub(r'[^a-z0-9áéíóúñü\s-]', '', text)
-    replacements = {
-        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
-        'ñ': 'n', 'ü': 'u',
-    }
-    for source, target in replacements.items():
-        text = text.replace(source, target)
-    text = re.sub(r'\s+', '-', text)
-    text = re.sub(r'-+', '-', text)
-    return text.strip('-') or 'salon-nails'
-
-
-def _nails_join_code(cursor):
-    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
-    for _ in range(20):
-        code = ''.join(secrets.choice(alphabet) for _ in range(8))
-        cursor.execute('SELECT id FROM nails_businesses WHERE join_code = %s LIMIT 1', (code,))
-        if not cursor.fetchone():
-            return code
-    return uuid.uuid4().hex[:10].upper()
 
 
 def _auth_email_profile(active_module):
@@ -535,35 +509,13 @@ def registro_nails():
             )
             log_detail = f"Registro Nails: técnica unida a {joined_business['name']}"
         else:
-            base_slug = _nails_slug(salon_name)
-            slug = base_slug
-            counter = 1
-            while True:
-                cursor.execute("SELECT id FROM nails_businesses WHERE slug = %s LIMIT 1", (slug,))
-                if not cursor.fetchone():
-                    break
-                slug = f"{base_slug}-{counter}"
-                counter += 1
-
-            cursor.execute(
-                """
-                INSERT INTO nails_businesses (
-                    user_id, name, slug, whatsapp, instagram, address, join_code
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
-                RETURNING id
-                """,
-                (user_id, salon_name, slug, telefono, instagram, address, _nails_join_code(cursor)),
-            )
-            business_id = cursor.fetchone()['id']
-            cursor.execute(
-                """
-                INSERT INTO nails_staff (business_id, user_id, name, email, phone, role, color)
-                VALUES (%s, %s, %s, %s, %s, 'owner', '#d946ef')
-                """,
-                (business_id, user_id, username, email, telefono),
-            )
-            log_detail = f"Registro Nails: creó salón {salon_name}"
+            session['nails_onboarding_prefill'] = {
+                'name': salon_name,
+                'whatsapp': telefono,
+                'instagram': instagram,
+                'address': address,
+            }
+            log_detail = f"Registro Nails: pendiente de configurar salón {salon_name}"
 
         cursor.execute(
             "INSERT INTO logs_actividad (user_id, accion, modulo, detalle) VALUES (%s, %s, %s, %s)",

@@ -1801,6 +1801,7 @@ def onboarding():
 
     user_id  = session.get("user_id")
     business = get_user_nails_business(user_id)
+    prefill = session.get("nails_onboarding_prefill") or {}
 
     if business:
         return redirect(url_for("nails.dashboard"))
@@ -1815,7 +1816,7 @@ def onboarding():
 
         if not name:
             flash("El nombre del salón es obligatorio.", "warning")
-            return render_template("nails/onboarding.html", business=None)
+            return render_template("nails/onboarding.html", business=None, prefill=prefill)
 
         base_slug = generate_slug(name)
         slug      = base_slug
@@ -1872,19 +1873,43 @@ def onboarding():
             )
 
             conn.commit()
+            session.pop("nails_onboarding_prefill", None)
             flash("Tu salón fue configurado correctamente.", "success")
             return redirect(url_for("nails.dashboard"))
 
         except Exception as e:
             conn.rollback()
             flash(f"No se pudo crear el salón: {e}", "danger")
-            return render_template("nails/onboarding.html", business=None)
+            return render_template("nails/onboarding.html", business=None, prefill=prefill)
 
         finally:
             cur.close()
             conn.close()
 
-    return render_template("nails/onboarding.html", business=None)
+    if not prefill:
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                """
+                SELECT company_name, telefono
+                FROM usuarios
+                WHERE id = %s
+                LIMIT 1
+                """,
+                (user_id,),
+            )
+            user = cur.fetchone()
+            if user:
+                prefill = {
+                    "name": user["company_name"] or "",
+                    "whatsapp": user["telefono"] or "",
+                }
+        finally:
+            cur.close()
+            conn.close()
+
+    return render_template("nails/onboarding.html", business=None, prefill=prefill)
 
 
 # =========================================================
