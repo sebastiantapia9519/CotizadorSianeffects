@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Ticket {{ sale.sale_number or sale.id }} | Sianeffects Nails</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+    <style>
+        :root {
+            --primary: {{ business.primary_color or '#b15aa3' }};
+            --primary-strong: color-mix(in srgb, var(--primary), #5d2054 28%);
+            --secondary: {{ business.secondary_color or '#f8e7f4' }};
+            --accent: {{ business.accent_color or '#9b7aa0' }};
+            --ink: #28202a;
+            --text: #443b46;
+            --muted: #817984;
+            --line: #ece6ee;
+            --soft: #fbf7fb;
+            --paper: #ffffff;
+            --shadow: 0 22px 60px rgba(52, 35, 56, .12);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--secondary), #fff 25%), transparent 360px),
+                #f5f2f5;
+            color: var(--text);
+            font-family: "Nunito", Arial, sans-serif;
+            padding: 22px 14px 112px;
+        }
+
+        .ticket-shell {
+            max-width: 430px;
+            margin: 0 auto;
+        }
+
+        .ticket-wrapper {
+            background: var(--paper);
+            border: 1px solid rgba(255, 255, 255, .8);
+            border-radius: 18px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .ticket-header {
+            padding: 28px 24px 20px;
+            text-align: center;
+        }
+
+        .ticket-logo {
+            align-items: center;
+            background: var(--secondary);
+            border: 1px solid color-mix(in srgb, var(--primary), #fff 62%);
+            border-radius: 999px;
+            box-shadow: 0 12px 28px color-mix(in srgb, var(--primary), transparent 82%);
+            color: var(--primary-strong);
+            display: flex;
+            font-size: 22px;
+            font-weight: 900;
+            height: 84px;
+            justify-content: center;
+            margin: 0 auto 12px;
+            overflow: hidden;
+            width: 84px;
+        }
+
+        .ticket-logo img {
+            height: 100%;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .ticket-business {
+            color: var(--ink);
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 30px;
+            line-height: 1.05;
+            margin-bottom: 9px;
+        }
+
+        .ticket-contact {
+            align-items: center;
+            color: var(--muted);
+            display: flex;
+            font-size: 12px;
+            font-weight: 800;
+            gap: 7px;
+            justify-content: center;
+            line-height: 1.35;
+            margin-top: 4px;
+        }
+
+        .ticket-contact i {
+            color: var(--accent);
+            width: 14px;
+        }
+
+        .ticket-band {
+            align-items: center;
+            background: linear-gradient(90deg, #fff, var(--soft));
+            border-bottom: 1px solid var(--line);
+            border-top: 1px solid var(--line);
+            display: flex;
+            justify-content: space-between;
+            gap: 16px;
+            padding: 13px 24px;
+        }
+
+        .ticket-band-label {
+            color: var(--muted);
+            display: block;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .ticket-number {
+            color: var(--ink);
+            display: block;
+            font-size: 20px;
+            font-weight: 900;
+            letter-spacing: .02em;
+            margin-top: 4px;
+        }
+
+        .ticket-status {
+            align-items: center;
+            background: color-mix(in srgb, var(--secondary), #fff 8%);
+            border-radius: 999px;
+            color: var(--primary-strong);
+            display: inline-flex;
+            font-size: 12px;
+            font-weight: 900;
+            gap: 7px;
+            padding: 8px 13px;
+            text-transform: uppercase;
+            white-space: nowrap;
+        }
+
+        .ticket-body {
+            padding: 0 24px 24px;
+        }
+
+        .ticket-info {
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 15px;
+            padding: 5px 0 12px;
+        }
+
+        .ticket-row {
+            align-items: baseline;
+            display: flex;
+            gap: 14px;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .ticket-row-label {
+            align-items: center;
+            color: var(--muted);
+            display: inline-flex;
+            flex: 0 0 auto;
+            font-size: 13px;
+            font-weight: 800;
+            gap: 10px;
+        }
+
+        .ticket-row-label i {
+            color: var(--accent);
+            font-size: 14px;
+            text-align: center;
+            width: 16px;
+        }
+
+        .ticket-row strong {
+            color: var(--ink);
+            font-size: 13px;
+            font-weight: 900;
+            text-align: right;
+            word-break: break-word;
+        }
+
+        .ticket-section {
+            margin-top: 17px;
+        }
+
+        .ticket-section-title {
+            color: var(--primary-strong);
+            font-size: 12px;
+            font-weight: 900;
+            letter-spacing: .08em;
+            margin-bottom: 9px;
+            text-transform: uppercase;
+        }
+
+        .ticket-item {
+            border-bottom: 1px solid var(--line);
+            padding: 9px 0;
+        }
+
+        .ticket-item:last-child {
+            border-bottom: 0;
+        }
+
+        .ticket-item-main {
+            align-items: flex-start;
+            display: flex;
+            gap: 14px;
+            justify-content: space-between;
+        }
+
+        .ticket-item-name {
+            color: var(--ink);
+            display: block;
+            font-size: 13px;
+            font-weight: 900;
+            line-height: 1.25;
+        }
+
+        .ticket-item small {
+            color: var(--muted);
+            display: block;
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 3px;
+        }
+
+        .ticket-item-price {
+            color: var(--ink);
+            flex: 0 0 auto;
+            font-size: 14px;
+            font-weight: 900;
+            text-align: right;
+        }
+
+        .ticket-summary {
+            background: linear-gradient(180deg, var(--soft), #fff);
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px 14px;
+        }
+
+        .ticket-summary .ticket-row {
+            padding: 4px 0;
+        }
+
+        .ticket-summary .ticket-row-label {
+            gap: 0;
+        }
+
+        .ticket-total-final {
+            border-top: 1px dashed var(--line);
+            margin-top: 5px;
+            padding-top: 9px !important;
+        }
+
+        .ticket-total-final strong,
+        .ticket-total-final .ticket-row-label {
+            color: var(--primary-strong);
+            font-size: 15px;
+            font-weight: 900;
+        }
+
+        .ticket-payment {
+            align-items: center;
+            border-bottom: 1px solid var(--line);
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            padding: 9px 0;
+        }
+
+        .ticket-payment:last-child {
+            border-bottom: 0;
+        }
+
+        .ticket-payment-left {
+            align-items: center;
+            display: flex;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .ticket-payment-icon {
+            align-items: center;
+            background: var(--secondary);
+            border-radius: 999px;
+            color: var(--primary-strong);
+            display: inline-flex;
+            flex: 0 0 auto;
+            height: 30px;
+            justify-content: center;
+            width: 30px;
+        }
+
+        .ticket-payment-meta {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+            min-width: 0;
+        }
+
+        .ticket-payment-meta span {
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .ticket-payment strong {
+            color: var(--ink);
+            font-size: 13px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .ticket-notes {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+            margin: 0;
+        }
+
+        .ticket-footer {
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 22px;
+            text-align: center;
+        }
+
+        .ticket-footer-line {
+            align-items: center;
+            display: flex;
+            gap: 9px;
+            justify-content: center;
+            margin: 8px auto 4px;
+            max-width: 230px;
+        }
+
+        .ticket-footer-line::before,
+        .ticket-footer-line::after {
+            background: var(--line);
+            content: "";
+            flex: 1;
+            height: 1px;
+        }
+
+        .ticket-footer i {
+            color: var(--primary);
+            font-size: 11px;
+        }
+
+        .ticket-actions {
+            align-items: center;
+            bottom: 26px;
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            left: 50%;
+            position: fixed;
+            transform: translateX(-50%);
+            width: min(430px, calc(100% - 28px));
+            z-index: 100;
+        }
+
+        .btn-accion {
+            align-items: center;
+            border: 0;
+            border-radius: 999px;
+            box-shadow: 0 12px 28px rgba(52, 35, 56, .16);
+            cursor: pointer;
+            display: inline-flex;
+            font-size: 13px;
+            font-weight: 900;
+            gap: 9px;
+            justify-content: center;
+            min-height: 48px;
+            padding: 0 18px;
+            transition: transform .12s ease, box-shadow .12s ease;
+        }
+
+        .btn-accion:active {
+            transform: translateY(1px) scale(.98);
+        }
+
+        .btn-share {
+            background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+            color: #fff;
+            flex: 1;
+        }
+
+        .btn-print,
+        .btn-close {
+            background: rgba(255, 255, 255, .94);
+            color: var(--text);
+            flex: 0 0 auto;
+            min-width: 112px;
+        }
+
+        .btn-close i {
+            color: var(--muted);
+        }
+
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .ticket-shell {
+                max-width: 340px;
+            }
+
+            .ticket-wrapper {
+                border: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }
+
+            .ticket-header {
+                padding-top: 12px;
+            }
+
+            .ticket-actions {
+                display: none !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 14px 10px 104px;
+            }
+
+            .ticket-header {
+                padding: 24px 18px 18px;
+            }
+
+            .ticket-band,
+            .ticket-body {
+                padding-left: 18px;
+                padding-right: 18px;
+            }
+
+            .ticket-business {
+                font-size: 28px;
+            }
+
+            .ticket-actions {
+                bottom: 18px;
+                gap: 9px;
+                width: calc(100% - 20px);
+            }
+
+            .btn-accion {
+                min-height: 46px;
+                padding: 0 14px;
+            }
+
+            .btn-print,
+            .btn-close {
+                min-width: 98px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+{% set status_label = {
+    'pagada': 'Pagada',
+    'anticipo': 'Anticipo',
+    'pendiente': 'Pendiente',
+    'cancelada': 'Cancelada'
+}.get(sale.status, sale.status|title) %}
+
+<main class="ticket-shell">
+    <div class="ticket-wrapper" id="ticketVisual">
+        <header class="ticket-header">
+            <div class="ticket-logo">
+                {% if ticket_logo_url %}
+                    <img src="{{ ticket_logo_url }}" alt="Logo">
+                {% else %}
+                    <span>{{ (business.name or 'S')[:1] }}</span>
+                {% endif %}
+            </div>
+
+            <div class="ticket-business">{{ business.name or 'Sianeffects Nails' }}</div>
+
+            {% if business.whatsapp %}
+                <div class="ticket-contact">
+                    <i class="fa-brands fa-whatsapp"></i>
+                    <span>WhatsApp: {{ business.whatsapp }}</span>
+                </div>
+            {% endif %}
+
+            {% if business.instagram %}
+                <div class="ticket-contact">
+                    <i class="fa-brands fa-instagram"></i>
+                    <span>Instagram: {{ business.instagram }}</span>
+                </div>
+            {% endif %}
+        </header>
+
+        <section class="ticket-band">
+            <div>
+                <span class="ticket-band-label">Ticket</span>
+                <strong class="ticket-number">{{ sale.sale_number or ('N-' ~ sale.id) }}</strong>
+            </div>
+            <span class="ticket-status">
+                <i class="fa-regular fa-circle-check"></i>
+                {{ status_label }}
+            </span>
+        </section>
+
+        <section class="ticket-body">
+            <div class="ticket-info">
+                <div class="ticket-row">
+                    <span class="ticket-row-label"><i class="fa-regular fa-calendar"></i>Fecha y hora</span>
+                    <strong>{{ sale.created_at_formatted or sale.created_at }}</strong>
+                </div>
+
+                <div class="ticket-row">
+                    <span class="ticket-row-label"><i class="fa-regular fa-user"></i>Cliente</span>
+                    <strong>{{ sale.client_name or 'Cliente General' }}</strong>
+                </div>
+
+                {% if sale.client_phone %}
+                    <div class="ticket-row">
+                        <span class="ticket-row-label"><i class="fa-solid fa-phone"></i>Teléfono</span>
+                        <strong>{{ sale.client_phone }}</strong>
+                    </div>
+                {% endif %}
+
+                {% if sale.staff_name %}
+                    <div class="ticket-row">
+                        <span class="ticket-row-label"><i class="fa-regular fa-id-badge"></i>Técnica</span>
+                        <strong>{{ sale.staff_name }}</strong>
+                    </div>
+                {% endif %}
+
+                <div class="ticket-row">
+                    <span class="ticket-row-label"><i class="fa-regular fa-credit-card"></i>Método de pago</span>
+                    <strong>{{ (sale.payment_method or 'No registrado')|title }}</strong>
+                </div>
+            </div>
+
+            <section class="ticket-section">
+                <div class="ticket-section-title">Detalle</div>
+                {% if details %}
+                    {% for item in details %}
+                        <div class="ticket-item">
+                            <div class="ticket-item-main">
+                                <div>
+                                    <span class="ticket-item-name">{{ item.name }}</span>
+                                    <small>{{ item.quantity or 1 }} x ${{ "%.2f"|format(item.unit_price or 0) }}</small>
+                                    {% if item.description %}
+                                        <small>{{ item.description }}</small>
+                                    {% endif %}
+                                </div>
+                                <strong class="ticket-item-price">${{ "%.2f"|format(item.total or 0) }}</strong>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="ticket-notes">No hay detalles registrados.</p>
+                {% endif %}
+            </section>
+
+            <section class="ticket-section">
+                <div class="ticket-section-title">Resumen</div>
+                <div class="ticket-summary">
+                    <div class="ticket-row">
+                        <span class="ticket-row-label">Subtotal</span>
+                        <strong>${{ "%.2f"|format(sale.subtotal or 0) }}</strong>
+                    </div>
+
+                    <div class="ticket-row">
+                        <span class="ticket-row-label">Descuento</span>
+                        <strong>${{ "%.2f"|format(sale.discount_amount or 0) }}</strong>
+                    </div>
+
+                    {% if sale.tax_amount and sale.tax_amount > 0 %}
+                        <div class="ticket-row">
+                            <span class="ticket-row-label">Impuestos</span>
+                            <strong>${{ "%.2f"|format(sale.tax_amount or 0) }}</strong>
+                        </div>
+                    {% endif %}
+
+                    <div class="ticket-row ticket-total-final">
+                        <span class="ticket-row-label">Total</span>
+                        <strong>${{ "%.2f"|format(sale.total or 0) }}</strong>
+                    </div>
+
+                    <div class="ticket-row">
+                        <span class="ticket-row-label">Pagado</span>
+                        <strong>${{ "%.2f"|format(sale.paid_amount or 0) }}</strong>
+                    </div>
+
+                    <div class="ticket-row">
+                        <span class="ticket-row-label">Por cobrar</span>
+                        <strong>${{ "%.2f"|format(sale.balance_due or 0) }}</strong>
+                    </div>
+                </div>
+            </section>
+
+            {% if payments %}
+                <section class="ticket-section">
+                    <div class="ticket-section-title">Pagos</div>
+                    {% for payment in payments %}
+                        <div class="ticket-payment">
+                            <div class="ticket-payment-left">
+                                <span class="ticket-payment-icon"><i class="fa-solid fa-money-bill-wave"></i></span>
+                                <div class="ticket-payment-meta">
+                                    <span>{{ payment.created_at_formatted or payment.created_at }}</span>
+                                    <span>{{ (payment.payment_type or 'pago')|title }} · {{ (payment.payment_method or 'efectivo')|title }}</span>
+                                </div>
+                            </div>
+                            <strong>${{ "%.2f"|format(payment.amount or 0) }}</strong>
+                        </div>
+                    {% endfor %}
+                </section>
+            {% endif %}
+
+            {% if sale.notes %}
+                <section class="ticket-section">
+                    <div class="ticket-section-title">Notas</div>
+                    <p class="ticket-notes">{{ sale.notes }}</p>
+                </section>
+            {% endif %}
+
+            <footer class="ticket-footer">
+                Gracias por tu preferencia
+                <div class="ticket-footer-line"><i class="fa-regular fa-heart"></i></div>
+                {{ business.name or 'Sianeffects Nails' }}
+            </footer>
+        </section>
+    </div>
+</main>
+
+<div class="ticket-actions">
+    <button id="btnShare" onclick="generarYCompartir()" class="btn-accion btn-share">
+        <i class="fa-solid fa-share-nodes"></i> Compartir
+    </button>
+
+    <button onclick="window.print()" class="btn-accion btn-print">
+        <i class="fa-solid fa-print"></i> Imprimir
+    </button>
+
+    <button type="button" onclick="cerrarTicket()" class="btn-accion btn-close">
+        <i class="fa-solid fa-xmark"></i> Cerrar
+    </button>
+</div>
+
+<script>
+    let ticketPreparado = null;
+
+    function esperarImagenes(elemento) {
+        const imagenes = Array.from(elemento.querySelectorAll("img"));
+
+        return Promise.all(imagenes.map(function (img) {
+            if (img.complete) return Promise.resolve();
+
+            return new Promise(function (resolve) {
+                img.onload = resolve;
+                img.onerror = resolve;
+            });
+        }));
+    }
+
+    function avisarTicket(icon, title, text) {
+        if (window.Swal) {
+            Swal.fire({
+                icon,
+                title,
+                text,
+                confirmButtonColor: "{{ business.primary_color or '#ff6b81' }}"
+            });
+        } else {
+            console[icon === "error" ? "error" : "log"](title + ": " + text);
+        }
+    }
+
+    function cerrarTicket() {
+        window.close();
+
+        window.setTimeout(function () {
+            if (!window.closed) {
+                window.location.href = "{{ url_for('nails.ventas') }}";
+            }
+        }, 180);
+    }
+
+    window.addEventListener("DOMContentLoaded", async function () {
+        try {
+            const ticket = document.getElementById("ticketVisual");
+
+            if (!ticket || !window.html2canvas) {
+                return;
+            }
+
+            await esperarImagenes(ticket);
+
+            const canvas = await html2canvas(ticket, {
+                scale: 2,
+                backgroundColor: "#ffffff",
+                useCORS: true
+            });
+
+            canvas.toBlob(function (blob) {
+                if (!blob) return;
+                ticketPreparado = new File(
+                    [blob],
+                    "ticket_nails_{{ sale.sale_number or sale.id }}.png",
+                    { type: "image/png" }
+                );
+            }, "image/png");
+        } catch (error) {
+            console.error("Error preparando el ticket Nails:", error);
+        }
+    });
+
+    async function generarYCompartir() {
+        if (!ticketPreparado) {
+            avisarTicket(
+                "info",
+                "Procesando...",
+                "Dame un segundito, estoy terminando de preparar la imagen del ticket."
+            );
+            return;
+        }
+
+        try {
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [ticketPreparado] })) {
+                await navigator.share({
+                    files: [ticketPreparado],
+                    title: "Ticket {{ business.name or 'Sianeffects Nails' }}",
+                    text: "Aquí tienes tu comprobante."
+                });
+            } else {
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(ticketPreparado);
+                a.download = ticketPreparado.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }
+        } catch (error) {
+            if (error.name !== "AbortError") {
+                console.error("No se pudo compartir el ticket Nails:", error);
+                avisarTicket("error", "Oops", "No se pudo abrir el menú de compartir.");
+            }
+        }
+    }
+</script>
+
+</body>
+</html>

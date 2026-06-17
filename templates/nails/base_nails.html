@@ -1,0 +1,441 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{% block title %}Sianeffects Nails{% endblock %}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='nails/css/nails.css') }}" rel="stylesheet">
+
+    {% if business %}
+        <style>
+            :root {
+                --nails-primary: {{ business.primary_color or '#ff6b81' }};
+                --nails-secondary: {{ business.secondary_color or '#fff0f3' }};
+                --nails-teal: {{ business.accent_color or '#2ec4b6' }};
+                --nails-primary-strong: color-mix(in srgb, var(--nails-primary), #8f1430 24%);
+                --nails-primary-soft: color-mix(in srgb, var(--nails-secondary), #ffffff 30%);
+                --nails-teal-soft: color-mix(in srgb, var(--nails-teal), #ffffff 86%);
+            }
+        </style>
+    {% endif %}
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<div class="nails-app">
+
+    <aside class="nails-sidebar" id="nails_sidebar">
+        <button type="button" class="nails-sidebar-close" aria-label="Cerrar menú">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <div class="nails-brand">
+            <div class="nails-logo">
+                {% if business and business.logo_url %}
+                    <img id="nails_sidebar_logo" src="{{ business.logo_url }}" alt="Logo">
+                    <span id="nails_sidebar_logo_fallback" style="display:none;">💅</span>
+                {% else %}
+                    <img id="nails_sidebar_logo" src="" alt="Logo" style="display:none;">
+                    <span id="nails_sidebar_logo_fallback">💅</span>
+                {% endif %}
+            </div>
+
+            <div>
+                <div class="nails-suite">Sianeffects</div>
+                <div class="nails-brand-title">
+                    {% if business %}
+                        {{ business.name }}
+                    {% else %}
+                        Sianeffects Nails
+                    {% endif %}
+                </div>
+                <div class="nails-brand-subtitle">Panel de salón</div>
+            </div>
+        </div>
+
+        {% set perms = nails_permissions or ['dashboard', 'agenda', 'clientes', 'servicios', 'ventas', 'gastos', 'reportes', 'galeria', 'personal', 'configuracion'] %}
+        <nav class="nails-nav">
+            {% if 'dashboard' in perms %}
+            <a href="{{ url_for('nails.dashboard') }}" class="{% if request.endpoint == 'nails.dashboard' %}active{% endif %}">
+                <i class="fa-solid fa-house"></i>
+                <span>Inicio</span>
+            </a>
+            {% endif %}
+            {% if 'agenda' in perms %}
+            <a href="{{ url_for('nails.agenda') }}" class="{% if request.endpoint == 'nails.agenda' %}active{% endif %}">
+                <i class="fa-regular fa-calendar-check"></i>
+                <span>Agenda</span>
+            </a>
+            {% endif %}
+            {% if 'clientes' in perms %}
+            <a href="{{ url_for('nails.clientes') }}" class="{% if request.endpoint == 'nails.clientes' %}active{% endif %}">
+                <i class="fa-regular fa-address-book"></i>
+                <span>Clientas</span>
+            </a>
+            {% endif %}
+            {% if 'servicios' in perms %}
+            <a href="{{ url_for('nails.servicios') }}" class="{% if request.endpoint == 'nails.servicios' %}active{% endif %}">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                <span>Servicios</span>
+            </a>
+            {% endif %}
+            {% if 'ventas' in perms %}
+            <a href="{{ url_for('nails.ventas') }}" class="{% if request.endpoint == 'nails.ventas' or request.endpoint == 'nails.ticket' %}active{% endif %}">
+                <i class="fa-solid fa-receipt"></i>
+                <span>Ventas</span>
+            </a>
+            {% endif %}
+            {% if 'gastos' in perms %}
+            <a href="{{ url_for('nails.gastos') }}" class="{% if request.endpoint == 'nails.gastos' %}active{% endif %}">
+                <i class="fa-solid fa-wallet"></i>
+                <span>Gastos</span>
+            </a>
+            {% endif %}
+            {% if 'reportes' in perms %}
+            <a href="{{ url_for('nails.reportes') }}" class="{% if request.endpoint == 'nails.reportes' %}active{% endif %}">
+                <i class="fa-solid fa-chart-pie"></i>
+                <span>Reportes</span>
+            </a>
+            {% endif %}
+            {% if 'galeria' in perms %}
+            <a href="{{ url_for('nails.galeria') }}" class="{% if request.endpoint == 'nails.galeria' %}active{% endif %}">
+                <i class="fa-regular fa-images"></i>
+                <span>Galería</span>
+            </a>
+            {% endif %}
+            {% if 'personal' in perms %}
+            <a href="{{ url_for('nails.personal') }}" class="{% if request.endpoint == 'nails.personal' %}active{% endif %}">
+                <i class="fa-solid fa-users-gear"></i>
+                <span>Personal</span>
+            </a>
+            {% endif %}
+            {% if 'configuracion' in perms %}
+            <a href="{{ url_for('nails.configuracion') }}" class="{% if request.endpoint == 'nails.configuracion' %}active{% endif %}">
+                <i class="fa-solid fa-gear"></i>
+                <span>Configuración</span>
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="nails-sidebar-footer">
+            {% if business and business.slug %}
+                <a href="/b/{{ business.slug }}" target="_blank">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    Catálogo público
+                </a>
+            {% endif %}
+            <a href="{{ url_for('auth.logout') }}" class="nails-sidebar-logout">
+                <i class="fa-solid fa-right-from-bracket"></i>
+                Cerrar sesión
+            </a>
+        </div>
+    </aside>
+
+    <div class="nails-mobile-mask"></div>
+
+    <main class="nails-main">
+        <header class="nails-mobile-header">
+            <button
+                type="button"
+                class="nails-mobile-menu-btn"
+                aria-label="Abrir menú"
+                aria-controls="nails_sidebar"
+                aria-expanded="false"
+            >
+                <i class="fa-solid fa-bars"></i>
+            </button>
+
+            <div class="nails-mobile-brand">
+                <span>Sianeffects</span>
+                <strong>
+                    {% if business %}
+                        {{ business.name }}
+                    {% else %}
+                        Nails
+                    {% endif %}
+                </strong>
+            </div>
+
+            {% if business and business.slug %}
+                <a href="/b/{{ business.slug }}" class="nails-mobile-catalog" target="_blank" aria-label="Ver catálogo">
+                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                </a>
+            {% else %}
+                <span class="nails-mobile-catalog nails-mobile-catalog-empty"></span>
+            {% endif %}
+        </header>
+
+        <header class="nails-topbar">
+            <div>
+                <h1>{% block page_title %}Sianeffects Nails{% endblock %}</h1>
+                <p>{% block page_subtitle %}Administra tu salón desde un solo lugar.{% endblock %}</p>
+            </div>
+            <div class="nails-topbar-actions">
+                
+                {% if business and business.slug %}
+                    <a href="/b/{{ business.slug }}" class="btn btn-sm btn-outline-primary" target="_blank">
+                        Ver catálogo
+                    </a>
+                {% endif %}
+            </div>
+        </header>
+
+        <section class="nails-content">
+            {% block content %}{% endblock %}
+        </section>
+    </main>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const flashMessages = {{ get_flashed_messages(with_categories=true)|tojson }};
+        const iconMap = {
+            success: 'success',
+            danger: 'error',
+            error: 'error',
+            warning: 'warning',
+            info: 'info',
+            message: 'info'
+        };
+        const toast = window.Swal ? Swal.mixin({
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 3200,
+            timerProgressBar: true
+        }) : null;
+
+        window.nailsNotify = function (icon, title, text) {
+            const resolvedIcon = iconMap[icon] || icon || 'info';
+
+            if (window.Swal) {
+                if (toast && resolvedIcon !== 'error') {
+                    toast.fire({
+                        icon: resolvedIcon,
+                        title: title || text
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    icon: resolvedIcon,
+                    title: title || 'Atención',
+                    text: text || '',
+                    confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--nails-primary').trim() || '#ff6b81'
+                });
+                return;
+            }
+
+            console[resolvedIcon === 'error' ? 'error' : 'log'](text || title || '');
+        };
+
+        flashMessages.forEach(function (item) {
+            const category = item[0] || 'info';
+            const message = item[1] || '';
+            const title = category === 'success' ? message : (category === 'danger' || category === 'error' ? 'No se pudo completar' : message);
+            const text = category === 'success' || category === 'warning' || category === 'info' ? '' : message;
+            window.nailsNotify(category, title, text);
+        });
+
+        const nailsCsrfToken = "{{ nails_csrf_token }}";
+        const nailsCsrfField = "{{ nails_csrf_field }}";
+        const nailsCsrfHeader = "{{ nails_csrf_header }}";
+
+        document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(function (form) {
+            if (!form.querySelector('input[name="' + nailsCsrfField + '"]')) {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = nailsCsrfField;
+                input.value = nailsCsrfToken;
+                form.appendChild(input);
+            }
+        });
+
+        if (window.fetch && !window.__nailsFetchCsrfWrapped) {
+            const originalFetch = window.fetch.bind(window);
+            window.fetch = function (resource, options) {
+                options = options || {};
+                const method = String(options.method || 'GET').toUpperCase();
+                if (method !== 'GET' && method !== 'HEAD') {
+                    const headers = new Headers(options.headers || {});
+                    if (!headers.has(nailsCsrfHeader)) {
+                        headers.set(nailsCsrfHeader, nailsCsrfToken);
+                    }
+                    options.headers = headers;
+                }
+                return originalFetch(resource, options);
+            };
+            window.__nailsFetchCsrfWrapped = true;
+        }
+
+        document.addEventListener('submit', function (event) {
+            const form = event.target;
+
+            if (!form || form.tagName !== 'FORM' || form.method.toLowerCase() !== 'post') {
+                return;
+            }
+
+            if (!form.classList.contains('require-confirm')) {
+                return;
+            }
+
+            event.preventDefault();
+
+            if (!window.Swal) {
+                form.submit();
+                return;
+            }
+
+            Swal.fire({
+                title: form.dataset.title || '¿Confirmar acción?',
+                text: form.dataset.text || 'Este cambio se aplicará inmediatamente.',
+                icon: form.dataset.icon || 'warning',
+                showCancelButton: true,
+                confirmButtonColor: form.dataset.btnColor || getComputedStyle(document.documentElement).getPropertyValue('--nails-primary').trim() || '#ff6b81',
+                cancelButtonColor: '#6c757d',
+                confirmButtonText: form.dataset.btnText || 'Sí, continuar',
+                cancelButtonText: 'Cancelar',
+                reverseButtons: true
+            }).then(function (result) {
+                if (result.isConfirmed) {
+                    const button = form.querySelector('button[type="submit"]');
+                    if (button) {
+                        button.disabled = true;
+                        button.dataset.originalText = button.innerHTML;
+                        button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Procesando...';
+                    }
+                    form.submit();
+                }
+            });
+        });
+
+        const sidebar = document.querySelector('.nails-sidebar');
+        const menuBtn = document.querySelector('.nails-mobile-menu-btn');
+        const closeBtn = document.querySelector('.nails-sidebar-close');
+        const mask = document.querySelector('.nails-mobile-mask');
+        const navLinks = document.querySelectorAll('.nails-nav a');
+
+        if (!sidebar || !menuBtn || !mask) {
+            return;
+        }
+
+        const setSidebar = function (isOpen) {
+            sidebar.classList.toggle('nails-sidebar-open', isOpen);
+            mask.classList.toggle('nails-mask-visible', isOpen);
+            document.body.classList.toggle('nails-menu-open', isOpen);
+            menuBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        };
+
+        menuBtn.addEventListener('click', function () {
+            setSidebar(!sidebar.classList.contains('nails-sidebar-open'));
+        });
+
+        mask.addEventListener('click', function () {
+            setSidebar(false);
+        });
+
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function () {
+                setSidebar(false);
+            });
+        }
+
+        navLinks.forEach(function (link) {
+            link.addEventListener('click', function () {
+                setSidebar(false);
+            });
+        });
+
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                setSidebar(false);
+            }
+        });
+    });
+</script>
+{% block scripts %}{% endblock %}
+
+{% if session.get('original_admin_id') %}
+<div class="nails-ghost-exit">
+    <a href="{{ url_for('admin.stop_impersonate') }}" class="nails-ghost-exit-btn">
+        <i class="fas fa-user-secret"></i>
+        <span>Salir del Modo Fantasma</span>
+    </a>
+</div>
+
+<style>
+    .nails-ghost-exit {
+        position: fixed;
+        right: 22px;
+        bottom: 22px;
+        z-index: 9999;
+    }
+
+    .nails-ghost-exit-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 18px;
+        border: 2px solid #ef4444;
+        border-radius: 999px;
+        background: #20242a;
+        color: #fff;
+        font-weight: 900;
+        text-decoration: none;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.26);
+        animation: nailsGhostPulse 2s infinite;
+    }
+
+    .nails-ghost-exit-btn:hover {
+        color: #fff;
+        background: #111827;
+        transform: translateY(-1px);
+    }
+
+    .nails-ghost-exit-btn i {
+        color: #ef4444;
+    }
+
+    @keyframes nailsGhostPulse {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.42), 0 16px 40px rgba(15, 23, 42, 0.26);
+        }
+        70% {
+            transform: scale(1.04);
+            box-shadow: 0 0 0 12px rgba(239, 68, 68, 0), 0 16px 40px rgba(15, 23, 42, 0.26);
+        }
+        100% {
+            transform: scale(1);
+            box-shadow: 0 0 0 0 rgba(239, 68, 68, 0), 0 16px 40px rgba(15, 23, 42, 0.26);
+        }
+    }
+
+    @media (max-width: 640px) {
+        .nails-ghost-exit {
+            right: 14px;
+            bottom: 14px;
+            left: 14px;
+        }
+
+        .nails-ghost-exit-btn {
+            justify-content: center;
+            width: 100%;
+        }
+    }
+</style>
+{% endif %}
+</body>
+</html>

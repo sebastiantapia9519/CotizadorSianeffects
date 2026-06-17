@@ -1,0 +1,44 @@
+<div class="staff-form-grid">
+    <div>
+        <label class="form-label">Nombre</label>
+        <input type="text" name="name" class="form-control" value="{{ person.name if person else '' }}" placeholder="Ej. Ana Técnica" required>
+    </div>
+    <div>
+        <label class="form-label">Rol</label>
+        {% if person and is_self and person.role == 'owner' %}
+        <input type="hidden" name="role" value="owner">
+        <input type="text" class="form-control" value="{{ role_labels.get('owner') }}" disabled>
+        {% else %}
+        <select name="role" class="form-select">
+            {% for role, label in role_labels.items() %}
+                <option value="{{ role }}" {% if person and person.role == role %}selected{% elif not person and role == 'staff' %}selected{% endif %}>
+                    {{ label }}
+                </option>
+            {% endfor %}
+        </select>
+        {% endif %}
+    </div>
+    <div>
+        <label class="form-label">Correo</label>
+        <input type="email" name="email" class="form-control" value="{{ person.email if person else '' }}" placeholder="correo@ejemplo.com">
+    </div>
+    <div>
+        <label class="form-label">WhatsApp</label>
+        <input type="text" name="phone" class="form-control" value="{{ person.phone if person else '' }}" placeholder="8112345678">
+    </div>
+    <div>
+        <label class="form-label">Color</label>
+        <input type="color" name="color" class="form-control form-control-color" value="{{ person.color if person and person.color else business.primary_color or '#d946ef' }}">
+    </div>
+    {% if person %}
+    <div class="d-flex align-items-end">
+        <div class="form-check form-switch">
+            {% if is_self %}
+            <input type="hidden" name="is_active" value="on">
+            {% endif %}
+            <input class="form-check-input" type="checkbox" role="switch" name="is_active" id="staff_active_{{ person.id }}" {% if person.is_active %}checked{% endif %} {% if is_self %}disabled{% endif %}>
+            <label class="form-check-label fw-bold" for="staff_active_{{ person.id }}">Activo</label>
+        </div>
+    </div>
+    {% endif %}
+</div>

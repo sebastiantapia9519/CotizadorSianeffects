@@ -1,0 +1,1398 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Clientas | Sianeffects Nails{% endblock %}
+{% block page_title %}Clientas{% endblock %}
+{% block page_subtitle %}Gestiona perfiles, preferencias e historial de tus clientas.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .nails-topbar {
+        display: none;
+    }
+
+    .clients-shell {
+        display: grid;
+        gap: 18px;
+    }
+
+    .clients-header {
+        align-items: flex-start;
+        display: flex;
+        gap: 16px;
+        justify-content: space-between;
+    }
+
+    .clients-title {
+        color: var(--nails-ink);
+        font-size: clamp(26px, 3vw, 34px);
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.05;
+        margin: 0;
+    }
+
+    .clients-toolbar,
+    .clients-panel,
+    .clients-stat,
+    .clients-empty-card,
+    .clients-mobile-card {
+        background: rgba(255, 255, 255, .94);
+        border: 1px solid var(--nails-border);
+        border-radius: 14px;
+        box-shadow: 0 16px 42px rgba(26, 31, 44, .06);
+    }
+
+    .clients-toolbar {
+        display: grid;
+        gap: 12px;
+        padding: 16px;
+    }
+
+    .clients-filter-row {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: minmax(260px, 1fr) 170px 170px;
+    }
+
+    .clients-search {
+        position: relative;
+    }
+
+    .clients-search i {
+        color: var(--nails-muted);
+        left: 14px;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .clients-search .form-control {
+        padding-left: 40px;
+    }
+
+    .clients-pills {
+        display: flex;
+        gap: 8px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .clients-pills::-webkit-scrollbar {
+        display: none;
+    }
+
+    .client-pill {
+        align-items: center;
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 999px;
+        color: var(--nails-text);
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-size: 12px;
+        font-weight: 900;
+        gap: 7px;
+        padding: 7px 12px;
+        text-decoration: none;
+    }
+
+    .client-pill:hover {
+        color: var(--nails-primary-strong);
+        border-color: color-mix(in srgb, var(--nails-primary), transparent 45%);
+    }
+
+    .client-pill.is-active {
+        background: var(--nails-primary);
+        border-color: var(--nails-primary);
+        color: #fff;
+    }
+
+    .client-pill.is-active i {
+        color: #fff !important;
+    }
+
+    .clients-stats {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .clients-stat {
+        align-items: center;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 52px 1fr;
+        padding: 18px;
+    }
+
+    .clients-stat-icon {
+        align-items: center;
+        background: var(--stat-bg, var(--nails-primary-soft));
+        border-radius: 14px;
+        color: var(--stat-color, var(--nails-primary-strong));
+        display: flex;
+        font-size: 21px;
+        height: 52px;
+        justify-content: center;
+        width: 52px;
+    }
+
+    .clients-stat strong {
+        color: var(--nails-ink);
+        display: block;
+        font-size: 24px;
+        font-weight: 900;
+        line-height: 1;
+    }
+
+    .clients-stat span,
+    .clients-stat small {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 4px;
+    }
+
+    .clients-main-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .clients-panel {
+        overflow: hidden;
+        min-width: 0;
+    }
+
+    .clients-panel-head {
+        align-items: center;
+        border-bottom: 1px solid var(--nails-border);
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        padding: 16px 18px;
+    }
+
+    .clients-panel-title {
+        align-items: baseline;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .clients-panel-title h2 {
+        color: var(--nails-ink);
+        font-size: 18px;
+        font-weight: 900;
+        margin: 0;
+    }
+
+    .clients-result-count {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .clients-table-wrap {
+        overflow-x: auto;
+    }
+
+    .clients-table {
+        margin: 0;
+        min-width: 860px;
+        table-layout: fixed;
+    }
+
+    .clients-table thead th {
+        background: #fafafa;
+        border-bottom: 1px solid var(--nails-border);
+        color: var(--nails-muted);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: .04em;
+        padding: 12px 14px;
+        text-transform: uppercase;
+    }
+
+    .clients-table tbody td {
+        border-color: #f1f3f8;
+        padding: 13px 14px;
+        vertical-align: middle;
+    }
+
+    .js-client-entry {
+        cursor: pointer;
+    }
+
+    .client-row.is-active,
+    .client-row:hover {
+        background: color-mix(in srgb, var(--nails-primary-soft), #fff 42%);
+    }
+
+    .client-avatar,
+    .client-detail-avatar {
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 72%);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-weight: 900;
+        justify-content: center;
+        overflow: hidden;
+    }
+
+    .client-avatar {
+        height: 42px;
+        width: 42px;
+    }
+
+    .client-detail-avatar {
+        font-size: 20px;
+        height: 58px;
+        width: 58px;
+    }
+
+    .client-name {
+        color: var(--nails-ink);
+        font-weight: 900;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .client-sub {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.35;
+    }
+
+    .client-sub.is-ellipsis {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .client-tag {
+        background: var(--tag-bg, var(--nails-primary-soft));
+        border: 1px solid var(--tag-border, color-mix(in srgb, var(--nails-primary), transparent 76%));
+        border-radius: 999px;
+        color: var(--tag-color, var(--nails-primary-strong));
+        display: inline-flex;
+        font-size: 11px;
+        font-weight: 900;
+        line-height: 1;
+        padding: 5px 9px;
+        white-space: nowrap;
+    }
+
+    .client-detail-head {
+        background:
+            linear-gradient(135deg, color-mix(in srgb, var(--nails-primary-soft), #fff 20%), #fff);
+        border: 1px solid var(--nails-border);
+        border-radius: 16px;
+        display: grid;
+        gap: 14px;
+        justify-items: center;
+        margin-bottom: 14px;
+        padding: 22px 16px;
+        text-align: center;
+    }
+
+    .detail-section {
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 14px;
+        margin-top: 10px;
+        padding: 14px;
+    }
+
+    .detail-section h3 {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+        margin: 0 0 6px;
+    }
+
+    .detail-metrics {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr;
+        margin-top: 14px;
+    }
+
+    .detail-metric {
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 14px;
+        padding: 12px 14px;
+    }
+
+    .detail-metric span {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .detail-metric strong {
+        color: var(--nails-ink);
+        display: block;
+        font-size: 13px;
+        font-weight: 900;
+        margin-top: 2px;
+    }
+
+    .client-actions {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 1fr;
+        margin-top: 16px;
+    }
+
+    .client-contact-grid {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .client-contact-item {
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 14px;
+        padding: 12px;
+    }
+
+    .client-contact-item i {
+        color: var(--nails-primary-strong);
+        margin-right: 8px;
+    }
+
+    .client-drawer-subtitle {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .clients-pagination-wrap {
+        align-items: center;
+        border-top: 1px solid var(--nails-border);
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        padding: 14px 18px;
+    }
+
+    .clients-pagination-info {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .clients-pagination {
+        align-items: center;
+        display: flex;
+        gap: 6px;
+    }
+
+    .clients-page-btn {
+        align-items: center;
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 9px;
+        color: var(--nails-text);
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 900;
+        height: 34px;
+        justify-content: center;
+        min-width: 34px;
+        padding: 0 10px;
+    }
+
+    .clients-page-btn:hover:not(:disabled),
+    .clients-page-btn.is-active {
+        background: var(--nails-primary);
+        border-color: var(--nails-primary);
+        color: #fff;
+    }
+
+    .clients-page-btn:disabled {
+        cursor: not-allowed;
+        opacity: .45;
+    }
+
+    .clients-mobile-list {
+        display: none;
+        gap: 10px;
+        padding: 12px;
+    }
+
+    .clients-mobile-card {
+        cursor: pointer;
+        display: grid;
+        gap: 12px;
+        padding: 14px;
+    }
+
+    .clients-mobile-card.is-active {
+        border-color: color-mix(in srgb, var(--nails-primary), transparent 35%);
+        background: color-mix(in srgb, var(--nails-primary-soft), #fff 50%);
+    }
+
+    .mobile-card-meta {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .mobile-card-meta span {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .mobile-card-meta strong {
+        color: var(--nails-ink);
+        display: block;
+        font-size: 12px;
+        font-weight: 900;
+        margin-top: 2px;
+    }
+
+    .clients-empty-card {
+        padding: 48px 18px;
+        text-align: center;
+    }
+
+    .clients-drawer,
+    .clients-detail-drawer {
+        border-left: 1px solid var(--nails-border);
+        width: min(440px, 100vw) !important;
+    }
+
+    .clients-detail-drawer {
+        background: #fbfafc;
+        width: min(430px, 100vw) !important;
+    }
+
+    .clients-drawer .offcanvas-header,
+    .clients-detail-drawer .offcanvas-header {
+        padding: 22px 22px 8px;
+    }
+
+    .clients-drawer .offcanvas-body {
+        padding: 8px 22px 22px;
+    }
+
+    .clients-detail-drawer .offcanvas-body {
+        padding: 8px 18px 18px;
+    }
+
+    .drawer-section-title {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+        margin: 22px 0 10px;
+    }
+
+    .min-w-0 {
+        min-width: 0;
+    }
+
+    @media (max-width: 1100px) {
+        .clients-stats {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .clients-filter-row {
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .clients-search {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .clients-header,
+        .clients-panel-head,
+        .clients-pagination-wrap {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .clients-filter-row {
+            grid-template-columns: 1fr;
+        }
+
+        .clients-header {
+            background: rgba(255, 255, 255, .94);
+            border: 1px solid var(--nails-border);
+            border-radius: 14px;
+            box-shadow: 0 16px 42px rgba(26, 31, 44, .06);
+            padding: 16px;
+        }
+
+        .clients-title {
+            font-size: 24px;
+        }
+
+        .clients-table-wrap {
+            display: none;
+        }
+
+        .clients-mobile-list {
+            display: grid;
+        }
+
+        .clients-pagination {
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .clients-pagination-info {
+            text-align: center;
+        }
+
+        .client-actions {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-metrics {
+            grid-template-columns: 1fr;
+        }
+
+        .detail-metric,
+        .detail-metric:first-child {
+            border-left: 0;
+            border-top: 1px solid var(--nails-border);
+            padding-left: 0;
+            padding-top: 10px;
+        }
+
+        .detail-metric:first-child {
+            border-top: 0;
+            padding-top: 0;
+        }
+    }
+    @media (max-width: 768px) {
+    .clients-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .clients-stat {
+        grid-template-columns: 38px 1fr;
+        gap: 10px;
+        padding: 12px;
+        border-radius: 14px;
+        min-height: auto;
+    }
+
+    .clients-stat-icon {
+        width: 38px;
+        height: 38px;
+        border-radius: 12px;
+        font-size: 17px;
+    }
+
+    .clients-stat strong {
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .clients-stat span {
+        font-size: 11px;
+        margin-top: 3px;
+    }
+
+    .clients-stat small {
+        font-size: 10px;
+        margin-top: 2px;
+        line-height: 1.2;
+    }
+}
+
+@media (max-width: 390px) {
+    .clients-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .clients-stat {
+        padding: 10px;
+        gap: 8px;
+    }
+
+    .clients-stat-icon {
+        width: 34px;
+        height: 34px;
+        font-size: 15px;
+    }
+
+    .clients-stat strong {
+        font-size: 18px;
+    }
+
+    .clients-stat span {
+        font-size: 10px;
+    }
+
+    .clients-stat small {
+        font-size: 9px;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="clients-shell">
+    <section class="clients-header">
+        <div>
+            <h1 class="clients-title">Clientas <span class="text-primary">✿</span></h1>
+            <p class="text-muted fw-bold mb-0">Gestiona perfiles, preferencias e historial de tus clientas.</p>
+        </div>
+
+        <button class="btn btn-primary px-4" type="button" data-bs-toggle="offcanvas" data-bs-target="#nuevaClientaDrawer">
+            <i class="fa-solid fa-plus me-2"></i>Nueva clienta
+        </button>
+    </section>
+
+    <form method="GET" class="clients-toolbar" id="clientsFilterForm">
+        <div class="clients-filter-row">
+            <div class="clients-search">
+                <i class="fa-solid fa-search"></i>
+                <input type="search" name="q" id="clientsSearchInput" value="{{ q or '' }}" class="form-control" placeholder="Buscar por nombre, teléfono, correo o Instagram" autocomplete="off">
+            </div>
+
+            <select class="form-select" name="filter" data-auto-submit>
+                <option value="" {% if not client_filter %}selected{% endif %}>Todas las etiquetas</option>
+                <option value="frecuentes" {% if client_filter == 'frecuentes' %}selected{% endif %}>Frecuentes</option>
+                <option value="cumpleanos" {% if client_filter == 'cumpleanos' %}selected{% endif %}>Cumpleaños del mes</option>
+                <option value="primera_visita" {% if client_filter == 'primera_visita' %}selected{% endif %}>Primera visita</option>
+                <option value="saldo_pendiente" {% if client_filter == 'saldo_pendiente' %}selected{% endif %}>Con saldo pendiente</option>
+                <option value="por_volver" {% if client_filter == 'por_volver' %}selected{% endif %}>Por volver</option>
+            </select>
+
+            <select class="form-select" name="frequency" data-auto-submit>
+                <option value="" {% if not frequency_filter %}selected{% endif %}>Todas las frecuencias</option>
+                <option value="sin_visitas" {% if frequency_filter == 'sin_visitas' %}selected{% endif %}>Sin visitas</option>
+                <option value="primera_visita" {% if frequency_filter == 'primera_visita' %}selected{% endif %}>1 visita</option>
+                <option value="frecuentes" {% if frequency_filter == 'frecuentes' %}selected{% endif %}>2+ visitas</option>
+            </select>
+        </div>
+
+        <div class="clients-pills">
+            <a href="{% if client_filter == 'frecuentes' %}{{ url_for('nails.clientes', q=q, frequency=frequency_filter) }}{% else %}{{ url_for('nails.clientes', q=q, filter='frecuentes', frequency=frequency_filter) }}{% endif %}" class="client-pill {% if client_filter == 'frecuentes' %}is-active{% endif %}" data-client-filter-pill="frecuentes">
+                <i class="fa-regular fa-star text-primary"></i>Frecuentes
+            </a>
+            <a href="{% if client_filter == 'cumpleanos' %}{{ url_for('nails.clientes', q=q, frequency=frequency_filter) }}{% else %}{{ url_for('nails.clientes', q=q, filter='cumpleanos', frequency=frequency_filter) }}{% endif %}" class="client-pill {% if client_filter == 'cumpleanos' %}is-active{% endif %}" data-client-filter-pill="cumpleanos">
+                <i class="fa-solid fa-gift text-primary"></i>Cumpleaños
+            </a>
+            <a href="{% if client_filter == 'primera_visita' %}{{ url_for('nails.clientes', q=q, frequency=frequency_filter) }}{% else %}{{ url_for('nails.clientes', q=q, filter='primera_visita', frequency=frequency_filter) }}{% endif %}" class="client-pill {% if client_filter == 'primera_visita' %}is-active{% endif %}" data-client-filter-pill="primera_visita">
+                <i class="fa-solid fa-wand-magic-sparkles text-primary"></i>Primera visita
+            </a>
+            <a href="{% if client_filter == 'saldo_pendiente' %}{{ url_for('nails.clientes', q=q, frequency=frequency_filter) }}{% else %}{{ url_for('nails.clientes', q=q, filter='saldo_pendiente', frequency=frequency_filter) }}{% endif %}" class="client-pill {% if client_filter == 'saldo_pendiente' %}is-active{% endif %}" data-client-filter-pill="saldo_pendiente">
+                <i class="fa-regular fa-credit-card text-primary"></i>Con saldo pendiente
+            </a>
+            <a href="{% if client_filter == 'por_volver' %}{{ url_for('nails.clientes', q=q, frequency=frequency_filter) }}{% else %}{{ url_for('nails.clientes', q=q, filter='por_volver', frequency=frequency_filter) }}{% endif %}" class="client-pill {% if client_filter == 'por_volver' %}is-active{% endif %}" data-client-filter-pill="por_volver">
+                <i class="fa-regular fa-clock text-primary"></i>Por volver
+            </a>
+
+            {% if q or client_filter or frequency_filter %}
+            <a href="{{ url_for('nails.clientes') }}" class="client-pill">
+                <i class="fa-solid fa-xmark"></i>Limpiar filtros
+            </a>
+            {% endif %}
+        </div>
+    </form>
+
+    <section class="clients-stats">
+        <article class="clients-stat" style="--stat-bg:var(--nails-primary-soft);--stat-color:var(--nails-primary-strong);">
+            <div class="clients-stat-icon"><i class="fa-solid fa-users"></i></div>
+            <div>
+                <strong>{{ stats.total_clients or 0 }}</strong>
+                <span>Total clientas</span>
+                <small>{{ clients|length }} resultado{{ '' if clients|length == 1 else 's' }}</small>
+            </div>
+        </article>
+
+        <article class="clients-stat" style="--stat-bg:#ecfdf3;--stat-color:#059669;">
+            <div class="clients-stat-icon"><i class="fa-regular fa-star"></i></div>
+            <div>
+                <strong>{{ stats.frequent_clients or 0 }}</strong>
+                <span>Frecuentes</span>
+                <small>2+ visitas</small>
+            </div>
+        </article>
+
+        <article class="clients-stat" style="--stat-bg:#fff7ed;--stat-color:#ea580c;">
+            <div class="clients-stat-icon"><i class="fa-solid fa-gift"></i></div>
+            <div>
+                <strong>{{ stats.birthdays_month or 0 }}</strong>
+                <span>Cumpleaños del mes</span>
+                <small>Para consentirlas</small>
+            </div>
+        </article>
+
+        <article class="clients-stat" style="--stat-bg:#faf5ff;--stat-color:#9333ea;">
+            <div class="clients-stat-icon"><i class="fa-regular fa-clock"></i></div>
+            <div>
+                <strong>{{ stats.due_return or 0 }}</strong>
+                <span>Por volver</span>
+                <small>Sin próxima cita</small>
+            </div>
+        </article>
+    </section>
+
+    <section class="clients-main-grid">
+        <article class="clients-panel" id="clientsPanel" data-page-size="5">
+            <div class="clients-panel-head">
+                <div class="clients-panel-title">
+                    <h2>Base de clientas</h2>
+                    <span class="clients-result-count">{{ clients|length }} resultado{{ '' if clients|length == 1 else 's' }}</span>
+                </div>
+
+                <button type="button" class="btn btn-sm btn-outline-secondary" disabled>
+                    Ordenar por: Recientes
+                </button>
+            </div>
+
+            {% if clients %}
+            <div class="clients-table-wrap">
+                <table class="table clients-table align-middle">
+                    <thead>
+                        <tr>
+                            <th style="width: 34%;">Clienta</th>
+                            <th style="width: 17%;">Última visita</th>
+                            <th style="width: 19%;">Próxima cita</th>
+                            <th style="width: 10%;">Visitas</th>
+                            <th class="text-end" style="width: 15%;">Gasto total</th>
+                            <th style="width: 5%;"></th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for client in clients %}
+                        {% set visits = client.visits_calculated or client.total_visits or 0 %}
+                        {% set spent = client.total_spent_calculated or client.total_spent or 0 %}
+                        {% set balance_due = client.balance_due_total or 0 %}
+                        {% set birthday_value = client.birthday|string if client.birthday else '' %}
+                        {% set client_meta = {
+                            'id': client.id,
+                            'name': client.name or '',
+                            'phone': client.phone or '',
+                            'email': client.email or '',
+                            'instagram': client.instagram or '',
+                            'birthday': birthday_value,
+                            'preferences': client.preferences or '',
+                            'allergies': client.allergies_notes or '',
+                            'notes': client.notes or '',
+                            'visits': visits,
+                            'spent': "%.2f"|format(spent),
+                            'lastVisit': client.last_visit_label or 'Sin visitas',
+                            'nextVisit': client.next_visit_label or 'Sin cita'
+                        } %}
+
+                        <tr class="client-row js-client-entry {% if loop.first %}is-active{% endif %}"
+                            data-index="{{ loop.index0 }}"
+                            data-client-id="{{ client.id }}"
+                            data-search="{{ (client.name ~ ' ' ~ (client.phone or '') ~ ' ' ~ (client.email or '') ~ ' ' ~ (client.instagram or ''))|lower }}"
+                            data-visits="{{ visits }}"
+                            data-birthday-month="{{ '1' if client.is_birthday_month else '0' }}"
+                            data-balance-due="{{ balance_due }}"
+                            data-due-return="{{ '1' if client.is_due_return else '0' }}"
+                            data-client='{{ client_meta|tojson|forceescape }}'>
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+                                    <div class="client-avatar">{{ (client.name or 'C')[0]|upper }}</div>
+                                    <div class="min-w-0">
+                                        <div class="client-name">{{ client.name or 'Clienta sin nombre' }}</div>
+                                        <div class="client-sub is-ellipsis">
+                                            {{ client.instagram or client.phone or client.email or 'Sin contacto' }}
+                                        </div>
+
+                                        <div class="d-flex gap-1 flex-wrap mt-1">
+                                            {% if visits >= 2 %}
+                                            <span class="client-tag" style="--tag-bg:#ecfdf3;--tag-color:#059669;--tag-border:#bbf7d0;">Frecuente</span>
+                                            {% endif %}
+
+                                            {% if client.birthday %}
+                                            <span class="client-tag" style="--tag-bg:#fdf2f8;--tag-color:#db2777;--tag-border:#fbcfe8;">Cumpleaños</span>
+                                            {% endif %}
+
+                                            {% if visits == 1 %}
+                                            <span class="client-tag" style="--tag-bg:#eff6ff;--tag-color:#2563eb;--tag-border:#bfdbfe;">Primera visita</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+
+                            <td>
+                                <div class="client-sub">{{ client.last_visit_label or 'Sin visitas' }}</div>
+                            </td>
+
+                            <td>
+                                <div class="client-sub">{{ client.next_visit_label or 'Sin cita' }}</div>
+                            </td>
+
+                            <td>
+                                <strong>{{ visits }}</strong>
+                            </td>
+
+                            <td class="text-end">
+                                <strong>${{ "%.2f"|format(spent) }}</strong>
+                            </td>
+
+                            <td class="text-end text-primary">
+                                <i class="fa-solid fa-chevron-right"></i>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="clients-mobile-list">
+                {% for client in clients %}
+                {% set visits = client.visits_calculated or client.total_visits or 0 %}
+                {% set spent = client.total_spent_calculated or client.total_spent or 0 %}
+                {% set balance_due = client.balance_due_total or 0 %}
+                {% set birthday_value = client.birthday|string if client.birthday else '' %}
+                {% set client_meta = {
+                    'id': client.id,
+                    'name': client.name or '',
+                    'phone': client.phone or '',
+                    'email': client.email or '',
+                    'instagram': client.instagram or '',
+                    'birthday': birthday_value,
+                    'preferences': client.preferences or '',
+                    'allergies': client.allergies_notes or '',
+                    'notes': client.notes or '',
+                    'visits': visits,
+                    'spent': "%.2f"|format(spent),
+                    'lastVisit': client.last_visit_label or 'Sin visitas',
+                    'nextVisit': client.next_visit_label or 'Sin cita'
+                } %}
+
+                <div class="clients-mobile-card js-client-entry {% if loop.first %}is-active{% endif %}"
+                     data-index="{{ loop.index0 }}"
+                     data-client-id="{{ client.id }}"
+                     data-search="{{ (client.name ~ ' ' ~ (client.phone or '') ~ ' ' ~ (client.email or '') ~ ' ' ~ (client.instagram or ''))|lower }}"
+                     data-visits="{{ visits }}"
+                     data-birthday-month="{{ '1' if client.is_birthday_month else '0' }}"
+                     data-balance-due="{{ balance_due }}"
+                     data-due-return="{{ '1' if client.is_due_return else '0' }}"
+                     data-client='{{ client_meta|tojson|forceescape }}'>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="client-avatar">{{ (client.name or 'C')[0]|upper }}</div>
+                        <div class="min-w-0 flex-grow-1">
+                            <div class="client-name">{{ client.name or 'Clienta sin nombre' }}</div>
+                            <div class="client-sub is-ellipsis">{{ client.instagram or client.phone or client.email or 'Sin contacto' }}</div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-primary"></i>
+                    </div>
+
+                    <div class="d-flex gap-1 flex-wrap">
+                        {% if visits >= 2 %}
+                        <span class="client-tag" style="--tag-bg:#ecfdf3;--tag-color:#059669;--tag-border:#bbf7d0;">Frecuente</span>
+                        {% endif %}
+
+                        {% if client.birthday %}
+                        <span class="client-tag" style="--tag-bg:#fdf2f8;--tag-color:#db2777;--tag-border:#fbcfe8;">Cumpleaños</span>
+                        {% endif %}
+
+                        {% if visits == 1 %}
+                        <span class="client-tag" style="--tag-bg:#eff6ff;--tag-color:#2563eb;--tag-border:#bfdbfe;">Primera visita</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="mobile-card-meta">
+                        <div>
+                            <span>Última visita</span>
+                            <strong>{{ client.last_visit_label or 'Sin visitas' }}</strong>
+                        </div>
+                        <div>
+                            <span>Próxima cita</span>
+                            <strong>{{ client.next_visit_label or 'Sin cita' }}</strong>
+                        </div>
+                        <div>
+                            <span>Visitas</span>
+                            <strong>{{ visits }}</strong>
+                        </div>
+                        <div>
+                            <span>Gasto total</span>
+                            <strong>${{ "%.2f"|format(spent) }}</strong>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+
+            <div class="clients-pagination-wrap">
+                <div class="clients-pagination-info" id="clientsPaginationInfo">
+                    Mostrando clientas
+                </div>
+
+                <div class="clients-pagination" id="clientsPagination"></div>
+            </div>
+            {% else %}
+            <div class="clients-empty-card">
+                <i class="fa-regular fa-address-book fs-2 mb-3 d-block opacity-50"></i>
+                <h2 class="h5 fw-black text-dark mb-1">Todavía no tienes clientas registradas</h2>
+                <p class="text-muted fw-bold mb-3">Cuando agregues clientas, aquí podrás consultar sus preferencias, historial y próximas citas.</p>
+                <button class="btn btn-primary" type="button" data-bs-toggle="offcanvas" data-bs-target="#nuevaClientaDrawer">
+                    <i class="fa-solid fa-plus me-2"></i>Agregar primera clienta
+                </button>
+            </div>
+            {% endif %}
+        </article>
+
+    </section>
+</div>
+
+<div class="offcanvas offcanvas-end clients-drawer" tabindex="-1" id="nuevaClientaDrawer" aria-labelledby="nuevaClientaDrawerLabel">
+    <div class="offcanvas-header">
+        <div>
+            <h2 class="offcanvas-title h5 fw-black mb-1" id="nuevaClientaDrawerLabel">Nueva clienta</h2>
+            <div class="text-muted small fw-bold">Agrega los datos básicos para crear el perfil.</div>
+        </div>
+
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+
+    <div class="offcanvas-body">
+        <form method="POST" class="row g-3">
+            <div class="col-12">
+                <div class="drawer-section-title">Datos básicos</div>
+                <label class="form-label">Nombre completo <span class="text-danger">*</span></label>
+                <input type="text" name="name" class="form-control" placeholder="Ej. Diana Reyes" required>
+            </div>
+
+            <div class="col-12">
+                <div class="drawer-section-title">Contacto</div>
+                <label class="form-label">WhatsApp / Teléfono</label>
+                <input type="text" name="phone" class="form-control" placeholder="Ej. 811 234 5678">
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Instagram</label>
+                <input type="text" name="instagram" class="form-control" placeholder="Ej. @dianareyes">
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Correo electrónico</label>
+                <input type="email" name="email" class="form-control" placeholder="correo@ejemplo.com">
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Cumpleaños</label>
+                <input type="date" name="birthday" class="form-control">
+            </div>
+
+            <div class="col-12">
+                <div class="drawer-section-title">Perfil de servicio</div>
+                <label class="form-label">Preferencias</label>
+                <textarea name="preferences" class="form-control" rows="3" placeholder="Ej. Le gustan tonos nude, forma almendra, largo medio."></textarea>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Alergias o notas especiales</label>
+                <textarea name="allergies_notes" class="form-control" rows="3" placeholder="Ej. Sensible al monómero, no usar cierto producto."></textarea>
+            </div>
+
+            <div class="col-12">
+                <label class="form-label">Notas internas</label>
+                <textarea name="notes" class="form-control" rows="3" placeholder="Ej. Prefiere citas por la mañana, puntual, etc."></textarea>
+            </div>
+
+            <div class="col-12 d-grid gap-2 mt-3">
+                <button type="submit" class="btn btn-primary">Guardar clienta</button>
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="offcanvas">Cancelar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="offcanvas offcanvas-end clients-detail-drawer" tabindex="-1" id="clientDetailDrawer" aria-labelledby="clientDetailDrawerLabel">
+    <div class="offcanvas-header">
+        <div>
+            <h2 class="offcanvas-title h5 fw-black mb-1" id="clientDetailDrawerLabel">Perfil de clienta</h2>
+            <div class="client-drawer-subtitle">Historial, preferencias y acciones rápidas.</div>
+        </div>
+
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Cerrar"></button>
+    </div>
+
+    <div class="offcanvas-body" id="clientDetailDrawerBody">
+        <div class="text-muted fw-bold">Selecciona una clienta.</div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const panel = document.getElementById("clientsPanel");
+    const entries = Array.from(document.querySelectorAll(".js-client-entry"));
+    const detailDrawerEl = document.getElementById("clientDetailDrawer");
+    const detailDrawerBody = document.getElementById("clientDetailDrawerBody");
+    const pagination = document.getElementById("clientsPagination");
+    const paginationInfo = document.getElementById("clientsPaginationInfo");
+    const filterForm = document.getElementById("clientsFilterForm");
+    const searchInput = document.getElementById("clientsSearchInput");
+    const filterSelect = filterForm?.querySelector('select[name="filter"]');
+    const frequencySelect = filterForm?.querySelector('select[name="frequency"]');
+    const filterPills = Array.from(document.querySelectorAll("[data-client-filter-pill]"));
+
+    const pageSize = Number(panel?.dataset.pageSize || 5);
+    let currentPage = 1;
+    let filteredClientIds = [];
+    let searchTimer = null;
+
+    function submitFilters() {
+        if (!filterForm) return;
+        currentPage = 1;
+        applyPagination();
+        syncFilterPills();
+        const firstVisible = getPrimaryEntries().find(entry => entry.style.display !== "none");
+        if (firstVisible) {
+            setActiveClient(firstVisible.dataset.clientId, false);
+        } else if (detailDrawerBody) {
+            detailDrawerBody.innerHTML = '<div class="text-muted fw-bold">No encontramos clientas con esos filtros.</div>';
+        }
+    }
+
+    searchInput?.addEventListener("input", function () {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(function () {
+            currentPage = 1;
+            applyPagination();
+            const firstVisible = getPrimaryEntries().find(entry => entry.style.display !== "none");
+            if (firstVisible) {
+                setActiveClient(firstVisible.dataset.clientId, false);
+            } else if (detailDrawerBody) {
+                detailDrawerBody.innerHTML = '<div class="text-muted fw-bold">No encontramos clientas con esa búsqueda.</div>';
+            }
+        }, 120);
+    });
+
+    filterForm?.querySelectorAll("[data-auto-submit]").forEach(function (control) {
+        control.addEventListener("change", submitFilters);
+    });
+
+    filterForm?.addEventListener("submit", function (event) {
+        event.preventDefault();
+        submitFilters();
+    });
+
+    filterPills.forEach(function (pill) {
+        pill.addEventListener("click", function (event) {
+            event.preventDefault();
+            if (!filterSelect) return;
+            const value = pill.dataset.clientFilterPill || "";
+            filterSelect.value = filterSelect.value === value ? "" : value;
+            submitFilters();
+        });
+    });
+
+    function getBootstrapOffcanvas(element) {
+        if (!element || !window.bootstrap) return null;
+        return window.bootstrap.Offcanvas.getOrCreateInstance(element);
+    }
+
+    function escapeHTML(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function empty(value, fallback) {
+        return value ? value : fallback;
+    }
+
+    function onlyDigits(value) {
+        return String(value || "").replace(/\D+/g, "");
+    }
+
+    function parseClientData(entry) {
+        try {
+            return JSON.parse(entry.dataset.client || "{}");
+        } catch (error) {
+            console.error("No se pudo leer la clienta:", error);
+            return {};
+        }
+    }
+
+    function getDetailHTML(data) {
+        const whatsapp = onlyDigits(data.phone);
+        const visits = Number(data.visits || 0);
+
+        return `
+            <div class="client-detail-head">
+                <div class="client-detail-avatar">${escapeHTML((data.name || "C").charAt(0).toUpperCase())}</div>
+
+                <div class="min-w-0">
+                    <h2 class="h5 fw-black mb-1 text-dark">${escapeHTML(data.name || "Clienta")}</h2>
+
+                    <div class="d-flex gap-1 flex-wrap justify-content-center">
+                        ${visits >= 2 ? '<span class="client-tag" style="--tag-bg:#ecfdf3;--tag-color:#059669;--tag-border:#bbf7d0;">Frecuente</span>' : ''}
+                        ${data.birthday ? '<span class="client-tag" style="--tag-bg:#fdf2f8;--tag-color:#db2777;--tag-border:#fbcfe8;">Cumpleaños</span>' : ''}
+                        ${visits === 1 ? '<span class="client-tag" style="--tag-bg:#eff6ff;--tag-color:#2563eb;--tag-border:#bfdbfe;">Primera visita</span>' : ''}
+                    </div>
+                </div>
+            </div>
+
+            <div class="client-contact-grid">
+                <div class="client-contact-item">
+                    <div class="client-sub"><i class="fa-brands fa-whatsapp"></i>WhatsApp</div>
+                    <strong class="d-block text-dark small mt-1">${escapeHTML(empty(data.phone, "Sin WhatsApp"))}</strong>
+                </div>
+
+                <div class="client-contact-item">
+                    <div class="client-sub"><i class="fa-brands fa-instagram"></i>Instagram</div>
+                    <strong class="d-block text-dark small mt-1">${escapeHTML(empty(data.instagram, "Sin Instagram"))}</strong>
+                </div>
+
+                <div class="client-contact-item">
+                    <div class="client-sub"><i class="fa-regular fa-envelope"></i>Correo</div>
+                    <strong class="d-block text-dark small mt-1">${escapeHTML(empty(data.email, "Sin correo"))}</strong>
+                </div>
+
+                <div class="client-contact-item">
+                    <div class="client-sub"><i class="fa-regular fa-calendar"></i>Cumpleaños</div>
+                    <strong class="d-block text-dark small mt-1">${escapeHTML(empty(data.birthday, "Sin fecha"))}</strong>
+                </div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Preferencias</h3>
+                <div class="client-sub">${escapeHTML(empty(data.preferences, "Sin preferencias registradas."))}</div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Alergias / cuidados</h3>
+                <div class="client-sub">${escapeHTML(empty(data.allergies, "Sin alergias registradas."))}</div>
+            </div>
+
+            <div class="detail-section">
+                <h3>Notas internas</h3>
+                <div class="client-sub">${escapeHTML(empty(data.notes, "Sin notas internas."))}</div>
+            </div>
+
+            <div class="detail-metrics">
+                <div class="detail-metric">
+                    <span>Última visita</span>
+                    <strong>${escapeHTML(data.lastVisit || "Sin visitas")}</strong>
+                </div>
+
+                <div class="detail-metric">
+                    <span>Próxima cita</span>
+                    <strong>${escapeHTML(data.nextVisit || "Sin cita")}</strong>
+                </div>
+
+                <div class="detail-metric">
+                    <span>Total gastado</span>
+                    <strong>$${escapeHTML(data.spent || "0.00")}</strong>
+                </div>
+            </div>
+
+            <div class="client-actions">
+                <a href="{{ url_for('nails.agenda') }}?new=1&client_id=${encodeURIComponent(data.id || '')}" class="btn btn-primary btn-sm">
+                    <i class="fa-regular fa-calendar-plus me-1"></i>Agendar cita
+                </a>
+
+                <a href="{{ url_for('nails.ventas') }}?client_id=${encodeURIComponent(data.id || '')}" class="btn btn-outline-primary btn-sm">
+                    <i class="fa-solid fa-bag-shopping me-1"></i>Registrar venta
+                </a>
+
+                ${whatsapp
+                    ? `<a href="https://wa.me/52${whatsapp}" target="_blank" rel="noopener" class="btn btn-success btn-sm"><i class="fa-brands fa-whatsapp me-1"></i>WhatsApp</a>`
+                    : '<button type="button" class="btn btn-outline-secondary btn-sm" disabled>Sin WhatsApp</button>'
+                }
+
+                <button type="button" class="btn btn-outline-secondary btn-sm" disabled>
+                    <i class="fa-regular fa-pen-to-square me-1"></i>Editar perfil
+                </button>
+            </div>
+        `;
+    }
+
+    function renderDetail(data, openMobileDrawer = false) {
+        if (!data) return;
+
+        const html = getDetailHTML(data);
+
+        if (detailDrawerBody) {
+            detailDrawerBody.innerHTML = html;
+        }
+
+        if (openMobileDrawer) {
+            const drawer = getBootstrapOffcanvas(detailDrawerEl);
+            if (drawer) drawer.show();
+        }
+    }
+
+    function setActiveClient(clientId, openMobileDrawer = false) {
+        entries.forEach(entry => {
+            entry.classList.toggle("is-active", String(entry.dataset.clientId) === String(clientId));
+        });
+
+        const selectedEntry = entries.find(entry => String(entry.dataset.clientId) === String(clientId));
+        if (!selectedEntry) return;
+
+        renderDetail(parseClientData(selectedEntry), openMobileDrawer);
+    }
+
+    function getPrimaryEntries() {
+        const tableRows = entries.filter(entry => entry.classList.contains("client-row"));
+        return tableRows.length ? tableRows : entries;
+    }
+
+    function getFilteredPrimaryEntries() {
+        const q = String(searchInput?.value || "").trim().toLowerCase();
+        const clientFilter = String(filterSelect?.value || "");
+        const frequencyFilter = String(frequencySelect?.value || "");
+
+        return getPrimaryEntries().filter(entry => {
+            const visits = Number(entry.dataset.visits || 0);
+            const balanceDue = Number(entry.dataset.balanceDue || 0);
+
+            if (q && !String(entry.dataset.search || "").includes(q)) return false;
+            if (clientFilter === "frecuentes" && visits < 2) return false;
+            if (clientFilter === "cumpleanos" && entry.dataset.birthdayMonth !== "1") return false;
+            if (clientFilter === "primera_visita" && visits !== 1) return false;
+            if (clientFilter === "saldo_pendiente" && balanceDue <= 0) return false;
+            if (clientFilter === "por_volver" && entry.dataset.dueReturn !== "1") return false;
+            if (frequencyFilter === "sin_visitas" && visits !== 0) return false;
+            if (frequencyFilter === "primera_visita" && visits !== 1) return false;
+            if (frequencyFilter === "frecuentes" && visits < 2) return false;
+            return true;
+        });
+    }
+
+    function syncFilterPills() {
+        const activeFilter = String(filterSelect?.value || "");
+        filterPills.forEach(function (pill) {
+            pill.classList.toggle("is-active", pill.dataset.clientFilterPill === activeFilter);
+        });
+    }
+
+    function getFilteredClientIds() {
+        return getFilteredPrimaryEntries().map(entry => String(entry.dataset.clientId));
+    }
+
+    function renderPagination() {
+        if (!pagination || !paginationInfo) return;
+
+        const totalClients = filteredClientIds.length;
+        const totalPages = Math.max(1, Math.ceil(totalClients / pageSize));
+        const start = totalClients === 0 ? 0 : ((currentPage - 1) * pageSize) + 1;
+        const end = Math.min(currentPage * pageSize, totalClients);
+
+        paginationInfo.textContent = `Mostrando ${start}-${end} de ${totalClients} clienta${totalClients === 1 ? "" : "s"}`;
+        pagination.innerHTML = "";
+
+        const prevButton = createPageButton("‹", currentPage - 1, currentPage === 1);
+        pagination.appendChild(prevButton);
+
+        getVisiblePages(totalPages).forEach(page => {
+            if (page === "...") {
+                const dots = document.createElement("span");
+                dots.className = "clients-page-btn";
+                dots.textContent = "...";
+                dots.style.pointerEvents = "none";
+                pagination.appendChild(dots);
+                return;
+            }
+
+            const button = createPageButton(page, page, false);
+            button.classList.toggle("is-active", page === currentPage);
+            pagination.appendChild(button);
+        });
+
+        const nextButton = createPageButton("›", currentPage + 1, currentPage === totalPages);
+        pagination.appendChild(nextButton);
+    }
+
+    function createPageButton(label, page, disabled) {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "clients-page-btn";
+        button.textContent = label;
+        button.disabled = disabled;
+
+        button.addEventListener("click", function () {
+            if (disabled) return;
+            currentPage = page;
+            applyPagination();
+
+            const firstVisible = getPrimaryEntries().find(entry => entry.style.display !== "none");
+            if (firstVisible) {
+                setActiveClient(firstVisible.dataset.clientId, false);
+            }
+        });
+
+        return button;
+    }
+
+    function getVisiblePages(totalPages) {
+        if (totalPages <= 5) {
+            return Array.from({ length: totalPages }, (_, index) => index + 1);
+        }
+
+        if (currentPage <= 3) {
+            return [1, 2, 3, 4, "...", totalPages];
+        }
+
+        if (currentPage >= totalPages - 2) {
+            return [1, "...", totalPages - 3, totalPages - 2, totalPages - 1, totalPages];
+        }
+
+        return [1, "...", currentPage - 1, currentPage, currentPage + 1, "...", totalPages];
+    }
+
+    function applyPagination() {
+        filteredClientIds = getFilteredClientIds();
+        const totalPages = Math.max(1, Math.ceil(filteredClientIds.length / pageSize));
+        currentPage = Math.min(currentPage, totalPages);
+        const startIndex = (currentPage - 1) * pageSize;
+        const endIndex = startIndex + pageSize;
+        const visibleIds = new Set(filteredClientIds.slice(startIndex, endIndex));
+
+        entries.forEach(entry => {
+            const isVisible = visibleIds.has(String(entry.dataset.clientId));
+            entry.style.display = isVisible ? "" : "none";
+        });
+
+        renderPagination();
+    }
+
+    entries.forEach(entry => {
+        entry.addEventListener("click", function () {
+            setActiveClient(entry.dataset.clientId, true);
+        });
+    });
+
+    if (entries.length) {
+        applyPagination();
+        syncFilterPills();
+
+        const firstEntry = getPrimaryEntries().find(entry => entry.style.display !== "none");
+        if (firstEntry) {
+            setActiveClient(firstEntry.dataset.clientId, false);
+        }
+    }
+});
+</script>
+{% endblock %}

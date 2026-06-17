@@ -75,7 +75,9 @@ def entrega_filter_sql(entrega_filter):
 
 @main_bp.route('/')
 def index():
-    if 'user_id' in session:        
+    if 'user_id' in session:
+        if session.get('active_module') == 'nails':
+            return redirect(url_for('nails.dashboard'))
         return redirect(url_for('main.cotizador'))
     return render_template('landing_promos.html')
 

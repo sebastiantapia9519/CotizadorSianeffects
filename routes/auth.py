@@ -24,6 +24,7 @@ from db import get_db_connection as get_db
 from datetime import timedelta
 import re
 import secrets
+import uuid
 
 # Utilidades y servicios del proyecto
 from utils.email_validators import is_disposable_email
@@ -33,6 +34,48 @@ from utils.datetime_utils import now_utc
 
 # Registramos el Blueprint de autenticación (sin prefijo de URL, rutas directas)
 auth_bp = Blueprint('auth', __name__)
+
+
+def _nails_slug(value):
+    text = (value or '').lower().strip()
+    text = re.sub(r'[^a-z0-9áéíóúñü\s-]', '', text)
+    replacements = {
+        'á': 'a', 'é': 'e', 'í': 'i', 'ó': 'o', 'ú': 'u',
+        'ñ': 'n', 'ü': 'u',
+    }
+    for source, target in replacements.items():
+        text = text.replace(source, target)
+    text = re.sub(r'\s+', '-', text)
+    text = re.sub(r'-+', '-', text)
+    return text.strip('-') or 'salon-nails'
+
+
+def _nails_join_code(cursor):
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    for _ in range(20):
+        code = ''.join(secrets.choice(alphabet) for _ in range(8))
+        cursor.execute('SELECT id FROM nails_businesses WHERE join_code = %s LIMIT 1', (code,))
+        if not cursor.fetchone():
+            return code
+    return uuid.uuid4().hex[:10].upper()
+
+
+def _auth_email_profile(active_module):
+    """Devuelve asunto y template de verificacion/bienvenida segun modulo."""
+    module = (active_module or 'cotizador').strip().lower()
+    if module == 'nails':
+        return {
+            "verification_subject": "Verifica tu cuenta - Sianeffects Nails",
+            "verification_template": "auth_code_nails",
+            "welcome_subject": "Bienvenida a Sianeffects Nails",
+            "welcome_template": "bienvenida_nails",
+        }
+    return {
+        "verification_subject": "Verifica tu cuenta - Sianeffects",
+        "verification_template": "auth_code",
+        "welcome_subject": "¡Bienvenido/a a Sianeffects!",
+        "welcome_template": "bienvenida",
+    }
 
 
 # =============================================================================
@@ -106,6 +149,7 @@ def login():
                 # PORTERO: Si el usuario no verificó su email, lo mandamos a verificar
                 if not user.get('verificado', False):
                     session['email_por_verificar'] = user['email']
+                    session['modulo_por_verificar'] = (user.get('active_module') or 'cotizador').strip().lower()
                     flash('Tu cuenta aún no ha sido verificada. Revisa tu correo.', 'warning')
                     return redirect(url_for('auth.verificar_email'))
 
@@ -120,6 +164,9 @@ def login():
                 session['user_id'] = user['id']
                 session['username'] = user['username']
                 session['role'] = user['role']
+
+                active_module = (user.get('active_module') or 'cotizador').strip().lower()
+                session['active_module'] = active_module
 
                 sub_end = user.get('subscription_end')
                 # Normalizamos el estado: lo pasamos a minúsculas y quitamos espacios
@@ -161,7 +208,10 @@ def login():
                 current_app.logger.info(
                     f"LOGIN_SUCCESS: Usuario '{user['username']}' autenticado desde {ip_cliente}."
                 )
-                return redirect(url_for('main.index'))
+                if active_module == 'nails':
+                    return redirect(url_for('nails.dashboard'))
+
+                return redirect(url_for('main.cotizador'))
 
             else:
                 # Credenciales incorrectas: registramos el intento fallido con la IP
@@ -370,6 +420,193 @@ def registro():
     return render_template('registro.html')
 
 
+@auth_bp.route('/registro-nails', methods=['GET', 'POST'])
+def registro_nails():
+    """
+    Registro especial para Sianeffects Nails.
+    - Con código: crea usuario y lo une como técnica del salón.
+    - Sin código: crea usuario, salón nuevo y staff owner.
+    """
+    if request.method == 'GET':
+        if request.args.get('utm_source'):
+            session['utm_source'] = request.args.get('utm_source').lower()
+        if request.args.get('utm_campaign'):
+            session['utm_campaign'] = request.args.get('utm_campaign').lower()
+        return render_template('nails/registro_nails.html', join_code=(request.args.get('codigo') or '').strip().upper())
+
+    username = request.form['username'].lower().strip()
+    email = request.form['email'].lower().strip()
+    password = request.form['password']
+    confirm_password = request.form['confirm_password']
+    telefono = request.form.get('phone', '').strip()
+    join_code = (request.form.get('join_code') or '').strip().upper()
+    salon_name = (request.form.get('salon_name') or '').strip()
+    instagram = (request.form.get('instagram') or '').strip()
+    address = (request.form.get('address') or '').strip()
+    company_name = salon_name or 'Sianeffects Nails'
+    origen_registro = session.pop('utm_source', 'nails')
+    utm_campaign = session.pop('utm_campaign', None)
+
+    if len(password) < 6 or password != confirm_password:
+        flash('Revisa que la contraseña sea válida y coincida en ambos campos.', 'error')
+        return render_template('nails/registro_nails.html', join_code=join_code)
+
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", email) or is_disposable_email(email):
+        flash('Por favor usa un correo electrónico real y válido.', 'error')
+        return render_template('nails/registro_nails.html', join_code=join_code)
+
+    if not join_code and not salon_name:
+        flash('Escribe el código del salón o el nombre de tu nuevo salón.', 'error')
+        return render_template('nails/registro_nails.html', join_code=join_code)
+
+    hashed_pw = generate_password_hash(password)
+    created_at = now_utc()
+    subscription_end = created_at + timedelta(days=7)
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute('SELECT id FROM usuarios WHERE email = %s', (email,))
+        if cursor.fetchone():
+            flash('Este correo ya está registrado. Inicia sesión o recupera tu contraseña.', 'error')
+            return render_template('nails/registro_nails.html', join_code=join_code)
+
+        joined_business = None
+        if join_code:
+            cursor.execute(
+                """
+                SELECT id, name, primary_color
+                FROM nails_businesses
+                WHERE join_code = %s AND is_active = TRUE
+                LIMIT 1
+                """,
+                (join_code,),
+            )
+            joined_business = cursor.fetchone()
+            if not joined_business:
+                flash('No encontramos un salón activo con ese código.', 'error')
+                return render_template('nails/registro_nails.html', join_code=join_code)
+            company_name = joined_business['name']
+
+        cursor.execute('''
+            INSERT INTO usuarios (
+                username, email, password, telefono, company_name,
+                role, subscription_end, created_at, last_login, terms_accepted,
+                origen_registro, utm_campaign, verificado,
+                estado_suscripcion, plan_type, active_module
+            )
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            RETURNING id
+        ''', (
+            username, email, hashed_pw, telefono, company_name,
+            0, subscription_end, created_at, created_at, True,
+            origen_registro, utm_campaign, False,
+            'Trial', 'Free', 'nails'
+        ))
+        user_id = cursor.fetchone()['id']
+
+        cursor.execute('''
+            INSERT INTO configuracion (
+                user_id, margen_ganancia, porcentaje_gastos_operativos,
+                inventario_activo, ticket_bw, nombre_empresa
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (user_id, 100, 0, False, False, company_name))
+
+        cursor.execute('''
+            INSERT INTO shipping_configs (user_id, local_base_rate, local_km_rate, safety_margin_percent)
+            VALUES (%s, %s, %s, %s)
+        ''', (user_id, 35.00, 8.00, 10))
+
+        if joined_business:
+            cursor.execute(
+                """
+                INSERT INTO nails_staff (business_id, user_id, name, email, phone, role, color)
+                VALUES (%s, %s, %s, %s, %s, 'staff', %s)
+                """,
+                (
+                    joined_business['id'],
+                    user_id,
+                    username,
+                    email,
+                    telefono,
+                    joined_business['primary_color'] or '#d946ef',
+                ),
+            )
+            log_detail = f"Registro Nails: técnica unida a {joined_business['name']}"
+        else:
+            base_slug = _nails_slug(salon_name)
+            slug = base_slug
+            counter = 1
+            while True:
+                cursor.execute("SELECT id FROM nails_businesses WHERE slug = %s LIMIT 1", (slug,))
+                if not cursor.fetchone():
+                    break
+                slug = f"{base_slug}-{counter}"
+                counter += 1
+
+            cursor.execute(
+                """
+                INSERT INTO nails_businesses (
+                    user_id, name, slug, whatsapp, instagram, address, join_code
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
+                """,
+                (user_id, salon_name, slug, telefono, instagram, address, _nails_join_code(cursor)),
+            )
+            business_id = cursor.fetchone()['id']
+            cursor.execute(
+                """
+                INSERT INTO nails_staff (business_id, user_id, name, email, phone, role, color)
+                VALUES (%s, %s, %s, %s, %s, 'owner', '#d946ef')
+                """,
+                (business_id, user_id, username, email, telefono),
+            )
+            log_detail = f"Registro Nails: creó salón {salon_name}"
+
+        cursor.execute(
+            "INSERT INTO logs_actividad (user_id, accion, modulo, detalle) VALUES (%s, %s, %s, %s)",
+            (user_id, "Registro Nails completo", "Cuenta", log_detail),
+        )
+
+        v_code = generate_verification_code()
+        expires_at = now_utc() + timedelta(minutes=10)
+        cursor.execute('''
+            INSERT INTO auth_codes (user_id, email, code, expires_at)
+            VALUES (%s, %s, %s, %s)
+        ''', (user_id, email, v_code, expires_at))
+
+        conn.commit()
+        email_profile = _auth_email_profile('nails')
+        enviar_correo_sian(
+            subject=email_profile["verification_subject"],
+            recipient=email,
+            template=email_profile["verification_template"],
+            sender_alias="accounts",
+            code=v_code,
+            nombre=username,
+            salon=company_name,
+        )
+
+        session['email_por_verificar'] = email
+        session['modulo_por_verificar'] = 'nails'
+        flash('Te enviamos un código de verificación a tu correo.', 'info')
+        resp = redirect(url_for('auth.verificar_email'))
+        resp.set_cookie('has_free_trial', 'true', max_age=31536000)
+        return resp
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"NAILS_REGISTER_ERROR: Fallo en registro Nails '{email}': {e}")
+        flash('Error al procesar el registro Nails. Intenta de nuevo.', 'error')
+    finally:
+        cursor.close()
+        conn.close()
+
+    return render_template('nails/registro_nails.html', join_code=join_code)
+
+
 # =============================================================================
 # VERIFICACIÓN DE EMAIL
 # =============================================================================
@@ -443,19 +680,30 @@ def verificar_email():
                 session.pop('email_por_verificar', None)
                 flash('¡Correo verificado! Ya puedes iniciar sesión.', 'success')
 
-                # 1. Extraemos el nombre del usuario de la base de datos
-                cursor.execute('SELECT username FROM usuarios WHERE id = %s', (record['user_id'],))
+                # 1. Extraemos datos del usuario para mandar la bienvenida correcta por modulo
+                cursor.execute(
+                    '''
+                    SELECT username, company_name, COALESCE(active_module, 'cotizador') AS active_module
+                    FROM usuarios
+                    WHERE id = %s
+                    ''',
+                    (record['user_id'],)
+                )
                 user_data = cursor.fetchone()
                 nombre_a_enviar = user_data['username'] if user_data else "Emprendedor"
+                active_module = user_data['active_module'] if user_data else session.get('modulo_por_verificar')
+                email_profile = _auth_email_profile(active_module)
 
                 # Correo de bienvenida DESPUÉS del commit
                 enviar_correo_sian(
-                    subject="¡Bienvenido/a a Sianeffects!",
+                    subject=email_profile["welcome_subject"],
                     recipient=email,
-                    template="bienvenida",
+                    template=email_profile["welcome_template"],
                     sender_alias="hola",
-                    nombre=nombre_a_enviar
+                    nombre=nombre_a_enviar,
+                    salon=(user_data['company_name'] if user_data else None),
                 )
+                session.pop('modulo_por_verificar', None)
 
                 return redirect(url_for('auth.login'))
 
@@ -512,7 +760,10 @@ def reenviar_codigo():
         cursor.execute('UPDATE auth_codes SET used = TRUE WHERE email = %s', (email,))
 
         # Obtenemos el user_id para poder insertarlo en el nuevo código
-        cursor.execute('SELECT id FROM usuarios WHERE email = %s', (email,))
+        cursor.execute(
+            "SELECT id, username, company_name, COALESCE(active_module, 'cotizador') AS active_module FROM usuarios WHERE email = %s",
+            (email,)
+        )
         user = cursor.fetchone()
 
         if not user:
@@ -530,12 +781,15 @@ def reenviar_codigo():
         # Commit primero, correo después
         conn.commit()
 
+        email_profile = _auth_email_profile(user['active_module'])
         enviar_correo_sian(
-            subject="Nuevo código de verificación - Sianeffects",
+            subject=email_profile["verification_subject"],
             recipient=email,
-            template="auth_code",
+            template=email_profile["verification_template"],
             sender_alias="accounts",
-            code=new_code
+            code=new_code,
+            nombre=user['username'],
+            salon=user['company_name'],
         )
 
         return jsonify({"status": "success", "message": "Código reenviado con éxito."})

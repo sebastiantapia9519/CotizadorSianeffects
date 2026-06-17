@@ -1,0 +1,223 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Personal | Sianeffects Nails{% endblock %}
+{% block page_title %}Personal{% endblock %}
+{% block page_subtitle %}Administra técnicas, recepción y roles de tu salón.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .staff-shell {
+        display: grid;
+        gap: 16px;
+    }
+
+    .staff-card,
+    .role-card {
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 14px;
+        box-shadow: 0 16px 42px rgba(26, 31, 44, .06);
+    }
+
+    .roles-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .role-card {
+        padding: 16px;
+    }
+
+    .role-card h3 {
+        color: var(--nails-ink);
+        font-size: 14px;
+        font-weight: 900;
+        margin: 0 0 6px;
+    }
+
+    .role-card p {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.35;
+        margin: 0;
+    }
+
+    .staff-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .staff-member {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 48px minmax(0, 1fr) auto;
+        padding: 14px;
+    }
+
+    .staff-avatar {
+        align-items: center;
+        background: var(--staff-color, var(--nails-primary-soft));
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: flex;
+        font-weight: 900;
+        height: 48px;
+        justify-content: center;
+        width: 48px;
+    }
+
+    .staff-name {
+        color: var(--nails-ink);
+        font-weight: 900;
+    }
+
+    .staff-meta {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .staff-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+    }
+
+    .staff-badge {
+        background: var(--nails-primary-soft);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        font-size: 11px;
+        font-weight: 900;
+        padding: 5px 9px;
+    }
+
+    .staff-badge.inactive {
+        background: #f1f3f8;
+        color: var(--nails-muted);
+    }
+
+    .staff-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    .staff-form-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    @media (max-width: 1000px) {
+        .roles-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 720px) {
+        .staff-member {
+            grid-template-columns: 1fr;
+        }
+
+        .roles-grid,
+        .staff-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .staff-actions {
+            justify-content: stretch;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="staff-shell">
+    <section class="roles-grid">
+        {% for role, label in role_labels.items() %}
+        <article class="role-card">
+            <h3>{{ label }}</h3>
+            <p>{{ role_descriptions.get(role) }}</p>
+        </article>
+        {% endfor %}
+    </section>
+
+    {% if not is_owner %}
+    <div class="alert alert-info border-0 rounded-4 fw-bold">
+        Solo la jefa puede crear, desactivar o cambiar roles. Puedes consultar el equipo y las diferencias de roles.
+    </div>
+    {% endif %}
+
+    <section class="staff-list">
+        {% for person in staff_members %}
+        {% set label = role_labels.get(person.role, person.role|title) %}
+        {% set is_self = person.user_id and current_user_id and person.user_id|string == current_user_id|string %}
+        <article class="staff-card staff-member">
+            <div class="staff-avatar" style="--staff-color: {{ person.color or business.secondary_color or '#fce7f3' }};">
+                {{ (person.name or 'P')[:1]|upper }}
+            </div>
+            <div class="min-w-0">
+                <div class="staff-name">{{ person.name }}</div>
+                <div class="staff-meta">
+                    {{ person.email or person.user_email or 'Sin correo' }}
+                    {% if person.phone %} · {{ person.phone }}{% endif %}
+                </div>
+                <div class="staff-badges">
+                    <span class="staff-badge">{{ label }}</span>
+                    <span class="staff-badge {% if not person.is_active %}inactive{% endif %}">
+                        {% if person.is_active %}Activo{% else %}Inactivo{% endif %}
+                    </span>
+                    <span class="staff-badge">{{ person.appointments_count or 0 }} citas</span>
+                    <span class="staff-badge">${{ "%.2f"|format(person.sales_total or 0) }} ventas</span>
+                    {% if person.user_id %}
+                    <span class="staff-badge">Cuenta vinculada</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="staff-actions">
+                {% if is_owner %}
+                <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#editStaff{{ person.id }}">
+                    Editar
+                </button>
+                {% if person.is_active and not is_self %}
+                <form method="POST" action="{{ url_for('nails.desactivar_personal', staff_id=person.id) }}" class="require-confirm" data-title="¿Desactivar personal?" data-text="Ya no aparecerá como activo para asignaciones nuevas." data-btn-text="Sí, desactivar">
+                    <button class="btn btn-sm btn-outline-danger" type="submit">Desactivar</button>
+                </form>
+                {% elif is_self %}
+                <span class="text-muted fw-bold small">Tu cuenta</span>
+                {% endif %}
+                {% else %}
+                <span class="text-muted fw-bold small">Solo lectura</span>
+                {% endif %}
+            </div>
+        </article>
+
+        {% if is_owner %}
+        <div class="modal fade" id="editStaff{{ person.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <form class="modal-content border-0 rounded-4" method="POST" action="{{ url_for('nails.editar_personal', staff_id=person.id) }}">
+                    <div class="modal-header border-0">
+                        <h2 class="modal-title h5 fw-black">Editar personal</h2>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        {% include "nails/partials/staff_form.html" %}
+                    </div>
+                    <div class="modal-footer border-0">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="staff-card p-4 text-center text-muted fw-bold">Aún no hay personal registrado.</div>
+        {% endfor %}
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Entrar como clienta | Sianeffects Nails</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root {
+            --pink: #d946ef;
+            --pink-dark: #a21caf;
+            --soft: #fdf4ff;
+            --ink: #2f2432;
+            --muted: #766d7a;
+            --border: #eaddea;
+        }
+
+        body {
+            align-items: center;
+            background:
+                radial-gradient(circle at 20% 10%, rgba(217, 70, 239, .12), transparent 28%),
+                linear-gradient(135deg, #fff7fd, #fdf4ff 46%, #fff);
+            color: var(--ink);
+            display: flex;
+            font-family: "Nunito", system-ui, sans-serif;
+            justify-content: center;
+            margin: 0;
+            min-height: 100vh;
+            padding: 24px;
+        }
+
+        .client-card {
+            background: rgba(255,255,255,.96);
+            border: 1px solid var(--border);
+            border-radius: 22px;
+            box-shadow: 0 24px 70px rgba(74, 37, 76, .14);
+            max-width: 470px;
+            padding: 30px;
+            width: 100%;
+        }
+
+        .client-icon {
+            align-items: center;
+            background: var(--soft);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            color: var(--pink);
+            display: inline-flex;
+            font-size: 28px;
+            height: 66px;
+            justify-content: center;
+            margin-bottom: 18px;
+            width: 66px;
+        }
+
+        h1 {
+            color: var(--pink-dark);
+            font-size: 32px;
+            font-weight: 900;
+            letter-spacing: 0;
+            margin: 0;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-weight: 800;
+            margin: 8px 0 24px;
+        }
+
+        .form-label {
+            color: var(--ink);
+            font-size: 12px;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            border-color: var(--border);
+            border-radius: 14px;
+            font-size: 18px;
+            font-weight: 900;
+            letter-spacing: 1px;
+            min-height: 52px;
+            text-transform: uppercase;
+        }
+
+        .form-control:focus {
+            border-color: var(--pink);
+            box-shadow: 0 0 0 .2rem rgba(217, 70, 239, .14);
+        }
+
+        .btn-nails {
+            background: var(--pink);
+            border: 0;
+            border-radius: 999px;
+            color: #fff;
+            font-weight: 900;
+            min-height: 52px;
+        }
+
+        .btn-nails:hover {
+            background: var(--pink-dark);
+            color: #fff;
+        }
+
+        .helper {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+        }
+    </style>
+</head>
+<body>
+    <main class="client-card">
+        <div class="client-icon">
+            <i class="fa-regular fa-calendar-check"></i>
+        </div>
+        <h1>Entrar como clienta</h1>
+        <p class="subtitle">Usa el código que te compartió tu salón para ver servicios y agendar tu cita.</p>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} rounded-4 border-0 fw-bold small">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" action="{{ url_for('nails.cliente_acceso') }}" class="d-grid gap-3">
+            <input type="hidden" name="{{ nails_csrf_field }}" value="{{ nails_csrf_token }}">
+            <div>
+                <label class="form-label" for="codigo">Código del salón</label>
+                <input
+                    type="text"
+                    class="form-control"
+                    id="codigo"
+                    name="codigo"
+                    value="{{ code or '' }}"
+                    placeholder="A7B9C2D4"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    maxlength="80"
+                    required
+                >
+                <div class="helper mt-2">También puedes escribir el nombre corto del catálogo si te lo compartieron.</div>
+            </div>
+
+            <button type="submit" class="btn btn-nails">
+                <i class="fa-solid fa-arrow-right-to-bracket me-2"></i>Entrar y agendar
+            </button>
+        </form>
+
+        <div class="text-center mt-4">
+            <a href="{{ url_for('auth.login') }}" class="text-muted text-decoration-none fw-bold small">Volver al inicio de sesión</a>
+        </div>
+    </main>
+
+    <script>
+        document.getElementById("codigo")?.addEventListener("input", function () {
+            this.value = this.value.toUpperCase().replace(/\s+/g, "");
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Registro Nails | Sianeffects</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}"
+        type="image/png">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}"
+        type="image/png">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        :root {
+            --pink: #d946ef;
+            --soft: #fdf4ff;
+            --ink: #2f2432;
+            --muted: #766d7a;
+            --border: #eaddea;
+        }
+
+        body {
+            background:
+                linear-gradient(120deg, rgba(253, 244, 255, .96), rgba(255, 255, 255, .9)),
+                #fff;
+            color: var(--ink);
+            font-family: "Nunito", system-ui, sans-serif;
+            min-height: 100vh;
+        }
+
+        .register-shell {
+            align-items: center;
+            display: grid;
+            grid-template-columns: minmax(0, .9fr) minmax(420px, 520px);
+            gap: 34px;
+            margin: 0 auto;
+            max-width: 1120px;
+            min-height: 100vh;
+            padding: 28px;
+        }
+
+        .intro h1 {
+            color: #7b3f87;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: clamp(42px, 7vw, 78px);
+            font-weight: 900;
+            line-height: .92;
+            margin: 0 0 18px;
+        }
+
+        .intro p {
+            color: var(--muted);
+            font-size: 18px;
+            font-weight: 800;
+            max-width: 560px;
+        }
+
+        .intro-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 24px;
+        }
+
+        .intro-pill {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: #7b3f87;
+            font-size: 13px;
+            font-weight: 900;
+            padding: 9px 13px;
+        }
+
+        .register-card {
+            background: rgba(255, 255, 255, .96);
+            border: 1px solid var(--border);
+            border-radius: 18px;
+            box-shadow: 0 24px 70px rgba(74, 37, 76, .12);
+            padding: 26px;
+        }
+
+        .form-label {
+            color: var(--ink);
+            font-size: 12px;
+            font-weight: 900;
+        }
+
+        .form-control {
+            border-color: var(--border);
+            border-radius: 12px;
+            font-weight: 800;
+            min-height: 46px;
+        }
+
+        .form-control:focus {
+            border-color: var(--pink);
+            box-shadow: 0 0 0 .2rem rgba(217, 70, 239, .12);
+        }
+
+        .join-box {
+            background: var(--soft);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .new-salon-fields.is-disabled {
+            opacity: .48;
+        }
+
+        .btn-nails {
+            background: var(--pink);
+            border: 0;
+            border-radius: 999px;
+            color: #fff;
+            font-weight: 900;
+            min-height: 50px;
+        }
+
+        @media (max-width: 920px) {
+            .register-shell {
+                grid-template-columns: 1fr;
+                min-height: auto;
+                padding: 18px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <main class="register-shell">
+        <section class="intro">
+            <h1>Sianeffects Nails</h1>
+            <p>Regístrate como técnica usando el código de tu salón, o crea un salón nuevo si vas a empezar desde cero.
+            </p>
+            <div class="intro-pills">
+                <span class="intro-pill"><i class="fa-regular fa-calendar-check me-1"></i> Agenda</span>
+                <span class="intro-pill"><i class="fa-solid fa-cash-register me-1"></i> Ventas</span>
+                <span class="intro-pill"><i class="fa-solid fa-chart-line me-1"></i> Reportes</span>
+            </div>
+        </section>
+
+        <section class="register-card">
+            <div class="mb-4">
+                <h2 class="h3 fw-black mb-1">Crear cuenta Nails</h2>
+                <div class="text-muted fw-bold small">Usa un código para unirte o deja el código vacío para crear tu
+                    salón.</div>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }} rounded-4 border-0">{{ message }}</div>
+            {% endfor %}
+            {% endif %}
+            {% endwith %}
+
+            <form action="{{ url_for('auth.registro_nails') }}" method="POST" class="row g-3">
+                <div class="col-12 join-box">
+                    <label class="form-label" for="join_code">Código del salón</label>
+                    <input type="text" name="join_code" id="join_code" class="form-control text-uppercase"
+                        value="{{ join_code or '' }}" placeholder="Ej. A7B9C2D4" maxlength="12">
+                    <div class="form-text fw-bold" id="join_code_hint">Si tu salón te compartió un código, escríbelo
+                        aquí. Si no, llena el nombre del salón abajo.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label" for="username">Tu nombre</label>
+                    <input type="text" name="username" id="username" class="form-control" placeholder="Ej. Ana Técnica"
+                        required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="phone">WhatsApp</label>
+                    <input type="tel" name="phone" id="phone" class="form-control" placeholder="8112345678">
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label" for="email">Correo</label>
+                    <input type="email" name="email" id="email" class="form-control" placeholder="nombre@correo.com"
+                        required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label" for="password">Contraseña</label>
+                    <input type="password" name="password" id="password" class="form-control" minlength="6" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label" for="confirm_password">Confirmar</label>
+                    <input type="password" name="confirm_password" id="confirm_password" class="form-control"
+                        minlength="6" required>
+                </div>
+
+                <div class="col-12 new-salon-fields" data-new-salon-field>
+                    <label class="form-label" for="salon_name">Nombre del salón nuevo</label>
+                    <input type="text" name="salon_name" id="salon_name" class="form-control"
+                        placeholder="Ej. Garritas Studio">
+                </div>
+                <div class="col-md-6 new-salon-fields" data-new-salon-field>
+                    <label class="form-label" for="instagram">Instagram del salón</label>
+                    <input type="text" name="instagram" id="instagram" class="form-control" placeholder="@tusalon">
+                </div>
+                <div class="col-md-6 new-salon-fields" data-new-salon-field>
+                    <label class="form-label" for="address">Ciudad / zona</label>
+                    <input type="text" name="address" id="address" class="form-control"
+                        placeholder="San Pedro Garza García">
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="termsCheck" required>
+                        <label class="form-check-label small text-muted fw-bold" for="termsCheck">
+                            Acepto los <a href="{{ url_for('main.terminos') }}" target="_blank">Términos</a> y el <a
+                                href="{{ url_for('main.privacidad') }}" target="_blank">Aviso de privacidad</a>.
+                        </label>
+                    </div>
+                </div>
+
+                <div class="col-12 d-grid">
+                    <button type="submit" class="btn btn-nails">
+                        <i class="fa-regular fa-circle-check me-2"></i>Crear cuenta Nails
+                    </button>
+                </div>
+            </form>
+
+            <div class="text-center mt-4">
+                <a href="{{ url_for('auth.login') }}" class="text-muted text-decoration-none fw-bold small">Ya tengo
+                    cuenta</a>
+                <span class="text-muted mx-2">·</span>
+                <a href="{{ url_for('nails.cliente_acceso') }}"
+                    class="text-muted text-decoration-none fw-bold small">Entrar como clienta</a>
+            </div>
+        </section>
+    </main>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            const joinCode = document.getElementById("join_code");
+            const hint = document.getElementById("join_code_hint");
+            const salonFields = Array.from(document.querySelectorAll("[data-new-salon-field]"));
+
+            function syncJoinMode() {
+                const hasCode = String(joinCode?.value || "").trim().length > 0;
+                salonFields.forEach(function (wrap) {
+                    wrap.classList.toggle("is-disabled", hasCode);
+                    wrap.querySelectorAll("input").forEach(function (input) {
+                        input.disabled = hasCode;
+                        if (hasCode) input.value = "";
+                    });
+                });
+                if (hint) {
+                    hint.textContent = hasCode
+                        ? "Con código no necesitas llenar datos de salón: te registraremos como técnica del salón."
+                        : "Si tu salón te compartió un código, escríbelo aquí. Si no, llena el nombre del salón abajo.";
+                }
+            }
+
+            joinCode?.addEventListener("input", function () {
+                joinCode.value = joinCode.value.toUpperCase().replace(/\s+/g, "");
+                syncJoinMode();
+            });
+            syncJoinMode();
+        });
+    </script>
+</body>
+
+</html>

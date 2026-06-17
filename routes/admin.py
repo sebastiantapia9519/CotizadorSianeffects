@@ -105,7 +105,7 @@ def dashboard():
 
     try:
         # 2. CONSTRUCCIÓN DINÁMICA DEL WHERE
-        base_where = "WHERE 1=1"
+        base_where = "WHERE COALESCE(u.active_module, 'cotizador') = 'cotizador'"
         params     = []
 
         if search_query:
@@ -199,6 +199,7 @@ def dashboard():
                 COUNT(CASE WHEN last_login > %s THEN 1 END) as online_hoy,
                 COUNT(CASE WHEN role = 0 AND subscription_end < %s THEN 1 END) as en_riesgo
             FROM usuarios
+            WHERE COALESCE(active_module, 'cotizador') = 'cotizador'
         ''', (ahora_utc, ahora_utc, ahora_utc - timedelta(days=1), ahora_utc - timedelta(days=350)))
 
         stats_db = cursor.fetchone()
@@ -211,7 +212,7 @@ def dashboard():
             'en_riesgo':  stats_db['en_riesgo']  if stats_db else 0,
         }
 
-        cursor.execute("SELECT COUNT(*) as v FROM usuarios")
+        cursor.execute("SELECT COUNT(*) as v FROM usuarios WHERE COALESCE(active_module, 'cotizador') = 'cotizador'")
         stats['total'] = cursor.fetchone()['v']
 
     except Exception as e:
@@ -224,9 +225,12 @@ def dashboard():
         cursor.close()
         conn.close()
 
-# 7. CONVERSIÓN DE FECHAS A "DÍA COMPLETO" (MÉXICO) - FIX DE MATH ERROR
+# 7. CONVERSIÓN DE FECHAS A "DÍA COMPLETO" (MÉXICO)
     tz_mx = pytz.timezone('America/Mexico_City')
     ahora_local = utc_to_local(ahora_utc)
+    
+    # Extraemos la fecha exacta (sin horas) una sola vez fuera del loop para optimizar
+    hoy_local = ahora_local.date() if ahora_local else datetime.now().date()
 
     for u in users:
         if u['subscription_end']:
@@ -238,17 +242,22 @@ def dashboard():
                 else:
                     f_dt = f if f.tzinfo else f.replace(tzinfo=timezone.utc)
                 
-                # 2. EL TRUCO: Forzamos el vencimiento al final del día (23:59:59) en UTC 
+                # 2. Forzamos el vencimiento al final del día (23:59:59) en UTC 
                 # antes de convertirlo a local. Esto asegura que el "Día 10" se mantenga 
                 # como "Día 10" tras el desfase de México y que siga siendo un objeto 'datetime'
                 # para que la resta en el HTML no truene (TypeError).
                 f_end_of_day = f_dt.replace(hour=23, minute=59, second=59)
-                u['subscription_end'] = utc_to_local(f_end_of_day)
+                fecha_local = utc_to_local(f_end_of_day)
+                u['subscription_end'] = fecha_local
                 
                 # 3. Flags para los badges del Admin (Usando comparativa de fechas puras)
-                dia_vence = u['subscription_end'].date()
-                u['is_grace_period'] = (ahora_local.date() == dia_vence + timedelta(days=1))
-                u['is_expired'] = (ahora_local.date() > dia_vence + timedelta(days=1))
+                if fecha_local:
+                    dia_vence = fecha_local.date()
+                    u['is_grace_period'] = (hoy_local == dia_vence + timedelta(days=1))
+                    u['is_expired'] = (hoy_local > dia_vence + timedelta(days=1))
+                else:
+                    u['is_grace_period'] = False
+                    u['is_expired'] = True
                 
             except Exception as e:
                 current_app.logger.error(f"Error procesando fecha admin: {e}")
@@ -275,8 +284,8 @@ def dashboard():
         now           = ahora_local,
         stats         = stats,
         my_role       = session.get('role'),
-        hace_24h_str  = (ahora_local - timedelta(days=1)).strftime('%Y-%m-%d %H:%M'),
-        limite_riesgo = (ahora_local - timedelta(days=350)).strftime('%Y-%m-%d'),
+        hace_24h_str  = (ahora_local - timedelta(days=1)).strftime('%Y-%m-%d %H:%M') if ahora_local else '',
+        limite_riesgo = (ahora_local - timedelta(days=350)).strftime('%Y-%m-%d') if ahora_local else '',
         page          = page,
         total_pages   = total_pages,
         per_page      = per_page,
@@ -284,6 +293,285 @@ def dashboard():
         status_filter = status_filter,
         sort_by       = sort_by,
     )
+
+
+# =============================================================================
+# DASHBOARD NAILS
+# =============================================================================
+
+@admin_bp.route('/nails')
+@admin_required
+def nails_dashboard():
+    """
+    Vista administrativa enfocada en usuarios Sianeffects y su acceso a Nails.
+    Permite auditar quién ya fue pasado al módulo, qué salón tiene y qué rol Nails usa.
+    """
+    search_query = request.args.get('q', '').strip()
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        like = f"%{search_query}%"
+        where_sql = "WHERE COALESCE(u.active_module, 'cotizador') = 'nails'"
+        params = []
+
+        if search_query:
+            where_sql += """
+                AND (
+                    LOWER(COALESCE(u.username, '')) LIKE LOWER(%s)
+                    OR LOWER(COALESCE(u.email, '')) LIKE LOWER(%s)
+                    OR LOWER(COALESCE(u.company_name, '')) LIKE LOWER(%s)
+                    OR LOWER(COALESCE(b.name, '')) LIKE LOWER(%s)
+                    OR LOWER(COALESCE(b.slug, '')) LIKE LOWER(%s)
+                )
+            """
+            params.extend([like, like, like, like, like])
+
+        cursor.execute(
+            """
+            SELECT
+                COUNT(*) FILTER (WHERE COALESCE(active_module, 'cotizador') = 'nails') AS users_count,
+                COUNT(*) FILTER (
+                    WHERE COALESCE(active_module, 'cotizador') = 'nails'
+                      AND EXISTS (
+                        SELECT 1 FROM nails_businesses nb
+                        WHERE nb.user_id = u.id AND nb.is_active = TRUE
+                      )
+                ) AS configured_users_count,
+                COUNT(*) FILTER (
+                    WHERE COALESCE(u.active_module, 'cotizador') = 'nails'
+                      AND NOT EXISTS (
+                        SELECT 1 FROM nails_businesses nb
+                        WHERE nb.user_id = u.id AND nb.is_active = TRUE
+                      )
+                ) AS nails_without_business_count
+            FROM usuarios u
+            """
+        )
+        stats = cursor.fetchone()
+
+        cursor.execute(
+            f"""
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.telefono,
+                u.company_name,
+                u.role AS platform_role,
+                u.active_module,
+                u.estado_suscripcion,
+                u.plan_type,
+                u.subscription_end,
+                u.last_login,
+                b.id AS business_id,
+                b.name AS business_name,
+                b.slug AS business_slug,
+                b.is_active AS business_is_active,
+                st.staff_id,
+                st.staff_name,
+                st.staff_role,
+                st.staff_is_active,
+                COALESCE(a.appointments_count, 0) AS appointments_count,
+                COALESCE(s.sales_count, 0) AS sales_count,
+                COALESCE(s.sales_total, 0) AS sales_total,
+                a.last_appointment_at
+            FROM usuarios u
+            LEFT JOIN LATERAL (
+                SELECT *
+                FROM nails_businesses nb
+                WHERE nb.user_id = u.id AND nb.is_active = TRUE
+                ORDER BY nb.id DESC
+                LIMIT 1
+            ) b ON TRUE
+            LEFT JOIN LATERAL (
+                SELECT id AS staff_id, name AS staff_name, role AS staff_role, is_active AS staff_is_active
+                FROM nails_staff ns
+                WHERE ns.user_id = u.id
+                ORDER BY
+                    CASE ns.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 WHEN 'reception' THEN 3 ELSE 4 END,
+                    ns.id DESC
+                LIMIT 1
+            ) st ON TRUE
+            LEFT JOIN (
+                SELECT business_id, COUNT(*) AS appointments_count, MAX(start_time) AS last_appointment_at
+                FROM nails_appointments
+                GROUP BY business_id
+            ) a ON a.business_id = b.id
+            LEFT JOIN (
+                SELECT business_id, COUNT(*) AS sales_count, SUM(total) AS sales_total
+                FROM nails_sales
+                GROUP BY business_id
+            ) s ON s.business_id = b.id
+            {where_sql}
+            ORDER BY u.created_at DESC NULLS LAST, u.id DESC
+            LIMIT 120
+            """,
+            params,
+        )
+        users = cursor.fetchall()
+
+        cursor.execute(
+            """
+            SELECT
+                st.id,
+                st.business_id,
+                st.name,
+                st.email,
+                st.phone,
+                st.role,
+                st.user_id,
+                st.is_active,
+                b.name AS business_name,
+                u.username,
+                u.email AS user_email,
+                u.role AS platform_role
+            FROM nails_staff st
+            INNER JOIN nails_businesses b ON b.id = st.business_id
+            LEFT JOIN usuarios u ON u.id = st.user_id
+            ORDER BY b.created_at DESC, st.role ASC, st.name ASC
+            LIMIT 160
+            """
+        )
+        staff_members = cursor.fetchall()
+
+        return render_template(
+            'admin_nails.html',
+            stats=stats,
+            users=users,
+            staff_members=staff_members,
+            search_query=search_query,
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"ADMIN_NAILS_DASHBOARD_ERROR: {e}")
+        flash(f"No se pudo cargar Admin Nails: {e}", "danger")
+        return redirect(url_for('admin.dashboard'))
+
+    finally:
+        cursor.close()
+        conn.close()
+
+
+@admin_bp.route('/nails/cambiar-modulo', methods=['POST'])
+@admin_required
+def nails_cambiar_modulo():
+    """Cambia manualmente el módulo principal de un usuario entre cotizador y nails."""
+    user_id = request.form.get('user_id', type=int)
+    active_module = (request.form.get('active_module') or '').strip().lower()
+    redirect_to = request.form.get('redirect_to', 'admin.nails_dashboard')
+    redirect_endpoint = 'admin.dashboard' if redirect_to == 'admin.dashboard' else 'admin.nails_dashboard'
+
+    if not user_id or active_module not in {'cotizador', 'nails'}:
+        flash("Datos inválidos para cambiar módulo.", "warning")
+        return redirect(url_for(redirect_endpoint))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            UPDATE usuarios
+            SET active_module = %s
+            WHERE id = %s
+            RETURNING username, email
+            """,
+            (active_module, user_id),
+        )
+        updated = cursor.fetchone()
+
+        if not updated:
+            conn.rollback()
+            flash("No se encontró el usuario.", "warning")
+            return redirect(url_for(redirect_endpoint))
+
+        cursor.execute(
+            """
+            INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                session.get('user_id'),
+                "Cambió módulo activo de usuario",
+                "Admin Nails",
+                f"Usuario #{user_id} ahora usa {active_module}",
+            ),
+        )
+        conn.commit()
+        flash(f"Usuario actualizado a módulo {active_module}.", "success")
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"ADMIN_NAILS_MODULE_CHANGE_ERROR: {e}")
+        flash(f"No se pudo cambiar el módulo: {e}", "danger")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for(redirect_endpoint))
+
+
+@admin_bp.route('/nails/cambiar-rol', methods=['POST'])
+@admin_required
+def nails_cambiar_rol():
+    """Actualiza el rol Nails de un staff ligado a usuario."""
+    staff_id = request.form.get('staff_id', type=int)
+    new_role = (request.form.get('role') or '').strip().lower()
+    roles_validos = {'owner', 'staff', 'reception'}
+
+    if not staff_id or new_role not in roles_validos:
+        flash("Datos inválidos para cambiar rol Nails.", "warning")
+        return redirect(url_for('admin.nails_dashboard'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            """
+            UPDATE nails_staff
+            SET role = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            RETURNING user_id, name
+            """,
+            (new_role, staff_id),
+        )
+        updated = cursor.fetchone()
+
+        if not updated:
+            conn.rollback()
+            flash("No se encontró el staff Nails.", "warning")
+            return redirect(url_for('admin.nails_dashboard'))
+
+        cursor.execute(
+            """
+            INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                session.get('user_id'),
+                "Cambió rol Nails",
+                "Admin Nails",
+                f"Staff #{staff_id} ahora es {new_role}",
+            ),
+        )
+        conn.commit()
+        flash("Rol Nails actualizado.", "success")
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"ADMIN_NAILS_ROLE_CHANGE_ERROR: {e}")
+        flash(f"No se pudo cambiar el rol Nails: {e}", "danger")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('admin.nails_dashboard'))
 
 
 # =============================================================================
@@ -297,7 +585,7 @@ def renovar():
     Renueva la suscripción de un usuario por N meses.
     Diferencia automáticamente entre planes Mensuales, Anuales o Pro.
     """
-    if session.get('role') < 1:
+    if session.get('role', 0) < 1:
         flash('No tienes permisos para renovar membresías.', 'error')
         return redirect(url_for('admin.dashboard'))
 
@@ -390,7 +678,7 @@ def cambiar_rol():
     Cambia el rol de un usuario. Un admin (role=1) no puede asignar roles
     superiores al suyo propio. Usa POST para protección CSRF.
     """
-    if session.get('role') < 1:
+    if session.get('role',0) < 1:
         flash('No tienes permisos para cambiar roles.', 'error')
         return redirect(url_for('admin.dashboard'))
 
@@ -445,7 +733,7 @@ def reset_password():
     Requiere role >= 1. Invalida también todos los tokens de reset activos
     del usuario afectado para evitar accesos con links viejos.
     """
-    if session.get('role') < 1:
+    if session.get('role',0) < 1:
         flash('No tienes permisos para resetear contraseñas.', 'error')
         return redirect(url_for('admin.dashboard'))
 
@@ -454,10 +742,12 @@ def reset_password():
 
     user_id  = request.form.get('user_id')
     new_pass = request.form.get('new_password', '').strip()
+    redirect_to = request.form.get('redirect_to', 'admin.dashboard')
+    redirect_endpoint = 'admin.nails_dashboard' if redirect_to == 'admin.nails_dashboard' else 'admin.dashboard'
 
     if not user_id or not new_pass:
         flash('Datos incompletos para el reset.', 'error')
-        return redirect(url_for('admin.dashboard'))
+        return redirect(url_for(redirect_endpoint))
 
     conn   = get_db()
     cursor = conn.cursor()
@@ -491,7 +781,7 @@ def reset_password():
         cursor.close()
         conn.close()
 
-    return redirect(url_for('admin.dashboard'))
+    return redirect(url_for(redirect_endpoint))
 
 
 # =============================================================================
@@ -511,7 +801,11 @@ def impersonate(user_id):
     conn   = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT id, username, role FROM usuarios WHERE id = %s', (user_id,))
+        cursor.execute("""
+            SELECT id, username, role, COALESCE(active_module, 'cotizador') AS active_module
+            FROM usuarios
+            WHERE id = %s
+        """, (user_id,))
         user = cursor.fetchone()
 
         if not user:
@@ -522,12 +816,15 @@ def impersonate(user_id):
         session['user_id']           = user['id']
         session['username']          = user['username']
         session['role']              = user['role']
+        session['active_module']     = (user.get('active_module') or 'cotizador').strip().lower()
 
         current_app.logger.info(
             f"IMPERSONATE_START: Admin '{admin_name}' (ID:{admin_id}) "
             f"entró a cuenta de '{user['username']}' (ID:{user['id']}, role:{user['role']})."
         )
         flash(f'Modo Fantasma activo: estás viendo el sistema como {user["username"]}', 'info')
+        if request.args.get('next') == 'nails':
+            return redirect(url_for('nails.dashboard'))
         return redirect(url_for('main.index'))
 
     except Exception as e:
@@ -557,7 +854,11 @@ def stop_impersonate():
     conn   = get_db()
     cursor = conn.cursor()
     try:
-        cursor.execute('SELECT id, username, role FROM usuarios WHERE id = %s', (original_id,))
+        cursor.execute("""
+            SELECT id, username, role, COALESCE(active_module, 'cotizador') AS active_module
+            FROM usuarios
+            WHERE id = %s
+        """, (original_id,))
         admin_user = cursor.fetchone()
 
         if admin_user:
@@ -566,6 +867,7 @@ def stop_impersonate():
             session['user_id']  = admin_user['id']
             session['username'] = admin_user['username']
             session['role']     = admin_user['role']
+            session['active_module'] = (admin_user.get('active_module') or 'cotizador').strip().lower()
             session.pop('original_admin_id', None)
 
             # Solo se loguea si el rol del admin original es menor a 2 (es decir, 1)
@@ -762,7 +1064,7 @@ def sumar_tiempo():
     Si ya estaba vencida, empieza a contar desde hoy.
     Si sigue activa, suma desde la fecha actual de vencimiento.
     """
-    if session.get('role') < 1:
+    if session.get('role',0) < 1:
         flash('No tienes permisos para modificar suscripciones.', 'error')
         return redirect(url_for('admin.dashboard'))
 
@@ -852,7 +1154,7 @@ def exportar_usuarios():
     Genera y descarga un CSV con todos los usuarios del sistema.
     Incluye BOM UTF-8 para compatibilidad con Excel en español.
     """
-    if session.get('role') < 1:
+    if session.get('role', 0) < 1:
         abort(403)
 
     admin_id   = session.get('user_id')
@@ -935,7 +1237,7 @@ def monitor():
 @admin_required
 def descargar_log():
     """Descarga el archivo limpieza.log completo. Solo role >= 1."""
-    if session.get('role') < 1:
+    if session.get('role', 0) < 1:
         abort(403)
 
     log_path = os.path.join(current_app.root_path, 'limpieza.log')

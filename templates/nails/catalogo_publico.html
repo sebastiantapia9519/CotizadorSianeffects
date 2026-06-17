@@ -1,0 +1,2728 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ business.name }} | Catálogo</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css" rel="stylesheet">
+
+    <style>
+        :root {
+            --primary: {{ business.primary_color or '#9a3fa0' }};
+            --primary-strong: color-mix(in srgb, var(--primary), #321535 32%);
+            --secondary: {{ business.secondary_color or '#fde7f5' }};
+            --accent: {{ business.accent_color or '#e879c2' }};
+
+            --ink: #2f2432;
+            --text: #4a4050;
+            --muted: #7b7180;
+            --soft: #fff7fd;
+            --bg: #fffafd;
+            --card: #ffffff;
+            --border: #eaddea;
+            --border-strong: color-mix(in srgb, var(--primary), transparent 68%);
+            --danger: #dc2626;
+            --success: #16a34a;
+
+            --radius-xs: 10px;
+            --radius-sm: 14px;
+            --radius-md: 20px;
+            --radius-lg: 28px;
+
+            --shadow-sm: 0 10px 26px rgba(74, 37, 76, .06);
+            --shadow-md: 0 20px 54px rgba(74, 37, 76, .10);
+            --shadow-lg: 0 28px 84px rgba(20, 12, 25, .24);
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            background:
+                radial-gradient(circle at 8% 4%, color-mix(in srgb, var(--secondary), #fff 14%) 0, transparent 260px),
+                radial-gradient(circle at 96% 0%, color-mix(in srgb, var(--accent), #fff 70%) 0, transparent 300px),
+                linear-gradient(180deg, color-mix(in srgb, var(--secondary), #fff 42%) 0, rgba(255,255,255,0) 360px),
+                var(--bg);
+            color: var(--ink);
+            font-family: "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            min-height: 100vh;
+        }
+
+        body.modal-open {
+            overflow: hidden;
+        }
+
+        button,
+        input,
+        select,
+        textarea {
+            font-family: inherit;
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .catalog-shell {
+            margin: 0 auto;
+            max-width: 1240px;
+            padding: 0 20px 30px;
+        }
+
+        .hero {
+            padding: 18px 20px 0;
+        }
+
+        .hero-inner {
+            background:
+                linear-gradient(135deg, rgba(255,255,255,.94) 0 58%, rgba(255,255,255,.62)),
+                var(--secondary);
+            border: 1px solid color-mix(in srgb, var(--primary), transparent 80%);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-md);
+            display: grid;
+            gap: 28px;
+            grid-template-columns: minmax(0, 1fr) minmax(260px, 330px);
+            margin: 0 auto;
+            max-width: 1240px;
+            min-height: 224px;
+            overflow: hidden;
+            padding: 30px 34px;
+            position: relative;
+        }
+
+        .hero-inner::before {
+            background:
+                radial-gradient(circle at 10% 12%, rgba(255,255,255,.70), transparent 112px),
+                radial-gradient(circle at 96% 8%, color-mix(in srgb, var(--accent), #fff 58%), transparent 150px);
+            content: "";
+            inset: 0;
+            pointer-events: none;
+            position: absolute;
+        }
+
+        .hero-info,
+        .hero-actions {
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero-info {
+            align-items: start;
+            display: grid;
+            gap: 22px;
+            grid-template-columns: 116px minmax(0, 1fr);
+        }
+
+        .logo {
+            align-items: center;
+            background: rgba(255,255,255,.78);
+            border: 4px solid rgba(255,255,255,.72);
+            border-radius: 999px;
+            box-shadow: 0 16px 40px rgba(74,37,76,.17);
+            color: var(--primary-strong);
+            display: flex;
+            font-size: 42px;
+            font-weight: 900;
+            height: 112px;
+            justify-content: center;
+            overflow: hidden;
+            width: 112px;
+        }
+
+        .logo img {
+            height: 100%;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .hero h1 {
+            color: var(--primary-strong);
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: clamp(42px, 6vw, 72px);
+            font-weight: 700;
+            letter-spacing: -.04em;
+            line-height: .9;
+            margin: 0 0 12px;
+        }
+
+        .hero-meta {
+            align-items: center;
+            color: var(--text);
+            display: flex;
+            flex-wrap: wrap;
+            font-size: 15px;
+            font-weight: 800;
+            gap: 18px;
+        }
+
+        .hero-meta span {
+            align-items: center;
+            display: inline-flex;
+            gap: 8px;
+        }
+
+        .hero-meta i {
+            color: var(--accent);
+            font-size: 18px;
+        }
+
+        .hero-copy {
+            color: var(--muted);
+            font-size: 17px;
+            font-weight: 800;
+            line-height: 1.35;
+            margin-top: 18px;
+            max-width: 620px;
+        }
+
+        .hero-actions {
+            align-self: center;
+            display: grid;
+            gap: 12px;
+        }
+
+        .btn-public {
+            align-items: center;
+            border: 0;
+            border-radius: 14px;
+            cursor: pointer;
+            display: inline-flex;
+            font: inherit;
+            font-size: 15px;
+            font-weight: 900;
+            gap: 10px;
+            justify-content: space-between;
+            min-height: 54px;
+            padding: 0 20px;
+            text-decoration: none;
+            transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+
+        .btn-public:hover {
+            transform: translateY(-1px);
+        }
+
+        .btn-wa {
+            background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary), #000 16%));
+            box-shadow: 0 14px 28px color-mix(in srgb, var(--primary), transparent 70%);
+            color: #fff;
+        }
+
+        .btn-light {
+            background: rgba(255,255,255,.94);
+            border: 1px solid var(--border);
+            color: var(--primary-strong);
+        }
+
+        .section {
+            margin-top: 30px;
+        }
+
+        .section-head {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 16px;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+
+        .section-title {
+            color: var(--primary-strong);
+            font-size: clamp(24px, 3vw, 32px);
+            font-weight: 900;
+            letter-spacing: -.02em;
+            line-height: 1.1;
+            margin: 0;
+        }
+
+        .catalog-toolbar {
+            align-items: center;
+            display: flex;
+            flex: 1;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .catalog-search {
+            position: relative;
+            width: min(300px, 100%);
+        }
+
+        .catalog-search i {
+            color: var(--muted);
+            left: 14px;
+            pointer-events: none;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .catalog-search input {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--text);
+            font: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            min-height: 48px;
+            outline: none;
+            padding: 0 14px 0 42px;
+            transition: border-color .15s ease, box-shadow .15s ease;
+            width: 100%;
+        }
+
+        .catalog-search input:focus {
+            border-color: var(--border-strong);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--primary), transparent 90%);
+        }
+
+        .filter-tabs {
+            display: flex;
+            gap: 8px;
+            max-width: 100%;
+            overflow-x: auto;
+            padding: 2px 0;
+            scrollbar-width: none;
+        }
+
+        .filter-tabs::-webkit-scrollbar {
+            display: none;
+        }
+
+        .filter-tab {
+            align-items: center;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--primary-strong);
+            cursor: pointer;
+            display: inline-flex;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 900;
+            gap: 8px;
+            min-height: 42px;
+            padding: 0 18px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .filter-tab.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .services-grid {
+            display: grid;
+            gap: 16px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .service-card {
+            align-items: center;
+            background:
+                linear-gradient(180deg, rgba(255,255,255,.99), rgba(255,255,255,.94)),
+                var(--card);
+            border: 1px solid color-mix(in srgb, var(--border), #fff 10%);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            display: grid;
+            gap: 16px;
+            grid-template-columns: 70px minmax(0, 1fr);
+            min-width: 0;
+            padding: 18px;
+            transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+        }
+
+        .service-card:hover {
+            border-color: color-mix(in srgb, var(--primary), transparent 62%);
+            box-shadow: 0 18px 38px rgba(74,37,76,.08);
+            transform: translateY(-2px);
+        }
+
+        .service-icon {
+            align-items: center;
+            background: color-mix(in srgb, var(--secondary), #fff 12%);
+            border-radius: 999px;
+            color: var(--accent);
+            display: flex;
+            font-size: 30px;
+            height: 70px;
+            justify-content: center;
+            width: 70px;
+        }
+
+        .service-main {
+            min-width: 0;
+        }
+
+        .service-top {
+            align-items: flex-start;
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+        }
+
+        .service-name {
+            color: var(--ink);
+            font-size: 18px;
+            font-weight: 900;
+            line-height: 1.16;
+            margin: 0;
+        }
+
+        .service-category-pill {
+            background: color-mix(in srgb, var(--secondary), #fff 18%);
+            border: 1px solid color-mix(in srgb, var(--primary), transparent 84%);
+            border-radius: 999px;
+            color: var(--primary-strong);
+            flex: 0 0 auto;
+            font-size: 11px;
+            font-weight: 900;
+            padding: 5px 9px;
+            white-space: nowrap;
+        }
+
+        .service-description {
+            color: var(--muted);
+            display: -webkit-box;
+            font-size: 13px;
+            font-weight: 800;
+            line-height: 1.35;
+            margin: 7px 0 0;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+
+        .service-bottom {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: space-between;
+            margin-top: 16px;
+        }
+
+        .service-meta-group {
+            align-items: center;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 13px;
+        }
+
+        .price {
+            color: color-mix(in srgb, var(--accent), #9d174d 35%);
+            font-size: 14px;
+            font-weight: 900;
+        }
+
+        .duration {
+            align-items: center;
+            color: var(--muted);
+            display: inline-flex;
+            font-size: 13px;
+            font-weight: 900;
+            gap: 7px;
+        }
+
+        .mini-action {
+            background: color-mix(in srgb, var(--secondary), #fff 60%);
+            border: 1px solid color-mix(in srgb, var(--primary), transparent 70%);
+            border-radius: 999px;
+            color: var(--primary-strong);
+            cursor: pointer;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 900;
+            padding: 9px 15px;
+            text-decoration: none;
+            white-space: nowrap;
+        }
+
+        .mini-action:hover {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .services-more-wrap {
+            margin-top: 16px;
+            text-align: center;
+        }
+
+        .services-more {
+            background: color-mix(in srgb, var(--secondary), #fff 56%);
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--primary-strong);
+            cursor: pointer;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 900;
+            min-height: 46px;
+            padding: 0 28px;
+        }
+
+        /* Servicios estilo catálogo compacto */
+        #services .section-head {
+            align-items: center;
+            gap: 14px;
+        }
+
+        #services .section-title {
+            font-size: clamp(22px, 2.4vw, 30px);
+        }
+
+        #services .catalog-toolbar {
+            justify-content: flex-end;
+        }
+
+        #services .catalog-search {
+            width: min(260px, 100%);
+        }
+
+        #services .catalog-search input {
+            border-radius: 8px;
+            font-size: 13px;
+            min-height: 38px;
+        }
+
+        #services .filter-tab {
+            border-radius: 8px;
+            font-size: 12px;
+            min-height: 36px;
+            padding: 0 14px;
+        }
+
+        #services .services-grid {
+            gap: 16px 18px;
+        }
+
+        #services .service-card {
+            border-radius: 10px;
+            box-shadow: 0 10px 25px rgba(74, 37, 76, .055);
+            gap: 14px;
+            grid-template-columns: 58px minmax(0, 1fr);
+            min-height: 130px;
+            padding: 16px;
+        }
+
+        #services .service-icon {
+            background: color-mix(in srgb, var(--secondary), #fff 16%);
+            font-size: 24px;
+            height: 52px;
+            width: 52px;
+        }
+
+        #services .service-name {
+            font-size: 15px;
+        }
+
+        #services .service-description {
+            font-size: 13px;
+            line-height: 1.25;
+            margin-top: 5px;
+        }
+
+        #services .service-category-pill {
+            display: none;
+        }
+
+        #services .service-bottom {
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        #services .service-meta-group {
+            gap: 12px;
+        }
+
+        #services .price {
+            font-size: 13px;
+        }
+
+        #services .duration {
+            font-size: 12px;
+        }
+
+        #services .mini-action {
+            border-radius: 8px;
+            font-size: 12px;
+            padding: 8px 12px;
+        }
+
+        #services .services-more {
+            border-radius: 8px;
+            font-size: 13px;
+            min-height: 38px;
+            width: 100%;
+        }
+
+        .gallery-strip {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(6, minmax(0, 1fr)) 110px;
+        }
+
+        .gallery-thumb-button {
+            background: transparent;
+            border: 0;
+            cursor: zoom-in;
+            display: block;
+            padding: 0;
+            width: 100%;
+        }
+
+        .gallery-thumb {
+            aspect-ratio: 1.35 / 1;
+            border-radius: 14px;
+            box-shadow: var(--shadow-sm);
+            display: block;
+            object-fit: cover;
+            width: 100%;
+        }
+
+        .gallery-more {
+            align-items: center;
+            background: color-mix(in srgb, var(--secondary), #fff 42%);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--primary-strong);
+            display: grid;
+            font-size: 13px;
+            font-weight: 900;
+            justify-items: center;
+            min-height: 92px;
+            padding: 12px;
+            text-align: center;
+        }
+
+        .bottom-grid {
+            display: grid;
+            gap: 18px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .info-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-sm);
+            padding: 20px;
+        }
+
+        .info-title {
+            color: var(--primary-strong);
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: 22px;
+            font-weight: 700;
+            margin: 0 0 14px;
+        }
+
+        .line-row {
+            align-items: flex-start;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            padding: 11px 0;
+        }
+
+        .line-row:last-child {
+            border-bottom: 0;
+        }
+
+        .line-row strong {
+            color: var(--ink);
+            font-size: 14px;
+            font-weight: 900;
+        }
+
+        .muted {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .footer {
+            background: linear-gradient(90deg, color-mix(in srgb, var(--secondary), #fff 20%), color-mix(in srgb, var(--secondary), #fff 40%));
+            border-top: 1px solid color-mix(in srgb, var(--primary), transparent 86%);
+            color: color-mix(in srgb, var(--muted), var(--primary) 18%);
+            font-size: 13px;
+            font-weight: 900;
+            margin-top: 24px;
+            padding: 14px;
+            text-align: center;
+        }
+
+        .footer strong {
+            color: var(--primary-strong);
+        }
+
+        .catalog-alert {
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 900;
+            margin: 18px 0 0;
+            padding: 12px 14px;
+        }
+
+        .catalog-alert-success {
+            background: #e9f8ef;
+            border: 1px solid #b7e8c8;
+            color: #136c42;
+        }
+
+        .catalog-alert-warning,
+        .catalog-alert-danger {
+            background: #fff2df;
+            border: 1px solid #ffd9a3;
+            color: #9a5a00;
+        }
+
+        .empty-state {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            color: var(--muted);
+            font-weight: 800;
+            padding: 18px;
+        }
+
+        .photo-lightbox {
+            align-items: center;
+            background: rgba(28, 20, 31, .74);
+            display: none;
+            inset: 0;
+            justify-content: center;
+            padding: 18px;
+            position: fixed;
+            z-index: 2000;
+        }
+
+        .photo-lightbox.is-open {
+            display: flex;
+        }
+
+        .photo-lightbox-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: var(--shadow-lg);
+            max-height: calc(100vh - 36px);
+            max-width: min(920px, 100%);
+            overflow: hidden;
+            position: relative;
+            width: 100%;
+        }
+
+        .photo-lightbox-card img {
+            background: var(--secondary);
+            display: block;
+            max-height: calc(100vh - 150px);
+            object-fit: contain;
+            width: 100%;
+        }
+
+        .photo-lightbox-info {
+            padding: 14px 18px;
+        }
+
+        .photo-lightbox-title {
+            color: var(--ink);
+            font-size: 17px;
+            font-weight: 900;
+            margin: 0;
+        }
+
+        .photo-lightbox-meta {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+            margin-top: 3px;
+        }
+
+        .photo-lightbox-close {
+            align-items: center;
+            background: rgba(255,255,255,.92);
+            border: 0;
+            border-radius: 999px;
+            color: var(--ink);
+            cursor: pointer;
+            display: inline-flex;
+            height: 40px;
+            justify-content: center;
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            width: 40px;
+        }
+
+        /* ==========================
+           Booking modal
+        ========================== */
+
+        .booking-modal {
+            align-items: center;
+            background: rgba(35, 24, 38, .70);
+            display: none;
+            inset: 0;
+            justify-content: center;
+            padding: 20px;
+            position: fixed;
+            z-index: 2100;
+        }
+
+        .booking-modal.is-open {
+            display: flex;
+        }
+
+        .booking-card {
+            background: rgba(255,255,255,.98);
+            border: 1px solid rgba(255,255,255,.62);
+            border-radius: 24px;
+            box-shadow: var(--shadow-lg);
+            max-height: calc(100vh - 40px);
+            max-width: 1040px;
+            overflow: hidden;
+            width: 100%;
+        }
+
+        .booking-head {
+            align-items: flex-start;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+            padding: 22px 24px 16px;
+        }
+
+        .booking-title {
+            color: var(--primary-strong);
+            font-size: 27px;
+            font-weight: 900;
+            letter-spacing: -.02em;
+            line-height: 1;
+            margin: 0 0 5px;
+        }
+
+        .booking-close {
+            align-items: center;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--muted);
+            cursor: pointer;
+            display: inline-flex;
+            flex: 0 0 auto;
+            height: 42px;
+            justify-content: center;
+            width: 42px;
+        }
+
+        .booking-form {
+            display: block;
+            max-height: calc(100vh - 122px);
+            overflow: auto;
+        }
+
+        .booking-progress {
+            align-items: center;
+            border-bottom: 1px solid var(--border);
+            display: grid;
+            gap: 8px;
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+            padding: 16px 24px;
+        }
+
+        .booking-step-dot {
+            align-items: center;
+            background: transparent;
+            border: 0;
+            color: var(--muted);
+            cursor: pointer;
+            display: flex;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 900;
+            gap: 9px;
+            justify-content: center;
+            min-width: 0;
+            padding: 0;
+        }
+
+        .booking-step-dot span {
+            align-items: center;
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            display: flex;
+            height: 32px;
+            justify-content: center;
+            width: 32px;
+        }
+
+        .booking-step-dot.is-active,
+        .booking-step-dot.is-done {
+            color: var(--primary-strong);
+        }
+
+        .booking-step-dot.is-active span,
+        .booking-step-dot.is-done span {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .booking-wizard {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 330px;
+            min-height: 620px;
+        }
+
+        .booking-stage {
+            border-right: 1px solid var(--border);
+            padding: 22px 24px 120px;
+        }
+
+        .booking-step-panel {
+            display: none;
+        }
+
+        .booking-step-panel.is-active {
+            display: block;
+        }
+
+        .booking-step-kicker {
+            color: var(--primary-strong);
+            font-size: 22px;
+            font-weight: 900;
+            margin: 0 0 5px;
+        }
+
+        .booking-step-panel h3 {
+            color: var(--primary-strong);
+            font-size: 18px;
+            font-weight: 900;
+            margin: 0 0 4px;
+        }
+
+        .booking-step-panel p {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+            margin: 0 0 14px;
+        }
+
+        .booking-picker-search {
+            position: relative;
+        }
+
+        .booking-picker-search i {
+            color: var(--muted);
+            left: 14px;
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .booking-picker-search input {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--ink);
+            font: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            min-height: 48px;
+            outline: none;
+            padding: 0 14px 0 42px;
+            width: 100%;
+        }
+
+        .booking-filter-row {
+            display: flex;
+            gap: 9px;
+            margin: 14px 0 16px;
+            overflow-x: auto;
+            padding-bottom: 2px;
+            scrollbar-width: none;
+        }
+
+        .booking-filter-row::-webkit-scrollbar {
+            display: none;
+        }
+
+        .booking-filter-row button {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+            color: var(--primary-strong);
+            cursor: pointer;
+            flex: 0 0 auto;
+            font: inherit;
+            font-size: 13px;
+            font-weight: 900;
+            padding: 9px 16px;
+        }
+
+        .booking-filter-row button.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .booking-service-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            max-height: 390px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .booking-choice-card,
+        .booking-extra-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            margin: 0;
+            position: relative;
+            transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+
+        .booking-choice-card {
+            border-radius: 16px;
+            display: grid;
+            gap: 11px;
+            grid-template-columns: 26px minmax(0, 1fr);
+            min-height: 126px;
+            padding: 14px;
+        }
+
+        .booking-choice-card input,
+        .booking-extra-card input {
+            opacity: 0;
+            pointer-events: none;
+            position: absolute;
+        }
+
+        .booking-choice-card.is-selected,
+        .booking-extra-card.is-selected {
+            background: color-mix(in srgb, var(--primary), #fff 91%);
+            border-color: color-mix(in srgb, var(--primary), transparent 32%);
+            box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--primary), transparent 50%);
+        }
+
+        .booking-choice-check {
+            align-items: center;
+            border: 1px solid color-mix(in srgb, var(--primary), transparent 68%);
+            border-radius: 7px;
+            color: #fff;
+            display: flex;
+            font-size: 12px;
+            height: 22px;
+            justify-content: center;
+            margin-top: 1px;
+            width: 22px;
+        }
+
+        .booking-choice-card.is-selected .booking-choice-check {
+            background: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .booking-choice-body strong {
+            color: var(--ink);
+            display: block;
+            font-size: 15px;
+            font-weight: 900;
+            line-height: 1.2;
+        }
+
+        .booking-choice-body small {
+            color: var(--muted);
+            display: -webkit-box;
+            font-size: 12px;
+            font-weight: 800;
+            line-height: 1.32;
+            margin: 8px 0;
+            overflow: hidden;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+        }
+
+        .booking-choice-body em {
+            color: var(--primary-strong);
+            font-size: 13px;
+            font-style: normal;
+            font-weight: 900;
+        }
+
+        .booking-extra-grid {
+            display: grid;
+            gap: 12px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            max-height: 420px;
+            overflow: auto;
+            padding-right: 4px;
+        }
+
+        .booking-extra-card {
+            align-items: center;
+            border-radius: 14px;
+            display: flex;
+            font-size: 13px;
+            font-weight: 900;
+            gap: 10px;
+            justify-content: space-between;
+            min-height: 56px;
+            padding: 12px 14px;
+        }
+
+        .booking-extra-card strong {
+            color: var(--primary-strong);
+            white-space: nowrap;
+        }
+
+        .booking-field {
+            margin-bottom: 14px;
+        }
+
+        .booking-field label {
+            color: var(--ink);
+            display: block;
+            font-size: 13px;
+            font-weight: 900;
+            margin-bottom: 7px;
+        }
+
+        .booking-field input,
+        .booking-field textarea {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--ink);
+            font: inherit;
+            font-size: 14px;
+            font-weight: 800;
+            min-height: 48px;
+            outline: none;
+            padding: 10px 13px;
+            width: 100%;
+        }
+
+        .booking-field textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+
+        .booking-grid {
+            display: grid;
+            gap: 14px;
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        }
+
+        .booking-slots {
+            background: color-mix(in srgb, var(--secondary), #fff 62%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            display: grid;
+            gap: 10px;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            min-height: 76px;
+            padding: 12px;
+        }
+
+        .booking-slot {
+            align-items: center;
+            background: #fff;
+            border: 1px solid color-mix(in srgb, var(--primary), transparent 72%);
+            border-radius: 12px;
+            color: var(--primary-strong);
+            cursor: pointer;
+            display: inline-flex;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 900;
+            justify-content: center;
+            min-height: 42px;
+            padding: 0 10px;
+        }
+
+        .booking-slot.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        .booking-slot-state {
+            align-self: center;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 900;
+            grid-column: 1 / -1;
+            margin: 0;
+            padding: 8px 4px;
+            text-align: center;
+        }
+
+        .booking-confirm-box {
+            background: color-mix(in srgb, var(--secondary), #fff 70%);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            color: var(--ink);
+            display: grid;
+            gap: 10px;
+            font-size: 14px;
+            font-weight: 900;
+            padding: 16px;
+        }
+
+        .booking-confirm-row {
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+        }
+
+        .booking-confirm-row span {
+            color: var(--muted);
+            font-weight: 900;
+        }
+
+        .booking-summary-panel {
+            background: linear-gradient(180deg, color-mix(in srgb, var(--secondary), #fff 78%), #fff);
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            padding: 22px 20px;
+        }
+
+        .booking-summary-panel h3 {
+            color: var(--primary-strong);
+            font-size: 20px;
+            font-weight: 900;
+            margin: 0 0 2px;
+        }
+
+        .booking-selected {
+            display: grid;
+            gap: 10px;
+            min-height: 80px;
+        }
+
+        .booking-selected-empty {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 800;
+            padding: 10px 0;
+        }
+
+        .booking-selected-line {
+            align-items: flex-start;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            justify-content: space-between;
+            padding-bottom: 9px;
+        }
+
+        .booking-selected-line:last-child {
+            border-bottom: 0;
+        }
+
+        .booking-selected-line strong {
+            color: var(--ink);
+            display: block;
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .booking-selected-line span {
+            color: var(--muted);
+            display: block;
+            font-size: 12px;
+            font-weight: 800;
+            margin-top: 2px;
+        }
+
+        .booking-selected-line em {
+            color: var(--primary-strong);
+            font-size: 13px;
+            font-style: normal;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+
+        .booking-summary {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            display: grid;
+            gap: 9px;
+            padding: 13px 14px;
+        }
+
+        .booking-summary-row {
+            display: flex;
+            gap: 12px;
+            justify-content: space-between;
+        }
+
+        .booking-summary-row span {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 900;
+        }
+
+        .booking-summary-row strong {
+            color: var(--ink);
+            font-size: 14px;
+            font-weight: 900;
+            text-align: right;
+        }
+
+        .booking-summary-row.total {
+            border-top: 1px dashed var(--border);
+            margin-top: 4px;
+            padding-top: 10px;
+        }
+
+        .booking-summary-row.total strong {
+            color: var(--primary-strong);
+            font-size: 18px;
+        }
+
+        .booking-note-box {
+            align-items: center;
+            background: color-mix(in srgb, var(--primary), #fff 88%);
+            border-radius: 14px;
+            color: var(--primary-strong);
+            display: flex;
+            font-size: 12px;
+            font-weight: 900;
+            gap: 10px;
+            padding: 12px;
+        }
+
+        .booking-nav-actions {
+            display: grid;
+            gap: 10px;
+            grid-template-columns: .7fr 1fr;
+            margin-top: auto;
+        }
+
+        .booking-secondary,
+        .booking-next,
+        .booking-submit {
+            border-radius: 14px;
+            cursor: pointer;
+            font: inherit;
+            font-size: 15px;
+            font-weight: 900;
+            min-height: 52px;
+            padding: 0 16px;
+        }
+
+        .booking-secondary {
+            background: #fff;
+            border: 1px solid var(--border);
+            color: var(--primary-strong);
+        }
+
+        .booking-next,
+        .booking-submit {
+            background: linear-gradient(135deg, var(--primary), color-mix(in srgb, var(--primary), #000 14%));
+            border: 0;
+            color: #fff;
+        }
+
+        .booking-submit {
+            grid-column: 1 / -1;
+            width: 100%;
+        }
+
+        .booking-privacy {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 800;
+            text-align: center;
+        }
+
+        .booking-empty-soft {
+            background: color-mix(in srgb, var(--secondary), #fff 70%);
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 900;
+            padding: 16px;
+        }
+
+        @media (max-width: 1080px) {
+            .services-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .gallery-strip {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .bottom-grid .info-card:last-child {
+                grid-column: 1 / -1;
+            }
+        }
+
+        @media (max-width: 860px) {
+            .hero-inner {
+                gap: 20px;
+                grid-template-columns: 1fr;
+            }
+
+            .hero-actions {
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .booking-wizard {
+                grid-template-columns: 1fr;
+            }
+
+            .booking-stage {
+                border-right: 0;
+            }
+
+            .booking-summary-panel {
+                border-top: 1px solid var(--border);
+            }
+        }
+
+        @media (max-width: 640px) {
+            body {
+                background:
+                    linear-gradient(180deg, color-mix(in srgb, var(--secondary), #fff 40%) 0, rgba(255,255,255,0) 320px),
+                    var(--bg);
+            }
+
+            .catalog-shell {
+                padding: 0 14px 24px;
+            }
+
+            .hero {
+                padding: 10px 10px 0;
+            }
+
+            .hero-inner {
+                border-radius: 22px;
+                margin: -10px -10px 0;
+                min-height: auto;
+                padding: 24px 16px 20px;
+            }
+
+            .hero-info {
+                grid-template-columns: 78px minmax(0, 1fr);
+                gap: 14px;
+            }
+
+            .logo {
+                height: 76px;
+                width: 76px;
+            }
+
+            .hero h1 {
+                font-size: 42px;
+            }
+
+            .hero-meta {
+                font-size: 13px;
+                gap: 9px;
+            }
+
+            .hero-copy {
+                font-size: 14px;
+                margin-top: 12px;
+                max-width: none;
+            }
+
+            .hero-actions {
+                grid-template-columns: 1fr;
+            }
+
+            .btn-public {
+                min-height: 52px;
+            }
+
+            .section {
+                margin-top: 24px;
+            }
+
+            .section-head {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .catalog-toolbar {
+                justify-content: flex-start;
+            }
+
+            .catalog-search {
+                width: 100%;
+            }
+
+            .filter-tabs {
+                margin-left: -2px;
+                padding-left: 2px;
+                width: 100%;
+            }
+
+            .services-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .service-card {
+                grid-template-columns: 1fr;
+                padding: 16px;
+            }
+
+            .service-icon {
+                display: none;
+            }
+
+            .service-bottom {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .mini-action {
+                text-align: center;
+            }
+
+            #services .service-card {
+                align-items: center;
+                grid-template-columns: 52px minmax(0, 1fr);
+                min-height: 120px;
+                padding: 14px;
+            }
+
+            #services .service-icon {
+                display: flex;
+            }
+
+            #services .service-bottom {
+                align-items: center;
+                flex-direction: row;
+            }
+
+            #services .mini-action {
+                text-align: center;
+                width: 100%;
+            }
+
+            .gallery-strip {
+                display: flex;
+                gap: 10px;
+                margin: 0 -14px;
+                overflow-x: auto;
+                padding: 0 14px 4px;
+                scroll-snap-type: x mandatory;
+            }
+
+            .gallery-thumb-button,
+            .gallery-more {
+                flex: 0 0 72%;
+                scroll-snap-align: start;
+            }
+
+            .gallery-more {
+                min-height: 130px;
+            }
+
+            .bottom-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .bottom-grid .info-card:last-child {
+                grid-column: auto;
+            }
+
+            .booking-modal {
+                align-items: stretch;
+                padding: 0;
+            }
+
+            .booking-card {
+                border-radius: 0;
+                max-height: 100vh;
+            }
+
+            .booking-head {
+                padding: 22px 18px 16px;
+            }
+
+            .booking-title {
+                font-size: 26px;
+            }
+
+            .booking-form {
+                max-height: calc(100vh - 104px);
+            }
+
+            .booking-progress {
+                gap: 2px;
+                overflow-x: auto;
+                padding: 16px 16px;
+            }
+
+            .booking-step-dot {
+                display: grid;
+                flex: 0 0 auto;
+                font-size: 11px;
+                gap: 6px;
+                justify-items: center;
+                min-width: 76px;
+            }
+
+            .booking-step-dot span {
+                height: 32px;
+                width: 32px;
+            }
+
+            .booking-wizard {
+                display: block;
+                min-height: auto;
+            }
+
+            .booking-stage {
+                padding: 24px 18px 190px;
+            }
+
+            .booking-step-kicker {
+                font-size: 24px;
+            }
+
+            .booking-service-grid {
+                grid-template-columns: 1fr;
+                max-height: none;
+                overflow: visible;
+            }
+
+            .booking-choice-card {
+                align-items: center;
+                grid-template-columns: minmax(0, 1fr) 28px;
+                min-height: 86px;
+                padding: 12px;
+            }
+
+            .booking-choice-check {
+                border-radius: 999px;
+                grid-column: 2;
+                grid-row: 1;
+                height: 26px;
+                width: 26px;
+            }
+
+            .booking-choice-body {
+                grid-column: 1;
+                grid-row: 1;
+            }
+
+            .booking-choice-body small {
+                -webkit-line-clamp: 1;
+            }
+
+            .booking-extra-grid {
+                grid-template-columns: 1fr;
+                max-height: none;
+                overflow: visible;
+            }
+
+            .booking-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .booking-slots {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .booking-summary-panel {
+                background: rgba(255,255,255,.98);
+                border-top: 1px solid var(--border);
+                border-radius: 22px 22px 0 0;
+                bottom: 0;
+                box-shadow: 0 -16px 42px rgba(30, 20, 34, .16);
+                left: 0;
+                padding: 14px 16px 16px;
+                position: fixed;
+                right: 0;
+                z-index: 2200;
+            }
+
+            .booking-summary-panel h3,
+            .booking-selected,
+            .booking-note-box,
+            .booking-privacy {
+                display: none;
+            }
+
+            .booking-summary {
+                border: 0;
+                grid-template-columns: 1fr 1fr;
+                padding: 0;
+            }
+
+            .booking-summary-row {
+                border-right: 1px solid var(--border);
+                display: grid;
+                justify-content: stretch;
+                padding: 0 8px;
+                text-align: center;
+            }
+
+            .booking-summary-row:nth-child(2n),
+            .booking-summary-row.total {
+                border-right: 0;
+            }
+
+            .booking-summary-row.total {
+                border-top: 0;
+                margin-top: 0;
+                padding-top: 0;
+            }
+
+            .booking-summary-row span {
+                font-size: 11px;
+            }
+
+            .booking-summary-row strong {
+                font-size: 14px;
+                text-align: center;
+            }
+
+            .booking-summary-row.total strong {
+                font-size: 22px;
+            }
+
+            .booking-nav-actions {
+                grid-template-columns: .5fr 1fr;
+                margin-top: 12px;
+            }
+
+            .booking-secondary,
+            .booking-next,
+            .booking-submit {
+                min-height: 56px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+{% set clean_whatsapp = business.whatsapp|replace(' ', '')|replace('-', '')|replace('(', '')|replace(')', '') if business.whatsapp else '' %}
+
+<header class="hero">
+    <div class="hero-inner">
+        <div class="hero-info">
+            <div class="logo">
+                {% if business.logo_url %}
+                    <img src="{{ business.logo_url }}" alt="{{ business.name }}">
+                {% else %}
+                    {{ (business.name or 'S')[:1] }}
+                {% endif %}
+            </div>
+
+            <div>
+                <h1>{{ business.name }}</h1>
+                <div class="hero-meta">
+                    {% if business.address %}
+                        <span><i class="fa-solid fa-location-dot"></i>{{ business.address }}</span>
+                    {% endif %}
+                    {% if business.instagram %}
+                        <span><i class="fa-brands fa-instagram"></i>{{ business.instagram }}</span>
+                    {% endif %}
+                </div>
+                <div class="hero-copy">{{ business.catalog_tagline or 'Uñas que expresan tu estilo, hechas con amor y detalle.' }}</div>
+            </div>
+        </div>
+
+        <div class="hero-actions">
+            <button type="button" class="btn-public btn-wa" data-open-booking>
+                <span><i class="fa-regular fa-calendar-check"></i> Agendar cita</span>
+                <i class="fa-solid fa-chevron-right"></i>
+            </button>
+
+            {% if business.whatsapp %}
+                <a class="btn-public btn-light" href="https://wa.me/52{{ clean_whatsapp }}?text=Hola,%20quiero%20agendar%20una%20cita" target="_blank" rel="noopener">
+                    <span><i class="fa-brands fa-whatsapp"></i> WhatsApp</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </a>
+            {% endif %}
+
+            {% if business.instagram %}
+                <a class="btn-public btn-light" href="https://instagram.com/{{ business.instagram|replace('@', '') }}" target="_blank" rel="noopener">
+                    <span><i class="fa-brands fa-instagram"></i> Ver Instagram</span>
+                    <i class="fa-solid fa-chevron-right"></i>
+                </a>
+            {% endif %}
+        </div>
+    </div>
+</header>
+
+<main class="catalog-shell">
+    {% for category, message in get_flashed_messages(with_categories=true) %}
+        <div class="catalog-alert catalog-alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+
+    <section class="section">
+        <div class="section-head">
+            <h2 class="section-title">Servicios ✦</h2>
+
+            <div class="catalog-toolbar">
+                <div class="catalog-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" id="service_search" placeholder="Buscar servicio...">
+                </div>
+
+                <div class="filter-tabs">
+                    <button type="button" class="filter-tab active" data-category-filter="all">Todos</button>
+                    {% set rendered_categories = [] %}
+                    {% for service in services %}
+                        {% if service.category_name and service.category_name not in rendered_categories %}
+                            {% set _ = rendered_categories.append(service.category_name) %}
+                            <button type="button" class="filter-tab" data-category-filter="{{ service.category_name|lower }}">
+                                <i class="fa-solid fa-wand-magic-sparkles"></i>{{ service.category_name }}
+                            </button>
+                        {% endif %}
+                    {% endfor %}
+                    {% if extras %}
+                        <a class="filter-tab" href="#extras">
+                            <i class="fa-solid fa-sparkles"></i> Extras
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        {% if services %}
+            <div class="services-grid" id="services_grid">
+                {% for service in services %}
+                    <article
+                        class="service-card {% if loop.index > 6 %}is-hidden-extra{% endif %}"
+                        data-service-card
+                        data-initially-hidden="{{ '1' if loop.index > 6 else '0' }}"
+                        data-category="{{ (service.category_name or '')|lower }}"
+                        data-search="{{ service.name ~ ' ' ~ (service.description or '') ~ ' ' ~ (service.category_name or '') }}"
+                    >
+                        <div class="service-icon">
+                            <i class="fa-solid fa-{{ service.service_icon or 'hand-sparkles' }}"></i>
+                        </div>
+
+                        <div class="service-main">
+                            <div class="service-top">
+                                <div class="min-w-0">
+                                    <h3 class="service-name">{{ service.name }}</h3>
+                                    {% if service.description %}
+                                        <p class="service-description">{{ service.description }}</p>
+                                    {% endif %}
+                                </div>
+
+                                {% if service.category_name %}
+                                    <span class="service-category-pill">{{ service.category_name }}</span>
+                                {% endif %}
+                            </div>
+
+                            <div class="service-bottom">
+                                <div class="service-meta-group">
+                                    <span class="price">Desde ${{ "%.2f"|format(service.base_price or 0) }}</span>
+                                    <span class="duration"><i class="fa-regular fa-clock"></i>{{ service.duration_minutes or 0 }} min</span>
+                                </div>
+
+                                <button
+                                    type="button"
+                                    class="mini-action"
+                                    data-open-booking
+                                    data-service-id="{{ service.id }}"
+                                >
+                                    Quiero este servicio
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+
+            {% if services|length > 6 %}
+                <div class="services-more-wrap">
+                    <button type="button" class="services-more" id="services_more_btn">
+                        Ver todos los servicios <i class="fa-solid fa-chevron-down"></i>
+                    </button>
+                </div>
+            {% endif %}
+
+            <p class="empty-state" id="services_empty" style="display:none;">No encontramos servicios con ese filtro.</p>
+        {% else %}
+            <div class="empty-state">Aún no hay servicios públicos registrados.</div>
+        {% endif %}
+    </section>
+
+    {% if gallery_items %}
+        <section class="section">
+            <div class="section-head">
+                <h2 class="section-title">Galería de trabajos ✦</h2>
+            </div>
+
+            <div class="gallery-strip">
+                {% for item in gallery_items[:6] %}
+                    <button
+                        type="button"
+                        class="gallery-thumb-button"
+                        data-lightbox-src="{{ item.image_url }}"
+                        data-lightbox-title="{{ item.title or 'Trabajo realizado' }}"
+                        data-lightbox-meta="{{ item.service_name or '' }}"
+                    >
+                        <img class="gallery-thumb" src="{{ item.image_url }}" alt="{{ item.title or 'Trabajo realizado' }}">
+                    </button>
+                {% endfor %}
+
+                {% if gallery_items|length > 6 %}
+                    <div class="gallery-more">
+                        <i class="fa-solid fa-grip"></i>
+                        <span>Ver más fotos</span>
+                    </div>
+                {% endif %}
+            </div>
+        </section>
+    {% endif %}
+
+    <section class="section bottom-grid">
+        {% if extras %}
+            <article class="info-card" id="extras">
+                <h2 class="info-title">Extras disponibles ✦</h2>
+                {% for extra in extras[:5] %}
+                    <div class="line-row">
+                        <div>
+                            <strong>{{ extra.name }}</strong>
+                            {% if extra.description %}
+                                <div class="muted">{{ extra.description }}</div>
+                            {% endif %}
+                        </div>
+                        <strong class="price">${{ "%.2f"|format(extra.price or 0) }}</strong>
+                    </div>
+                {% endfor %}
+            </article>
+        {% endif %}
+
+        {% if business_hours %}
+            <article class="info-card">
+                <h2 class="info-title">Horarios ✦</h2>
+                {% set day_labels = {
+                    'monday': 'Lunes',
+                    'tuesday': 'Martes',
+                    'wednesday': 'Miércoles',
+                    'thursday': 'Jueves',
+                    'friday': 'Viernes',
+                    'saturday': 'Sábado',
+                    'sunday': 'Domingo'
+                } %}
+                {% for key, label in day_labels.items() %}
+                    <div class="line-row">
+                        <span>{{ label }}</span>
+                        <strong>{{ business_hours.get(key) or 'No definido' }}</strong>
+                    </div>
+                {% endfor %}
+                <div class="muted" style="margin-top:10px;"><i class="fa-regular fa-clock"></i> Horarios pueden variar en días festivos.</div>
+            </article>
+        {% endif %}
+
+        {% if business.deposit_policy or business.cancellation_policy %}
+            <article class="info-card">
+                <h2 class="info-title">Políticas ✦</h2>
+                {% if business.deposit_policy %}
+                    <div class="line-row">
+                        <div>
+                            <strong><i class="fa-regular fa-credit-card" style="color:var(--accent);"></i> Anticipos</strong>
+                            <div class="muted">{{ business.deposit_policy }}</div>
+                        </div>
+                    </div>
+                {% endif %}
+                {% if business.cancellation_policy %}
+                    <div class="line-row">
+                        <div>
+                            <strong><i class="fa-solid fa-xmark" style="color:var(--accent);"></i> Cancelaciones</strong>
+                            <div class="muted">{{ business.cancellation_policy }}</div>
+                        </div>
+                    </div>
+                {% endif %}
+            </article>
+        {% endif %}
+    </section>
+</main>
+
+<footer class="footer">
+    Catálogo creado con <strong>Sianeffects Nails</strong> ♡
+</footer>
+
+<div class="booking-modal" id="booking_modal" aria-hidden="true">
+    <div class="booking-card" role="dialog" aria-modal="true" aria-labelledby="booking_title">
+        <div class="booking-head">
+            <div>
+                <h2 class="booking-title" id="booking_title">Agenda tu cita</h2>
+                <div class="muted">El salón recibirá tu solicitud y podrá confirmarla.</div>
+            </div>
+            <button type="button" class="booking-close" id="booking_close" aria-label="Cerrar agendado">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+        </div>
+
+        <form method="POST" action="{{ url_for('nails.catalogo_publico', slug=business.slug) }}" class="booking-form" id="booking_form">
+            <input type="hidden" name="{{ nails_csrf_field }}" value="{{ nails_csrf_token }}">
+            <div class="booking-progress" aria-label="Pasos de agendado">
+                <button type="button" class="booking-step-dot is-active" data-booking-step-target="1"><span>1</span><strong>Servicio</strong></button>
+                <button type="button" class="booking-step-dot" data-booking-step-target="2"><span>2</span><strong>Extras</strong></button>
+                <button type="button" class="booking-step-dot" data-booking-step-target="3"><span>3</span><strong>Fecha</strong></button>
+                <button type="button" class="booking-step-dot" data-booking-step-target="4"><span>4</span><strong>Datos</strong></button>
+                <button type="button" class="booking-step-dot" data-booking-step-target="5"><span>5</span><strong>Confirmar</strong></button>
+            </div>
+
+            <div class="booking-wizard">
+                <section class="booking-stage">
+                    <div class="booking-step-panel is-active" data-booking-step="1">
+                        <div class="booking-step-kicker">1. Servicio</div>
+                        <h3>Selecciona tus servicios</h3>
+                        <p>Elige uno o más servicios principales.</p>
+
+                        <div class="booking-picker-search">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="search" id="booking_item_search" placeholder="Buscar servicio..." autocomplete="off">
+                        </div>
+
+                        <div class="booking-filter-row" id="booking_category_filters">
+                            <button type="button" class="active" data-booking-category="all">Todos</button>
+                            {% set shown_categories = [] %}
+                            {% for service in services %}
+                                {% set category_label = service.category_name or 'Otros' %}
+                                {% if category_label not in shown_categories %}
+                                    {% set _ = shown_categories.append(category_label) %}
+                                    <button type="button" data-booking-category="{{ category_label|lower }}">{{ category_label }}</button>
+                                {% endif %}
+                            {% endfor %}
+                        </div>
+
+                        <div class="booking-service-grid" id="booking_services">
+                            {% for service in services %}
+                                <label class="booking-choice-card" data-booking-option data-booking-service-card data-category="{{ (service.category_name or 'Otros')|lower }}" data-search="{{ service.name ~ ' ' ~ (service.description or '') ~ ' ' ~ (service.category_name or '') }}">
+                                    <input
+                                        type="checkbox"
+                                        name="service_ids"
+                                        value="{{ service.id }}"
+                                        data-booking-service
+                                        data-booking-item
+                                        data-kind="service"
+                                        data-name="{{ service.name }}"
+                                        data-price="{{ service.base_price or 0 }}"
+                                        data-duration="{{ service.duration_minutes or 0 }}"
+                                    >
+                                    <span class="booking-choice-check"><i class="fa-solid fa-check"></i></span>
+                                    <span class="booking-choice-body">
+                                        <strong>{{ service.name }}</strong>
+                                        <small>{{ service.description or 'Servicio del salón.' }}</small>
+                                        <em>${{ "%.2f"|format(service.base_price or 0) }} · {{ service.duration_minutes or 0 }} min</em>
+                                    </span>
+                                </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="booking-step-panel" data-booking-step="2">
+                        <div class="booking-step-kicker">2. Extras</div>
+                        <h3>Extras opcionales</h3>
+                        <p>Agrega complementos a tus servicios.</p>
+
+                        {% if extras %}
+                            <div class="booking-extra-grid">
+                                {% for extra in extras %}
+                                    <label class="booking-extra-card" data-booking-option data-search="{{ extra.name ~ ' ' ~ (extra.description or '') }}">
+                                        <input
+                                            type="checkbox"
+                                            name="extras"
+                                            value="{{ extra.id }}"
+                                            data-booking-extra
+                                            data-booking-item
+                                            data-kind="extra"
+                                            data-name="{{ extra.name }}"
+                                            data-price="{{ extra.price or 0 }}"
+                                            data-duration="{{ extra.duration_minutes or 0 }}"
+                                        >
+                                        <span>{{ extra.name }}</span>
+                                        <strong>+${{ "%.2f"|format(extra.price or 0) }}</strong>
+                                    </label>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="booking-empty-soft">Este salón no tiene extras activos por ahora.</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="booking-step-panel" data-booking-step="3">
+                        <div class="booking-step-kicker">3. Fecha y hora</div>
+                        <h3>Elige cuándo venir</h3>
+                        <p>Solo verás horarios libres según tu selección.</p>
+
+                        <div class="booking-grid">
+                            <div class="booking-field">
+                                <label for="booking_date">Fecha</label>
+                                <input type="date" name="appointment_date" id="booking_date" required>
+                            </div>
+
+                            <div class="booking-field">
+                                <label>Horarios disponibles</label>
+                                <input type="hidden" name="start_time" id="booking_time">
+                                <div class="booking-slots" id="booking_slots" aria-live="polite">
+                                    <p class="booking-slot-state">Elige servicio(s) y fecha para ver horarios.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="booking-step-panel" data-booking-step="4">
+                        <div class="booking-step-kicker">4. Tus datos</div>
+                        <h3>Datos de contacto</h3>
+                        <p>El salón usará estos datos para confirmar tu cita.</p>
+
+                        <div class="booking-grid">
+                            <div class="booking-field">
+                                <label for="booking_client_name">Nombre</label>
+                                <input type="text" name="client_name" id="booking_client_name" maxlength="120" required placeholder="Tu nombre">
+                            </div>
+
+                            <div class="booking-field">
+                                <label for="booking_client_phone">WhatsApp</label>
+                                <input type="tel" name="client_phone" id="booking_client_phone" maxlength="40" required placeholder="Ej. 8112345678">
+                            </div>
+                        </div>
+
+                        <div class="booking-field">
+                            <label for="booking_notes">Notas</label>
+                            <textarea name="notes" id="booking_notes" maxlength="1000" placeholder="Cuéntanos si quieres un diseño, color o detalle especial."></textarea>
+                        </div>
+                    </div>
+
+                    <div class="booking-step-panel" data-booking-step="5">
+                        <div class="booking-step-kicker">5. Confirmar</div>
+                        <h3>Confirma tu cita</h3>
+                        <p>Revisa que todo esté correcto antes de enviar tu solicitud.</p>
+
+                        <div class="booking-confirm-box" id="booking_confirm_box"></div>
+                    </div>
+                </section>
+
+                <aside class="booking-summary-panel">
+                    <h3>Resumen de tu cita</h3>
+                    <div class="booking-selected" id="booking_selected"></div>
+                    <div class="booking-summary" id="booking_summary">
+                        <div class="booking-summary-row"><span>Servicios</span><strong>0</strong></div>
+                        <div class="booking-summary-row"><span>Extras</span><strong>0</strong></div>
+                        <div class="booking-summary-row"><span>Duración</span><strong>0 min</strong></div>
+                        <div class="booking-summary-row total"><span>Total estimado</span><strong>$0.00</strong></div>
+                    </div>
+
+                    <div class="booking-note-box">
+                        <i class="fa-regular fa-clock"></i>
+                        <span>Los horarios disponibles se muestran después de elegir servicio y fecha.</span>
+                    </div>
+
+                    <div class="booking-nav-actions">
+                        <button type="button" class="booking-secondary" data-booking-prev>Cancelar</button>
+                        <button type="button" class="booking-next" data-booking-next>Continuar <i class="fa-solid fa-arrow-right"></i></button>
+                        <button type="submit" class="booking-submit" data-booking-submit style="display:none;">
+                            <i class="fa-regular fa-calendar-check"></i> Solicitar cita
+                        </button>
+                    </div>
+
+                    <div class="booking-privacy"><i class="fa-solid fa-lock"></i> Tu información está protegida y no se compartirá.</div>
+                </aside>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="photo-lightbox" id="photo_lightbox" aria-hidden="true">
+    <div class="photo-lightbox-card" role="dialog" aria-modal="true" aria-label="Foto de galería">
+        <button type="button" class="photo-lightbox-close" id="photo_lightbox_close" aria-label="Cerrar foto">
+            <i class="fa-solid fa-xmark"></i>
+        </button>
+        <img id="photo_lightbox_img" src="" alt="">
+        <div class="photo-lightbox-info">
+            <h2 class="photo-lightbox-title" id="photo_lightbox_title">Trabajo realizado</h2>
+            <div class="photo-lightbox-meta" id="photo_lightbox_meta"></div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const documentBody = document.body;
+
+    const serviceSearch = document.getElementById("service_search");
+    const serviceCards = Array.from(document.querySelectorAll("[data-service-card]"));
+    const categoryFilters = Array.from(document.querySelectorAll("[data-category-filter]"));
+    const servicesEmpty = document.getElementById("services_empty");
+    const servicesMoreBtn = document.getElementById("services_more_btn");
+    let activeCategory = "all";
+    let showAllServices = false;
+
+    function applyServiceFilters() {
+        const query = String(serviceSearch?.value || "").trim().toLowerCase();
+        let visible = 0;
+
+        serviceCards.forEach(function (card) {
+            const category = String(card.dataset.category || "");
+            const text = String(card.dataset.search || "").toLowerCase();
+            const initiallyHidden = card.dataset.initiallyHidden === "1";
+            const byCategory = activeCategory === "all" || category === activeCategory;
+            const bySearch = !query || text.includes(query);
+            const shouldLimit = activeCategory === "all" && !query && initiallyHidden && !showAllServices;
+            const show = byCategory && bySearch && !shouldLimit;
+
+            card.style.display = show ? "" : "none";
+            if (show) visible += 1;
+        });
+
+        if (servicesEmpty) servicesEmpty.style.display = visible ? "none" : "";
+
+        if (servicesMoreBtn) {
+            const shouldShowButton = activeCategory === "all" && !query && serviceCards.some(card => card.dataset.initiallyHidden === "1");
+            servicesMoreBtn.parentElement.style.display = shouldShowButton ? "" : "none";
+            servicesMoreBtn.innerHTML = showAllServices
+                ? 'Ver menos servicios <i class="fa-solid fa-chevron-up"></i>'
+                : 'Ver todos los servicios <i class="fa-solid fa-chevron-down"></i>';
+        }
+    }
+
+    categoryFilters.forEach(function (button) {
+        button.addEventListener("click", function () {
+            activeCategory = button.dataset.categoryFilter || "all";
+            showAllServices = activeCategory !== "all";
+            categoryFilters.forEach(btn => btn.classList.toggle("active", btn === button));
+            applyServiceFilters();
+        });
+    });
+
+    serviceSearch?.addEventListener("input", applyServiceFilters);
+    servicesMoreBtn?.addEventListener("click", function () {
+        showAllServices = !showAllServices;
+        applyServiceFilters();
+    });
+    applyServiceFilters();
+
+    const lightbox = document.getElementById("photo_lightbox");
+    const lightboxImg = document.getElementById("photo_lightbox_img");
+    const lightboxTitle = document.getElementById("photo_lightbox_title");
+    const lightboxMeta = document.getElementById("photo_lightbox_meta");
+    const lightboxClose = document.getElementById("photo_lightbox_close");
+
+    function closeLightbox() {
+        if (!lightbox) return;
+        lightbox.classList.remove("is-open");
+        lightbox.setAttribute("aria-hidden", "true");
+        if (lightboxImg) {
+            lightboxImg.removeAttribute("src");
+        }
+        documentBody.classList.remove("modal-open");
+    }
+
+    document.querySelectorAll("[data-lightbox-src]").forEach(function (button) {
+        button.addEventListener("click", function () {
+            if (!lightbox || !lightboxImg) return;
+
+            const src = button.dataset.lightboxSrc || "";
+            const title = button.dataset.lightboxTitle || "Trabajo realizado";
+            const meta = button.dataset.lightboxMeta || "";
+
+            lightboxImg.src = src;
+            lightboxImg.alt = title;
+
+            if (lightboxTitle) lightboxTitle.textContent = title;
+
+            if (lightboxMeta) {
+                lightboxMeta.textContent = meta;
+                lightboxMeta.style.display = meta ? "" : "none";
+            }
+
+            lightbox.classList.add("is-open");
+            lightbox.setAttribute("aria-hidden", "false");
+            documentBody.classList.add("modal-open");
+        });
+    });
+
+    lightboxClose?.addEventListener("click", closeLightbox);
+    lightbox?.addEventListener("click", function (event) {
+        if (event.target === lightbox) closeLightbox();
+    });
+
+    const bookingModal = document.getElementById("booking_modal");
+    const bookingClose = document.getElementById("booking_close");
+    const bookingForm = document.getElementById("booking_form");
+    const bookingServices = Array.from(document.querySelectorAll("[data-booking-service]"));
+    const bookingExtras = Array.from(document.querySelectorAll("[data-booking-extra]"));
+    const bookingOptions = Array.from(document.querySelectorAll("[data-booking-option]"));
+    const bookingServiceCards = Array.from(document.querySelectorAll("[data-booking-service-card]"));
+    const bookingCategoryButtons = Array.from(document.querySelectorAll("[data-booking-category]"));
+    const bookingItemSearch = document.getElementById("booking_item_search");
+    const bookingSummary = document.getElementById("booking_summary");
+    const bookingSelected = document.getElementById("booking_selected");
+    const bookingConfirmBox = document.getElementById("booking_confirm_box");
+    const bookingDate = document.getElementById("booking_date");
+    const bookingTime = document.getElementById("booking_time");
+    const bookingSlots = document.getElementById("booking_slots");
+    const bookingStepButtons = Array.from(document.querySelectorAll("[data-booking-step-target]"));
+    const bookingStepPanels = Array.from(document.querySelectorAll("[data-booking-step]"));
+    const bookingNext = document.querySelector("[data-booking-next]");
+    const bookingPrev = document.querySelector("[data-booking-prev]");
+    const bookingSubmit = document.querySelector("[data-booking-submit]");
+    const availabilityUrl = "{{ url_for('nails.catalogo_horarios_disponibles', slug=business.slug) }}";
+
+    let availabilityRequest = 0;
+    let currentBookingStep = 1;
+    let activeBookingCategory = "all";
+
+    const bookingToast = window.Swal ? Swal.mixin({
+        toast: true,
+        position: "top-end",
+        showConfirmButton: false,
+        timer: 2800,
+        timerProgressBar: true
+    }) : null;
+
+    if (bookingDate) {
+        bookingDate.min = new Date().toISOString().slice(0, 10);
+    }
+
+    function bookingNotify(message, icon = "warning", title = "") {
+        if (bookingToast && icon !== "error") {
+            bookingToast.fire({ icon, title: title || message });
+            return;
+        }
+
+        if (window.Swal) {
+            Swal.fire({
+                icon,
+                title: title || "Revisa tu cita",
+                text: title ? message : "",
+                confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue("--primary").trim() || "#9a3fa0"
+            });
+            return;
+        }
+
+        alert(message);
+    }
+
+    function formatMoney(value) {
+        return `$${Number(value || 0).toLocaleString("es-MX", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        })}`;
+    }
+
+    function selectedBookingServices() {
+        return bookingServices.filter(input => input.checked).map(function (input) {
+            return {
+                id: input.value,
+                name: input.dataset.name || "Servicio",
+                price: Number(input.dataset.price || 0),
+                duration: Number(input.dataset.duration || 0),
+            };
+        });
+    }
+
+    function selectedBookingExtras() {
+        return bookingExtras.filter(input => input.checked).map(function (input) {
+            return {
+                id: input.value,
+                name: input.dataset.name || "Extra",
+                price: Number(input.dataset.price || 0),
+                duration: Number(input.dataset.duration || 0),
+            };
+        });
+    }
+
+    function selectedBookingTotals() {
+        const services = selectedBookingServices();
+        const extras = selectedBookingExtras();
+        const selected = services.concat(extras);
+
+        return {
+            services,
+            extras,
+            selected,
+            total: selected.reduce((sum, item) => sum + item.price, 0),
+            duration: selected.reduce((sum, item) => sum + item.duration, 0)
+        };
+    }
+
+    function setSlotsState(message) {
+        if (!bookingSlots) return;
+        bookingSlots.innerHTML = "";
+        const state = document.createElement("p");
+        state.className = "booking-slot-state";
+        state.textContent = message;
+        bookingSlots.appendChild(state);
+    }
+
+    function clearSelectedTime() {
+        if (bookingTime) bookingTime.value = "";
+        bookingSlots?.querySelectorAll(".booking-slot.active").forEach(function (button) {
+            button.classList.remove("active");
+        });
+    }
+
+    function updateBookingSummary() {
+        bookingOptions.forEach(function (option) {
+            const input = option.querySelector("[data-booking-item]");
+            option.classList.toggle("is-selected", Boolean(input?.checked));
+        });
+
+        const totals = selectedBookingTotals();
+        const deposit = totals.total * 0.30;
+
+        if (bookingSummary) {
+            bookingSummary.innerHTML = `
+                <div class="booking-summary-row"><span>Servicios</span><strong>${totals.services.length}</strong></div>
+                <div class="booking-summary-row"><span>Extras</span><strong>${totals.extras.length}</strong></div>
+                <div class="booking-summary-row"><span>Duración</span><strong>${totals.duration} min</strong></div>
+                <div class="booking-summary-row total"><span>Total estimado</span><strong>${formatMoney(totals.total)}</strong></div>
+                <div class="booking-summary-row"><span>Anticipo 30%</span><strong>${formatMoney(deposit)}</strong></div>
+            `;
+        }
+
+        if (bookingSelected) {
+            if (!totals.selected.length) {
+                bookingSelected.innerHTML = `<div class="booking-selected-empty">Selecciona servicios para ver el resumen.</div>`;
+            } else {
+                bookingSelected.innerHTML = totals.selected.map(function (item) {
+                    return `
+                        <div class="booking-selected-line">
+                            <div>
+                                <strong>${escapeHTML(item.name)}</strong>
+                                <span>${item.duration} min</span>
+                            </div>
+                            <em>${formatMoney(item.price)}</em>
+                        </div>
+                    `;
+                }).join("");
+            }
+        }
+
+        updateConfirmBox();
+    }
+
+    function escapeHTML(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function updateConfirmBox() {
+        if (!bookingConfirmBox) return;
+
+        const totals = selectedBookingTotals();
+        const date = bookingDate?.value || "Sin fecha";
+        const time = bookingTime?.value || "Sin horario";
+        const name = document.getElementById("booking_client_name")?.value || "Sin nombre";
+        const phone = document.getElementById("booking_client_phone")?.value || "Sin WhatsApp";
+
+        bookingConfirmBox.innerHTML = `
+            <div class="booking-confirm-row"><span>Servicios</span><strong>${totals.services.length || 0}</strong></div>
+            <div>
+                ${totals.services.map(item => `<div class="booking-confirm-row"><span>${escapeHTML(item.name)}</span><strong>${formatMoney(item.price)}</strong></div>`).join("") || "<div class='booking-confirm-row'><span>Sin servicios</span><strong>-</strong></div>"}
+            </div>
+            <div class="booking-confirm-row"><span>Extras</span><strong>${totals.extras.length || 0}</strong></div>
+            <div>
+                ${totals.extras.map(item => `<div class="booking-confirm-row"><span>${escapeHTML(item.name)}</span><strong>${formatMoney(item.price)}</strong></div>`).join("") || "<div class='booking-confirm-row'><span>Sin extras</span><strong>-</strong></div>"}
+            </div>
+            <div class="booking-confirm-row"><span>Fecha y hora</span><strong>${escapeHTML(date)} · ${escapeHTML(time)}</strong></div>
+            <div class="booking-confirm-row"><span>Nombre</span><strong>${escapeHTML(name)}</strong></div>
+            <div class="booking-confirm-row"><span>WhatsApp</span><strong>${escapeHTML(phone)}</strong></div>
+            <div class="booking-confirm-row"><span>Duración estimada</span><strong>${totals.duration} min</strong></div>
+            <div class="booking-confirm-row"><span>Total estimado</span><strong>${formatMoney(totals.total)}</strong></div>
+        `;
+    }
+
+    function applyBookingServiceFilters() {
+        const query = String(bookingItemSearch?.value || "").trim().toLowerCase();
+
+        bookingServiceCards.forEach(function (card) {
+            const text = String(card.dataset.search || "").toLowerCase();
+            const category = String(card.dataset.category || "");
+            const showCategory = activeBookingCategory === "all" || category === activeBookingCategory;
+            const showSearch = !query || text.includes(query);
+            card.style.display = showCategory && showSearch ? "" : "none";
+        });
+    }
+
+    function canEnterBookingStep(step, showMessage) {
+        const services = selectedBookingServices();
+        const name = document.getElementById("booking_client_name")?.value.trim();
+        const phone = document.getElementById("booking_client_phone")?.value.trim();
+
+        if (step >= 2 && !services.length) {
+            if (showMessage) bookingNotify("Selecciona al menos un servicio.");
+            return false;
+        }
+
+        if (step >= 4 && !bookingTime?.value) {
+            if (showMessage) bookingNotify("Selecciona fecha y horario disponible.");
+            return false;
+        }
+
+        if (step >= 5 && (!name || !phone)) {
+            if (showMessage) bookingNotify("Completa tu nombre y WhatsApp.");
+            return false;
+        }
+
+        return true;
+    }
+
+    function setBookingStep(step, showMessage = false) {
+        const nextStep = Math.max(1, Math.min(5, Number(step) || 1));
+
+        if (nextStep > currentBookingStep && !canEnterBookingStep(nextStep, showMessage)) return;
+
+        currentBookingStep = nextStep;
+
+        bookingStepPanels.forEach(panel => {
+            panel.classList.toggle("is-active", Number(panel.dataset.bookingStep) === currentBookingStep);
+        });
+
+        bookingStepButtons.forEach(button => {
+            const buttonStep = Number(button.dataset.bookingStepTarget);
+            button.classList.toggle("is-active", buttonStep === currentBookingStep);
+            button.classList.toggle("is-done", buttonStep < currentBookingStep);
+        });
+
+        if (bookingPrev) bookingPrev.textContent = currentBookingStep === 1 ? "Cancelar" : "Atrás";
+        if (bookingNext) bookingNext.style.display = currentBookingStep === 5 ? "none" : "";
+        if (bookingSubmit) bookingSubmit.style.display = currentBookingStep === 5 ? "" : "none";
+
+        updateConfirmBox();
+    }
+
+    function renderSlots(slots, message) {
+        if (!bookingSlots) return;
+
+        bookingSlots.innerHTML = "";
+        clearSelectedTime();
+
+        if (!slots.length) {
+            setSlotsState(message || "No hay horarios disponibles para ese día.");
+            return;
+        }
+
+        slots.forEach(function (slot) {
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "booking-slot";
+            button.textContent = slot.label || slot.value;
+            button.dataset.time = slot.value;
+
+            button.addEventListener("click", function () {
+                clearSelectedTime();
+                button.classList.add("active");
+
+                if (bookingTime) bookingTime.value = slot.value;
+
+                updateConfirmBox();
+            });
+
+            bookingSlots.appendChild(button);
+        });
+    }
+
+    async function loadAvailableSlots() {
+        clearSelectedTime();
+
+        const selectedServices = selectedBookingServices();
+        const selectedExtras = selectedBookingExtras();
+        const selectedDate = bookingDate?.value || "";
+
+        if (!selectedServices.length || !selectedDate) {
+            setSlotsState("Elige servicio(s) y fecha para ver horarios.");
+            return;
+        }
+
+        const requestId = ++availabilityRequest;
+        setSlotsState("Buscando horarios disponibles...");
+
+        try {
+            const params = new URLSearchParams({ date: selectedDate });
+
+            selectedServices.forEach(service => params.append("service_ids", service.id));
+            selectedExtras.forEach(extra => params.append("extras", extra.id));
+
+            const response = await fetch(`${availabilityUrl}?${params.toString()}`, {
+                headers: { "Accept": "application/json" }
+            });
+
+            const data = await response.json();
+
+            if (requestId !== availabilityRequest) return;
+
+            if (!response.ok || !data.success) {
+                setSlotsState(data.message || "No se pudieron cargar los horarios.");
+                return;
+            }
+
+            renderSlots(Array.isArray(data.slots) ? data.slots : [], data.message || "");
+        } catch (error) {
+            if (requestId === availabilityRequest) {
+                setSlotsState("No se pudieron cargar los horarios. Intenta de nuevo.");
+            }
+        }
+    }
+
+    function openBooking(serviceId) {
+        if (!bookingModal) return;
+
+        if (serviceId) {
+            bookingServices.forEach(function (input) {
+                input.checked = input.value === String(serviceId);
+            });
+        }
+
+        updateBookingSummary();
+        loadAvailableSlots();
+        setBookingStep(1);
+
+        bookingModal.classList.add("is-open");
+        bookingModal.setAttribute("aria-hidden", "false");
+        documentBody.classList.add("modal-open");
+    }
+
+    function closeBooking() {
+        if (!bookingModal) return;
+
+        bookingModal.classList.remove("is-open");
+        bookingModal.setAttribute("aria-hidden", "true");
+        documentBody.classList.remove("modal-open");
+    }
+
+    document.querySelectorAll("[data-open-booking]").forEach(function (button) {
+        button.addEventListener("click", function () {
+            openBooking(button.dataset.serviceId || "");
+        });
+    });
+
+    bookingClose?.addEventListener("click", closeBooking);
+
+    bookingModal?.addEventListener("click", function (event) {
+        if (event.target === bookingModal) closeBooking();
+    });
+
+    bookingServices.forEach(function (input) {
+        input.addEventListener("change", function () {
+            updateBookingSummary();
+            loadAvailableSlots();
+        });
+    });
+
+    bookingExtras.forEach(function (input) {
+        input.addEventListener("change", function () {
+            updateBookingSummary();
+            loadAvailableSlots();
+        });
+    });
+
+    bookingItemSearch?.addEventListener("input", applyBookingServiceFilters);
+
+    bookingCategoryButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            activeBookingCategory = button.dataset.bookingCategory || "all";
+            bookingCategoryButtons.forEach(item => item.classList.toggle("active", item === button));
+            applyBookingServiceFilters();
+        });
+    });
+
+    bookingDate?.addEventListener("change", loadAvailableSlots);
+
+    document.getElementById("booking_client_name")?.addEventListener("input", updateConfirmBox);
+    document.getElementById("booking_client_phone")?.addEventListener("input", updateConfirmBox);
+    document.getElementById("booking_notes")?.addEventListener("input", updateConfirmBox);
+
+    bookingStepButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            setBookingStep(button.dataset.bookingStepTarget, true);
+        });
+    });
+
+    bookingNext?.addEventListener("click", function () {
+        setBookingStep(currentBookingStep + 1, true);
+    });
+
+    bookingPrev?.addEventListener("click", function () {
+        if (currentBookingStep === 1) {
+            closeBooking();
+            return;
+        }
+
+        setBookingStep(currentBookingStep - 1);
+    });
+
+    bookingForm?.addEventListener("submit", function (event) {
+        if (!selectedBookingServices().length) {
+            event.preventDefault();
+            bookingNotify("Selecciona al menos un servicio.");
+            setBookingStep(1);
+            return;
+        }
+
+        if (!bookingTime?.value) {
+            event.preventDefault();
+            bookingNotify("Selecciona uno de los horarios disponibles.");
+            setBookingStep(3);
+            return;
+        }
+
+        if (!canEnterBookingStep(5, true)) {
+            event.preventDefault();
+        }
+    });
+
+    updateBookingSummary();
+    applyBookingServiceFilters();
+    setBookingStep(1);
+
+    if (new URLSearchParams(window.location.search).get("agendar") === "1") {
+        openBooking("");
+    }
+
+    document.addEventListener("keydown", function (event) {
+        if (event.key === "Escape") {
+            closeLightbox();
+            closeBooking();
+        }
+    });
+});
+</script>
+
+</body>
+</html>

@@ -1,0 +1,729 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Reportes | Sianeffects Nails{% endblock %}
+{% block page_title %}Reportes{% endblock %}
+{% block page_subtitle %}Consulta ventas, citas, saldos pendientes y servicios más vendidos.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .reports-shell {
+        display: grid;
+        gap: 16px;
+    }
+
+    .reports-filter {
+        align-items: end;
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 14px 34px rgba(26,31,44,.06);
+        display: grid;
+        gap: 14px;
+        grid-template-columns: minmax(150px, 1fr) minmax(150px, 1fr) auto auto auto;
+        padding: 14px 16px;
+    }
+
+    .reports-quick {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        overflow: hidden;
+        border: 1px solid var(--nails-border);
+        border-radius: 8px;
+    }
+
+    .reports-quick a {
+        align-items: center;
+        background: #fff;
+        border-right: 1px solid var(--nails-border);
+        color: var(--nails-muted);
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 900;
+        justify-content: center;
+        min-height: 42px;
+        padding: 0 16px;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .reports-quick a:last-child {
+        border-right: 0;
+    }
+
+    .reports-quick a.active {
+        background: var(--nails-primary-soft);
+        color: var(--nails-primary-strong);
+    }
+
+    .reports-stats {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .report-stat,
+    .report-panel {
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 14px 34px rgba(26,31,44,.06);
+    }
+
+    .report-stat {
+        align-items: center;
+        display: flex;
+        gap: 14px;
+        min-height: 118px;
+        min-width: 0;
+        padding: 20px;
+    }
+
+    .report-stat-icon {
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border-radius: 12px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-size: 22px;
+        height: 52px;
+        justify-content: center;
+        width: 52px;
+    }
+
+    .report-stat:nth-child(2) .report-stat-icon {
+        background: #fdf2f8;
+        color: #db2777;
+    }
+
+    .report-stat:nth-child(3) .report-stat-icon {
+        background: #fff7ed;
+        color: #f97316;
+    }
+
+    .report-stat:nth-child(4) .report-stat-icon {
+        background: #f5efff;
+        color: #8b5cf6;
+    }
+
+    .report-stat-label {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .report-stat-value {
+        color: var(--nails-ink);
+        font-size: 24px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin-top: 6px;
+    }
+
+    .report-stat-note {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 4px;
+    }
+
+    .report-stat-note.positive {
+        color: #059669;
+    }
+
+    .reports-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .reports-grid-small {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, .9fr) minmax(0, 1fr);
+    }
+
+    .reports-insights {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .report-insight {
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 14px 34px rgba(26,31,44,.06);
+        padding: 16px;
+    }
+
+    .report-insight span {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .report-insight strong {
+        color: var(--nails-ink);
+        display: block;
+        font-size: 18px;
+        font-weight: 900;
+        margin-top: 7px;
+    }
+
+    .report-insight small {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 5px;
+    }
+
+    .report-panel {
+        min-width: 0;
+        padding: 18px;
+    }
+
+    .report-panel-title {
+        color: var(--nails-ink);
+        font-size: 17px;
+        font-weight: 900;
+        margin: 0 0 14px;
+    }
+
+    .status-row {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 82px minmax(0, 1fr) 118px;
+        margin-bottom: 13px;
+    }
+
+    .status-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .status-label {
+        color: var(--nails-text);
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .status-track,
+    .service-track {
+        background: #eef0f5;
+        border-radius: 999px;
+        height: 5px;
+        overflow: hidden;
+    }
+
+    .status-fill,
+    .service-fill {
+        background: var(--nails-primary);
+        border-radius: inherit;
+        display: block;
+        height: 100%;
+        min-width: 3px;
+    }
+
+    .status-row:nth-child(2) .status-fill {
+        background: #ff38a6;
+    }
+
+    .status-row:nth-child(3) .status-fill {
+        background: #f59e0b;
+    }
+
+    .status-row:nth-child(4) .status-fill {
+        background: #a78bfa;
+    }
+
+    .status-amount {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 900;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .day-chart {
+        display: grid;
+        gap: 10px;
+    }
+
+    .chart-grid {
+        align-items: end;
+        border-bottom: 1px solid var(--nails-border);
+        border-left: 1px solid var(--nails-border);
+        display: grid;
+        gap: 18px;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(36px, 1fr);
+        height: 190px;
+        padding: 10px 12px 0;
+    }
+
+    .chart-bar-wrap {
+        align-items: center;
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        height: 100%;
+        justify-content: flex-end;
+        min-width: 0;
+    }
+
+    .chart-bar {
+        background: linear-gradient(180deg, color-mix(in srgb, var(--nails-primary), #fff 16%), var(--nails-primary));
+        border-radius: 6px 6px 0 0;
+        box-shadow: 0 8px 18px color-mix(in srgb, var(--nails-primary), transparent 78%);
+        min-height: 3px;
+        width: min(42px, 70%);
+    }
+
+    .chart-label {
+        color: var(--nails-muted);
+        font-size: 11px;
+        font-weight: 900;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .rank-list {
+        display: grid;
+        gap: 12px;
+    }
+
+    .rank-row {
+        align-items: center;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 26px minmax(0, 1fr) auto;
+    }
+
+    .rank-number {
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 900;
+        height: 24px;
+        justify-content: center;
+        width: 24px;
+    }
+
+    .rank-title {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .rank-sub {
+        color: var(--nails-muted);
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .rank-amount {
+        color: var(--nails-text);
+        font-size: 12px;
+        font-weight: 900;
+        text-align: right;
+        white-space: nowrap;
+    }
+
+    .expense-row {
+        display: grid;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .expense-row:last-child {
+        margin-bottom: 0;
+    }
+
+    .expense-row-head {
+        align-items: center;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+    }
+
+    .expense-row-title {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .expense-row-value {
+        color: var(--nails-text);
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .reports-table {
+        min-width: 760px;
+    }
+
+    .reports-table thead th {
+        background: #fbfcff;
+        color: var(--nails-muted);
+        font-size: 11px;
+        font-weight: 900;
+        padding: 10px 12px;
+        text-transform: uppercase;
+    }
+
+    .reports-table tbody td {
+        font-size: 13px;
+        padding: 12px;
+        vertical-align: middle;
+    }
+
+    .report-empty {
+        color: var(--nails-muted);
+        font-size: 13px;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    @media (max-width: 1120px) {
+        .reports-stats,
+        .reports-grid,
+        .reports-grid-small,
+        .reports-insights {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .reports-filter {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 700px) {
+        .reports-stats,
+        .reports-grid,
+        .reports-grid-small,
+        .reports-insights,
+        .reports-filter {
+            grid-template-columns: 1fr;
+        }
+
+        .reports-quick {
+            grid-template-columns: 1fr 1fr 1fr;
+        }
+
+        .status-row {
+            grid-template-columns: 76px minmax(0, 1fr);
+        }
+
+        .status-amount {
+            grid-column: 1 / -1;
+            text-align: left;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="reports-shell">
+    <form method="GET" class="reports-filter">
+        <div>
+            <label class="form-label">Desde</label>
+            <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+        </div>
+
+        <div>
+            <label class="form-label">Hasta</label>
+            <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+        </div>
+
+        <div class="reports-quick">
+            <a class="{% if date_from == quick_ranges['today'].date_from and date_to == quick_ranges['today'].date_to %}active{% endif %}"
+               href="{{ url_for('nails.reportes', date_from=quick_ranges['today'].date_from, date_to=quick_ranges['today'].date_to) }}">Hoy</a>
+            <a class="{% if date_from == quick_ranges['seven'].date_from and date_to == quick_ranges['seven'].date_to %}active{% endif %}"
+               href="{{ url_for('nails.reportes', date_from=quick_ranges['seven'].date_from, date_to=quick_ranges['seven'].date_to) }}">7 días</a>
+            <a class="{% if date_from == quick_ranges['thirty'].date_from and date_to == quick_ranges['thirty'].date_to %}active{% endif %}"
+               href="{{ url_for('nails.reportes', date_from=quick_ranges['thirty'].date_from, date_to=quick_ranges['thirty'].date_to) }}">30 días</a>
+        </div>
+
+        <button type="submit" class="btn btn-primary">
+            <i class="fa-solid fa-sliders me-2"></i>Aplicar filtros
+        </button>
+        <a
+            href="{{ url_for('nails.reportes_excel', date_from=date_from, date_to=date_to) }}"
+            class="btn btn-outline-primary"
+        >
+            <i class="fa-regular fa-file-excel me-2"></i>Descargar Excel
+        </a>
+    </form>
+
+    <section class="reports-stats">
+        <article class="report-stat">
+            <span class="report-stat-icon"><i class="fa-solid fa-bag-shopping"></i></span>
+            <div>
+                <div class="report-stat-label">Ventas del periodo</div>
+                <div class="report-stat-value">${{ "%.2f"|format(stats.total_sales or 0) }}</div>
+                <div class="report-stat-note positive">{{ stats.sales_count or 0 }} ventas</div>
+            </div>
+        </article>
+
+        <article class="report-stat">
+            <span class="report-stat-icon"><i class="fa-regular fa-wallet"></i></span>
+            <div>
+                <div class="report-stat-label">Cobrado</div>
+                <div class="report-stat-value">${{ "%.2f"|format(stats.total_paid or 0) }}</div>
+                <div class="report-stat-note">Pagos registrados</div>
+            </div>
+        </article>
+
+        <article class="report-stat">
+            <span class="report-stat-icon"><i class="fa-regular fa-clock"></i></span>
+            <div>
+                <div class="report-stat-label">Saldo pendiente</div>
+                <div class="report-stat-value">${{ "%.2f"|format(stats.total_balance or 0) }}</div>
+                <div class="report-stat-note">Por cobrar</div>
+            </div>
+        </article>
+
+        <article class="report-stat">
+            <span class="report-stat-icon"><i class="fa-solid fa-wallet"></i></span>
+            <div>
+                <div class="report-stat-label">Gastos</div>
+                <div class="report-stat-value">${{ "%.2f"|format(stats.total_expenses or 0) }}</div>
+                <div class="report-stat-note">{{ stats.expenses_count or 0 }} registros</div>
+            </div>
+        </article>
+
+        <article class="report-stat">
+            <span class="report-stat-icon"><i class="fa-solid fa-scale-balanced"></i></span>
+            <div>
+                <div class="report-stat-label">Utilidad neta</div>
+                <div class="report-stat-value">${{ "%.2f"|format(stats.net_profit or 0) }}</div>
+                <div class="report-stat-note {% if (stats.net_profit or 0) >= 0 %}positive{% endif %}">Ventas menos gastos</div>
+            </div>
+        </article>
+
+        <article class="report-stat">
+            <span class="report-stat-icon"><i class="fa-regular fa-calendar-days"></i></span>
+            <div>
+                <div class="report-stat-label">Citas del periodo</div>
+                <div class="report-stat-value">{{ stats.appointments_count or 0 }}</div>
+                <div class="report-stat-note">Todas las citas</div>
+            </div>
+        </article>
+    </section>
+
+    <section class="reports-insights">
+        <article class="report-insight">
+            <span>Gasto más alto</span>
+            <strong>{{ stats.biggest_expense_label }}</strong>
+            <small>${{ "%.2f"|format(stats.biggest_expense_total or 0) }} · {{ stats.biggest_expense_percent or 0 }}% de gastos</small>
+        </article>
+
+        <article class="report-insight">
+            <span>Ticket promedio</span>
+            <strong>${{ "%.2f"|format(stats.avg_ticket or 0) }}</strong>
+            <small>Promedio por venta activa</small>
+        </article>
+
+        <article class="report-insight">
+            <span>Margen neto</span>
+            <strong>{{ stats.net_margin or 0 }}%</strong>
+            <small>Utilidad neta contra ventas</small>
+        </article>
+
+        <article class="report-insight">
+            <span>Asistencia</span>
+            <strong>{{ stats.attendance_rate or 0 }}%</strong>
+            <small>{{ stats.no_show_rate or 0 }}% no asistió</small>
+        </article>
+    </section>
+
+    <section class="reports-grid">
+        <article class="report-panel">
+            <h2 class="report-panel-title">Ventas por estado</h2>
+            {% for row in sales_status_rows %}
+                <div class="status-row">
+                    <div class="status-label">{{ row.label }}</div>
+                    <div class="status-track">
+                        <span class="status-fill" style="width: {{ row.percent if row.percent > 0 else 1 }}%;"></span>
+                    </div>
+                    <div class="status-amount">${{ "%.2f"|format(row.total or 0) }} ({{ row.percent }}%)</div>
+                </div>
+            {% endfor %}
+        </article>
+
+        <article class="report-panel">
+            <h2 class="report-panel-title">Ventas por día</h2>
+            {% if sales_by_day %}
+                <div class="day-chart">
+                    <div class="chart-grid">
+                        {% for day in sales_by_day %}
+                            {% set bar_height = (((day.total_sales or 0)|float) / (max_day_total|float) * 100) if max_day_total else 0 %}
+                            <div class="chart-bar-wrap" title="${{ '%.2f'|format(day.total_sales or 0) }}">
+                                <span class="chart-bar" style="height: {{ bar_height if bar_height > 0 else 2 }}%;"></span>
+                                <span class="chart-label">{{ day.sale_date.strftime('%d/%m') if day.sale_date.strftime else day.sale_date }}</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            {% else %}
+                <p class="report-empty">No hay ventas por día en este periodo.</p>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="reports-grid">
+        <article class="report-panel">
+            <h2 class="report-panel-title">¿En qué estás gastando más?</h2>
+            {% if expenses_by_category %}
+                {% for expense in expenses_by_category %}
+                    <div class="expense-row">
+                        <div class="expense-row-head">
+                            <div>
+                                <div class="expense-row-title">{{ expense.label }}</div>
+                                <div class="rank-sub">{{ expense.expenses_count or 0 }} registro(s)</div>
+                            </div>
+                            <div class="expense-row-value">${{ "%.2f"|format(expense.total or 0) }} · {{ expense.percent }}%</div>
+                        </div>
+                        <div class="service-track">
+                            <span class="service-fill" style="width: {{ expense.percent if expense.percent > 0 else 2 }}%;"></span>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p class="report-empty">No hay gastos activos en este periodo.</p>
+            {% endif %}
+        </article>
+
+        <article class="report-panel">
+            <h2 class="report-panel-title">Extras más vendidos</h2>
+            {% if top_extras %}
+                <div class="rank-list">
+                    {% for item in top_extras[:6] %}
+                        {% set width = (((item.total or 0)|float) / ((top_extras[0].total or 1)|float) * 100) if top_extras and top_extras[0].total else 0 %}
+                        <div class="rank-row">
+                            <span class="rank-number">{{ loop.index }}</span>
+                            <div class="min-w-0">
+                                <div class="rank-title">{{ item.name }}</div>
+                                <div class="service-track mt-1"><span class="service-fill" style="width: {{ width if width > 0 else 2 }}%;"></span></div>
+                            </div>
+                            <div class="rank-amount">
+                                ${{ "%.2f"|format(item.total or 0) }}
+                                <div class="rank-sub">{{ item.quantity or 0 }} venta</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="report-empty">Todavía no hay extras vendidos en este periodo.</p>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="reports-grid-small">
+        <article class="report-panel">
+            <h2 class="report-panel-title">Servicios más vendidos</h2>
+            {% if top_services %}
+                <div class="rank-list">
+                    {% for item in top_services[:5] %}
+                        {% set width = (((item.total or 0)|float) / ((top_services[0].total or 1)|float) * 100) if top_services and top_services[0].total else 0 %}
+                        <div class="rank-row">
+                            <span class="rank-number">{{ loop.index }}</span>
+                            <div class="min-w-0">
+                                <div class="rank-title">{{ item.name }}</div>
+                                <div class="service-track mt-1"><span class="service-fill" style="width: {{ width if width > 0 else 2 }}%;"></span></div>
+                            </div>
+                            <div class="rank-amount">
+                                ${{ "%.2f"|format(item.total or 0) }}
+                                <div class="rank-sub">{{ item.quantity or 0 }} venta</div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="report-empty">Todavía no hay servicios vendidos en este periodo.</p>
+            {% endif %}
+        </article>
+
+        <article class="report-panel">
+            <h2 class="report-panel-title">Top clientas</h2>
+            {% if top_clients %}
+                <div class="rank-list">
+                    {% for client in top_clients[:5] %}
+                        <div class="rank-row">
+                            <span class="rank-number">{{ loop.index }}</span>
+                            <div class="min-w-0">
+                                <div class="rank-title">{{ client.client_name }}</div>
+                                <div class="rank-sub">{{ client.sales_count or 0 }} visita(s)</div>
+                            </div>
+                            <div class="rank-amount">${{ "%.2f"|format(client.total_spent or 0) }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <p class="report-empty">Todavía no hay ventas con clientas en este periodo.</p>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="report-panel">
+        <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-3">
+            <div>
+                <h2 class="report-panel-title mb-1">Ventas con saldo pendiente</h2>
+                <div class="text-muted small fw-bold">Ventas pendientes o con anticipo que todavía tienen saldo por cobrar.</div>
+            </div>
+            <a href="{{ url_for('nails.ventas') }}" class="btn btn-sm btn-outline-primary">Ver todas las ventas pendientes</a>
+        </div>
+
+        {% if pending_sales %}
+            <div class="table-responsive">
+                <table class="table reports-table align-middle">
+                    <thead>
+                        <tr>
+                            <th>Folio</th>
+                            <th>Clienta</th>
+                            <th>Fecha</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-end">Pagado</th>
+                            <th class="text-end">Saldo</th>
+                            <th class="text-end">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sale in pending_sales %}
+                            <tr>
+                                <td>
+                                    <strong>{{ sale.sale_number or ('N-' ~ sale.id) }}</strong>
+                                    <br>
+                                    <span class="badge nails-status nails-status-{{ sale.status }}">{{ sale.status }}</span>
+                                </td>
+                                <td>{{ sale.client_name or 'Cliente General' }}</td>
+                                <td>{{ sale.created_at_formatted }}</td>
+                                <td class="text-end">${{ "%.2f"|format(sale.total or 0) }}</td>
+                                <td class="text-end">${{ "%.2f"|format(sale.paid_amount or 0) }}</td>
+                                <td class="text-end fw-bold">${{ "%.2f"|format(sale.balance_due or 0) }}</td>
+                                <td class="text-end">
+                                    <a href="{{ url_for('nails.ventas', sale_id=sale.id) }}" class="btn btn-sm btn-outline-primary">Ver venta</a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <p class="report-empty">No hay ventas con saldo pendiente.</p>
+        {% endif %}
+    </section>
+</div>
+
+{% endblock %}

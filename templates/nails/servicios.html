@@ -1,0 +1,807 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Servicios | Sianeffects Nails{% endblock %}
+{% block page_title %}Servicios y extras{% endblock %}
+{% block page_subtitle %}Configura lo que ofrece tu salón: servicios, precios, duración y extras.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .services-shell {
+        display: grid;
+        gap: 16px;
+    }
+
+    .services-forms-grid,
+    .services-lists-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    }
+
+    .service-panel {
+        background: rgba(255,255,255,.94);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 16px 42px rgba(26, 31, 44, .06);
+        min-width: 0;
+        padding: 18px;
+    }
+
+    .service-panel-head {
+        align-items: center;
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+    .service-panel-title {
+        align-items: center;
+        color: var(--nails-ink);
+        display: flex;
+        font-size: 20px;
+        font-weight: 900;
+        gap: 10px;
+        margin: 0;
+    }
+
+    .service-title-icon,
+    .service-item-icon {
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border-radius: 8px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        flex: 0 0 auto;
+        height: 36px;
+        justify-content: center;
+        width: 36px;
+    }
+
+    .service-panel-badge {
+        background: var(--nails-primary-soft);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 72%);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        font-size: 12px;
+        font-weight: 900;
+        padding: 7px 12px;
+    }
+
+    .service-form-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .service-filterbar {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+    }
+
+    .service-filterbar .form-control,
+    .service-filterbar .form-select {
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 900;
+        min-height: 34px;
+    }
+
+    .service-filterbar .form-control {
+        max-width: 190px;
+    }
+
+    .service-filterbar .form-select {
+        max-width: 130px;
+    }
+
+    .service-icon-picker {
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+    }
+
+    .service-icon-choice {
+        cursor: pointer;
+        display: block;
+        margin: 0;
+    }
+
+    .service-icon-choice input {
+        opacity: 0;
+        pointer-events: none;
+        position: absolute;
+    }
+
+    .service-icon-choice span {
+        align-items: center;
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        color: var(--nails-primary-strong);
+        display: grid;
+        font-size: 11px;
+        font-weight: 900;
+        gap: 5px;
+        justify-items: center;
+        min-height: 62px;
+        padding: 8px 6px;
+        text-align: center;
+    }
+
+    .service-icon-choice i {
+        font-size: 18px;
+    }
+
+    .service-icon-choice input:checked + span {
+        background: var(--nails-primary-soft);
+        border-color: color-mix(in srgb, var(--nails-primary), transparent 46%);
+        box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--nails-primary), transparent 62%);
+    }
+
+    .service-table {
+        margin: 0;
+        min-width: 560px;
+        table-layout: auto;
+    }
+
+    .service-table thead th {
+        background: #f9fafb;
+        color: var(--nails-muted);
+        font-size: 11px;
+        font-weight: 900;
+        letter-spacing: .04em;
+        padding: 11px 12px;
+        text-transform: uppercase;
+    }
+
+    .service-table tbody td {
+        border-color: #f1f3f8;
+        padding: 12px;
+        vertical-align: middle;
+    }
+
+    .service-table-service {
+        min-width: 250px;
+        width: 48%;
+    }
+
+    .service-table-duration {
+        min-width: 92px;
+        white-space: nowrap;
+        width: 16%;
+    }
+
+    .service-table-price {
+        min-width: 105px;
+        white-space: nowrap;
+        width: 17%;
+    }
+
+    .service-table-status {
+        min-width: 86px;
+        white-space: nowrap;
+        width: 13%;
+    }
+
+    .service-table-actions {
+        min-width: 42px;
+        width: 42px;
+    }
+
+    .service-table-title-wrap {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    .service-name {
+        color: var(--nails-ink);
+        font-weight: 900;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .service-sub {
+        color: var(--nails-muted);
+        display: -webkit-box;
+        font-size: 12px;
+        font-weight: 800;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+        line-height: 1.25;
+        white-space: normal;
+    }
+
+    .service-chip {
+        background: var(--nails-primary-soft);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        font-size: 11px;
+        font-weight: 900;
+        padding: 5px 9px;
+        white-space: nowrap;
+    }
+
+    .extra-list {
+        display: grid;
+    }
+
+    .extra-item {
+        align-items: center;
+        border-bottom: 1px solid #f1f3f8;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 48px minmax(0, 1fr) auto 30px;
+        padding: 13px 0;
+    }
+
+    .service-action-btn {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        border-radius: 999px;
+        color: var(--nails-muted);
+        display: inline-flex;
+        height: 32px;
+        justify-content: center;
+        width: 32px;
+    }
+
+    .service-action-btn:hover {
+        background: var(--nails-primary-soft);
+        color: var(--nails-primary-strong);
+    }
+
+    .service-edit-modal .modal-content {
+        border: 0;
+        border-radius: 12px;
+        box-shadow: 0 24px 80px rgba(26, 31, 44, .2);
+    }
+
+    .extra-item:last-child {
+        border-bottom: 0;
+    }
+
+    .service-pagination {
+        align-items: center;
+        border-top: 1px solid var(--nails-border);
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        margin-top: 12px;
+        padding-top: 12px;
+    }
+
+    .pager {
+        align-items: center;
+        display: flex;
+        gap: 6px;
+    }
+
+    .pager-link {
+        align-items: center;
+        border: 1px solid var(--nails-border);
+        border-radius: 8px;
+        color: var(--nails-text);
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 900;
+        height: 32px;
+        justify-content: center;
+        min-width: 32px;
+        padding: 0 10px;
+        text-decoration: none;
+    }
+
+    .pager-link.active {
+        background: var(--nails-primary);
+        border-color: var(--nails-primary);
+        color: #fff;
+    }
+
+    .pager-link.disabled {
+        opacity: .45;
+        pointer-events: none;
+    }
+
+    @media (max-width: 1050px) {
+        .services-forms-grid,
+        .services-lists-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .service-pagination {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .service-table {
+            min-width: 560px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% macro pager(base_key, current_page, total_pages, other_key, other_page) %}
+<div class="pager">
+    <a class="pager-link {% if current_page <= 1 %}disabled{% endif %}"
+       href="{{ url_for('nails.servicios', **{base_key: current_page - 1, other_key: other_page}) }}">
+        <i class="fa-solid fa-chevron-left"></i>
+    </a>
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == 1 or p == total_pages or (p >= current_page - 1 and p <= current_page + 1) %}
+        <a class="pager-link {% if p == current_page %}active{% endif %}"
+           href="{{ url_for('nails.servicios', **{base_key: p, other_key: other_page}) }}">{{ p }}</a>
+        {% elif p == current_page - 2 or p == current_page + 2 %}
+        <span class="pager-link disabled">...</span>
+        {% endif %}
+    {% endfor %}
+    <a class="pager-link {% if current_page >= total_pages %}disabled{% endif %}"
+       href="{{ url_for('nails.servicios', **{base_key: current_page + 1, other_key: other_page}) }}">
+        <i class="fa-solid fa-chevron-right"></i>
+    </a>
+</div>
+{% endmacro %}
+
+{% block content %}
+<div class="services-shell">
+    <section class="services-forms-grid">
+        <article class="service-panel">
+            <div class="service-panel-head">
+                <h2 class="service-panel-title">
+                    <span class="service-title-icon"><i class="fa-solid fa-bottle-droplet"></i></span>
+                    Agregar servicio
+                </h2>
+                <span class="service-panel-badge"><i class="fa-solid fa-wand-magic-sparkles me-1"></i>Servicio principal</span>
+            </div>
+
+            <form method="POST" class="row g-3">
+                <input type="hidden" name="form_type" value="service">
+
+                <div class="col-12">
+                    <label class="form-label">Nombre del servicio</label>
+                    <input type="text" name="name" class="form-control" placeholder="Ej. Uñas acrílicas" required>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Categoría</label>
+                    <input type="text" name="category" class="form-control" list="service_categories" placeholder="Ej. Acrílico, Gelish, Pedicure">
+                    <datalist id="service_categories">
+                        {% for category in categories %}
+                        <option value="{{ category.name }}"></option>
+                        {% endfor %}
+                    </datalist>
+                    <div class="form-text">Si la categoría no existe, se crea automáticamente.</div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Precio base</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" name="base_price" class="form-control" min="0" step="0.01" value="0.00">
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Duración aproximada</label>
+                    <div class="input-group">
+                        <input type="number" name="duration_minutes" class="form-control" min="0" step="5" value="60">
+                        <span class="input-group-text">min</span>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="description" class="form-control" rows="3" placeholder="Ej. Aplicación completa con preparación de uña natural."></textarea>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Icono en catálogo</label>
+                    <div class="service-icon-picker">
+                        {% for icon, label in service_icon_options %}
+                        <label class="service-icon-choice">
+                            <input type="radio" name="service_icon" value="{{ icon }}" {% if loop.first %}checked{% endif %}>
+                            <span><i class="fa-solid fa-{{ icon }}"></i>{{ label }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="is_public" id="is_public" checked>
+                        <label class="form-check-label fw-bold" for="is_public">Mostrar en catálogo público</label>
+                    </div>
+                </div>
+
+                <div class="col-12 service-form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fa-regular fa-floppy-disk me-2"></i>Guardar servicio</button>
+                    <button type="reset" class="btn btn-outline-secondary"><i class="fa-solid fa-rotate-right me-2"></i>Limpiar</button>
+                </div>
+            </form>
+        </article>
+
+        <article class="service-panel">
+            <div class="service-panel-head">
+                <h2 class="service-panel-title">
+                    <span class="service-title-icon"><i class="fa-solid fa-gift"></i></span>
+                    Agregar extra
+                </h2>
+                <span class="service-panel-badge"><i class="fa-regular fa-star me-1"></i>Complemento</span>
+            </div>
+
+            <form method="POST" class="row g-3">
+                <input type="hidden" name="form_type" value="extra">
+
+                <div class="col-12">
+                    <label class="form-label">Nombre del extra</label>
+                    <input type="text" name="extra_name" class="form-control" placeholder="Ej. Pedrería" required>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Precio</label>
+                    <div class="input-group">
+                        <span class="input-group-text">$</span>
+                        <input type="number" name="extra_price" class="form-control" min="0" step="0.01" value="0.00">
+                    </div>
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">Tiempo adicional</label>
+                    <div class="input-group">
+                        <input type="number" name="extra_duration_minutes" class="form-control" min="0" step="5" value="0">
+                        <span class="input-group-text">min</span>
+                    </div>
+                </div>
+
+                <div class="col-12">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="extra_description" class="form-control" rows="4" placeholder="Ej. Aplicación de pedrería por diseño."></textarea>
+                </div>
+
+                <div class="col-12 service-form-actions">
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-gift me-2"></i>Guardar extra</button>
+                    <button type="reset" class="btn btn-outline-secondary"><i class="fa-solid fa-rotate-right me-2"></i>Limpiar</button>
+                </div>
+            </form>
+        </article>
+    </section>
+
+    <section class="services-lists-grid">
+        <article class="service-panel">
+            <div class="service-panel-head">
+                <h2 class="service-panel-title">Servicios registrados <span class="service-panel-badge">{{ services_total }}</span></h2>
+                <div class="service-filterbar">
+                    <input type="search" class="form-control" id="service_list_search" placeholder="Buscar servicio...">
+                    <select class="form-select" id="service_status_filter" aria-label="Filtrar servicios">
+                        <option value="all">Todos</option>
+                        <option value="public">Públicos</option>
+                        <option value="private">Privados</option>
+                    </select>
+                </div>
+            </div>
+
+            {% if services %}
+            <div class="table-responsive">
+                <table class="table service-table align-middle">
+                    <thead>
+                        <tr>
+                            <th class="service-table-service">Servicio</th>
+                            <th class="service-table-duration">Duración</th>
+                            <th class="service-table-price text-end">Precio</th>
+                            <th class="service-table-status">Estado</th>
+                            <th class="service-table-actions text-end"></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for service in services %}
+                        <tr data-service-row data-status="{{ 'public' if service.is_public else 'private' }}" data-search="{{ (service.name ~ ' ' ~ (service.description or '') ~ ' ' ~ (service.category_name or ''))|lower }}">
+                            <td class="service-table-service">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="service-item-icon"><i class="fa-solid fa-{{ service.service_icon or 'hand-sparkles' }}"></i></span>
+                                    <div class="service-table-title-wrap">
+                                        <div class="service-name">{{ service.name }}</div>
+                                        <div class="service-sub">{{ service.description or 'Sin descripción' }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="service-table-duration">{{ service.duration_minutes or 0 }} min</td>
+                            <td class="service-table-price text-end fw-bold">${{ "%.2f"|format(service.base_price or 0) }}</td>
+                            <td class="service-table-status">
+                                {% if service.is_public %}
+                                <span class="badge text-bg-success">Público</span>
+                                {% else %}
+                                <span class="badge text-bg-secondary">Privado</span>
+                                {% endif %}
+                            </td>
+                            <td class="service-table-actions text-end">
+                                <div class="dropdown">
+                                    <button class="service-action-btn" type="button" data-bs-toggle="dropdown" aria-label="Acciones de servicio">
+                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li>
+                                            <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editServiceModal{{ service.id }}">
+                                                <i class="fa-regular fa-pen-to-square me-2"></i>Editar
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <form
+                                                method="POST"
+                                                action="{{ url_for('nails.eliminar_servicio', service_id=service.id) }}"
+                                                class="require-confirm"
+                                                data-title="¿Eliminar servicio?"
+                                                data-text="Ya no aparecerá para nuevas citas o ventas."
+                                                data-btn-text="Sí, eliminar"
+                                            >
+                                                <button class="dropdown-item text-danger" type="submit">
+                                                    <i class="fa-regular fa-trash-can me-2"></i>Eliminar
+                                                </button>
+                                            </form>
+                                        </li>
+                                    </ul>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <p class="text-muted fw-bold mb-0" id="service_filter_empty" style="display:none;">No hay servicios con ese filtro en esta página.</p>
+            {% else %}
+            <p class="text-muted mb-0">Todavía no hay servicios registrados.</p>
+            {% endif %}
+
+            <div class="service-pagination">
+                <small class="text-muted fw-bold">
+                    Mostrando {{ ((service_page - 1) * services_per_page) + 1 if services_total else 0 }}
+                    a {{ [service_page * services_per_page, services_total]|min }} de {{ services_total }} servicios
+                </small>
+                {{ pager('service_page', service_page, services_total_pages, 'extra_page', extra_page) }}
+            </div>
+        </article>
+
+        <article class="service-panel">
+            <div class="service-panel-head">
+                <h2 class="service-panel-title">Extras registrados <span class="service-panel-badge">{{ extras_total }}</span></h2>
+                <div class="service-filterbar">
+                    <input type="search" class="form-control" id="extra_list_search" placeholder="Buscar extra...">
+                </div>
+            </div>
+
+            {% if extras %}
+            <div class="extra-list">
+                {% for extra in extras %}
+                <div class="extra-item" data-extra-row data-search="{{ (extra.name ~ ' ' ~ (extra.description or ''))|lower }}">
+                    <span class="service-item-icon"><i class="fa-regular fa-gem"></i></span>
+                    <div class="min-w-0">
+                        <div class="service-name">{{ extra.name }}</div>
+                        <div class="service-sub">{{ extra.description or 'Sin descripción' }}</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="fw-bold">${{ "%.2f"|format(extra.price or 0) }}</div>
+                        <div class="service-sub">+{{ extra.duration_minutes or 0 }} min</div>
+                    </div>
+                    <div class="text-end">
+                        <div class="dropdown">
+                            <button class="service-action-btn" type="button" data-bs-toggle="dropdown" aria-label="Acciones de extra">
+                                <i class="fa-solid fa-ellipsis-vertical"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <button class="dropdown-item" type="button" data-bs-toggle="modal" data-bs-target="#editExtraModal{{ extra.id }}">
+                                        <i class="fa-regular fa-pen-to-square me-2"></i>Editar
+                                    </button>
+                                </li>
+                                <li>
+                                    <form
+                                        method="POST"
+                                        action="{{ url_for('nails.eliminar_extra', extra_id=extra.id) }}"
+                                        class="require-confirm"
+                                        data-title="¿Eliminar extra?"
+                                        data-text="Ya no aparecerá para nuevas citas o ventas."
+                                        data-btn-text="Sí, eliminar"
+                                    >
+                                        <button class="dropdown-item text-danger" type="submit">
+                                            <i class="fa-regular fa-trash-can me-2"></i>Eliminar
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            <p class="text-muted fw-bold mb-0" id="extra_filter_empty" style="display:none;">No hay extras con ese filtro en esta página.</p>
+            {% else %}
+            <p class="text-muted mb-0">Todavía no hay extras registrados.</p>
+            {% endif %}
+
+            <div class="service-pagination">
+                <small class="text-muted fw-bold">
+                    Mostrando {{ ((extra_page - 1) * extras_per_page) + 1 if extras_total else 0 }}
+                    a {{ [extra_page * extras_per_page, extras_total]|min }} de {{ extras_total }} extras
+                </small>
+                {{ pager('extra_page', extra_page, extras_total_pages, 'service_page', service_page) }}
+            </div>
+        </article>
+    </section>
+</div>
+
+{% for service in services %}
+<div class="modal fade service-edit-modal" id="editServiceModal{{ service.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <form class="modal-content" method="POST" action="{{ url_for('nails.editar_servicio', service_id=service.id) }}">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title fs-5 fw-bold">Editar servicio</h2>
+                    <div class="text-muted small">{{ service.name }}</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Nombre del servicio</label>
+                        <input type="text" name="name" class="form-control" value="{{ service.name }}" required>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Categoría</label>
+                        <input type="text" name="category" class="form-control" list="service_categories" value="{{ service.category_name or '' }}" placeholder="Ej. Acrílico, Gelish, Pedicure">
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Precio base</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" name="base_price" class="form-control" min="0" step="0.01" value="{{ service.base_price or 0 }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Duración aproximada</label>
+                        <div class="input-group">
+                            <input type="number" name="duration_minutes" class="form-control" min="0" step="5" value="{{ service.duration_minutes or 0 }}">
+                            <span class="input-group-text">min</span>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Descripción</label>
+                        <textarea name="description" class="form-control" rows="3">{{ service.description or '' }}</textarea>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Icono en catálogo</label>
+                        <div class="service-icon-picker">
+                            {% for icon, label in service_icon_options %}
+                            <label class="service-icon-choice">
+                                <input type="radio" name="service_icon" value="{{ icon }}" {% if (service.service_icon or 'hand-sparkles') == icon %}checked{% endif %}>
+                                <span><i class="fa-solid fa-{{ icon }}"></i>{{ label }}</span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="is_public" id="edit_service_public_{{ service.id }}" {% if service.is_public %}checked{% endif %}>
+                            <label class="form-check-label fw-bold" for="edit_service_public_{{ service.id }}">Mostrar en catálogo público</label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+
+{% for extra in extras %}
+<div class="modal fade service-edit-modal" id="editExtraModal{{ extra.id }}" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <form class="modal-content" method="POST" action="{{ url_for('nails.editar_extra', extra_id=extra.id) }}">
+            <div class="modal-header">
+                <div>
+                    <h2 class="modal-title fs-5 fw-bold">Editar extra</h2>
+                    <div class="text-muted small">{{ extra.name }}</div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row g-3">
+                    <div class="col-12">
+                        <label class="form-label">Nombre del extra</label>
+                        <input type="text" name="extra_name" class="form-control" value="{{ extra.name }}" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Precio</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" name="extra_price" class="form-control" min="0" step="0.01" value="{{ extra.price or 0 }}">
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Tiempo adicional</label>
+                        <div class="input-group">
+                            <input type="number" name="extra_duration_minutes" class="form-control" min="0" step="5" value="{{ extra.duration_minutes or 0 }}">
+                            <span class="input-group-text">min</span>
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Descripción</label>
+                        <textarea name="extra_description" class="form-control" rows="3">{{ extra.description or '' }}</textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-light border" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary">Guardar cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endfor %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const serviceSearch = document.getElementById("service_list_search");
+    const serviceStatus = document.getElementById("service_status_filter");
+    const serviceRows = Array.from(document.querySelectorAll("[data-service-row]"));
+    const serviceEmpty = document.getElementById("service_filter_empty");
+    const extraSearch = document.getElementById("extra_list_search");
+    const extraRows = Array.from(document.querySelectorAll("[data-extra-row]"));
+    const extraEmpty = document.getElementById("extra_filter_empty");
+
+    function applyServiceListFilters() {
+        const q = String(serviceSearch?.value || "").trim().toLowerCase();
+        const status = serviceStatus?.value || "all";
+        let visible = 0;
+
+        serviceRows.forEach(function (row) {
+            const matchesText = !q || String(row.dataset.search || "").includes(q);
+            const matchesStatus = status === "all" || row.dataset.status === status;
+            const show = matchesText && matchesStatus;
+            row.style.display = show ? "" : "none";
+            if (show) visible += 1;
+        });
+
+        if (serviceEmpty) serviceEmpty.style.display = visible || !serviceRows.length ? "none" : "";
+    }
+
+    function applyExtraListFilters() {
+        const q = String(extraSearch?.value || "").trim().toLowerCase();
+        let visible = 0;
+
+        extraRows.forEach(function (row) {
+            const show = !q || String(row.dataset.search || "").includes(q);
+            row.style.display = show ? "" : "none";
+            if (show) visible += 1;
+        });
+
+        if (extraEmpty) extraEmpty.style.display = visible || !extraRows.length ? "none" : "";
+    }
+
+    serviceSearch?.addEventListener("input", applyServiceListFilters);
+    serviceStatus?.addEventListener("change", applyServiceListFilters);
+    extraSearch?.addEventListener("input", applyExtraListFilters);
+    applyServiceListFilters();
+    applyExtraListFilters();
+});
+</script>
+{% endblock %}

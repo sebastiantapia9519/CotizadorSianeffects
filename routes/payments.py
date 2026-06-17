@@ -7,7 +7,7 @@ from helpers import login_required
 from db import get_db_connection as get_db
 from services.mail_service import enviar_correo_sian
 from utils.datetime_utils import now_utc
-from datetime import timedelta
+from datetime import timedelta, timezone, datetime
 
 # Registramos el Blueprint para segmentar la lógica de pagos
 payments_bp = Blueprint('payments', __name__)
@@ -20,7 +20,7 @@ endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET')
 # CREAR SESIÓN DE PAGO (CHECKOUT)
 # =============================================================================
 @payments_bp.route('/create-checkout-session', methods=['POST'])
-@login_required # <-- Súper importante para jalar el ID
+@login_required
 def create_checkout_session():
     """
     Inicia el flujo de pago enviando al cliente a la pasarela de Stripe.
@@ -67,6 +67,11 @@ def create_checkout_session():
             checkout_params['customer'] = customer_id
 
         checkout_session = stripe.checkout.Session.create(**checkout_params)
+        
+        # Validamos que Stripe realmente haya generado la URL para satisfacer a Pylance
+        if not checkout_session.url:
+            raise ValueError("Stripe no devolvió una URL de checkout válida.")
+            
         return redirect(checkout_session.url, code=303)
         
     except Exception as e:
@@ -400,7 +405,6 @@ def procesar_resurreccion(stripe_customer_id, invoice_obj):
 
         if user:
             # 1. Extraemos la fecha exacta de la factura de Stripe (viene en formato Unix)
-            from datetime import datetime, timezone
             period_end_unix = invoice_obj.lines.data[0].period.end
             nueva_fecha_fin = datetime.fromtimestamp(period_end_unix, tz=timezone.utc)
 

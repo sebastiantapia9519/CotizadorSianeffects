@@ -775,6 +775,9 @@ from routes.chatbot import chatbot_bp
 from routes.payments import payments_bp
 from routes.whatsapp_bot import whatsapp_bot_bp
 
+#Nails
+from routes.nails.nails import nails_bp
+
 app.register_blueprint(auth_bp)
 app.register_blueprint(main_bp)
 app.register_blueprint(inventory_bp)
@@ -791,6 +794,9 @@ app.register_blueprint(user_dash_bp)
 app.register_blueprint(chatbot_bp)
 app.register_blueprint(payments_bp, url_prefix='/payments')
 app.register_blueprint(whatsapp_bot_bp, url_prefix='/whatsapp')
+
+#Nails
+app.register_blueprint(nails_bp)
 
 # =============================================================================
 # MIDDLEWARE — Anti-caché
@@ -888,6 +894,15 @@ def serve_apple_icon():
     """
     return send_from_directory('static/images', 'apple-touch-icon.png')
 
+@app.route("/b/<slug>")
+def public_business_catalog(slug):
+    """
+    Ruta pública corta para catálogos de negocios.
+    Ejemplo: /b/nails-studio-diana
+    Redirige al catálogo público del módulo Nails.
+    """
+    return redirect(url_for("nails.catalogo_publico", slug=slug))
+
 
 @app.errorhandler(404)
 def page_not_found(e):
@@ -907,6 +922,8 @@ def page_not_found(e):
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'error': 'Ruta no encontrada'}), 404
     return render_template('404.html'), 404
+
+
 
 
 # =============================================================================

@@ -1,0 +1,722 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Galería | Sianeffects Nails{% endblock %}
+{% block page_title %}Galería ✨{% endblock %}
+{% block page_subtitle %}Sube fotos de trabajos realizados y organízalas para tu catálogo.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .gallery-shell {
+        display: grid;
+        gap: 16px;
+    }
+
+    .gallery-stats {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .gallery-stat {
+        align-items: center;
+        background: rgba(255,255,255,.94);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 14px 34px rgba(26,31,44,.06);
+        display: flex;
+        gap: 16px;
+        min-width: 0;
+        min-height: 92px;
+        padding: 18px;
+    }
+
+    .gallery-stat-icon {
+        align-items: center;
+        background: color-mix(in srgb, var(--nails-primary), #fff 72%);
+        border-radius: 10px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-size: 20px;
+        height: 48px;
+        justify-content: center;
+        width: 48px;
+    }
+
+    .gallery-stat-icon i {
+        color: currentColor;
+        display: block;
+        font-size: 20px;
+        line-height: 1;
+    }
+
+    .gallery-stat:nth-child(2) .gallery-stat-icon {
+        background: color-mix(in srgb, var(--nails-teal), #fff 78%);
+        color: #0f766e;
+    }
+
+    .gallery-stat:nth-child(3) .gallery-stat-icon {
+        background: #fff2e8;
+        color: #ea580c;
+    }
+
+    .gallery-stat:nth-child(4) .gallery-stat-icon {
+        background: #fdf2f8;
+        color: #be185d;
+    }
+
+    .gallery-stat strong {
+        color: var(--nails-ink);
+        display: block;
+        font-size: 22px;
+        font-weight: 900;
+        line-height: 1.05;
+    }
+
+    .gallery-stat div span {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .gallery-main {
+        align-items: start;
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(320px, 390px) minmax(0, 1fr);
+    }
+
+    .gallery-panel {
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 16px 42px rgba(26,31,44,.07);
+        min-width: 0;
+        padding: 18px;
+    }
+
+    .gallery-panel-head {
+        align-items: center;
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+    .gallery-panel-title {
+        color: var(--nails-ink);
+        font-size: 18px;
+        font-weight: 900;
+        margin: 0;
+    }
+
+    .gallery-upload-zone {
+        background: #fff;
+        border: 1px dashed color-mix(in srgb, var(--nails-primary), transparent 38%);
+        border-radius: 12px;
+        cursor: pointer;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 1fr;
+        margin-bottom: 16px;
+        padding: 12px;
+        transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    .gallery-upload-zone:hover {
+        border-color: var(--nails-primary);
+        box-shadow: 0 12px 26px color-mix(in srgb, var(--nails-primary), transparent 86%);
+        transform: translateY(-1px);
+    }
+
+    .gallery-upload-copy {
+        align-items: center;
+        color: var(--nails-muted);
+        display: grid;
+        font-size: 12px;
+        font-weight: 800;
+        gap: 9px;
+        justify-items: center;
+        text-align: center;
+    }
+
+    .gallery-upload-copy i {
+        color: var(--nails-primary-strong);
+        font-size: 25px;
+    }
+
+    .gallery-file-button {
+        background: var(--nails-primary);
+        border-radius: 8px;
+        color: #fff;
+        cursor: pointer;
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 900;
+        justify-content: center;
+        padding: 9px 12px;
+    }
+
+    .gallery-file-button input {
+        display: none;
+    }
+
+    .gallery-preview-frame {
+        aspect-ratio: 16 / 10;
+        background: var(--nails-primary-soft);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 70%);
+        border-radius: 10px;
+        overflow: hidden;
+        position: relative;
+        width: 100%;
+    }
+
+    .gallery-preview-frame img {
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .gallery-preview-empty {
+        align-items: center;
+        color: var(--nails-primary-strong);
+        display: grid;
+        font-size: 30px;
+        gap: 8px;
+        height: 100%;
+        justify-content: center;
+        place-items: center;
+        text-align: center;
+        width: 100%;
+    }
+
+    .gallery-preview-empty span {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .gallery-toolbar {
+        align-items: center;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+
+    .gallery-search {
+        max-width: 240px;
+        position: relative;
+        width: 100%;
+    }
+
+    .gallery-search i {
+        color: var(--nails-muted);
+        left: 12px;
+        pointer-events: none;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .gallery-search .form-control {
+        min-height: 38px;
+        padding-left: 36px;
+    }
+
+    .gallery-filter-tabs {
+        display: flex;
+        gap: 7px;
+    }
+
+    .gallery-filter {
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 8px;
+        color: var(--nails-text);
+        font-size: 12px;
+        font-weight: 900;
+        min-height: 38px;
+        padding: 0 12px;
+    }
+
+    .gallery-filter.active {
+        background: var(--nails-primary-soft);
+        border-color: color-mix(in srgb, var(--nails-primary), transparent 45%);
+        color: var(--nails-primary-strong);
+    }
+
+    .gallery-cards {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        max-height: min(72vh, 780px);
+        overflow-y: auto;
+        padding-right: 4px;
+    }
+
+    .gallery-card {
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 12px 26px rgba(26,31,44,.05);
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .gallery-card.is-hidden {
+        opacity: .82;
+    }
+
+    .gallery-card-image {
+        aspect-ratio: 16 / 10;
+        background: var(--nails-primary-soft);
+        display: block;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .gallery-card-body {
+        padding: 12px;
+    }
+
+    .gallery-card-title-row {
+        align-items: flex-start;
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+    }
+
+    .gallery-card-title {
+        color: var(--nails-ink);
+        font-weight: 900;
+        line-height: 1.2;
+        margin: 0;
+    }
+
+    .gallery-card-service,
+    .gallery-card-desc {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+    }
+
+    .gallery-card-desc {
+        display: -webkit-box;
+        margin: 8px 0 0;
+        overflow: hidden;
+        -webkit-box-orient: vertical;
+        -webkit-line-clamp: 2;
+    }
+
+    .gallery-card-actions {
+        align-items: center;
+        border-top: 1px solid var(--nails-border);
+        display: flex;
+        gap: 8px;
+        margin-top: 12px;
+        padding-top: 10px;
+    }
+
+    .gallery-card-actions form {
+        margin: 0;
+    }
+
+    .gallery-card-actions .btn {
+        font-size: 12px;
+    }
+
+    .gallery-tip {
+        align-items: center;
+        background: linear-gradient(90deg, var(--nails-primary-soft), #fff);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 80%);
+        border-radius: 10px;
+        color: var(--nails-primary-strong);
+        display: flex;
+        font-size: 13px;
+        font-weight: 900;
+        justify-content: space-between;
+        padding: 13px 16px;
+    }
+
+    @media (max-width: 1120px) {
+        .gallery-main {
+            grid-template-columns: 1fr;
+        }
+
+        .gallery-cards {
+            max-height: none;
+        }
+    }
+
+    @media (max-width: 780px) {
+        .gallery-stats,
+        .gallery-cards {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .gallery-toolbar {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .gallery-search {
+            max-width: none;
+        }
+    }
+
+    @media (max-width: 560px) {
+        .gallery-stats,
+        .gallery-cards,
+        .gallery-upload-zone {
+            grid-template-columns: 1fr;
+        }
+
+        .gallery-filter-tabs {
+            overflow-x: auto;
+            padding-bottom: 2px;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="gallery-shell">
+    <section class="gallery-stats">
+        <article class="gallery-stat">
+            <span class="gallery-stat-icon"><i class="fa-regular fa-image"></i></span>
+            <div>
+                <span>Fotos totales</span>
+                <strong>{{ gallery_stats.total if gallery_stats else 0 }}</strong>
+                <span>En tu galería</span>
+            </div>
+        </article>
+        <article class="gallery-stat">
+            <span class="gallery-stat-icon"><i class="fa-regular fa-eye"></i></span>
+            <div>
+                <span>Visibles en catálogo</span>
+                <strong>{{ gallery_stats.public if gallery_stats else 0 }}</strong>
+                <span>Publicadas</span>
+            </div>
+        </article>
+        <article class="gallery-stat">
+            <span class="gallery-stat-icon"><i class="fa-solid fa-lock"></i></span>
+            <div>
+                <span>Pendientes de publicar</span>
+                <strong>{{ gallery_stats.hidden if gallery_stats else 0 }}</strong>
+                <span>No visibles</span>
+            </div>
+        </article>
+        <article class="gallery-stat">
+            <span class="gallery-stat-icon"><i class="fa-solid fa-bottle-droplet"></i></span>
+            <div>
+                <span>Servicios con fotos</span>
+                <strong>{{ gallery_stats.services_with_photos if gallery_stats else 0 }}</strong>
+                <span>Servicios activos</span>
+            </div>
+        </article>
+    </section>
+
+    <section class="gallery-main">
+        <article class="gallery-panel">
+            <div class="gallery-panel-head">
+                <h2 class="gallery-panel-title">Nueva foto</h2>
+            </div>
+
+            <form method="POST" id="gallery_form">
+                <input type="hidden" name="image_url" id="image_url">
+
+                <label class="gallery-upload-zone" for="gallery_file">
+                    <input type="file" id="gallery_file" accept="image/*" class="d-none">
+
+                    <div class="gallery-preview-frame d-none" id="gallery_preview_box">
+                        <div class="gallery-preview-empty" id="gallery_preview_empty">
+                            <i class="fa-regular fa-image"></i>
+                            <span>Vista previa</span>
+                        </div>
+                        <img id="gallery_preview" src="" alt="Vista previa" class="d-none">
+                    </div>
+
+                    <div class="gallery-upload-copy">
+                        <i class="fa-solid fa-cloud-arrow-up"></i>
+                        <span>Haz clic para seleccionar una imagen</span>
+                        <span class="gallery-file-button">Seleccionar archivo</span>
+                        <small id="gallery_upload_status" class="text-muted">Formatos: JPG, PNG · Máx. 10MB</small>
+                    </div>
+                </label>
+
+                <div class="mb-3">
+                    <label class="form-label">Título</label>
+                    <input type="text" name="title" class="form-control" placeholder="Ej. Uñas almendra rosa con flores">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Descripción</label>
+                    <textarea name="description" class="form-control" rows="3" placeholder="Ej. Diseño con glitter y detalles encapsulados"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Servicio relacionado</label>
+                    <select name="service_id" class="form-select">
+                        <option value="">Selecciona un servicio</option>
+                        {% for service in services %}
+                            <option value="{{ service.id }}">{{ service.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Orden</label>
+                    <input type="number" name="sort_order" class="form-control" value="0">
+                    <div class="form-text">Menor número aparece primero.</div>
+                </div>
+
+                <div class="form-check form-switch mb-4">
+                    <input class="form-check-input" type="checkbox" name="is_public" id="is_public" checked>
+                    <label class="form-check-label fw-bold" for="is_public">Mostrar en catálogo público</label>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-fill">
+                        <i class="fa-regular fa-floppy-disk me-2"></i>Guardar en galería
+                    </button>
+                    <button type="reset" class="btn btn-outline-secondary">
+                        <i class="fa-regular fa-trash-can me-2"></i>Limpiar
+                    </button>
+                </div>
+            </form>
+        </article>
+
+        <article class="gallery-panel">
+            <div class="gallery-panel-head">
+                <div>
+                    <h2 class="gallery-panel-title">Fotos guardadas</h2>
+                    <div class="text-muted small">Estas imágenes pueden aparecer en el catálogo público.</div>
+                </div>
+
+                <a
+                    href="/b/{{ business.slug }}"
+                    class="btn btn-sm btn-outline-primary"
+                    target="_blank"
+                >
+                    Ver catálogo
+                </a>
+            </div>
+
+            <div class="gallery-toolbar">
+                <div class="gallery-search">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="search" class="form-control" id="gallery_search" placeholder="Buscar por título o servicio...">
+                </div>
+
+                <div class="gallery-filter-tabs" role="group" aria-label="Filtros de galería">
+                    <button type="button" class="gallery-filter active" data-gallery-filter="all">Todas</button>
+                    <button type="button" class="gallery-filter" data-gallery-filter="public">Públicas</button>
+                    <button type="button" class="gallery-filter" data-gallery-filter="hidden">Ocultas</button>
+                </div>
+            </div>
+
+            {% if gallery_items %}
+                <div class="gallery-cards" id="gallery_cards">
+                    {% for item in gallery_items %}
+                        {% if item.is_active %}
+                            <article
+                                class="gallery-card {% if not item.is_public %}is-hidden{% endif %}"
+                                data-gallery-card
+                                data-public="{{ 'public' if item.is_public else 'hidden' }}"
+                                data-search="{{ (item.title or '') ~ ' ' ~ (item.service_name or '') ~ ' ' ~ (item.description or '') }}"
+                            >
+                                <img src="{{ item.image_url }}" alt="{{ item.title }}" class="gallery-card-image">
+
+                                <div class="gallery-card-body">
+                                    <div class="gallery-card-title-row">
+                                        <div class="min-w-0">
+                                            <h3 class="gallery-card-title">{{ item.title or 'Trabajo realizado' }}</h3>
+                                            {% if item.service_name %}
+                                                <div class="gallery-card-service">{{ item.service_name }}</div>
+                                            {% endif %}
+                                        </div>
+
+                                        {% if item.is_public %}
+                                            <span class="badge text-bg-success">Público</span>
+                                        {% else %}
+                                            <span class="badge text-bg-danger">Oculta</span>
+                                        {% endif %}
+                                    </div>
+
+                                    {% if item.description %}
+                                        <p class="gallery-card-desc">{{ item.description }}</p>
+                                    {% endif %}
+
+                                    <div class="gallery-card-actions">
+                                        <form method="POST" action="{{ url_for('nails.toggle_public_galeria', image_id=item.id) }}">
+                                            <button type="submit" class="btn btn-sm btn-outline-primary">
+                                                {% if item.is_public %}
+                                                    <i class="fa-regular fa-eye-slash me-1"></i>Ocultar
+                                                {% else %}
+                                                    <i class="fa-regular fa-eye me-1"></i>Mostrar
+                                                {% endif %}
+                                            </button>
+                                        </form>
+
+                                        <form
+                                            method="POST"
+                                            action="{{ url_for('nails.eliminar_imagen_galeria', image_id=item.id) }}"
+                                            class="require-confirm ms-auto"
+                                            data-title="¿Eliminar esta imagen?"
+                                            data-text="Se quitará de la galería y del catálogo público si estaba visible."
+                                            data-icon="warning"
+                                            data-btn-text="Sí, eliminar"
+                                            data-btn-color="#dc3545"
+                                        >
+                                            <button type="submit" class="btn btn-sm btn-light border text-danger">
+                                                <i class="fa-regular fa-trash-can"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </article>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <p class="text-muted small mb-0 mt-3" id="gallery_empty_search" style="display:none;">
+                    No encontramos fotos con ese filtro.
+                </p>
+            {% else %}
+                <p class="text-muted mb-0">Todavía no tienes imágenes en la galería.</p>
+            {% endif %}
+        </article>
+    </section>
+
+    <div class="gallery-tip">
+        <span><i class="fa-regular fa-lightbulb me-2"></i>Tip: usa tus mejores fotos para atraer más clientas.</span>
+        <span class="d-none d-md-inline">Actualiza tu catálogo con frecuencia</span>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const fileInput = document.getElementById("gallery_file");
+    const imageUrlInput = document.getElementById("image_url");
+    const statusBox = document.getElementById("gallery_upload_status");
+    const previewBox = document.getElementById("gallery_preview_box");
+    const previewImg = document.getElementById("gallery_preview");
+    const previewEmpty = document.getElementById("gallery_preview_empty");
+    const form = document.getElementById("gallery_form");
+    const searchInput = document.getElementById("gallery_search");
+    const filterButtons = document.querySelectorAll("[data-gallery-filter]");
+    const cards = document.querySelectorAll("[data-gallery-card]");
+    const emptySearch = document.getElementById("gallery_empty_search");
+    let activeFilter = "all";
+
+    function updateGalleryFilters() {
+        const q = String(searchInput?.value || "").trim().toLowerCase();
+        let visible = 0;
+
+        cards.forEach(function (card) {
+            const matchStatus = activeFilter === "all" || card.dataset.public === activeFilter;
+            const matchSearch = !q || String(card.dataset.search || "").toLowerCase().includes(q);
+            const shouldShow = matchStatus && matchSearch;
+            card.style.display = shouldShow ? "" : "none";
+            if (shouldShow) visible += 1;
+        });
+
+        if (emptySearch) {
+            emptySearch.style.display = visible ? "none" : "";
+        }
+    }
+
+    filterButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            activeFilter = button.dataset.galleryFilter || "all";
+            filterButtons.forEach(btn => btn.classList.toggle("active", btn === button));
+            updateGalleryFilters();
+        });
+    });
+
+    searchInput?.addEventListener("input", updateGalleryFilters);
+
+    if (fileInput && imageUrlInput) {
+        fileInput.addEventListener("change", async function () {
+            const file = fileInput.files[0];
+
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append("file", file);
+            formData.append("folder_type", "gallery");
+
+            if (statusBox) {
+                statusBox.textContent = "Subiendo imagen...";
+            }
+
+            try {
+                const response = await fetch("{{ url_for('nails.upload_r2_nails') }}", {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.error || "Error al subir imagen");
+                }
+
+                imageUrlInput.value = result.url;
+
+                if (previewImg && previewBox) {
+                    previewImg.src = result.url;
+                    previewBox.classList.remove("d-none");
+                    previewImg.classList.remove("d-none");
+                    if (previewEmpty) previewEmpty.classList.add("d-none");
+                }
+
+                if (statusBox) {
+                    statusBox.textContent = "Imagen subida correctamente.";
+                }
+
+            } catch (error) {
+                console.error(error);
+
+                if (statusBox) {
+                    statusBox.textContent = "No se pudo subir la imagen.";
+                }
+
+                imageUrlInput.value = "";
+            }
+        });
+    }
+
+    if (form) {
+        form.addEventListener("submit", function (event) {
+            if (!imageUrlInput.value) {
+                event.preventDefault();
+                if (window.nailsNotify) {
+                    window.nailsNotify("warning", "Primero sube una imagen.");
+                }
+            }
+        });
+
+        form.addEventListener("reset", function () {
+            imageUrlInput.value = "";
+            if (previewImg) {
+                previewImg.src = "";
+                previewImg.classList.add("d-none");
+            }
+            if (previewBox) previewBox.classList.add("d-none");
+            if (previewEmpty) previewEmpty.classList.remove("d-none");
+            if (statusBox) statusBox.textContent = "Formatos: JPG, PNG · Máx. 10MB";
+        });
+    }
+
+    updateGalleryFilters();
+});
+</script>
+{% endblock %}

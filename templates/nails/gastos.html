@@ -1,0 +1,778 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Gastos | Sianeffects Nails{% endblock %}
+{% block page_title %}Gastos{% endblock %}
+{% block page_subtitle %}Registra materiales, renta, servicios, comisiones y gastos recurrentes del salón.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .expenses-shell {
+        display: grid;
+        gap: 18px;
+    }
+
+    .expenses-stats {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .expense-stat,
+    .expense-form-card,
+    .expense-list-card,
+    .expense-recurring-card {
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 14px 34px rgba(26,31,44,.06);
+    }
+
+    .expense-stat {
+        align-items: center;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 58px minmax(0, 1fr);
+        min-height: 112px;
+        padding: 18px;
+    }
+
+    .expense-stat-icon {
+        align-items: center;
+        background: var(--stat-bg, var(--nails-primary-soft));
+        border-radius: 16px;
+        color: var(--stat-color, var(--nails-primary-strong));
+        display: inline-flex;
+        font-size: 22px;
+        height: 58px;
+        justify-content: center;
+        width: 58px;
+    }
+
+    .expense-stat-label {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .expense-stat-value {
+        color: var(--nails-ink);
+        font-size: 24px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin-top: 5px;
+    }
+
+    .expense-stat-note {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 4px;
+    }
+
+    .expenses-main {
+        display: grid;
+        gap: 18px;
+        grid-template-columns: 360px minmax(0, 1fr);
+        align-items: start;
+    }
+
+    .expense-form-card,
+    .expense-list-card,
+    .expense-recurring-card {
+        padding: 18px;
+    }
+
+    .expense-card-title {
+        align-items: center;
+        color: var(--nails-primary-strong);
+        display: flex;
+        font-size: 17px;
+        font-weight: 900;
+        gap: 9px;
+        margin: 0 0 16px;
+    }
+
+    .expense-form-grid {
+        display: grid;
+        gap: 12px;
+    }
+
+    .expense-two {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .expense-recurring-fields {
+        background: color-mix(in srgb, var(--nails-primary-soft), #fff 38%);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 78%);
+        border-radius: 8px;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1fr 92px;
+        padding: 12px;
+    }
+
+    .expense-actions-row {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 12px;
+    }
+
+    .expense-toolbar {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: minmax(220px, 1fr) 160px;
+        margin-bottom: 14px;
+    }
+
+    .expense-search {
+        position: relative;
+    }
+
+    .expense-search i {
+        color: var(--nails-muted);
+        left: 13px;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .expense-search .form-control {
+        padding-left: 38px;
+    }
+
+    .expense-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 14px;
+        overflow-x: auto;
+        scrollbar-width: none;
+    }
+
+    .expense-tabs::-webkit-scrollbar {
+        display: none;
+    }
+
+    .expense-tab {
+        align-items: center;
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 8px;
+        color: var(--nails-text);
+        display: inline-flex;
+        flex: 0 0 auto;
+        font-size: 12px;
+        font-weight: 900;
+        gap: 7px;
+        min-height: 38px;
+        padding: 8px 13px;
+        text-decoration: none;
+    }
+
+    .expense-tab.active,
+    .expense-tab:hover {
+        background: var(--nails-primary-soft);
+        border-color: color-mix(in srgb, var(--nails-primary), transparent 60%);
+        color: var(--nails-primary-strong);
+    }
+
+    .expense-table-wrap {
+        overflow-x: auto;
+    }
+
+    .expense-table {
+        min-width: 900px;
+        table-layout: fixed;
+    }
+
+    .expense-table thead th {
+        background: #fbfcff;
+        color: var(--nails-muted);
+        font-size: 10px;
+        font-weight: 900;
+        padding: 11px 12px;
+        text-transform: uppercase;
+    }
+
+    .expense-table tbody td {
+        font-size: 13px;
+        padding: 13px 12px;
+        vertical-align: middle;
+    }
+
+    .expense-name {
+        align-items: center;
+        display: flex;
+        gap: 10px;
+        min-width: 0;
+    }
+
+    .expense-row-icon {
+        align-items: center;
+        background: var(--icon-bg, var(--nails-primary-soft));
+        border-radius: 999px;
+        color: var(--icon-color, var(--nails-primary-strong));
+        display: inline-flex;
+        flex: 0 0 auto;
+        height: 34px;
+        justify-content: center;
+        width: 34px;
+    }
+
+    .expense-name strong {
+        color: var(--nails-ink);
+        display: block;
+        font-size: 13px;
+        line-height: 1.15;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .expense-name small {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .expense-badge {
+        background: var(--badge-bg, var(--nails-primary-soft));
+        color: var(--badge-color, var(--nails-primary-strong));
+        border-radius: 999px;
+        display: inline-flex;
+        font-size: 11px;
+        font-weight: 900;
+        padding: 5px 9px;
+        white-space: nowrap;
+    }
+
+    .expense-status-activo {
+        --badge-bg: #eaf8ee;
+        --badge-color: #168044;
+    }
+
+    .expense-status-cancelado {
+        --badge-bg: #feeceb;
+        --badge-color: #be2d2d;
+    }
+
+    .expense-icon-btn {
+        align-items: center;
+        border: 0;
+        background: transparent;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        height: 32px;
+        justify-content: center;
+        width: 32px;
+    }
+
+    .expense-icon-btn.danger {
+        color: #ef4444;
+    }
+
+    .expense-pagination {
+        align-items: center;
+        display: flex;
+        gap: 8px;
+        justify-content: space-between;
+        margin-top: 12px;
+    }
+
+    .expense-pages {
+        display: flex;
+        gap: 6px;
+    }
+
+    .expense-pages a,
+    .expense-pages span {
+        align-items: center;
+        border: 1px solid var(--nails-border);
+        border-radius: 8px;
+        color: var(--nails-text);
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 900;
+        height: 34px;
+        justify-content: center;
+        min-width: 34px;
+        padding: 0 10px;
+        text-decoration: none;
+    }
+
+    .expense-pages .active {
+        background: var(--nails-primary-soft);
+        color: var(--nails-primary-strong);
+    }
+
+    .expense-recurring-card {
+        display: grid;
+        gap: 14px;
+    }
+
+    .expense-recurring-list {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .expense-recurring-item {
+        align-items: center;
+        border-right: 1px solid var(--nails-border);
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 44px minmax(0, 1fr) auto;
+        min-width: 0;
+        padding-right: 12px;
+    }
+
+    .expense-recurring-item:last-child {
+        border-right: 0;
+    }
+
+    .expense-recurring-title {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .expense-recurring-meta {
+        color: var(--nails-muted);
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .expense-empty {
+        color: var(--nails-muted);
+        font-size: 13px;
+        font-weight: 800;
+        margin: 0;
+    }
+
+    @media (max-width: 1120px) {
+        .expenses-stats,
+        .expense-recurring-list {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .expenses-main {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .expenses-stats,
+        .expense-toolbar,
+        .expense-two,
+        .expense-recurring-fields,
+        .expense-recurring-list {
+            grid-template-columns: 1fr;
+        }
+
+        .expense-actions-row,
+        .expense-pagination {
+            align-items: stretch;
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="expenses-shell">
+    <section class="expenses-stats">
+        <article class="expense-stat">
+            <span class="expense-stat-icon"><i class="fa-solid fa-wallet"></i></span>
+            <div>
+                <div class="expense-stat-label">Gasto del mes</div>
+                <div class="expense-stat-value">${{ "%.2f"|format(stats.month_total or 0) }}</div>
+                <div class="expense-stat-note">{{ month_start.strftime('%B %Y') }}</div>
+            </div>
+        </article>
+
+        <article class="expense-stat">
+            <span class="expense-stat-icon" style="--stat-bg:#f5efff;--stat-color:#8b5cf6;"><i class="fa-solid fa-rotate"></i></span>
+            <div>
+                <div class="expense-stat-label">Recurrentes activos</div>
+                <div class="expense-stat-value">{{ stats.recurring_count or 0 }}</div>
+                <div class="expense-stat-note">Gastos programados</div>
+            </div>
+        </article>
+
+        <article class="expense-stat">
+            <span class="expense-stat-icon" style="--stat-bg:#fdf2f8;--stat-color:#db2777;"><i class="fa-solid fa-box-open"></i></span>
+            <div>
+                <div class="expense-stat-label">Materiales</div>
+                <div class="expense-stat-value">${{ "%.2f"|format(stats.materials_total or 0) }}</div>
+                <div class="expense-stat-note">Total del mes</div>
+            </div>
+        </article>
+
+        <article class="expense-stat">
+            <span class="expense-stat-icon" style="--stat-bg:#f5efff;--stat-color:#7c3aed;"><i class="fa-regular fa-calendar-days"></i></span>
+            <div>
+                <div class="expense-stat-label">Próximo gasto</div>
+                <div class="expense-stat-value">{{ next_expense.expense_date_label if next_expense else "Sin fecha" }}</div>
+                <div class="expense-stat-note">{{ next_expense.title if next_expense else "No hay gastos próximos" }}</div>
+            </div>
+        </article>
+    </section>
+
+    <section class="expenses-main">
+        <article class="expense-form-card">
+            <h2 class="expense-card-title"><i class="fa-solid fa-briefcase"></i>Registrar gasto</h2>
+            <form method="POST" class="expense-form-grid">
+                <div>
+                    <label class="form-label">Nombre del gasto</label>
+                    <input type="text" name="title" class="form-control" maxlength="160" placeholder="Ej. Compra de gelish, Renta, Luz..." required>
+                </div>
+
+                <div class="expense-two">
+                    <div>
+                        <label class="form-label">Categoría</label>
+                        <select name="category" class="form-select" required>
+                            {% for value, label in category_labels.items() %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Monto</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input type="number" name="amount" class="form-control" step="0.01" min="0" placeholder="0.00" required>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="expense-two">
+                    <div>
+                        <label class="form-label">Fecha del gasto</label>
+                        <input type="date" name="expense_date" class="form-control" value="{{ current_date or '' }}">
+                    </div>
+                    <div>
+                        <label class="form-label">Método de pago</label>
+                        <select name="payment_method" class="form-select">
+                            {% for value, label in payment_labels.items() %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-check form-switch">
+                    <input class="form-check-input js-recurring-toggle" type="checkbox" role="switch" id="is_recurring_new" name="is_recurring">
+                    <label class="form-check-label fw-bold" for="is_recurring_new">¿Es recurrente?</label>
+                </div>
+
+                <div class="expense-recurring-fields js-recurring-fields" style="display:none;">
+                    <div>
+                        <label class="form-label">Frecuencia</label>
+                        <select name="recurring_frequency" class="form-select">
+                            {% for value, label in frequency_labels.items() %}
+                                <option value="{{ value }}">{{ label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label">Día</label>
+                        <input type="number" name="recurring_day" class="form-control" min="1" max="31" value="1">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="form-label">Notas <span class="text-muted">(opcional)</span></label>
+                    <textarea name="notes" class="form-control" rows="4" maxlength="1000" placeholder="Agrega notas o detalles adicionales..."></textarea>
+                </div>
+
+                <div class="expense-actions-row">
+                    <button type="reset" class="btn btn-outline-secondary">
+                        <i class="fa-solid fa-rotate-left me-2"></i>Limpiar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fa-regular fa-floppy-disk me-2"></i>Guardar gasto
+                    </button>
+                </div>
+            </form>
+        </article>
+
+        <article class="expense-list-card">
+            <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap mb-2">
+                <h2 class="expense-card-title mb-0"><i class="fa-solid fa-briefcase"></i>Gastos registrados</h2>
+                <form method="GET" class="expense-toolbar">
+                    <div class="expense-search">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <input type="search" name="q" class="form-control" value="{{ q }}" placeholder="Buscar gasto...">
+                    </div>
+                    <input type="month" name="month" class="form-control" value="{{ selected_month }}">
+                    <input type="hidden" name="status" value="{{ filter_status }}">
+                </form>
+            </div>
+
+            <nav class="expense-tabs">
+                <a class="expense-tab {% if filter_status == 'todos' %}active{% endif %}" href="{{ url_for('nails.gastos', month=selected_month, q=q, status='todos') }}">
+                    <i class="fa-solid fa-list"></i>Todos
+                </a>
+                <a class="expense-tab {% if filter_status == 'activos' %}active{% endif %}" href="{{ url_for('nails.gastos', month=selected_month, q=q, status='activos') }}">
+                    <i class="fa-solid fa-circle-check"></i>Activos
+                </a>
+                <a class="expense-tab {% if filter_status == 'recurrentes' %}active{% endif %}" href="{{ url_for('nails.gastos', month=selected_month, q=q, status='recurrentes') }}">
+                    <i class="fa-solid fa-rotate"></i>Recurrentes
+                </a>
+                <a class="expense-tab {% if filter_status == 'cancelados' %}active{% endif %}" href="{{ url_for('nails.gastos', month=selected_month, q=q, status='cancelados') }}">
+                    <i class="fa-regular fa-circle-xmark"></i>Cancelados
+                </a>
+            </nav>
+
+            {% if expenses %}
+                <div class="expense-table-wrap">
+                    <table class="table expense-table align-middle">
+                        <thead>
+                            <tr>
+                                <th style="width: 240px;">Gasto</th>
+                                <th>Categoría</th>
+                                <th class="text-end">Monto</th>
+                                <th>Fecha</th>
+                                <th>Pagó</th>
+                                <th>Frecuencia</th>
+                                <th>Estado</th>
+                                <th class="text-end">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for expense in expenses %}
+                                {% set category = expense.category or 'otros' %}
+                                <tr>
+                                    <td>
+                                        <div class="expense-name">
+                                            <span class="expense-row-icon">
+                                                {% if category == 'renta' %}
+                                                    <i class="fa-solid fa-building"></i>
+                                                {% elif category == 'materiales' %}
+                                                    <i class="fa-solid fa-bottle-droplet"></i>
+                                                {% elif category == 'servicios' %}
+                                                    <i class="fa-solid fa-bolt"></i>
+                                                {% elif category == 'publicidad' %}
+                                                    <i class="fa-solid fa-bullhorn"></i>
+                                                {% elif category == 'sueldos' %}
+                                                    <i class="fa-regular fa-user"></i>
+                                                {% else %}
+                                                    <i class="fa-solid fa-wallet"></i>
+                                                {% endif %}
+                                            </span>
+                                            <span class="min-w-0">
+                                                <strong>{{ expense.title }}</strong>
+                                                {% if expense.notes %}<small>{{ expense.notes }}</small>{% endif %}
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td><span class="expense-badge">{{ category_labels.get(category, category|title) }}</span></td>
+                                    <td class="text-end fw-bold">${{ "%.2f"|format(expense.amount or 0) }}</td>
+                                    <td>{{ expense.expense_date_label }}</td>
+                                    <td>{{ payment_labels.get(expense.payment_method, expense.payment_method|title) }}</td>
+                                    <td>
+                                        {% if expense.is_recurring %}
+                                            <span class="expense-badge" style="--badge-bg:#f5efff;--badge-color:#7c3aed;">{{ frequency_labels.get(expense.recurring_frequency, 'Recurrente') }}</span>
+                                            <div class="text-muted small fw-bold">Día {{ expense.recurring_day or '-' }}</div>
+                                        {% else %}
+                                            <span class="text-muted fw-bold">--</span>
+                                        {% endif %}
+                                    </td>
+                                    <td><span class="expense-badge expense-status-{{ expense.status }}">{{ expense.status|title }}</span></td>
+                                    <td class="text-end">
+                                        <button type="button" class="expense-icon-btn" data-bs-toggle="modal" data-bs-target="#editExpense{{ expense.id }}" aria-label="Editar gasto">
+                                            <i class="fa-regular fa-pen-to-square"></i>
+                                        </button>
+                                        {% if expense.status != 'cancelado' %}
+                                            <form method="POST" action="{{ url_for('nails.cancelar_gasto', expense_id=expense.id) }}" class="d-inline require-confirm" data-title="¿Cancelar gasto?" data-text="El gasto dejará de contar para los reportes." data-btn-text="Sí, cancelar">
+                                                <button type="submit" class="expense-icon-btn danger" aria-label="Cancelar gasto">
+                                                    <i class="fa-regular fa-trash-can"></i>
+                                                </button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="expense-pagination">
+                    <div class="expense-pages">
+                        {% if page > 1 %}
+                            <a href="{{ url_for('nails.gastos', month=selected_month, q=q, status=filter_status, page=page-1) }}"><i class="fa-solid fa-chevron-left"></i></a>
+                        {% endif %}
+                        {% for number in range(1, total_pages + 1) %}
+                            {% if number == page %}
+                                <span class="active">{{ number }}</span>
+                            {% elif number <= 3 or number == total_pages or (number >= page - 1 and number <= page + 1) %}
+                                <a href="{{ url_for('nails.gastos', month=selected_month, q=q, status=filter_status, page=number) }}">{{ number }}</a>
+                            {% endif %}
+                        {% endfor %}
+                        {% if page < total_pages %}
+                            <a href="{{ url_for('nails.gastos', month=selected_month, q=q, status=filter_status, page=page+1) }}"><i class="fa-solid fa-chevron-right"></i></a>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small fw-bold">Mostrando {{ expenses|length }} de {{ total_filtered }} gastos</div>
+                </div>
+            {% else %}
+                <p class="expense-empty">No hay gastos registrados con estos filtros.</p>
+            {% endif %}
+        </article>
+    </section>
+
+    <section class="expense-recurring-card">
+        <div class="d-flex justify-content-between align-items-center gap-3 flex-wrap">
+            <h2 class="expense-card-title mb-0"><i class="fa-regular fa-calendar"></i>Próximos gastos recurrentes</h2>
+            <a href="{{ url_for('nails.gastos', status='recurrentes') }}" class="btn btn-sm btn-outline-primary">Ver todos</a>
+        </div>
+
+        {% if recurring_expenses %}
+            <div class="expense-recurring-list">
+                {% for expense in recurring_expenses %}
+                    {% set category = expense.category or 'otros' %}
+                    <div class="expense-recurring-item">
+                        <span class="expense-row-icon">
+                            {% if category == 'renta' %}
+                                <i class="fa-solid fa-building"></i>
+                            {% elif category == 'servicios' %}
+                                <i class="fa-solid fa-bolt"></i>
+                            {% elif category == 'sueldos' %}
+                                <i class="fa-regular fa-user"></i>
+                            {% else %}
+                                <i class="fa-solid fa-wallet"></i>
+                            {% endif %}
+                        </span>
+                        <div class="min-w-0">
+                            <div class="expense-recurring-title">{{ expense.title }}</div>
+                            <div class="expense-recurring-meta">Día {{ expense.recurring_day or '-' }} · {{ frequency_labels.get(expense.recurring_frequency, 'Recurrente') }}</div>
+                            <div class="expense-recurring-meta">Próximo: {{ expense.expense_date_label }}</div>
+                        </div>
+                        <strong class="text-nowrap">${{ "%.2f"|format(expense.amount or 0) }}</strong>
+                    </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p class="expense-empty">No hay gastos recurrentes activos.</p>
+        {% endif %}
+    </section>
+</div>
+
+{% for expense in expenses %}
+    <div class="modal fade" id="editExpense{{ expense.id }}" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <form method="POST" action="{{ url_for('nails.editar_gasto', expense_id=expense.id) }}" class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-black">Editar gasto</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-8">
+                            <label class="form-label">Nombre del gasto</label>
+                            <input type="text" name="title" class="form-control" maxlength="160" value="{{ expense.title }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Estado</label>
+                            <select name="status" class="form-select">
+                                <option value="activo" {% if expense.status == 'activo' %}selected{% endif %}>Activo</option>
+                                <option value="cancelado" {% if expense.status == 'cancelado' %}selected{% endif %}>Cancelado</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Categoría</label>
+                            <select name="category" class="form-select">
+                                {% for value, label in category_labels.items() %}
+                                    <option value="{{ value }}" {% if expense.category == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Monto</label>
+                            <input type="number" name="amount" class="form-control" step="0.01" min="0" value="{{ '%.2f'|format(expense.amount or 0) }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Fecha</label>
+                            <input type="date" name="expense_date" class="form-control" value="{{ expense.expense_date }}" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Método de pago</label>
+                            <select name="payment_method" class="form-select">
+                                {% for value, label in payment_labels.items() %}
+                                    <option value="{{ value }}" {% if expense.payment_method == value %}selected{% endif %}>{{ label }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-8">
+                            <label class="form-label">Notas</label>
+                            <input type="text" name="notes" class="form-control" maxlength="1000" value="{{ expense.notes or '' }}">
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input js-recurring-toggle" type="checkbox" role="switch" id="is_recurring_{{ expense.id }}" name="is_recurring" {% if expense.is_recurring %}checked{% endif %}>
+                                <label class="form-check-label fw-bold" for="is_recurring_{{ expense.id }}">Es recurrente</label>
+                            </div>
+                        </div>
+                        <div class="col-12 js-recurring-fields" {% if not expense.is_recurring %}style="display:none;"{% endif %}>
+                            <div class="expense-recurring-fields">
+                                <div>
+                                    <label class="form-label">Frecuencia</label>
+                                    <select name="recurring_frequency" class="form-select">
+                                        {% for value, label in frequency_labels.items() %}
+                                            <option value="{{ value }}" {% if expense.recurring_frequency == value %}selected{% endif %}>{{ label }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="form-label">Día</label>
+                                    <input type="number" name="recurring_day" class="form-control" min="1" max="31" value="{{ expense.recurring_day or 1 }}">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endfor %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('form .js-recurring-toggle').forEach(function (toggle) {
+            const form = toggle.closest('form');
+            const fields = form ? form.querySelector('.js-recurring-fields') : null;
+            if (!fields) return;
+
+            const syncFields = function () {
+                fields.style.display = toggle.checked ? '' : 'none';
+            };
+
+            toggle.addEventListener('change', syncFields);
+            syncFields();
+        });
+
+        const toolbar = document.querySelector('.expense-toolbar');
+        if (toolbar) {
+            toolbar.querySelectorAll('input').forEach(function (input) {
+                input.addEventListener('change', function () {
+                    toolbar.submit();
+                });
+            });
+        }
+    });
+</script>
+
+{% endblock %}

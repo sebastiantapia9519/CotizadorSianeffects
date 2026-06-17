@@ -1,0 +1,617 @@
+================================================================================
+                    MANUAL COMPLETO: SIANEFFECTS NAILS
+================================================================================
+Ultima actualizacion: Junio 2026
+Modulo: Sianeffects Nails
+Audiencia: usuarias finales, soporte, administracion y desarrollo.
+
+--------------------------------------------------------------------------------
+1. QUE ES SIANEFFECTS NAILS
+--------------------------------------------------------------------------------
+Sianeffects Nails es el modulo para salones de unas y negocios de belleza dentro
+del ecosistema Sianeffects. Su flujo principal es:
+
+  Registro -> Configuracion del salon -> Servicios/Extras -> Agenda -> Venta
+  -> Ticket -> Clientas -> Reportes
+
+No es el cotizador de recetas/materiales. Nails esta pensado para negocios de
+servicios: citas, tecnicas, clientas, anticipos, ventas, gastos, catalogo publico
+y reportes operativos.
+
+Reglas de separacion:
+- Nails comparte la tabla `usuarios` para autenticacion, suscripcion y soporte.
+- Nails usa tablas propias con prefijo `nails_`.
+- Nails no mezcla sus ventas/clientas con las tablas del cotizador.
+- El campo `usuarios.active_module` define a donde entra una cuenta al iniciar
+  sesion:
+  - `cotizador`: entra a `/cotizador`.
+  - `nails`: entra a `/nails/dashboard`.
+
+--------------------------------------------------------------------------------
+2. REGISTRO, LOGIN Y CORREOS
+--------------------------------------------------------------------------------
+Rutas importantes:
+- Registro Cotizador: `/registro`
+- Registro Nails: `/registro-nails`
+- Login general: `/login`
+- Verificacion de correo: `/verificar-email`
+- Reenvio de codigo: `/reenviar-codigo`
+- Logout: `/logout`
+
+Registro Nails sin codigo:
+1. La usuaria entra a `/registro-nails`.
+2. Deja vacio el codigo de salon.
+3. Llena nombre, correo, password, WhatsApp y datos del salon.
+4. Se crea un usuario con `active_module = 'nails'`.
+5. Se crea un salon en `nails_businesses`.
+6. Se crea su registro en `nails_staff` con rol `owner`.
+7. Se genera un codigo de verificacion en `auth_codes`.
+8. Se envia correo `auth_code_nails`.
+9. Al verificar, se envia correo `bienvenida_nails`.
+10. Al iniciar sesion, entra directo a `/nails/dashboard`.
+
+Registro Nails con codigo:
+1. La jefa comparte el codigo del salon desde Configuracion.
+2. La tecnica entra a `/registro-nails?codigo=CODIGO`.
+3. El formulario desactiva los campos de salon.
+4. La cuenta se crea con `active_module = 'nails'`.
+5. Se agrega a `nails_staff` como `staff`.
+6. Recibe correo de verificacion Nails.
+7. Al verificar, recibe bienvenida Nails.
+8. Al iniciar sesion, entra al dashboard Nails del salon.
+
+Correos:
+- Cotizador usa:
+  - `templates/emails/auth_code.html`
+  - `templates/emails/bienvenida.html`
+- Nails usa:
+  - `templates/emails/auth_code_nails.html`
+  - `templates/emails/bienvenida_nails.html`
+
+Notas tecnicas:
+- Los correos se mandan con `services/mail_service.py`.
+- Se usa Resend mediante `enviar_correo_sian`.
+- Los correos se envian despues del commit de base de datos.
+- Si falla el envio, el usuario puede reenviar el codigo.
+- El reenvio detecta `active_module` y manda el template correcto.
+
+--------------------------------------------------------------------------------
+3. ROLES Y PERMISOS
+--------------------------------------------------------------------------------
+Roles internos de `nails_staff.role`:
+
+owner = Jefa
+- Control total del salon.
+- Ve configuracion, personal, reportes, ventas, gastos, agenda, clientas,
+  servicios y galeria.
+- Puede cancelar/eliminar citas si esta permitido en la UI.
+- Puede anular ventas.
+- Puede cambiar roles.
+- Solo una jefa puede crear o asignar otra jefa.
+- No debe poder desactivarse a si misma desde Personal.
+
+admin = Administracion
+- Apoya operacion diaria.
+- Puede ver agenda, clientas, servicios, ventas, gastos, reportes y galeria.
+- No administra jefas.
+- No debe ver acciones sensibles de owner.
+
+staff = Tecnica
+- Pensada para quien atiende servicios.
+- Puede aparecer como tecnica asignable en citas.
+- Debe enfocarse en agenda, sus citas, clientas y ventas operativas segun permisos.
+- Por default, quien se une con codigo de salon entra como tecnica.
+
+reception = Recepcion
+- Apoyo en agenda, clientas y cobros.
+- No administra configuracion sensible ni personal.
+
+Traduccion visible:
+- En UI no se muestra "owner" como texto final; se usa "Jefa".
+
+--------------------------------------------------------------------------------
+4. PRIMER USO PARA UNA JEFA
+--------------------------------------------------------------------------------
+1. Entrar a `/registro-nails`.
+2. Crear cuenta sin codigo de salon.
+3. Verificar correo.
+4. Iniciar sesion.
+5. Entrar a Configuracion.
+6. Revisar:
+   - Nombre del salon.
+   - Correo registrado.
+   - WhatsApp.
+   - Instagram.
+   - Direccion.
+   - Frase del catalogo.
+   - Colores.
+   - Logo.
+   - Horarios de trabajo.
+   - Politicas de anticipo/cancelacion.
+   - Codigo del salon.
+7. Crear categorias, servicios y extras.
+8. Subir galeria.
+9. Compartir catalogo publico.
+10. Registrar citas y ventas.
+11. Revisar reportes y gastos.
+
+--------------------------------------------------------------------------------
+5. CONFIGURACION DEL SALON
+--------------------------------------------------------------------------------
+Ruta:
+- `/nails/configuracion`
+
+Secciones principales:
+- Datos del salon:
+  - Nombre.
+  - Correo registrado: solo lectura, sale de `usuarios.email` del usuario creador.
+  - WhatsApp.
+  - Instagram.
+  - Direccion.
+  - Zona horaria.
+  - Moneda.
+  - Frase del catalogo.
+- Logo:
+  - Se sube a Cloudflare R2 si esta configurado.
+- Colores:
+  - Primary, secondary, accent.
+- Link publico:
+  - `/b/<slug>`.
+- Codigo del salon:
+  - `nails_businesses.join_code`.
+  - Sirve para que nuevas tecnicas se registren y se unan al salon.
+- Horarios:
+  - Guardados en `business_hours_json`.
+  - Se usan para disponibilidad en catalogo y agenda.
+- Politicas:
+  - Cancelacion.
+  - Anticipo.
+
+--------------------------------------------------------------------------------
+6. PERSONAL
+--------------------------------------------------------------------------------
+Ruta:
+- `/nails/personal`
+
+Objetivo:
+- Administrar miembros del salon y roles.
+- No se usa para "crear personal" manualmente; cada persona debe registrarse.
+- La jefa comparte el codigo del salon.
+- La tecnica se registra por su cuenta.
+
+Reglas de UX:
+- No mostrar boton "Agregar personal".
+- No permitir que una jefa se desactive a si misma.
+- Solo una jefa puede promover a otra persona a jefa.
+- Quitar comisiones de la UI para no confundir mientras no exista modulo de
+  comisiones real.
+
+--------------------------------------------------------------------------------
+7. SERVICIOS Y EXTRAS
+--------------------------------------------------------------------------------
+Ruta:
+- `/nails/servicios`
+
+Servicios:
+- Nombre.
+- Descripcion.
+- Precio base.
+- Duracion.
+- Categoria.
+- Icono.
+- Estado activo/inactivo.
+- Publico/no publico.
+- Orden.
+
+Extras:
+- Nombre.
+- Descripcion.
+- Precio.
+- Duracion adicional.
+- Estado.
+- Orden.
+
+Iconos:
+- Se configuran desde servicios.
+- Opciones soportadas en backend:
+  - hand-sparkles
+  - wand-magic-sparkles
+  - bottle-droplet
+  - paintbrush
+  - gem
+  - spa
+  - shoe-prints
+  - droplet
+  - heart
+  - star
+
+Filtros:
+- Deben filtrar servicios/extras por estado, busqueda o categoria si se muestran
+  en UI.
+
+--------------------------------------------------------------------------------
+8. AGENDA Y CITAS
+--------------------------------------------------------------------------------
+Ruta:
+- `/nails/agenda`
+
+Funciones:
+- Vista calendario Dia/Semana/Lista.
+- Crear cita desde boton Nueva Cita.
+- Crear cita tocando un horario.
+- Ver detalle en panel lateral.
+- Gestionar citas en modal.
+- Cambiar estado.
+- Cobrar venta.
+- Reagendar.
+- Contactar por WhatsApp.
+- Cancelar/eliminar cita segun permisos.
+
+Nueva cita:
+- Cliente:
+  - Buscar clienta existente.
+  - Escribir nombre nuevo.
+  - Si se deja vacio, usa Cliente General.
+- Servicios:
+  - Permite varios servicios.
+  - Permite repetir el mismo servicio mas de una vez.
+- Staff/Tecnica:
+  - Puede quedar sin asignar.
+  - Si se asigna y se empalma, debe alertar antes de guardar.
+- Fecha/hora:
+  - Obligatorio.
+- Extras:
+  - Opcionales.
+- Estado:
+  - pendiente, confirmada, atendida, cancelada, no_asistio.
+- Anticipo:
+  - Muestra 0 por default.
+  - Al enfocar el campo, el 0 se limpia para escribir rapido.
+  - Si queda vacio al salir, vuelve a 0.
+- Notas:
+  - Informacion libre.
+
+Validacion de empalmes:
+- Antes de enviar, valida en frontend contra citas cargadas.
+- No debe cerrar modal ni borrar informacion si detecta empalme.
+- Mensaje recomendado:
+  "Ojo: esta tecnica ya tiene una cita programada de HH:MM a HH:MM. Se empalman
+  los horarios."
+
+Reglas de venta:
+- Al crear una cita, se crea/asocia una venta.
+- Si se cancela una cita, se cancela la venta asociada.
+- Si la clienta no asiste, queda historial de la clienta.
+
+Gestionar citas:
+- Desktop:
+  - Lista a la izquierda.
+  - Resumen del dia a la derecha.
+- Movil:
+  - Resumen compacto colapsable arriba de la lista.
+  - Acciones principales visibles.
+  - Acciones secundarias dentro de menu de tres puntos.
+
+--------------------------------------------------------------------------------
+9. CLIENTAS
+--------------------------------------------------------------------------------
+Ruta:
+- `/nails/clientes`
+
+Funciones:
+- Buscar en vivo por nombre, telefono, correo o Instagram.
+- Filtros por segmentos:
+  - frecuentes
+  - cumpleanos
+  - primera visita
+  - saldo pendiente
+  - por volver
+- Off canvas de detalle de clienta.
+- Historial de citas/ventas.
+- Ultima visita.
+- Total gastado.
+- Saldo pendiente.
+- Preferencias, alergias y notas.
+
+Reglas:
+- "Ultima visita" debe actualizarse cuando hay venta/cita atendida real.
+- No asistencias pueden quedar en historial, pero no necesariamente cuentan como
+  visita atendida.
+
+--------------------------------------------------------------------------------
+10. VENTAS Y TICKETS
+--------------------------------------------------------------------------------
+Ruta:
+- `/nails/ventas`
+
+Funciones:
+- Punto de cobro.
+- Buscar clienta como en agenda.
+- Si no se elige clienta, usar Cliente General.
+- Seleccionar servicios.
+- Seleccionar extras.
+- Pago recibido.
+- Metodo de pago.
+- Descuento.
+- Tecnica.
+- Notas.
+- Cobrar.
+- Cobrar y generar ticket.
+- Liquidar total.
+- Ventas recientes con paginacion.
+- Filtro por fecha.
+- Anular venta solo para Jefa.
+
+Validaciones:
+- No permitir cobrar si no hay servicios/extras/total.
+- Si pago es 0 y se enfoca el campo, se limpia para escribir rapido.
+- Ticket debe abrir en nueva pestana.
+- Boton cerrar ticket debe intentar cerrar ventana y si no puede, volver a ventas.
+
+Estados de venta:
+- pendiente
+- anticipo
+- pagada
+- cancelada
+
+Anular venta:
+- Solo owner/Jefa.
+- No borra registro.
+- Cambia status a cancelada.
+- Debe quedar fuera de reportes activos.
+- Conserva historial/auditoria.
+
+--------------------------------------------------------------------------------
+11. GASTOS
+--------------------------------------------------------------------------------
+Ruta:
+- `/nails/gastos`
+
+Tabla:
+- `nails_expenses`
+
+Categorias permitidas:
+- materiales
+- renta
+- servicios
+- sueldos
+- comisiones
+- publicidad
+- mantenimiento
+- capacitacion
+- otros
+
+Campos:
+- title
+- category
+- amount
+- expense_date
+- payment_method
+- is_recurring
+- recurring_day
+- recurring_frequency
+- notes
+- status
+
+Uso:
+- Registrar materiales, renta, luz, servicios, publicidad, sueldos,
+  comisiones y gastos recurrentes.
+- Estos datos alimentan reportes de utilidad y desglose de gastos.
+
+--------------------------------------------------------------------------------
+12. REPORTES
+--------------------------------------------------------------------------------
+Ruta:
+- `/nails/reportes`
+
+Filtros:
+- Desde.
+- Hasta.
+- Atajos: Hoy, 7 dias, 30 dias.
+
+Indicadores:
+- Ventas del periodo.
+- Cobrado.
+- Saldo pendiente.
+- Gastos.
+- Utilidad neta.
+- Citas del periodo.
+- Gasto mas alto.
+- Ticket promedio.
+- Margen neto.
+- Asistencia.
+
+Paneles:
+- Ventas por estado.
+- Ventas por dia.
+- En que estas gastando mas.
+- Extras mas vendidos.
+- Servicios mas vendidos.
+- Top clientas.
+- Ventas con saldo pendiente.
+
+Excel:
+- Boton "Descargar Excel".
+- Ruta: `/nails/reportes/excel?date_from=YYYY-MM-DD&date_to=YYYY-MM-DD`.
+- Hojas:
+  - Resumen
+  - Ventas
+  - Detalle ventas
+  - Gastos
+  - Gastos por categoria
+  - Citas
+
+--------------------------------------------------------------------------------
+13. GALERIA Y CATALOGO PUBLICO
+--------------------------------------------------------------------------------
+Rutas:
+- Admin galeria: `/nails/galeria`
+- Catalogo publico: `/b/<slug>`
+- Cliente acceso Nails: `/nails/cliente`
+
+Catalogo publico:
+- Muestra logo, nombre, ubicacion, Instagram, frase personalizada.
+- Muestra servicios con filtros/busqueda.
+- Muestra galeria.
+- Permite solicitar cita.
+- La cita desde catalogo debe mostrar horarios libres dentro del horario laboral.
+- Debe permitir seleccionar multiples servicios y extras.
+
+Frase del catalogo:
+- Campo `nails_businesses.catalog_tagline`.
+- Editable desde Configuracion.
+
+--------------------------------------------------------------------------------
+14. ADMIN Y SOPORTE
+--------------------------------------------------------------------------------
+Admin general:
+- `/admin/`
+- Lista usuarios Cotizador.
+- Ya no debe mostrar "Pasar a Nails" dentro del menu de tres puntos.
+- El acceso a Nails se hace desde boton superior "Admin Nails".
+
+Admin Nails:
+- `/admin/nails`
+- Lista usuarios con `active_module = nails`.
+- Permite:
+  - Ver catalogo.
+  - Entrar al dashboard de la cuenta en modo fantasma.
+  - Reset clave.
+  - Cambiar rol Nails.
+  - Regresar a Cotizador si corresponde.
+
+Modo fantasma:
+- Permite soporte entrando como usuario.
+- En Nails debe mandar al dashboard Nails, no al catalogo ni cotizador.
+- Debe mostrar boton "Salir del Modo Fantasma".
+- Al salir, restaura sesion del admin original.
+
+--------------------------------------------------------------------------------
+15. BASE DE DATOS PRINCIPAL
+--------------------------------------------------------------------------------
+Tablas principales:
+- usuarios
+- nails_businesses
+- nails_staff
+- nails_clients
+- nails_service_categories
+- nails_services
+- nails_extras
+- nails_appointments
+- nails_appointment_services
+- nails_appointment_extras
+- nails_sales
+- nails_sale_details
+- nails_payments
+- nails_gallery
+- nails_activity_logs
+- nails_expenses
+
+Campos clave agregados a usuarios:
+- active_module TEXT DEFAULT 'cotizador'
+
+Campos clave en nails_businesses:
+- user_id
+- name
+- slug
+- join_code
+- catalog_tagline
+- whatsapp
+- instagram
+- address
+- logo_url
+- primary_color
+- secondary_color
+- accent_color
+- timezone
+- currency
+- business_hours_json
+- cancellation_policy
+- deposit_policy
+- is_active
+
+--------------------------------------------------------------------------------
+16. CHECKLIST ANTES DE SUBIR A PRODUCCION
+--------------------------------------------------------------------------------
+Autenticacion:
+- Login Cotizador redirige a `/cotizador`.
+- Login Nails redirige a `/nails/dashboard`.
+- `/` redirige segun `active_module`.
+- Logout funciona desde Nails.
+- Registro Nails manda `auth_code_nails`.
+- Reenvio de codigo Nails manda `auth_code_nails`.
+- Verificacion Nails manda `bienvenida_nails`.
+- Usuario no verificado va a `/verificar-email`.
+
+Nails:
+- Dashboard carga.
+- Configuracion guarda.
+- Codigo de salon visible.
+- Registro con codigo crea tecnica.
+- Registro sin codigo crea salon y jefa.
+- Personal no muestra agregar manual.
+- Servicios permiten iconos.
+- Agenda crea citas con varios servicios repetibles.
+- Validacion de empalmes se muestra antes de guardar.
+- Cita cancelada cancela venta.
+- Ventas no cobran en vacio.
+- Ticket abre en nueva pestana.
+- Anular venta solo Jefa.
+- Gastos registran y filtran.
+- Reportes muestran gastos por categoria.
+- Excel descarga.
+- Catalogo publico muestra servicios y agenda con disponibilidad.
+
+Seguridad Nails:
+- `utils/nails_security.py` contiene helpers propios de Nails.
+- Todas las rutas privadas de Nails deben pasar por el guard central del
+  blueprint antes de ejecutar la vista.
+- Las rutas privadas sin sesion redirigen a `/login`.
+- Las APIs privadas sin sesion devuelven JSON 401.
+- Los POST de Nails validan `_nails_csrf_token` o header `X-Nails-CSRF-Token`.
+- El layout interno `templates/nails/base_nails.html` agrega token CSRF a forms
+  POST y a fetch POST automaticamente.
+- El catalogo publico y acceso clienta incluyen token CSRF propio.
+- El POST publico del catalogo tiene rate limit por IP y salon para reducir spam
+  de solicitudes de cita.
+- El rate limit vive en memoria de proceso; si hay multiples workers o replicas,
+  conviene moverlo a Redis o almacenamiento compartido.
+
+Correos:
+- `RESEND_API_KEY` configurada.
+- Sender aliases validos:
+  - accounts@sianeffects.com
+  - hola@sianeffects.com
+- Templates renderizan sin error.
+- Dominio de produccion correcto en botones: `https://sianeffects.com/login`.
+
+Infra:
+- `SECRET_KEY` fuerte.
+- `DATABASE_URL` correcto.
+- R2 configurado si se suben logos/galeria.
+- `SESSION_COOKIE_SECURE=True` en produccion HTTPS.
+- `FLASK_DEBUG=0` en produccion.
+
+--------------------------------------------------------------------------------
+17. PRUEBA RAPIDA REALIZADA EN DESARROLLO
+--------------------------------------------------------------------------------
+Usuario de prueba proporcionado:
+- Email: ebstian@gmail.com
+- Password: no se documenta aqui.
+
+Resultado esperado:
+- POST `/login` devuelve 302.
+- Location: `/nails/dashboard`.
+- Sesion contiene `active_module = nails`.
+- GET `/nails/dashboard` devuelve 200.
+
+--------------------------------------------------------------------------------
+18. NOTAS PARA FUTURO
+--------------------------------------------------------------------------------
+- Si se implementan comisiones reales, reactivar campos visuales y reportes.
+- Si se implementan recordatorios por WhatsApp/email, usar `nails_activity_logs`
+  para auditoria.
+- Si se agregan planes separados para Nails, definir si `plan_type` aplica igual
+  que Cotizador o si requiere campos nuevos.
+- Si se requiere app de clientas, separar claramente acceso clienta de acceso
+  staff/admin.

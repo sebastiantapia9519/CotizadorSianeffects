@@ -1,0 +1,2798 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Agenda | Sianeffects Nails{% endblock %}
+{% block page_title %}Agenda{% endblock %}
+{% block page_subtitle %}Registra y administra las citas de tu salón.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .agenda-shell {
+        display: grid;
+        gap: 16px;
+    }
+
+    .agenda-stats {
+        display: grid;
+        gap: 14px;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .agenda-stat {
+        align-items: center;
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 14px 34px rgba(26,31,44,.06);
+        display: grid;
+        gap: 14px;
+        grid-template-columns: 58px minmax(0, 1fr);
+        min-height: 108px;
+        padding: 18px;
+    }
+
+    .agenda-stat-icon {
+        align-items: center;
+        background: var(--stat-bg, var(--nails-primary-soft));
+        border-radius: 16px;
+        color: var(--stat-color, var(--nails-primary-strong));
+        display: inline-flex;
+        font-size: 22px;
+        height: 58px;
+        justify-content: center;
+        width: 58px;
+    }
+
+    .agenda-stat-label {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .agenda-stat-value {
+        color: var(--nails-ink);
+        font-size: 24px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin-top: 4px;
+    }
+
+    .agenda-stat-link {
+        color: var(--nails-primary-strong);
+        font-size: 12px;
+        font-weight: 900;
+        margin-top: 6px;
+        text-decoration: none;
+    }
+
+    .agenda-board {
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 16px 42px rgba(26,31,44,.06);
+        overflow: hidden;
+    }
+
+    .agenda-board-head {
+        align-items: center;
+        border-bottom: 1px solid var(--nails-border);
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        padding: 14px 16px;
+    }
+
+    .agenda-board-title {
+        color: var(--nails-ink);
+        font-size: 17px;
+        font-weight: 900;
+        margin: 0;
+    }
+
+    .agenda-mode-group {
+        border: 1px solid var(--nails-border);
+        border-radius: 8px;
+        display: inline-flex;
+        overflow: hidden;
+    }
+
+    .agenda-mode-group button {
+        background: #fff;
+        border: 0;
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 900;
+        padding: 8px 12px;
+    }
+
+    .agenda-mode-group button.active {
+        background: var(--nails-primary);
+        color: #fff;
+    }
+
+    .agenda-workspace {
+        align-items: stretch;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        min-height: 640px;
+        transition: grid-template-columns .22s ease;
+    }
+
+    .agenda-workspace.has-detail {
+        grid-template-columns: minmax(0, 1fr) 360px;
+    }
+
+    .agenda-calendar-pane {
+        min-width: 0;
+        overflow: hidden;
+    }
+
+    .agenda-detail-panel {
+        background: #fff;
+        border-left: 1px solid var(--nails-border);
+        display: none;
+        min-width: 0;
+        padding: 18px;
+    }
+
+    .agenda-detail-panel.is-open {
+        display: block;
+    }
+
+    .agenda-detail-head {
+        align-items: flex-start;
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        margin-bottom: 16px;
+    }
+
+    .agenda-detail-title {
+        color: var(--nails-ink);
+        font-size: 14px;
+        font-weight: 900;
+        margin: 0 0 6px;
+    }
+
+    .agenda-detail-close {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        color: var(--nails-muted);
+        display: inline-flex;
+        height: 34px;
+        justify-content: center;
+        width: 34px;
+    }
+
+    .agenda-client-block {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 54px minmax(0, 1fr);
+        margin-bottom: 16px;
+    }
+
+    .agenda-client-avatar {
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        font-weight: 900;
+        height: 54px;
+        justify-content: center;
+        width: 54px;
+    }
+
+    .agenda-detail-list {
+        display: grid;
+        gap: 0;
+        margin-bottom: 14px;
+    }
+
+    .agenda-detail-row {
+        align-items: start;
+        border-bottom: 1px solid var(--nails-border);
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 24px minmax(0, 1fr);
+        padding: 11px 0;
+    }
+
+    .agenda-detail-row i {
+        color: var(--nails-muted);
+        margin-top: 2px;
+        text-align: center;
+    }
+
+    .agenda-detail-row span {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .agenda-detail-row strong,
+    .agenda-detail-row p {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+        margin: 2px 0 0;
+    }
+
+    .agenda-detail-actions {
+        display: grid;
+        gap: 10px;
+        margin-top: 14px;
+    }
+
+    .agenda-detail-actions .btn {
+        min-height: 40px;
+    }
+
+    .agenda-empty-panel {
+        align-content: center;
+        color: var(--nails-muted);
+        display: grid;
+        min-height: 100%;
+        padding: 28px;
+        text-align: center;
+    }
+
+    .nails-calendar {
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .nails-calendar-grid {
+        min-width: 1060px;
+    }
+
+    .nails-calendar-day-header {
+        min-height: 54px;
+        text-align: center;
+    }
+
+    .nails-calendar-time-label,
+    .nails-calendar-slot {
+        min-height: 50px;
+    }
+
+    .nails-calendar .nails-calendar-day-col,
+    .nails-calendar .nails-calendar-day-body {
+        min-height: 1200px;
+    }
+
+    .nails-calendar-event {
+        border-left-width: 4px;
+        border-radius: 8px;
+        box-shadow: none;
+        font-size: 11px;
+        padding: 8px 9px;
+    }
+
+    .nails-calendar-event strong {
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .nails-calendar-event small {
+        color: inherit;
+        opacity: .78;
+    }
+
+    .nails-calendar-event.is-selected {
+        outline: 3px solid color-mix(in srgb, var(--nails-primary), transparent 54%);
+        outline-offset: 2px;
+        z-index: 8;
+    }
+
+    .nails-calendar-event-status-pendiente {
+        background: #fff7df;
+        border-color: #f59e0b;
+    }
+
+    .nails-calendar-event-status-confirmada {
+        background: #f5eaff;
+        border-color: #9d4edd;
+    }
+
+    .nails-calendar-event-status-atendida,
+    .nails-calendar-event-status-pagada {
+        background: #e9f8ef;
+        border-color: #22a06b;
+    }
+
+    .nails-calendar-event-status-anticipo {
+        background: #eaf3ff;
+        border-color: #3b82f6;
+    }
+
+    .agenda-list-view {
+        display: none;
+        padding: 16px;
+    }
+
+    .agenda-list-view.is-active {
+        display: grid;
+        gap: 12px;
+    }
+
+    .agenda-list-day {
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        background: #fff;
+        overflow: hidden;
+    }
+
+    .agenda-list-day-title {
+        background: #fbfcff;
+        border-bottom: 1px solid var(--nails-border);
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+        padding: 10px 12px;
+    }
+
+    .agenda-list-item {
+        align-items: center;
+        background: #fff;
+        border: 0;
+        border-bottom: 1px solid var(--nails-border);
+        display: grid;
+        gap: 10px;
+        grid-template-columns: minmax(0, 1fr) auto;
+        padding: 12px;
+        text-align: left;
+        width: 100%;
+    }
+
+    .agenda-list-item:last-child {
+        border-bottom: 0;
+    }
+
+    .agenda-list-item:hover {
+        background: var(--nails-primary-soft);
+    }
+
+    .agenda-list-item strong {
+        color: var(--nails-ink);
+        display: block;
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .agenda-list-item span {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .agenda-list-empty {
+        border: 1px dashed var(--nails-border);
+        border-radius: 10px;
+        color: var(--nails-muted);
+        font-weight: 900;
+        padding: 18px;
+        text-align: center;
+    }
+
+    .manager-modal-shell {
+        border-radius: 16px;
+        box-shadow: 0 26px 80px rgba(26, 31, 44, 0.18);
+    }
+
+    .manager-title {
+        align-items: center;
+        color: var(--nails-ink);
+        display: flex;
+        font-size: 22px;
+        font-weight: 900;
+        gap: 8px;
+        margin: 0;
+    }
+
+    .manager-title i {
+        color: var(--nails-primary);
+        font-size: 15px;
+    }
+
+    .manager-toolbar {
+        align-items: center;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: minmax(0, 1fr) 180px;
+        margin-bottom: 12px;
+    }
+
+    .manager-search {
+        position: relative;
+    }
+
+    .manager-search i,
+    .manager-date i {
+        color: var(--nails-muted);
+        left: 14px;
+        pointer-events: none;
+        position: absolute;
+        top: 50%;
+        transform: translateY(-50%);
+    }
+
+    .manager-search .form-control,
+    .manager-date .form-control {
+        border-color: var(--nails-border);
+        border-radius: 8px;
+        font-size: 13px;
+        font-weight: 800;
+        min-height: 42px;
+        padding-left: 40px;
+    }
+
+    .manager-date {
+        position: relative;
+    }
+
+    .manager-filters {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+    }
+
+    .manager-filter {
+        border: 1px solid var(--filter-border, var(--nails-border));
+        border-radius: 8px;
+        background: var(--filter-bg, #fff);
+        color: var(--filter-color, var(--nails-muted));
+        font-size: 12px;
+        font-weight: 900;
+        min-height: 32px;
+        padding: 6px 13px;
+    }
+
+    .manager-filter.is-active {
+        box-shadow: inset 0 0 0 1px var(--filter-color, var(--nails-primary));
+    }
+
+    .manager-layout {
+        align-items: start;
+        display: grid;
+        gap: 14px;
+        grid-template-columns: minmax(0, 1fr) 230px;
+    }
+
+    .manager-list {
+        display: grid;
+        gap: 12px;
+        max-height: min(64vh, 700px);
+        overflow: auto;
+        padding-right: 4px;
+    }
+
+    /* === NUEVA ESTRUCTURA GRID PARA TARJETAS RESPONSIVAS === */
+    .manager-appointment {
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 12px;
+        box-shadow: 0 12px 28px rgba(26, 31, 44, .05);
+        display: grid;
+        gap: 10px 14px;
+        /* Áreas del grid: Avatar a la izquierda, Info al centro, Precio/Estado derecha */
+        grid-template-columns: 46px minmax(0, 1fr) auto;
+        grid-template-areas:
+            "avatar info money"
+            ". details details"
+            "actions actions actions";
+        padding: 16px;
+        transition: border-color .16s ease, box-shadow .16s ease, transform .16s ease;
+    }
+
+    .manager-appointment:hover {
+        border-color: color-mix(in srgb, var(--nails-primary), transparent 62%);
+        box-shadow: 0 16px 36px rgba(26, 31, 44, .08);
+        transform: translateY(-1px);
+    }
+
+    .manager-avatar {
+        grid-area: avatar;
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        font-weight: 900;
+        height: 46px;
+        justify-content: center;
+        width: 100%; /* Ajuste a la columna */
+    }
+
+    .manager-info {
+        grid-area: info;
+        align-self: center;
+    }
+
+    .manager-client {
+        color: var(--nails-ink);
+        font-size: 15px;
+        font-weight: 900;
+        line-height: 1.1;
+        margin: 0;
+    }
+
+    .manager-service {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 900;
+        margin-top: 3px;
+    }
+
+    .manager-money {
+        grid-area: money;
+        text-align: right;
+    }
+
+    .manager-money strong {
+        color: var(--nails-ink);
+        display: block;
+        font-size: 16px;
+        font-weight: 900;
+        margin-top: 8px;
+    }
+
+    .manager-money small {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+        margin-top: 3px;
+    }
+
+    .manager-details {
+        grid-area: details;
+    }
+
+    .manager-meta {
+        color: var(--nails-muted);
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px 14px;
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .manager-meta span {
+        align-items: center;
+        display: inline-flex;
+        gap: 6px;
+    }
+
+    .manager-extra-line,
+    .manager-note-line {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 7px;
+    }
+
+    .manager-actions {
+        grid-area: actions;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+        margin-top: 8px;
+        border-top: 1px solid var(--nails-border);
+        padding-top: 14px;
+    }
+
+    .manager-actions .btn,
+    .manager-actions form {
+        min-width: 0;
+        width: 100%;
+        margin: 0;
+    }
+
+    .manager-actions form button {
+        width: 100%;
+    }
+
+    .manager-actions .btn {
+        align-items: center;
+        border-radius: 8px;
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 900;
+        gap: 6px;
+        justify-content: center;
+        min-height: 34px;
+    }
+
+    .manager-side {
+        background: #fff;
+        border: 1px solid var(--nails-border);
+        border-radius: 12px;
+        padding: 16px;
+        position: sticky;
+        top: 0;
+    }
+
+    .manager-side-title {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+        margin-bottom: 12px;
+    }
+
+    .manager-summary-head {
+        align-items: center;
+        background: transparent;
+        border: 0;
+        color: var(--nails-ink);
+        display: flex;
+        font-weight: 900;
+        justify-content: space-between;
+        padding: 0;
+        text-align: left;
+        width: 100%;
+    }
+
+    .manager-summary-compact {
+        color: var(--nails-muted);
+        display: none;
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 4px;
+    }
+
+    .manager-summary-chevron {
+        color: var(--nails-muted);
+        display: none;
+        transition: transform .16s ease;
+    }
+
+    .manager-summary-body {
+        margin-top: 12px;
+    }
+
+    .manager-summary-row {
+        align-items: center;
+        border-top: 1px solid var(--nails-border);
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 42px minmax(0, 1fr);
+        padding: 13px 0;
+    }
+
+    .manager-summary-row:first-of-type {
+        border-top: 0;
+        padding-top: 0;
+    }
+
+    .manager-summary-icon {
+        align-items: center;
+        background: var(--summary-bg, var(--nails-primary-soft));
+        border-radius: 10px;
+        color: var(--summary-color, var(--nails-primary-strong));
+        display: inline-flex;
+        flex-shrink: 0;
+        font-size: 15px;
+        height: 42px;
+        justify-content: center;
+        line-height: 1;
+        width: 42px;
+    }
+
+    .manager-summary-icon i {
+        color: inherit;
+        display: block;
+        font-size: 15px;
+        line-height: 1;
+    }
+
+    .manager-summary-row div > span {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 11px;
+        font-weight: 900;
+    }
+
+    .manager-summary-row strong {
+        color: var(--nails-ink);
+        display: block;
+        font-size: 16px;
+        font-weight: 900;
+    }
+
+    .manager-tip {
+        background: linear-gradient(135deg, var(--nails-primary-soft), #fff);
+        border-radius: 10px;
+        color: var(--nails-primary-strong);
+        font-size: 11px;
+        font-weight: 900;
+        margin-top: 14px;
+        padding: 12px;
+    }
+
+    .manager-mobile-more {
+        display: none;
+    }
+
+    @media (max-width: 1180px) {
+        .agenda-stats {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .agenda-workspace,
+        .agenda-workspace.has-detail {
+            grid-template-columns: 1fr;
+        }
+
+        .agenda-detail-panel {
+            border-left: 0;
+            border-top: 1px solid var(--nails-border);
+        }
+
+        .manager-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .manager-side {
+            position: static;
+        }
+    }
+
+    @media (max-width: 920px) {
+        .manager-side {
+            order: -1;
+        }
+
+        .manager-summary-head {
+            cursor: pointer;
+        }
+
+        .manager-summary-compact,
+        .manager-summary-chevron {
+            display: block;
+        }
+
+        .manager-side:not(.is-open) .manager-summary-body {
+            display: none;
+        }
+
+        .manager-side.is-open .manager-summary-chevron {
+            transform: rotate(180deg);
+        }
+
+        .manager-actions {
+            grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 42px;
+        }
+
+        .manager-actions .btn {
+            min-height: 38px;
+        }
+
+        .manager-actions .d-md-inline-flex,
+        .manager-actions .d-md-block {
+            display: none !important;
+        }
+
+        .manager-mobile-more {
+            display: block;
+        }
+
+        .manager-mobile-more .btn {
+            min-width: 42px;
+            padding-left: 0;
+            padding-right: 0;
+            width: 42px;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .agenda-stats {
+            grid-template-columns: 1fr;
+        }
+
+        .agenda-board-head {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .manager-toolbar {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="modal fade" id="nuevaCitaModal" tabindex="-1" aria-labelledby="nuevaCitaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0" style="border-radius: 16px; box-shadow: 0 24px 60px rgba(26, 31, 44, 0.15);">
+            
+            <div class="modal-header border-bottom-0 px-4 pt-4 pb-2">
+                <h2 class="modal-title h4 mb-0" id="nuevaCitaModalLabel">Nueva cita</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            
+            <div class="modal-body px-4 pb-4 pt-0">
+                <form method="POST" action="" class="row g-3">
+
+                    <div class="col-12">
+                        <label class="form-label">Cliente</label>
+                        <div class="nails-client-autocomplete">
+                            <input type="hidden" name="client_id" id="client_id" value="">
+                            <input
+                                type="text"
+                                name="quick_client_name"
+                                id="quick_client_name"
+                                class="form-control"
+                                placeholder="Buscar clienta o escribir nombre nuevo"
+                                autocomplete="off"
+                            >
+                            <input type="hidden" name="quick_client_phone" id="quick_client_phone" value="">
+                            <div id="nails_client_suggestions" class="nails-client-suggestions d-none"></div>
+                        </div>
+                        <div class="form-text">
+                            Si ya existe, selecciónala. Si escribes un nombre nuevo, se guardará. Si lo dejas vacío, será Cliente General.
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Servicios</label>
+                        <div class="d-flex gap-2">
+                            <select id="appointment_service_picker" name="service_id" class="form-select">
+                                <option value="">Seleccionar servicio</option>
+                                {% for service in services %}
+                                <option
+                                    value="{{ service.id }}"
+                                    data-name="{{ service.name }}"
+                                    data-price="{{ service.base_price or 0 }}"
+                                    data-duration="{{ service.duration_minutes or 0 }}"
+                                >
+                                    {{ service.name }} - ${{ "%.2f"|format(service.base_price or 0) }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            <button type="button" class="btn btn-outline-primary" id="add_appointment_service">
+                                <i class="fa-solid fa-plus"></i>
+                            </button>
+                        </div>
+                        <div id="appointment_services_inputs"></div>
+                        <div id="appointment_services_list" class="nails-selected-services mt-2"></div>
+                        <div class="form-text">Agrega uno o más servicios para la misma visita.</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Staff / Técnica</label>
+                        <select name="staff_id" class="form-select">
+                            <option value="">Sin asignar</option>
+                            {% for person in staff %}
+                            {% set person_role_label = {
+                                'owner': 'Jefa',
+                                'admin': 'Administración',
+                                'staff': 'Técnica',
+                                'reception': 'Recepción'
+                            }.get(person.role, person.role|title) %}
+                            <option value="{{ person.id }}">
+                                {{ person.name }} - {{ person_role_label }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" name="appointment_date" id="appointment_date" class="form-control" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Hora</label>
+                        <input type="time" name="start_time" id="start_time" class="form-control" required>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Extras</label>
+                        {% if extras %}
+                        <div class="nails-extra-list">
+                            {% for extra in extras %}
+                            <label class="nails-extra-option">
+                                <input type="checkbox" name="extras" value="{{ extra.id }}">
+                                <span>
+                                    <strong>{{ extra.name }}</strong>
+                                    <small>${{ "%.2f"|format(extra.price or 0) }} {% if extra.duration_minutes %}· +{{ extra.duration_minutes }} min{% endif %}</small>
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted small mb-0">Todavía no tienes extras registrados.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Estado</label>
+                        <select name="status" class="form-select">
+                            <option value="pendiente">Pendiente</option>
+                            <option value="confirmada">Confirmada</option>
+                            <option value="atendida">Atendida</option>
+                            <option value="cancelada">Cancelada</option>
+                            <option value="no_asistio">No asistió</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Anticipo</label>
+                        <input type="number" name="deposit_amount" class="form-control" min="0" step="0.01" value="0" data-clear-zero-on-focus>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Notas</label>
+                        <textarea name="notes" class="form-control" rows="2" placeholder="Ej. Quiere diseño rosa con pedrería."></textarea>
+                    </div>
+
+                    <div class="col-12 mt-4 text-end">
+                        <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar cita</button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="detalleCitaModal" tabindex="-1" aria-labelledby="detalleCitaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content nails-appointment-detail-modal border-0">
+            <div class="modal-header border-bottom-0">
+                <div>
+                    <span class="badge nails-status" id="detalle_cita_status">pendiente</span>
+                    <h2 class="modal-title h4 mb-0 mt-2" id="detalleCitaModalLabel">Detalle de cita</h2>
+                    <div class="text-muted small" id="detalle_cita_horario"></div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body pt-0">
+                <div class="nails-detail-summary">
+                    <div>
+                        <span>Cliente</span>
+                        <strong id="detalle_cita_cliente">Cliente General</strong>
+                        <small id="detalle_cita_phone"></small>
+                    </div>
+                    <div>
+                        <span>Técnica</span>
+                        <strong id="detalle_cita_staff">Sin asignar</strong>
+                    </div>
+                </div>
+
+                <div class="nails-detail-section">
+                    <div class="nails-detail-label">Servicios</div>
+                    <div id="detalle_cita_servicios" class="nails-selected-services"></div>
+                </div>
+
+                <div class="nails-detail-section" id="detalle_cita_extras_wrap">
+                    <div class="nails-detail-label">Extras</div>
+                    <div id="detalle_cita_extras" class="d-flex flex-wrap gap-1"></div>
+                </div>
+
+                <div class="nails-detail-section" id="detalle_cita_notas_wrap">
+                    <div class="nails-detail-label">Notas</div>
+                    <p class="mb-0 text-muted" id="detalle_cita_notas"></p>
+                </div>
+
+                <div class="nails-detail-totals">
+                    <span>Total estimado</span>
+                    <strong id="detalle_cita_total">$0.00</strong>
+                    <small id="detalle_cita_anticipo"></small>
+                </div>
+            </div>
+
+            <div class="modal-footer border-top-0">
+                {% if can_delete_appointments %}
+                <form
+                    method="POST"
+                    id="detalle_cita_delete_form"
+                    class="me-auto require-confirm"
+                    data-title="¿Eliminar esta cita?"
+                    data-text="Esta acción no se puede deshacer."
+                    data-icon="warning"
+                    data-btn-text="Sí, eliminar"
+                    data-btn-color="#dc3545"
+                >
+                    <button type="submit" class="btn btn-outline-danger">
+                        <i class="fa-regular fa-trash-can me-1"></i> Eliminar cita
+                    </button>
+                </form>
+                {% endif %}
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <a href="#" class="btn btn-primary" id="detalle_cita_venta_url">
+                    <i class="fa-solid fa-receipt me-1"></i> Cobrar venta
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editarCitaModal" tabindex="-1" aria-labelledby="editarCitaModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
+        <div class="modal-content border-0" style="border-radius: 16px; box-shadow: 0 24px 60px rgba(26, 31, 44, 0.15);">
+            <div class="modal-header border-bottom-0 px-4 pt-4 pb-2">
+                <h2 class="modal-title h4 mb-0" id="editarCitaModalLabel">Editar cita</h2>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body px-4 pb-4 pt-0">
+                <form method="POST" id="editar_cita_form" class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Cliente</label>
+                        <select name="client_id" id="edit_client_id" class="form-select">
+                            <option value="">Cliente General</option>
+                            {% for client in clients %}
+                            <option value="{{ client.id }}">{{ client.name }}{% if client.phone %} - {{ client.phone }}{% endif %}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Staff / Técnica</label>
+                        <select name="staff_id" id="edit_staff_id" class="form-select">
+                            <option value="">Sin asignar</option>
+                            {% for person in staff %}
+                            {% set person_role_label = {
+                                'owner': 'Jefa',
+                                'admin': 'Administración',
+                                'staff': 'Técnica',
+                                'reception': 'Recepción'
+                            }.get(person.role, person.role|title) %}
+                            <option value="{{ person.id }}">{{ person.name }} - {{ person_role_label }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Servicios</label>
+                        <div class="nails-extra-list">
+                            {% for service in services %}
+                            <label class="nails-extra-option">
+                                <input
+                                    type="checkbox"
+                                    name="service_ids"
+                                    value="{{ service.id }}"
+                                    data-edit-service
+                                >
+                                <span>
+                                    <strong>{{ service.name }}</strong>
+                                    <small>${{ "%.2f"|format(service.base_price or 0) }} {% if service.duration_minutes %}· {{ service.duration_minutes }} min{% endif %}</small>
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        <div class="form-text">Selecciona uno o más servicios para esta cita.</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Fecha</label>
+                        <input type="date" name="appointment_date" id="edit_appointment_date" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Hora</label>
+                        <input type="time" name="start_time" id="edit_start_time" class="form-control" required>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Estado</label>
+                        <select name="status" id="edit_status" class="form-select">
+                            <option value="pendiente">Pendiente</option>
+                            <option value="confirmada">Confirmada</option>
+                            <option value="atendida">Atendida</option>
+                            <option value="cancelada">Cancelada</option>
+                            <option value="no_asistio">No asistió</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label">Anticipo</label>
+                        <input type="number" name="deposit_amount" id="edit_deposit_amount" class="form-control" min="0" step="0.01" value="0" data-clear-zero-on-focus>
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Extras</label>
+                        {% if extras %}
+                        <div class="nails-extra-list">
+                            {% for extra in extras %}
+                            <label class="nails-extra-option">
+                                <input
+                                    type="checkbox"
+                                    name="extras"
+                                    value="{{ extra.id }}"
+                                    data-edit-extra
+                                >
+                                <span>
+                                    <strong>{{ extra.name }}</strong>
+                                    <small>${{ "%.2f"|format(extra.price or 0) }} {% if extra.duration_minutes %}· +{{ extra.duration_minutes }} min{% endif %}</small>
+                                </span>
+                            </label>
+                            {% endfor %}
+                        </div>
+                        {% else %}
+                        <p class="text-muted small mb-0">Todavía no tienes extras registrados.</p>
+                        {% endif %}
+                    </div>
+
+                    <div class="col-12">
+                        <label class="form-label">Notas</label>
+                        <textarea name="notes" id="edit_notes" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="col-12 mt-4 d-flex justify-content-between gap-2 flex-wrap">
+                        {% if can_delete_appointments %}
+                        <button type="submit" class="btn btn-outline-danger" id="edit_delete_button" form="editar_cita_delete_form">
+                            Eliminar cita
+                        </button>
+                        {% else %}
+                        <span class="text-muted small align-self-center">Solo la dueña del salón puede eliminar citas.</span>
+                        {% endif %}
+
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="submit" class="btn btn-primary">Guardar cambios</button>
+                        </div>
+                    </div>
+                </form>
+
+                {% if can_delete_appointments %}
+                <form
+                    method="POST"
+                    id="editar_cita_delete_form"
+                    class="require-confirm"
+                    data-title="¿Eliminar esta cita?"
+                    data-text="Esta acción no se puede deshacer."
+                    data-icon="warning"
+                    data-btn-text="Sí, eliminar"
+                    data-btn-color="#dc3545"
+                ></form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="agenda-shell">
+    <section class="agenda-stats">
+        <article class="agenda-stat">
+            <span class="agenda-stat-icon"><i class="fa-regular fa-calendar"></i></span>
+            <div>
+                <div class="agenda-stat-label">Citas hoy</div>
+                <div class="agenda-stat-value">{{ agenda_stats.appointments_today or 0 }}</div>
+                <a href="#" class="agenda-stat-link" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">Ver detalle →</a>
+            </div>
+        </article>
+
+        <article class="agenda-stat">
+            <span class="agenda-stat-icon" style="--stat-bg:#fff3e6;--stat-color:#f97316;"><i class="fa-regular fa-clock"></i></span>
+            <div>
+                <div class="agenda-stat-label">Pendientes</div>
+                <div class="agenda-stat-value">{{ agenda_stats.pending_count or 0 }}</div>
+                <a href="#" class="agenda-stat-link" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">Ver pendientes →</a>
+            </div>
+        </article>
+
+        <article class="agenda-stat">
+            <span class="agenda-stat-icon" style="--stat-bg:#e8f8ef;--stat-color:#169b5f;"><i class="fa-solid fa-dollar-sign"></i></span>
+            <div>
+                <div class="agenda-stat-label">Anticipos</div>
+                <div class="agenda-stat-value">${{ "%.2f"|format(agenda_stats.deposits_total or 0) }}</div>
+                <a href="#" class="agenda-stat-link" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">Ver anticipos →</a>
+            </div>
+        </article>
+
+        <article class="agenda-stat">
+            <span class="agenda-stat-icon" style="--stat-bg:#fdf2f8;--stat-color:#db2777;"><i class="fa-regular fa-calendar-check"></i></span>
+            <div>
+                <div class="agenda-stat-label">Próxima cita</div>
+                <div class="agenda-stat-value">{{ agenda_stats.next_time }}</div>
+                <div class="agenda-stat-link">{{ agenda_stats.next_client }}</div>
+            </div>
+        </article>
+    </section>
+
+    <section class="agenda-board">
+        <div class="agenda-board-head">
+            <div>
+                <h2 class="agenda-board-title">Calendario de citas</h2>
+                <div class="text-muted small fw-bold">Toca un horario para agendar o una cita para ver su detalle.</div>
+            </div>
+
+            <div class="nails-calendar-toolbar d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar_prev_week">
+                            <i class="fa-solid fa-chevron-left"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar_today">
+                            Hoy
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar_next_week">
+                            <i class="fa-solid fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <div id="calendar_week_label" class="fw-bold text-nowrap mx-2"></div>
+
+                    <div class="agenda-mode-group d-none d-md-inline-flex" role="group" aria-label="Vista del calendario">
+                        <button type="button" data-calendar-mode="day">Día</button>
+                        <button type="button" class="active" data-calendar-mode="week">Semana</button>
+                        <button type="button" data-calendar-mode="list">Lista</button>
+                    </div>
+
+                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">
+                        <i class="fa-regular fa-calendar-days me-1"></i>
+                        Gestionar
+                        <span class="badge text-bg-light ms-1">{{ appointments|length if appointments else 0 }}</span>
+                    </button>
+                    
+                    <button class="btn btn-sm btn-primary d-none d-md-inline-flex" data-bs-toggle="modal" data-bs-target="#nuevaCitaModal">
+                        <i class="fa-solid fa-plus me-1"></i> Nueva Cita
+                    </button>
+                </div>
+        </div>
+
+        <button class="nails-fab d-md-none" data-bs-toggle="modal" data-bs-target="#nuevaCitaModal">
+            <i class="fa-solid fa-plus"></i>
+        </button>
+
+        <div class="agenda-workspace" id="agenda_workspace">
+            <div class="agenda-calendar-pane">
+            <div class="nails-calendar">
+                <div class="nails-calendar-grid" id="main_calendar_grid">
+                    <div class="nails-calendar-time-column">
+                        <div class="nails-calendar-day-header"></div>
+                        <div id="calendar_time_labels"></div>
+                    </div>
+                    {% for day_name in ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"] %}
+                    <div class="nails-calendar-day-col" data-day-index="{{ loop.index0 }}">
+                        <div class="nails-calendar-day-header">{{ day_name }}</div>
+                        <div class="nails-calendar-day-body"></div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            <div class="agenda-list-view" id="agenda_list_view"></div>
+            </div>
+
+            <aside class="agenda-detail-panel" id="agenda_detail_panel" aria-live="polite">
+                <div class="agenda-detail-head">
+                    <div>
+                        <div class="agenda-detail-title">Cita seleccionada</div>
+                        <span class="badge nails-status" id="panel_cita_status">Pendiente</span>
+                    </div>
+                    <button type="button" class="agenda-detail-close" id="panel_cita_close" aria-label="Cerrar detalle">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+
+                <div class="agenda-client-block">
+                    <div class="agenda-client-avatar" id="panel_cita_avatar">CT</div>
+                    <div class="min-w-0">
+                        <div class="fw-black text-dark" id="panel_cita_cliente">Cliente General</div>
+                        <div class="text-muted small fw-bold" id="panel_cita_phone"></div>
+                    </div>
+                </div>
+
+                <div class="agenda-detail-list">
+                    <div class="agenda-detail-row">
+                        <i class="fa-solid fa-spa"></i>
+                        <div><span>Servicio</span><strong id="panel_cita_servicios">Servicio</strong></div>
+                    </div>
+                    <div class="agenda-detail-row">
+                        <i class="fa-regular fa-calendar"></i>
+                        <div><span>Fecha y hora</span><strong id="panel_cita_horario">--</strong></div>
+                    </div>
+                    <div class="agenda-detail-row">
+                        <i class="fa-regular fa-clock"></i>
+                        <div><span>Duración</span><strong id="panel_cita_duracion">--</strong></div>
+                    </div>
+                    <div class="agenda-detail-row">
+                        <i class="fa-regular fa-user"></i>
+                        <div><span>Técnica</span><strong id="panel_cita_staff">Sin asignar</strong></div>
+                    </div>
+                    <div class="agenda-detail-row">
+                        <i class="fa-solid fa-piggy-bank"></i>
+                        <div><span>Anticipo</span><strong id="panel_cita_anticipo">$0.00</strong></div>
+                    </div>
+                    <div class="agenda-detail-row">
+                        <i class="fa-solid fa-receipt"></i>
+                        <div><span>Saldo estimado</span><strong id="panel_cita_total">$0.00</strong></div>
+                    </div>
+                    <div class="agenda-detail-row" id="panel_cita_notas_wrap">
+                        <i class="fa-regular fa-note-sticky"></i>
+                        <div><span>Notas</span><p id="panel_cita_notas"></p></div>
+                    </div>
+                </div>
+
+                <div class="agenda-detail-actions">
+                    <form method="POST" id="panel_confirm_form">
+                        <input type="hidden" name="status" value="confirmada">
+                        <button type="submit" class="btn btn-primary w-100">Confirmar</button>
+                    </form>
+                    <a href="#" class="btn btn-outline-primary w-100" id="panel_cita_venta_url">Cobrar venta</a>
+                    <button type="button" class="btn btn-outline-secondary w-100" id="panel_cita_edit_button">Reagendar</button>
+                    <a href="#" class="btn btn-outline-success w-100" id="panel_cita_whatsapp">
+                        <i class="fa-brands fa-whatsapp me-1"></i> WhatsApp
+                    </a>
+                    {% if can_delete_appointments %}
+                    <form
+                        method="POST"
+                        id="panel_cita_delete_form"
+                        class="require-confirm"
+                        data-title="¿Eliminar esta cita?"
+                        data-text="Esta acción no se puede deshacer."
+                        data-icon="warning"
+                        data-btn-text="Sí, eliminar"
+                        data-btn-color="#dc3545"
+                    >
+                        <button type="submit" class="btn btn-outline-danger w-100">
+                            <i class="fa-regular fa-trash-can me-1"></i> Cancelar cita
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </aside>
+        </div>
+
+            <div id="nails_calendar_appointment_data" class="d-none">
+                {% for appointment in appointments %}
+                <div class="nails-calendar-appointment-data"
+                    data-id="{{ appointment.id }}"
+                    data-start="{{ appointment.start_time_iso or appointment.start_time.strftime('%Y-%m-%dT%H:%M:%S') }}"
+                    data-end="{{ appointment.end_time_iso or appointment.end_time.strftime('%Y-%m-%dT%H:%M:%S') }}"
+                    data-title="{{ appointment.title or appointment.service_name }}"
+                    data-client-id="{{ appointment.client_id or '' }}"
+                    data-client="{{ appointment.client_name or 'Cliente General' }}"
+                    data-phone="{{ appointment.client_phone or '' }}"
+                    data-status="{{ appointment.status }}"
+                    data-staff-id="{{ appointment.staff_id or '' }}"
+                    data-staff="{{ appointment.staff_name or '' }}"
+                    data-total="{{ appointment.estimated_total or 0 }}"
+                    data-deposit="{{ appointment.deposit_amount or 0 }}"
+                    data-notes="{{ appointment.notes or '' }}"
+                    data-start-label="{{ appointment.start_time_formatted or appointment.start_time }}"
+                    data-end-label="{{ appointment.end_time_formatted or appointment.end_time }}"
+                    data-url="{{ url_for('nails.ventas', appointment_id=appointment.id) }}">
+                    <div class="nails-calendar-services-data">
+                        {% if appointment_services and appointment_services.get(appointment.id) %}
+                            {% for service in appointment_services.get(appointment.id) %}
+                            <span
+                                data-id="{{ service.service_id or '' }}"
+                                data-name="{{ service.name }}"
+                                data-price="{{ service.price or 0 }}"
+                                data-duration="{{ service.duration_minutes or 0 }}"
+                            ></span>
+                            {% endfor %}
+                        {% else %}
+                            <span
+                                data-id="{{ appointment.service_id or '' }}"
+                                data-name="{{ appointment.service_name or appointment.title }}"
+                                data-price="{{ appointment.estimated_total or 0 }}"
+                                data-duration="0"
+                            ></span>
+                        {% endif %}
+                    </div>
+                    <div class="nails-calendar-extras-data">
+                        {% if appointment_extras.get(appointment.id) %}
+                            {% for extra in appointment_extras.get(appointment.id) %}
+                            <span
+                                data-id="{{ extra.extra_id or '' }}"
+                                data-name="{{ extra.name }}"
+                                data-price="{{ extra.price or 0 }}"
+                                data-duration="{{ extra.duration_minutes or 0 }}"
+                            ></span>
+                            {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+    </section>
+
+        <div class="modal fade" id="gestionarCitasModal" tabindex="-1" aria-labelledby="gestionarCitasModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+                <div class="modal-content manager-modal-shell border-0">
+                    <div class="modal-header border-bottom-0 px-4 pt-4 pb-2">
+                        <div>
+                            <h2 class="modal-title manager-title" id="gestionarCitasModalLabel">
+                                Gestionar citas <i class="fa-solid fa-wand-magic-sparkles"></i>
+                            </h2>
+                            <div class="text-muted small fw-bold">Busca, revisa estados y convierte citas en ventas.</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+
+                    <div class="modal-body px-4 pb-4 pt-2">
+                        <div class="manager-toolbar">
+                            <div class="manager-search">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <input
+                                    type="search"
+                                    id="appointment_manager_search"
+                                    class="form-control"
+                                    placeholder="Buscar por cliente, servicio, técnica o notas..."
+                                    autocomplete="off"
+                                >
+                            </div>
+                            <div class="manager-date">
+                                <i class="fa-regular fa-calendar"></i>
+                                <input type="date" class="form-control" id="appointment_manager_date">
+                            </div>
+                        </div>
+
+                        <div class="manager-filters" id="appointment_manager_filters">
+                            <button type="button" class="manager-filter is-active" data-status-filter="all" style="--filter-bg:#fff;--filter-color:var(--nails-primary-strong);">Todas</button>
+                            <button type="button" class="manager-filter" data-status-filter="pendiente" style="--filter-bg:#fff8e8;--filter-color:#b7791f;--filter-border:#fde5a8;">Pendientes</button>
+                            <button type="button" class="manager-filter" data-status-filter="confirmada" style="--filter-bg:#ecfdf3;--filter-color:#15803d;--filter-border:#bbf7d0;">Confirmadas</button>
+                            <button type="button" class="manager-filter" data-status-filter="atendida" style="--filter-bg:#f5edff;--filter-color:#7e22ce;--filter-border:#ead6ff;">Atendidas</button>
+                            <button type="button" class="manager-filter" data-status-filter="no_asistio" style="--filter-bg:#f8fafc;--filter-color:#64748b;--filter-border:#e2e8f0;">No asistió</button>
+                            <button type="button" class="manager-filter" data-status-filter="cancelada" style="--filter-bg:#fff1f2;--filter-color:#e11d48;--filter-border:#fecdd3;">Canceladas</button>
+                        </div>
+
+                        <div class="manager-layout">
+                            <div>
+                                <div id="appointment_manager_empty" class="alert alert-light border d-none mb-3">
+                                    No encontré citas con esa búsqueda.
+                                </div>
+
+                                <div id="appointment_manager_list">
+                                    {% if appointments %}
+                                    <div class="manager-list">
+                                        {% for appointment in appointments %}
+                                        {% set client_name = appointment.client_name or 'Cliente General' %}
+                                        {% set initials = client_name.split() %}
+                                        {% set display_services = appointment_services.get(appointment.id) if appointment_services else None %}
+                                        
+                                        <article
+                                            class="manager-appointment nails-appointment-item"
+                                            data-status="{{ appointment.status }}"
+                                            data-date="{{ appointment.start_time_iso[:10] if appointment.start_time_iso else '' }}"
+                                            data-search-text="{{ client_name }} {{ appointment.title or appointment.service_name }} {{ appointment.staff_name or '' }} {{ appointment.status }} {{ appointment.start_time_formatted or appointment.start_time }} {{ appointment.notes or '' }}"
+                                        >
+                                            <div class="manager-avatar">
+                                                {{ (initials[0][0] if initials else 'C') }}{{ (initials[1][0] if initials|length > 1 else '') }}
+                                            </div>
+
+                                            <div class="manager-info">
+                                                <h3 class="manager-client">{{ client_name }}</h3>
+                                                <div class="manager-service">
+                                                    {{ appointment.title or appointment.service_name or 'Servicio' }}
+                                                </div>
+                                            </div>
+
+                                            <div class="manager-money">
+                                                {% set status_styles = {
+                                                    'pendiente': {'bg': '#fff8e8', 'text': '#b7791f', 'border': '#fde5a8', 'icon': 'fa-regular fa-clock'},
+                                                    'confirmada': {'bg': '#ecfdf3', 'text': '#15803d', 'border': '#bbf7d0', 'icon': 'fa-regular fa-circle-check'},
+                                                    'atendida': {'bg': '#f5edff', 'text': '#7e22ce', 'border': '#ead6ff', 'icon': 'fa-solid fa-check'},
+                                                    'no_asistio': {'bg': '#f8fafc', 'text': '#64748b', 'border': '#e2e8f0', 'icon': 'fa-regular fa-circle-xmark'},
+                                                    'cancelada': {'bg': '#fff1f2', 'text': '#e11d48', 'border': '#fecdd3', 'icon': 'fa-regular fa-circle-xmark'}
+                                                } %}
+                                                {% set st = status_styles.get(appointment.status, status_styles['pendiente']) %}
+                                                <span class="badge" style="background: {{ st.bg }}; color: {{ st.text }}; border: 1px solid {{ st.border }}; font-weight: 800; padding: 5px 10px; font-size: 11px; border-radius: 6px;">
+                                                    <i class="{{ st.icon }} me-1"></i> {{ appointment.status|replace('_', ' ')|title }}
+                                                </span>
+                                                <strong>${{ "%.2f"|format(appointment.estimated_total or 0) }}</strong>
+                                                {% if appointment.deposit_amount and appointment.deposit_amount > 0 %}
+                                                <small>Anticipo: ${{ "%.2f"|format(appointment.deposit_amount or 0) }}</small>
+                                                {% endif %}
+                                            </div>
+
+                                            <div class="manager-details">
+                                                <div class="manager-meta">
+                                                    <span><i class="fa-regular fa-calendar"></i>{{ appointment.start_time_formatted or appointment.start_time }}</span>
+                                                    <span><i class="fa-regular fa-clock"></i>{{ appointment.end_time_formatted or appointment.end_time }}</span>
+                                                    <span><i class="fa-regular fa-user"></i>{{ appointment.staff_name or 'Sin asignar' }}</span>
+                                                    {% if appointment.client_phone %}
+                                                    <span><i class="fa-brands fa-whatsapp text-success"></i>{{ appointment.client_phone }}</span>
+                                                    {% endif %}
+                                                </div>
+
+                                                {% if display_services %}
+                                                <div class="manager-extra-line">
+                                                    <i class="fa-solid fa-tag me-1"></i>
+                                                    Servicios:
+                                                    {% for service in display_services %}
+                                                        {{ service.name }}{% if not loop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                                {% endif %}
+
+                                                {% if appointment_extras.get(appointment.id) %}
+                                                <div class="manager-extra-line">
+                                                    <i class="fa-solid fa-tags me-1"></i>
+                                                    Extras:
+                                                    {% for extra in appointment_extras.get(appointment.id) %}
+                                                        {{ extra.name }} ${{ "%.2f"|format(extra.price or 0) }}{% if not loop.last %}, {% endif %}
+                                                    {% endfor %}
+                                                </div>
+                                                {% endif %}
+
+                                                <div class="manager-note-line">
+                                                    <i class="fa-regular fa-message me-1"></i>
+                                                    {% if appointment.notes %}Notas: {{ appointment.notes }}{% else %}Sin notas{% endif %}
+                                                </div>
+                                            </div>
+
+                                            <div class="manager-actions">
+                                                <button type="button" class="btn btn-outline-secondary" onclick="abrirDetalleCita('{{ appointment.id }}')">
+                                                    <i class="fa-regular fa-eye"></i> Ver detalle
+                                                </button>
+                                                
+                                                <button type="button" class="btn btn-outline-primary d-none d-md-inline-flex" onclick="abrirEditarCita('{{ appointment.id }}')">
+                                                    <i class="fa-regular fa-pen-to-square"></i> Editar
+                                                </button>
+
+                                                {% if appointment.status == 'pendiente' %}
+                                                <form method="POST" action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}">
+                                                    <input type="hidden" name="status" value="confirmada">
+                                                    <button type="submit" class="btn btn-outline-success">
+                                                        <i class="fa-solid fa-circle-check"></i> Confirmar
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+
+                                                {% if appointment.status in ['pendiente', 'confirmada'] %}
+                                                <a href="{{ url_for('nails.ventas', appointment_id=appointment.id) }}" class="btn btn-primary {% if appointment.status == 'pendiente' %}d-none d-md-inline-flex{% endif %}">
+                                                    <i class="fa-regular fa-credit-card"></i> Cobrar
+                                                </a>
+                                                <button type="button" class="btn btn-outline-primary d-none d-md-inline-flex" onclick="abrirEditarCita('{{ appointment.id }}')">
+                                                    <i class="fa-regular fa-calendar-days"></i> Reagendar
+                                                </button>
+                                                {% endif %}
+
+                                                {% if appointment.status not in ['atendida', 'cancelada', 'no_asistio'] %}
+                                                <form
+                                                    method="POST"
+                                                    action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                    class="require-confirm d-none d-md-block"
+                                                    data-title="¿Marcar como atendida?"
+                                                    data-text="Se marcará como atendida sin generar una venta."
+                                                    data-icon="info"
+                                                    data-btn-text="Sí, marcar atendida"
+                                                >
+                                                    <input type="hidden" name="status" value="atendida">
+                                                    <button type="submit" class="btn btn-outline-success">
+                                                        <i class="fa-solid fa-check"></i> Atendida
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+
+                                                {% if appointment.status in ['pendiente', 'confirmada'] %}
+                                                <form
+                                                    method="POST"
+                                                    action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                    class="require-confirm d-none d-md-block"
+                                                    data-title="¿Marcar como no asistió?"
+                                                    data-text="La cita quedará registrada como no asistida."
+                                                    data-icon="warning"
+                                                    data-btn-text="Sí, marcar"
+                                                >
+                                                    <input type="hidden" name="status" value="no_asistio">
+                                                    <button type="submit" class="btn btn-outline-secondary">
+                                                        <i class="fa-regular fa-circle-xmark"></i> No asistió
+                                                    </button>
+                                                </form>
+
+                                                <form
+                                                    method="POST"
+                                                    action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                    class="require-confirm d-none d-md-block"
+                                                    data-title="¿Cancelar esta cita?"
+                                                    data-text="La cita quedará marcada como cancelada."
+                                                    data-icon="warning"
+                                                    data-btn-text="Sí, cancelar"
+                                                    data-btn-color="#dc3545"
+                                                >
+                                                    <input type="hidden" name="status" value="cancelada">
+                                                    <button type="submit" class="btn btn-outline-danger">
+                                                        <i class="fa-regular fa-trash-can"></i> Cancelar
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+
+                                                {% if appointment.status in ['cancelada', 'no_asistio', 'atendida'] %}
+                                                <form method="POST" action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}">
+                                                    <input type="hidden" name="status" value="pendiente">
+                                                    <button type="submit" class="btn btn-outline-dark">
+                                                        <i class="fa-solid fa-rotate-left"></i> Reabrir
+                                                    </button>
+                                                </form>
+                                                {% endif %}
+                                                
+                                                <div class="dropdown manager-mobile-more">
+                                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="dropdown" aria-label="Más acciones">
+                                                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                    </button>
+                                                    <ul class="dropdown-menu dropdown-menu-end">
+                                                        <li>
+                                                            <button type="button" class="dropdown-item" onclick="abrirEditarCita('{{ appointment.id }}')">
+                                                                <i class="fa-regular fa-pen-to-square me-2"></i>Editar
+                                                            </button>
+                                                        </li>
+                                                        <li>
+                                                            <button type="button" class="dropdown-item" onclick="abrirEditarCita('{{ appointment.id }}')">
+                                                                <i class="fa-regular fa-calendar-days me-2"></i>Reagendar
+                                                            </button>
+                                                        </li>
+                                                        {% if appointment.status == 'pendiente' %}
+                                                        <li>
+                                                            <a href="{{ url_for('nails.ventas', appointment_id=appointment.id) }}" class="dropdown-item">
+                                                                <i class="fa-regular fa-credit-card me-2"></i>Cobrar
+                                                            </a>
+                                                        </li>
+                                                        {% endif %}
+                                                        {% if appointment.status not in ['atendida', 'cancelada', 'no_asistio'] %}
+                                                        <li>
+                                                            <form
+                                                                method="POST"
+                                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                                class="m-0 require-confirm"
+                                                                data-title="¿Marcar como atendida?"
+                                                                data-text="Se marcará como atendida sin generar una venta."
+                                                                data-icon="info"
+                                                                data-btn-text="Sí, marcar atendida"
+                                                            >
+                                                                <input type="hidden" name="status" value="atendida">
+                                                                <button type="submit" class="dropdown-item">
+                                                                    <i class="fa-solid fa-check me-2"></i>Atendida
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                        {% endif %}
+                                                        {% if appointment.status in ['pendiente', 'confirmada'] %}
+                                                        <li>
+                                                            <form
+                                                                method="POST"
+                                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                                class="m-0 require-confirm"
+                                                                data-title="¿Marcar como no asistió?"
+                                                                data-text="La cita quedará registrada como no asistida."
+                                                                data-icon="warning"
+                                                                data-btn-text="Sí, marcar"
+                                                            >
+                                                                <input type="hidden" name="status" value="no_asistio">
+                                                                <button type="submit" class="dropdown-item">
+                                                                    <i class="fa-regular fa-circle-xmark me-2"></i>No asistió
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                        <li>
+                                                            <form
+                                                                method="POST"
+                                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                                class="m-0 require-confirm"
+                                                                data-title="¿Cancelar esta cita?"
+                                                                data-text="La cita quedará marcada como cancelada."
+                                                                data-icon="warning"
+                                                                data-btn-text="Sí, cancelar"
+                                                                data-btn-color="#dc3545"
+                                                            >
+                                                                <input type="hidden" name="status" value="cancelada">
+                                                                <button type="submit" class="dropdown-item text-danger">
+                                                                    <i class="fa-regular fa-trash-can me-2"></i>Cancelar
+                                                                </button>
+                                                            </form>
+                                                        </li>
+                                                        {% endif %}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </article>
+                                        {% endfor %}
+                                    </div>
+                                    {% else %}
+                                    <p class="text-muted mb-0 fw-bold">Todavía no tienes citas registradas.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <aside class="manager-side" id="appointment_manager_summary">
+                                <button type="button" class="manager-summary-head" id="appointment_manager_summary_toggle" aria-expanded="false">
+                                    <span>
+                                        <span class="manager-side-title d-block mb-0">Resumen del día</span>
+                                        <span class="manager-summary-compact">
+                                            <span id="appointment_manager_compact_count">{{ appointments|length if appointments else 0 }}</span> citas ·
+                                            ${{ "%.2f"|format(agenda_stats.today_sales_total or 0) }} ventas ·
+                                            ${{ "%.2f"|format(agenda_stats.deposits_total or 0) }} anticipos
+                                        </span>
+                                    </span>
+                                    <i class="fa-solid fa-chevron-down manager-summary-chevron"></i>
+                                </button>
+
+                                <div class="manager-summary-body">
+                                    <div class="manager-summary-row">
+                                        <span class="manager-summary-icon" style="--summary-bg:#f5edff;--summary-color:#8e44ad;"><i class="fa-solid fa-chart-column"></i></span>
+                                        <div>
+                                            <span>Ventas totales</span>
+                                            <strong>${{ "%.2f"|format(agenda_stats.today_sales_total or 0) }}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="manager-summary-row">
+                                        <span class="manager-summary-icon" style="--summary-bg:#ecfdf3;--summary-color:#16a34a;"><i class="fa-solid fa-hand-holding-dollar"></i></span>
+                                        <div>
+                                            <span>Anticipos</span>
+                                            <strong>${{ "%.2f"|format(agenda_stats.deposits_total or 0) }}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="manager-summary-row">
+                                        <span class="manager-summary-icon" style="--summary-bg:#eff6ff;--summary-color:#2563eb;"><i class="fa-regular fa-calendar-check"></i></span>
+                                        <div>
+                                            <span>Citas visibles</span>
+                                            <strong id="appointment_manager_visible_count">{{ appointments|length if appointments else 0 }}</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="manager-summary-row">
+                                        <span class="manager-summary-icon" style="--summary-bg:#fdf2f8;--summary-color:#db2777;"><i class="fa-solid fa-heart-pulse"></i></span>
+                                        <div>
+                                            <span>Tasa de asistencia</span>
+                                            <strong id="appointment_manager_attendance_rate">--</strong>
+                                        </div>
+                                    </div>
+
+                                    <div class="manager-tip">
+                                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i>
+                                        Convierte más citas en ventas agregando anticipos y confirmaciones por WhatsApp.
+                                    </div>
+                                </div>
+                            </aside>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    let calendarAppointmentData = [];
+
+    document.addEventListener("DOMContentLoaded", function () {
+        inicializarBuscadorClientesNails();
+        inicializarServiciosCita();
+        inicializarGestorCitas();
+        inicializarPanelDetalleAgenda();
+
+        // Pre-llenar fecha y hora al abrir el modal manualmente
+        const btnNuevaCita = document.querySelector('[data-bs-target="#nuevaCitaModal"]');
+        if (btnNuevaCita) {
+            btnNuevaCita.addEventListener('click', function() {
+                const now = new Date();
+                const appDateInput = document.getElementById('appointment_date');
+                const startTimeInput = document.getElementById('start_time');
+                
+                if (appDateInput && !appDateInput.value) {
+                    appDateInput.value = now.toISOString().slice(0, 10);
+                }
+                if (startTimeInput && !startTimeInput.value) {
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const mins = now.getMinutes() < 30 ? '00' : '30';
+                    startTimeInput.value = `${hours}:${mins}`;
+                }
+            });
+        }
+
+        // Lógica del Calendario
+        const appointmentDateInput = document.querySelector('input[name="appointment_date"]');
+        const startTimeInput = document.querySelector('input[name="start_time"]');
+        const calendarWeekLabel = document.getElementById('calendar_week_label');
+        const calendarPrev = document.getElementById('calendar_prev_week');
+        const calendarNext = document.getElementById('calendar_next_week');
+        const calendarToday = document.getElementById('calendar_today');
+        const dayColumns = Array.from(document.querySelectorAll('.nails-calendar-day-col'));
+        const mainGrid = document.getElementById('main_calendar_grid');
+        const timeLabels = document.getElementById('calendar_time_labels');
+        const calendarModeButtons = Array.from(document.querySelectorAll('[data-calendar-mode]'));
+        const calendarShell = document.querySelector('.nails-calendar');
+        const agendaListView = document.getElementById('agenda_list_view');
+        
+        const appointmentDataRows = Array.from(document.querySelectorAll('.nails-calendar-appointment-data'));
+        calendarAppointmentData = appointmentDataRows.map(function (row) {
+            const services = Array.from(row.querySelectorAll('.nails-calendar-services-data span')).map(function (item) {
+                return {
+                    id: item.dataset.id || '',
+                    name: item.dataset.name || '',
+                    price: Number(item.dataset.price || 0),
+                    duration: Number(item.dataset.duration || 0)
+                };
+            });
+            const extras = Array.from(row.querySelectorAll('.nails-calendar-extras-data span')).map(function (item) {
+                return {
+                    id: item.dataset.id || '',
+                    name: item.dataset.name || '',
+                    price: Number(item.dataset.price || 0),
+                    duration: Number(item.dataset.duration || 0)
+                };
+            });
+
+            return {
+                id: row.dataset.id,
+                title: row.dataset.title,
+                clientId: row.dataset.clientId,
+                client: row.dataset.client,
+                phone: row.dataset.phone,
+                status: row.dataset.status,
+                staffId: row.dataset.staffId,
+                staff: row.dataset.staff,
+                total: Number(row.dataset.total || 0),
+                deposit: Number(row.dataset.deposit || 0),
+                notes: row.dataset.notes || '',
+                startLabel: row.dataset.startLabel,
+                endLabel: row.dataset.endLabel,
+                url: row.dataset.url,
+                start: new Date(row.dataset.start),
+                end: new Date(row.dataset.end),
+                services: services,
+                extras: extras
+            };
+        });
+
+        const baseStartHour = 8;
+        const baseEndHour = 21;
+        const slotHeight = 44;
+
+        const getMonday = function (date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            d.setDate(diff);
+            d.setHours(0, 0, 0, 0);
+            return d;
+        };
+
+        const buildSlotTime = function (minutes) {
+            const hour = Math.floor(minutes / 60);
+            const min = minutes % 60;
+            return (hour < 10 ? '0' + hour : hour) + ':' + (min === 0 ? '00' : min);
+        };
+
+        const isMobileView = () => window.innerWidth <= 768;
+
+        const isSameCalendarDay = function (left, right) {
+            return left.getFullYear() === right.getFullYear() &&
+                left.getMonth() === right.getMonth() &&
+                left.getDate() === right.getDate();
+        };
+
+        const getVisibleHours = function (weekDates) {
+            let startHour = baseStartHour;
+            let endHour = baseEndHour;
+
+            calendarAppointmentData.forEach(function (appointment) {
+                const belongsToVisibleWeek = weekDates.some(function (day) {
+                    return isSameCalendarDay(day, appointment.start);
+                });
+
+                if (!belongsToVisibleWeek) return;
+
+                startHour = Math.min(startHour, appointment.start.getHours());
+                endHour = Math.max(
+                    endHour,
+                    appointment.end.getHours() + (appointment.end.getMinutes() > 0 ? 1 : 0)
+                );
+            });
+
+            return {
+                start: Math.max(0, startHour),
+                end: Math.min(24, Math.max(startHour + 1, endHour))
+            };
+        };
+
+        const renderTimeLabels = function (startHour, endHour) {
+            if (!timeLabels) return;
+
+            let labels = "";
+            for (let slot = startHour * 60; slot < endHour * 60; slot += 30) {
+                labels += '<div class="nails-calendar-time-label">' + buildSlotTime(slot) + '</div>';
+            }
+            timeLabels.innerHTML = labels;
+        };
+
+        let calendarViewMode = 'week';
+
+        const getWeekDates = function (focusDate) {
+            const weekStart = getMonday(focusDate);
+            const weekDates = [];
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(weekStart);
+                day.setDate(weekStart.getDate() + i);
+                weekDates.push(day);
+            }
+            return weekDates;
+        };
+
+        const getRangeDates = function (focusDate) {
+            if (calendarViewMode === 'day') {
+                const day = new Date(focusDate);
+                day.setHours(0, 0, 0, 0);
+                return [day];
+            }
+            return getWeekDates(focusDate);
+        };
+
+        const updateModeButtons = function () {
+            calendarModeButtons.forEach(function (button) {
+                button.classList.toggle('active', button.dataset.calendarMode === calendarViewMode);
+            });
+        };
+
+        const renderListView = function (focusDate) {
+            if (!agendaListView) return;
+
+            const rangeDates = getRangeDates(focusDate);
+            const rangeAppointments = calendarAppointmentData.filter(function (appointment) {
+                return rangeDates.some(function (day) {
+                    return isSameCalendarDay(day, appointment.start);
+                });
+            });
+
+            if (calendarWeekLabel) {
+                if (calendarViewMode === 'day') {
+                    calendarWeekLabel.textContent = focusDate.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: '2-digit' }).replace(/^\w/, c => c.toUpperCase());
+                } else {
+                    calendarWeekLabel.textContent = rangeDates[0].toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }) + ' - ' + rangeDates[rangeDates.length - 1].toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                }
+            }
+
+            if (!rangeAppointments.length) {
+                agendaListView.innerHTML = '<div class="agenda-list-empty">No hay citas en este rango.</div>';
+                return;
+            }
+
+            agendaListView.innerHTML = rangeDates.map(function (day) {
+                const dayAppointments = rangeAppointments.filter(function (appointment) {
+                    return isSameCalendarDay(day, appointment.start);
+                });
+
+                if (!dayAppointments.length) return '';
+
+                const title = day.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long' }).replace(/^\w/, c => c.toUpperCase());
+                const items = dayAppointments.map(function (appointment) {
+                    const status = escapeHTML((appointment.status || 'pendiente').replace('_', ' '));
+                    const time = appointment.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' - ' + appointment.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    return `
+                        <button type="button" class="agenda-list-item" data-list-appointment-id="${escapeHTML(appointment.id)}">
+                            <div>
+                                <strong>${escapeHTML(appointment.client || 'Cliente General')} · ${escapeHTML(appointment.title || 'Servicio')}</strong>
+                                <span>${escapeHTML(time)} · ${escapeHTML(appointment.staff || 'Sin asignar')}</span>
+                            </div>
+                            <span class="badge nails-status nails-status-${escapeHTML(appointment.status || 'pendiente')}">${status}</span>
+                        </button>
+                    `;
+                }).join('');
+
+                return `<section class="agenda-list-day"><div class="agenda-list-day-title">${escapeHTML(title)}</div>${items}</section>`;
+            }).join('');
+
+            agendaListView.querySelectorAll('[data-list-appointment-id]').forEach(function (button) {
+                button.addEventListener('click', function () {
+                    abrirDetalleCita(button.dataset.listAppointmentId);
+                });
+            });
+        };
+
+        const renderCalendar = function (focusDate) {
+            const mobile = isMobileView();
+            const dayMode = calendarViewMode === 'day' || (mobile && calendarViewMode !== 'list');
+            const listMode = calendarViewMode === 'list';
+            const weekDates = getWeekDates(focusDate);
+
+            updateModeButtons();
+
+            if (calendarShell) calendarShell.style.display = listMode ? 'none' : '';
+            if (agendaListView) agendaListView.classList.toggle('is-active', listMode);
+
+            if (listMode) {
+                renderListView(focusDate);
+                return;
+            }
+
+            const visibleHours = getVisibleHours(weekDates);
+            const businessStartHour = visibleHours.start;
+            const businessEndHour = visibleHours.end;
+            const calendarHeight = ((businessEndHour - businessStartHour) * 2) * slotHeight;
+            renderTimeLabels(businessStartHour, businessEndHour);
+
+            // Actualizar el título de la barra
+            if (calendarWeekLabel) {
+                if (dayMode) {
+                    calendarWeekLabel.textContent = focusDate.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: '2-digit' }).replace(/^\w/, c => c.toUpperCase());
+                } else {
+                    calendarWeekLabel.textContent = weekDates[0].toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }) + ' - ' + weekDates[6].toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+                }
+            }
+
+            // Ajustar el grid en CSS dinámicamente
+            if (mainGrid) {
+                mainGrid.style.gridTemplateColumns = dayMode ? '80px minmax(0, 1fr)' : '80px repeat(7, minmax(0, 1fr))';
+            }
+
+            // Renderizar las columnas
+            dayColumns.forEach(function (column, index) {
+                const header = column.querySelector('.nails-calendar-day-header');
+                const body = column.querySelector('.nails-calendar-day-body');
+                const currentDateCol = weekDates[index];
+                
+                if (!header || !body) return;
+
+                // Lógica de visualización por modo
+                if (dayMode) {
+                    const isFocusDay = currentDateCol.getFullYear() === focusDate.getFullYear() &&
+                                       currentDateCol.getMonth() === focusDate.getMonth() &&
+                                       currentDateCol.getDate() === focusDate.getDate();
+                    column.style.display = isFocusDay ? 'block' : 'none';
+                } else {
+                    column.style.display = 'block';
+                }
+
+                header.textContent = currentDateCol.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: '2-digit' });
+                body.innerHTML = '';
+                body.style.minHeight = calendarHeight + 'px';
+                column.style.minHeight = calendarHeight + 41 + 'px';
+
+                // Generar los bloques de tiempo (slots)
+                for (let slot = businessStartHour * 60; slot < businessEndHour * 60; slot += 30) {
+                    const slotBox = document.createElement('div');
+                    slotBox.className = 'nails-calendar-slot';
+                    slotBox.dataset.time = buildSlotTime(slot);
+                    slotBox.dataset.date = formatLocalDateInput(currentDateCol);
+                    
+                    slotBox.addEventListener('click', function () {
+                        if (appointmentDateInput) appointmentDateInput.value = slotBox.dataset.date;
+                        if (startTimeInput) startTimeInput.value = slotBox.dataset.time;
+                        
+                        document.querySelectorAll('.nails-calendar-slot.active').forEach(function (activeSlot) {
+                            activeSlot.classList.remove('active');
+                        });
+                        slotBox.classList.add('active');
+
+                        // Abrir modal automáticamente
+                        if (typeof bootstrap !== 'undefined') {
+                            const citaModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('nuevaCitaModal'));
+                            citaModal.show();
+                        }
+                    });
+                    body.appendChild(slotBox);
+                }
+
+                const now = new Date();
+                const isToday = currentDateCol.getFullYear() === now.getFullYear() &&
+                    currentDateCol.getMonth() === now.getMonth() &&
+                    currentDateCol.getDate() === now.getDate();
+                const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                const dayStartMinutes = businessStartHour * 60;
+                const dayEndMinutes = businessEndHour * 60;
+
+                if (isToday && nowMinutes >= dayStartMinutes && nowMinutes <= dayEndMinutes) {
+                    const line = document.createElement('div');
+                    line.className = 'nails-calendar-now-line';
+                    line.style.top = (((nowMinutes - dayStartMinutes) / 30) * slotHeight) + 'px';
+                    line.innerHTML = '<span>' + now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + '</span>';
+                    body.appendChild(line);
+                }
+            });
+
+            // Pintar las citas encima de los slots
+            calendarAppointmentData.forEach(function (appointment) {
+                const appointmentDate = new Date(appointment.start.getFullYear(), appointment.start.getMonth(), appointment.start.getDate());
+                const matchIndex = weekDates.findIndex(function (day) {
+                    return day.getFullYear() === appointmentDate.getFullYear() && day.getMonth() === appointmentDate.getMonth() && day.getDate() === appointmentDate.getDate();
+                });
+
+                if (matchIndex === -1) return;
+
+                const column = dayColumns[matchIndex].querySelector('.nails-calendar-day-body');
+                if (!column) return;
+                
+                const startMinutesOfDay = appointment.start.getHours() * 60 + appointment.start.getMinutes();
+                const endMinutesOfDay = appointment.end.getHours() * 60 + appointment.end.getMinutes();
+                const calendarStartMinutes = businessStartHour * 60;
+                const calendarEndMinutes = businessEndHour * 60;
+                const visibleStartMinutes = Math.max(startMinutesOfDay, calendarStartMinutes);
+                const visibleEndMinutes = Math.min(Math.max(endMinutesOfDay, visibleStartMinutes + 30), calendarEndMinutes);
+                const startSlotMinutes = visibleStartMinutes - calendarStartMinutes;
+                const durationMinutes = (appointment.end - appointment.start) / 60000;
+                const top = Math.max(0, (startSlotMinutes / 30) * slotHeight);
+                const visibleDurationMinutes = Math.max(30, visibleEndMinutes - visibleStartMinutes);
+                const height = Math.max(slotHeight, Math.min((durationMinutes / 30) * slotHeight - 4, (visibleDurationMinutes / 30) * slotHeight - 4));
+                
+                const eventEl = document.createElement('button');
+                eventEl.type = 'button';
+                eventEl.className = 'nails-calendar-event nails-calendar-event-status-' + appointment.status;
+                eventEl.setAttribute('aria-label', 'Ver detalle de cita de ' + appointment.client);
+                eventEl.dataset.appointmentId = appointment.id;
+                eventEl.style.top = top + 'px';
+                eventEl.style.height = height + 'px';
+                eventEl.innerHTML = '<strong>' + escapeHTML(appointment.title) + '</strong><small>' + escapeHTML(appointment.client) + ' · ' + appointment.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' - ' + appointment.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + '</small>';
+                eventEl.addEventListener('click', function () {
+                    abrirDetalleCita(appointment.id);
+                });
+                
+                column.appendChild(eventEl);
+            });
+        };
+
+        const agendaParams = new URLSearchParams(window.location.search);
+        const prefillDate = agendaParams.get("date") || "";
+        const prefillTime = agendaParams.get("time") || "";
+        const shouldOpenNewAppointment = agendaParams.get("new") === "1";
+        const hasValidPrefill = /^\d{4}-\d{2}-\d{2}$/.test(prefillDate) && /^\d{2}:\d{2}$/.test(prefillTime);
+
+        // Estado de navegación
+        let currentDateView = hasValidPrefill ? new Date(prefillDate + "T00:00:00") : new Date();
+        renderCalendar(currentDateView);
+
+        if (hasValidPrefill) {
+            if (appointmentDateInput) appointmentDateInput.value = prefillDate;
+            if (startTimeInput) startTimeInput.value = prefillTime;
+
+            const targetSlot = document.querySelector(
+                '.nails-calendar-slot[data-date="' + prefillDate + '"][data-time="' + prefillTime + '"]'
+            );
+
+            if (targetSlot) {
+                targetSlot.classList.add("active");
+                targetSlot.scrollIntoView({ block: "center", inline: "center", behavior: "smooth" });
+            }
+        }
+
+        if (shouldOpenNewAppointment && hasValidPrefill && typeof bootstrap !== "undefined") {
+            const citaModal = bootstrap.Modal.getOrCreateInstance(document.getElementById("nuevaCitaModal"));
+            citaModal.show();
+        }
+
+        // Controles de barra
+        if (calendarPrev) {
+            calendarPrev.addEventListener('click', function () {
+                const step = calendarViewMode === 'day' || (isMobileView() && calendarViewMode !== 'list') ? 1 : 7;
+                currentDateView.setDate(currentDateView.getDate() - step);
+                renderCalendar(new Date(currentDateView));
+            });
+        }
+
+        if (calendarNext) {
+            calendarNext.addEventListener('click', function () {
+                const step = calendarViewMode === 'day' || (isMobileView() && calendarViewMode !== 'list') ? 1 : 7;
+                currentDateView.setDate(currentDateView.getDate() + step);
+                renderCalendar(new Date(currentDateView));
+            });
+        }
+
+        if (calendarToday) {
+            calendarToday.addEventListener('click', function () {
+                currentDateView = new Date();
+                renderCalendar(currentDateView);
+            });
+        }
+
+        calendarModeButtons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                calendarViewMode = button.dataset.calendarMode || 'week';
+                cerrarDetalleAgenda();
+                renderCalendar(currentDateView);
+            });
+        });
+
+        // Re-renderizar si el usuario gira el teléfono o cambia el tamaño de la ventana
+        window.addEventListener('resize', function() {
+            renderCalendar(currentDateView);
+        });
+
+        window.setInterval(function () {
+            renderCalendar(currentDateView);
+        }, 60000);
+    });
+
+    let nailsClientesSugeridos = [];
+    let appointmentServicesSelected = [];
+
+    function escapeHTML(value) {
+        return String(value || "")
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function inicializarBuscadorClientesNails() {
+        const input = document.getElementById("quick_client_name");
+        const hidden = document.getElementById("client_id");
+        const phoneHidden = document.getElementById("quick_client_phone");
+        const lista = document.getElementById("nails_client_suggestions");
+
+        if (!input || !hidden || !lista) return;
+
+        let timer = null;
+        let controller = null;
+
+        input.addEventListener("input", function () {
+            const selectedName = input.dataset.selectedName || "";
+
+            if (selectedName && input.value !== selectedName) {
+                hidden.value = "";
+                input.dataset.selectedName = "";
+                if (phoneHidden) phoneHidden.value = "";
+            }
+
+            clearTimeout(timer);
+            const q = input.value.trim();
+
+            if (q.length < 2 || q.toLowerCase() === "cliente general") {
+                ocultarSugerenciasClientesNails();
+                return;
+            }
+
+            timer = setTimeout(async function () {
+                if (controller) controller.abort();
+                controller = new AbortController();
+
+                try {
+                    const response = await fetch("{{ url_for('nails.api_clientes') }}?q=" + encodeURIComponent(q), {
+                        signal: controller.signal
+                    });
+                    const data = await response.json();
+                    renderizarSugerenciasClientesNails(data.clientes || []);
+                } catch (error) {
+                    if (error.name !== "AbortError") {
+                        ocultarSugerenciasClientesNails();
+                    }
+                }
+            }, 220);
+        });
+
+        document.addEventListener("click", function (event) {
+            if (!event.target.closest(".nails-client-autocomplete")) {
+                ocultarSugerenciasClientesNails();
+            }
+        });
+    }
+
+    function renderizarSugerenciasClientesNails(clientes) {
+        const lista = document.getElementById("nails_client_suggestions");
+        if (!lista) return;
+
+        if (!clientes.length) {
+            ocultarSugerenciasClientesNails();
+            return;
+        }
+
+        nailsClientesSugeridos = clientes;
+        lista.innerHTML = clientes.map(function (client, index) {
+            const meta = [client.phone, client.instagram].filter(Boolean).join(" - ") || "Clienta guardada";
+
+            return `
+                <button type="button" class="nails-client-suggestion-item"
+                    onmousedown="seleccionarClienteNails(${index})">
+                    <span class="nails-client-suggestion-name">${escapeHTML(client.name || "")}</span>
+                    <span class="nails-client-suggestion-meta">${escapeHTML(meta)}</span>
+                </button>`;
+        }).join("");
+
+        lista.classList.remove("d-none");
+    }
+
+    function seleccionarClienteNails(index) {
+        const client = nailsClientesSugeridos[index];
+        if (!client) return;
+
+        const input = document.getElementById("quick_client_name");
+        const hidden = document.getElementById("client_id");
+        const phoneHidden = document.getElementById("quick_client_phone");
+
+        if (!input || !hidden) return;
+
+        input.value = client.name || "";
+        input.dataset.selectedName = client.name || "";
+        hidden.value = client.id || "";
+
+        if (phoneHidden) {
+            phoneHidden.value = client.phone || "";
+        }
+
+        ocultarSugerenciasClientesNails();
+    }
+
+    function ocultarSugerenciasClientesNails() {
+        const lista = document.getElementById("nails_client_suggestions");
+        if (!lista) return;
+
+        lista.innerHTML = "";
+        lista.classList.add("d-none");
+    }
+
+    function money(value) {
+        return "$" + Number(value || 0).toFixed(2);
+    }
+
+    function formatLocalDateInput(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        return `${year}-${month}-${day}`;
+    }
+
+    function inicializarGestorCitas() {
+        const search = document.getElementById("appointment_manager_search");
+        const items = Array.from(document.querySelectorAll("#appointment_manager_list .nails-appointment-item"));
+        const empty = document.getElementById("appointment_manager_empty");
+        const dateInput = document.getElementById("appointment_manager_date");
+        const filterButtons = Array.from(document.querySelectorAll("[data-status-filter]"));
+        const visibleCounter = document.getElementById("appointment_manager_visible_count");
+        const compactCounter = document.getElementById("appointment_manager_compact_count");
+        const attendanceRate = document.getElementById("appointment_manager_attendance_rate");
+        const summaryCard = document.getElementById("appointment_manager_summary");
+        const summaryToggle = document.getElementById("appointment_manager_summary_toggle");
+
+        if (!items.length) return;
+
+        if (summaryToggle && summaryCard) {
+            summaryToggle.addEventListener("click", function () {
+                const isOpen = summaryCard.classList.toggle("is-open");
+                summaryToggle.setAttribute("aria-expanded", isOpen ? "true" : "false");
+            });
+        }
+
+        const applyFilters = function () {
+            const query = search ? search.value.trim().toLowerCase() : "";
+            const selectedStatus = (filterButtons.find(function (button) {
+                return button.classList.contains("is-active");
+            })?.dataset.statusFilter) || "all";
+            const selectedDate = dateInput ? dateInput.value : "";
+            let visibleCount = 0;
+            let attendedCount = 0;
+            let attendanceBase = 0;
+
+            items.forEach(function (item) {
+                const haystack = (item.dataset.searchText || item.textContent || "").toLowerCase();
+                const status = item.dataset.status || "";
+                const date = item.dataset.date || "";
+                const matchesText = !query || haystack.includes(query);
+                const matchesStatus = selectedStatus === "all" || status === selectedStatus;
+                const matchesDate = !selectedDate || date === selectedDate;
+                const visible = matchesText && matchesStatus && matchesDate;
+
+                item.classList.toggle("d-none", !visible);
+                if (visible) {
+                    visibleCount += 1;
+                    if (status !== "cancelada") attendanceBase += 1;
+                    if (status === "atendida" || status === "confirmada") attendedCount += 1;
+                }
+            });
+
+            if (empty) {
+                empty.classList.toggle("d-none", visibleCount > 0);
+            }
+
+            if (visibleCounter) visibleCounter.textContent = String(visibleCount);
+            if (compactCounter) compactCounter.textContent = String(visibleCount);
+            if (attendanceRate) {
+                attendanceRate.textContent = attendanceBase
+                    ? Math.round((attendedCount / attendanceBase) * 100) + "%"
+                    : "--";
+            }
+        };
+
+        if (search) search.addEventListener("input", applyFilters);
+        if (dateInput) dateInput.addEventListener("change", applyFilters);
+        filterButtons.forEach(function (button) {
+            button.addEventListener("click", function () {
+                filterButtons.forEach(function (item) {
+                    item.classList.remove("is-active");
+                });
+                button.classList.add("is-active");
+                applyFilters();
+            });
+        });
+
+        applyFilters();
+    }
+
+    function inicializarPanelDetalleAgenda() {
+        const closeButton = document.getElementById("panel_cita_close");
+        if (closeButton) {
+            closeButton.addEventListener("click", cerrarDetalleAgenda);
+        }
+    }
+
+    function cerrarDetalleAgenda() {
+        const workspace = document.getElementById("agenda_workspace");
+        const panel = document.getElementById("agenda_detail_panel");
+
+        if (workspace) workspace.classList.remove("has-detail");
+        if (panel) panel.classList.remove("is-open");
+
+        document.querySelectorAll(".nails-calendar-event.is-selected").forEach(function (eventEl) {
+            eventEl.classList.remove("is-selected");
+        });
+    }
+
+    function initialsFromName(name) {
+        const parts = String(name || "Cliente").trim().split(/\s+/).filter(Boolean);
+        return (parts[0]?.[0] || "C") + (parts[1]?.[0] || "T");
+    }
+
+    function formatDurationLabel(start, end) {
+        const minutes = Math.max(0, Math.round((end - start) / 60000));
+        const hours = Math.floor(minutes / 60);
+        const rest = minutes % 60;
+
+        if (hours && rest) return `${hours} h ${rest} min`;
+        if (hours) return `${hours} h`;
+        return `${minutes} min`;
+    }
+
+    function abrirDetalleCita(appointmentId) {
+        const appointment = calendarAppointmentData.find(function (item) {
+            return String(item.id) === String(appointmentId);
+        });
+
+        if (!appointment) return;
+
+        const workspace = document.getElementById("agenda_workspace");
+        const panel = document.getElementById("agenda_detail_panel");
+        const status = document.getElementById("panel_cita_status");
+        const avatar = document.getElementById("panel_cita_avatar");
+        const cliente = document.getElementById("panel_cita_cliente");
+        const phone = document.getElementById("panel_cita_phone");
+        const servicios = document.getElementById("panel_cita_servicios");
+        const horario = document.getElementById("panel_cita_horario");
+        const duracion = document.getElementById("panel_cita_duracion");
+        const staff = document.getElementById("panel_cita_staff");
+        const anticipo = document.getElementById("panel_cita_anticipo");
+        const total = document.getElementById("panel_cita_total");
+        const notasWrap = document.getElementById("panel_cita_notas_wrap");
+        const notas = document.getElementById("panel_cita_notas");
+        const ventaUrl = document.getElementById("panel_cita_venta_url");
+        const whatsapp = document.getElementById("panel_cita_whatsapp");
+        const editButton = document.getElementById("panel_cita_edit_button");
+        const confirmForm = document.getElementById("panel_confirm_form");
+        const deleteForm = document.getElementById("panel_cita_delete_form");
+
+        if (!workspace || !panel) return;
+
+        workspace.classList.add("has-detail");
+        panel.classList.add("is-open");
+
+        document.querySelectorAll(".nails-calendar-event.is-selected").forEach(function (eventEl) {
+            eventEl.classList.remove("is-selected");
+        });
+        document.querySelectorAll(`.nails-calendar-event[data-appointment-id="${appointment.id}"]`).forEach(function (eventEl) {
+            eventEl.classList.add("is-selected");
+        });
+
+        if (status) {
+            status.className = "badge nails-status nails-status-" + appointment.status;
+            status.textContent = appointment.status || "pendiente";
+        }
+        if (avatar) avatar.textContent = initialsFromName(appointment.client).toUpperCase();
+        if (cliente) cliente.textContent = appointment.client || "Cliente General";
+        if (phone) phone.textContent = appointment.phone || "Sin WhatsApp";
+        if (servicios) {
+            servicios.textContent = appointment.services.map(function (service) {
+                return service.name || "Servicio";
+            }).join(" + ") || appointment.title || "Servicio";
+        }
+        if (horario) horario.textContent = (appointment.startLabel || "") + " - " + (appointment.endLabel || "");
+        if (duracion) duracion.textContent = formatDurationLabel(appointment.start, appointment.end);
+        if (staff) staff.textContent = appointment.staff || "Sin asignar";
+        if (anticipo) anticipo.textContent = money(appointment.deposit);
+        if (total) total.textContent = money(Math.max((appointment.total || 0) - (appointment.deposit || 0), 0));
+
+        if (notas && notasWrap) {
+            notas.textContent = appointment.notes || "Sin notas";
+            notasWrap.classList.toggle("d-none", !appointment.notes);
+        }
+
+        if (ventaUrl) ventaUrl.href = appointment.url || "#";
+        if (whatsapp) {
+            whatsapp.href = appointment.phone
+                ? `https://wa.me/${String(appointment.phone).replace(/\D/g, "")}`
+                : "#";
+            whatsapp.classList.toggle("disabled", !appointment.phone);
+        }
+        if (editButton) {
+            editButton.onclick = function () {
+                abrirEditarCita(appointment.id);
+            };
+        }
+        if (confirmForm) {
+            confirmForm.action = `/nails/agenda/${appointment.id}/estado`;
+            confirmForm.classList.toggle("d-none", appointment.status !== "pendiente");
+        }
+        if (deleteForm) deleteForm.action = `/nails/agenda/${appointment.id}/eliminar`;
+
+        const managerEl = document.getElementById("gestionarCitasModal");
+        const managerInstance = managerEl ? bootstrap.Modal.getInstance(managerEl) : null;
+        if (managerInstance) {
+            managerInstance.hide();
+        }
+
+        panel.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+
+    function abrirEditarCita(appointmentId) {
+        const appointment = calendarAppointmentData.find(function (item) {
+            return String(item.id) === String(appointmentId);
+        });
+
+        if (!appointment) return;
+
+        const modalEl = document.getElementById("editarCitaModal");
+        const form = document.getElementById("editar_cita_form");
+        const deleteForm = document.getElementById("editar_cita_delete_form");
+
+        if (!modalEl || !form) return;
+
+        form.action = `/nails/agenda/${appointment.id}/editar`;
+        if (deleteForm) {
+            deleteForm.action = `/nails/agenda/${appointment.id}/eliminar`;
+        }
+
+        const dateInput = document.getElementById("edit_appointment_date");
+        const timeInput = document.getElementById("edit_start_time");
+        const clientInput = document.getElementById("edit_client_id");
+        const staffInput = document.getElementById("edit_staff_id");
+        const statusInput = document.getElementById("edit_status");
+        const depositInput = document.getElementById("edit_deposit_amount");
+        const notesInput = document.getElementById("edit_notes");
+
+        if (dateInput) dateInput.value = formatLocalDateInput(appointment.start);
+        if (timeInput) {
+            timeInput.value = appointment.start.toLocaleTimeString("en-GB", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false
+            });
+        }
+        if (clientInput) clientInput.value = appointment.clientId || "";
+        if (staffInput) staffInput.value = appointment.staffId || "";
+        if (statusInput) statusInput.value = appointment.status || "pendiente";
+        if (depositInput) depositInput.value = appointment.deposit || 0;
+        if (notesInput) notesInput.value = appointment.notes || "";
+
+        const serviceIds = appointment.services.map(function (service) {
+            return String(service.id || "");
+        }).filter(Boolean);
+        document.querySelectorAll("[data-edit-service]").forEach(function (input) {
+            input.checked = serviceIds.includes(String(input.value));
+        });
+
+        const extraIds = appointment.extras.map(function (extra) {
+            return String(extra.id || "");
+        }).filter(Boolean);
+        document.querySelectorAll("[data-edit-extra]").forEach(function (input) {
+            input.checked = extraIds.includes(String(input.value));
+        });
+
+        const managerEl = document.getElementById("gestionarCitasModal");
+        const managerInstance = managerEl ? bootstrap.Modal.getInstance(managerEl) : null;
+        if (managerInstance) {
+            managerInstance.hide();
+        }
+
+        bootstrap.Modal.getOrCreateInstance(modalEl).show();
+    }
+
+    function inicializarServiciosCita() {
+        const picker = document.getElementById("appointment_service_picker");
+        const addButton = document.getElementById("add_appointment_service");
+        const modal = document.getElementById("nuevaCitaModal");
+        const form = modal ? modal.querySelector("form") : null;
+
+        if (!picker || !addButton) return;
+
+        addButton.addEventListener("click", function () {
+            agregarServicioCitaDesdePicker();
+        });
+
+        picker.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                agregarServicioCitaDesdePicker();
+            }
+        });
+
+        if (form) {
+            form.addEventListener("submit", function (event) {
+                agregarServicioCitaDesdePicker();
+
+                const validationMessage = validarNuevaCitaAntesDeEnviar(form);
+                if (validationMessage) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                    mostrarAlertaAgenda(validationMessage);
+                    return false;
+                }
+            }, true);
+        }
+
+        if (modal) {
+            modal.addEventListener("hidden.bs.modal", function () {
+                const form = modal.querySelector("form");
+                if (form) form.reset();
+
+                appointmentServicesSelected = [];
+                renderServiciosCitaSeleccionados();
+
+                const clientId = document.getElementById("client_id");
+                const clientInput = document.getElementById("quick_client_name");
+                const phoneInput = document.getElementById("quick_client_phone");
+                if (clientId) clientId.value = "";
+                if (clientInput) {
+                    clientInput.value = "";
+                    clientInput.dataset.selectedName = "";
+                }
+                if (phoneInput) phoneInput.value = "";
+                modal.querySelectorAll('[data-clear-zero-on-focus]').forEach(function (input) {
+                    input.value = "0";
+                });
+                ocultarSugerenciasClientesNails();
+            });
+        }
+    }
+
+    document.querySelectorAll('[data-clear-zero-on-focus]').forEach(function (input) {
+        input.addEventListener("focus", function () {
+            if (input.value === "0" || input.value === "0.00") {
+                input.value = "";
+            }
+        });
+
+        input.addEventListener("blur", function () {
+            if (input.value.trim() === "") {
+                input.value = "0";
+            }
+        });
+    });
+
+    function agregarServicioCitaDesdePicker() {
+        const picker = document.getElementById("appointment_service_picker");
+        if (!picker || !picker.value) return;
+
+        const selected = picker.selectedOptions[0];
+        const serviceId = picker.value;
+
+        appointmentServicesSelected.push({
+            key: `${serviceId}-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+            id: serviceId,
+            name: selected.dataset.name || selected.textContent.trim(),
+            price: Number(selected.dataset.price || 0),
+            duration: Number(selected.dataset.duration || 0)
+        });
+
+        picker.value = "";
+        renderServiciosCitaSeleccionados();
+    }
+
+    function quitarServicioCita(serviceKey) {
+        appointmentServicesSelected = appointmentServicesSelected.filter(item => item.key !== String(serviceKey));
+        renderServiciosCitaSeleccionados();
+    }
+
+    function renderServiciosCitaSeleccionados() {
+        const list = document.getElementById("appointment_services_list");
+        const inputs = document.getElementById("appointment_services_inputs");
+
+        if (!list || !inputs) return;
+
+        inputs.innerHTML = appointmentServicesSelected.map(function (service) {
+            return `<input type="hidden" name="service_ids" value="${escapeHTML(service.id)}">`;
+        }).join("");
+
+        if (!appointmentServicesSelected.length) {
+            list.innerHTML = '<div class="text-muted small">Aún no agregas servicios.</div>';
+            return;
+        }
+
+        list.innerHTML = appointmentServicesSelected.map(function (service) {
+            return `
+                <div class="nails-selected-service">
+                    <span>
+                        <strong>${escapeHTML(service.name)}</strong>
+                        <small>${money(service.price)} · ${service.duration || 0} min</small>
+                    </span>
+                    <button type="button" onclick="quitarServicioCita('${escapeHTML(service.key)}')" aria-label="Quitar servicio">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>`;
+        }).join("");
+    }
+
+    function mostrarAlertaAgenda(message) {
+        if (window.Swal) {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Revisa la cita',
+                text: message,
+                confirmButtonColor: getComputedStyle(document.documentElement).getPropertyValue('--nails-primary').trim() || '#ff6b81'
+            });
+            return;
+        }
+
+        if (window.nailsNotify) {
+            window.nailsNotify('warning', 'Revisa la cita', message);
+            return;
+        }
+
+        console.warn(message);
+    }
+
+    function validarNuevaCitaAntesDeEnviar(form) {
+        const dateInput = form.querySelector('[name="appointment_date"]');
+        const timeInput = form.querySelector('[name="start_time"]');
+        const staffInput = form.querySelector('[name="staff_id"]');
+
+        if (!appointmentServicesSelected.length || !dateInput?.value || !timeInput?.value) {
+            return 'Selecciona servicio, fecha y hora antes de guardar la cita.';
+        }
+
+        const start = new Date(`${dateInput.value}T${timeInput.value}:00`);
+        if (Number.isNaN(start.getTime())) {
+            return 'La fecha u hora no tienen un formato válido.';
+        }
+
+        const serviceMinutes = appointmentServicesSelected.reduce(function (sum, service) {
+            return sum + (Number(service.duration || 0) || 60);
+        }, 0);
+
+        const extraMinutes = Array.from(form.querySelectorAll('input[name="extras"]:checked')).reduce(function (sum, input) {
+            const option = input.closest('.nails-extra-option');
+            const minutesText = option ? option.textContent.match(/\+(\d+)\s*min/i) : null;
+            return sum + (minutesText ? Number(minutesText[1] || 0) : 0);
+        }, 0);
+
+        const durationMinutes = Math.max(15, serviceMinutes + extraMinutes);
+        const end = new Date(start.getTime() + durationMinutes * 60000);
+        const staffId = staffInput ? staffInput.value : '';
+        const staffName = staffInput && staffInput.selectedOptions[0]
+            ? staffInput.selectedOptions[0].textContent.trim()
+            : 'Sin asignar';
+
+        const overlap = calendarAppointmentData.find(function (appointment) {
+            if (['cancelada', 'no_asistio'].includes(appointment.status)) return false;
+            if (!(start < appointment.end && end > appointment.start)) return false;
+            if (!staffId) return true;
+            return appointment.staffId === staffId || !appointment.staffId;
+        });
+
+        if (!overlap) {
+            return '';
+        }
+
+        const overlapStart = overlap.startLabel || overlap.start.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
+        const overlapEnd = overlap.endLabel || overlap.end.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+        const clientName = overlap.client || 'Cliente General';
+        const overlapStaff = overlap.staff || 'sin técnica asignada';
+
+        if (staffId && overlap.staffId) {
+            return `Ojo: ${staffName} ya tiene una cita programada de ${overlapStart} a ${overlapEnd} con ${clientName}. Se empalman los horarios.`;
+        }
+
+        if (staffId) {
+            return `Ojo: en ese horario ya existe una cita sin técnica asignada, de ${overlapStart} a ${overlapEnd} con ${clientName}. Revisa la agenda antes de asignar otra cita.`;
+        }
+
+        return `Ojo: a esta hora ya tienes una cita programada de ${overlapStart} a ${overlapEnd} con ${clientName} (${overlapStaff}). Asigna una técnica libre o cambia el horario.`;
+    }
+</script>
+{% endblock %}

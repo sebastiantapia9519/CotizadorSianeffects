@@ -1,0 +1,733 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Configuración | Sianeffects Nails{% endblock %}
+{% block page_title %}Configuración{% endblock %}
+{% block page_subtitle %}Personaliza los datos, colores, horarios y políticas de tu salón.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .settings-form {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1.08fr) minmax(340px, .92fr);
+        align-items: start;
+    }
+
+    .settings-column {
+        display: grid;
+        gap: 16px;
+        min-width: 0;
+    }
+
+    .settings-card {
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 14px 34px rgba(26,31,44,.06);
+        min-width: 0;
+        padding: 18px;
+    }
+
+    .settings-card-head {
+        margin-bottom: 14px;
+    }
+
+    .settings-title {
+        align-items: center;
+        color: var(--nails-ink);
+        display: flex;
+        font-size: 17px;
+        font-weight: 900;
+        gap: 9px;
+        margin: 0;
+    }
+
+    .settings-title i {
+        color: var(--nails-primary-strong);
+        font-size: 15px;
+        width: 18px;
+    }
+
+    .settings-subtitle {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 3px;
+    }
+
+    .settings-logo-row {
+        align-items: center;
+        display: grid;
+        gap: 16px;
+        grid-template-columns: 78px minmax(0, 1fr) auto;
+    }
+
+    .settings-logo-preview {
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 70%);
+        border-radius: 12px;
+        color: var(--nails-primary-strong);
+        display: flex;
+        font-size: 28px;
+        font-weight: 900;
+        height: 78px;
+        justify-content: center;
+        overflow: hidden;
+        width: 78px;
+    }
+
+    .settings-logo-preview img {
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .settings-logo-drop {
+        align-items: center;
+        border: 1px dashed color-mix(in srgb, var(--nails-primary), transparent 45%);
+        border-radius: 10px;
+        color: var(--nails-muted);
+        cursor: pointer;
+        display: grid;
+        gap: 5px;
+        justify-items: center;
+        min-height: 76px;
+        padding: 12px;
+        text-align: center;
+    }
+
+    .settings-logo-drop i {
+        color: var(--nails-primary-strong);
+        font-size: 20px;
+    }
+
+    .settings-logo-drop span {
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .settings-logo-drop small {
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .settings-logo-drop input {
+        display: none;
+    }
+
+    .color-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .color-field {
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        padding: 10px;
+    }
+
+    .color-field label {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 11px;
+        font-weight: 900;
+        margin-bottom: 8px;
+    }
+
+    .color-control {
+        align-items: center;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 42px minmax(0, 1fr);
+    }
+
+    .color-control input[type="color"] {
+        border: 0;
+        border-radius: 8px;
+        height: 42px;
+        padding: 0;
+        width: 42px;
+    }
+
+    .color-hex {
+        color: var(--nails-text);
+        font-size: 12px;
+        font-weight: 900;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .settings-preview-card {
+        background:
+            linear-gradient(120deg, var(--nails-primary-soft), #fff 78%),
+            var(--nails-primary-soft);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 74%);
+        border-radius: 12px;
+        min-height: 148px;
+        overflow: hidden;
+        padding: 22px;
+        position: relative;
+    }
+
+    .settings-preview-card::after {
+        color: color-mix(in srgb, var(--nails-primary), transparent 78%);
+        content: "✦";
+        font-size: 58px;
+        position: absolute;
+        right: 26px;
+        top: 18px;
+    }
+
+    .settings-preview-content {
+        align-items: center;
+        display: flex;
+        gap: 14px;
+        position: relative;
+        z-index: 1;
+    }
+
+    .settings-preview-logo {
+        align-items: center;
+        background: #fff;
+        border-radius: 999px;
+        display: flex;
+        flex: 0 0 auto;
+        height: 70px;
+        justify-content: center;
+        overflow: hidden;
+        width: 70px;
+    }
+
+    .settings-preview-logo img {
+        height: 100%;
+        object-fit: cover;
+        width: 100%;
+    }
+
+    .settings-preview-name {
+        color: var(--nails-ink);
+        font-size: 18px;
+        font-weight: 900;
+    }
+
+    .settings-preview-action {
+        background: var(--nails-primary);
+        border: 0;
+        border-radius: 999px;
+        color: #fff;
+        font-size: 13px;
+        font-weight: 900;
+        margin-top: 12px;
+        padding: 9px 18px;
+    }
+
+    .settings-link-box {
+        background: var(--nails-primary-soft);
+        border: 1px dashed color-mix(in srgb, var(--nails-primary), transparent 55%);
+        border-radius: 10px;
+        color: var(--nails-primary-strong);
+        display: flex;
+        gap: 10px;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px;
+    }
+
+    .settings-link-box code {
+        color: inherit;
+        font-weight: 900;
+        overflow-wrap: anywhere;
+    }
+
+    .hours-table {
+        display: grid;
+        gap: 0;
+    }
+
+    .hours-head,
+    .hours-row {
+        align-items: center;
+        display: grid;
+        gap: 10px;
+        grid-template-columns: 1.2fr .9fr 1fr 1fr;
+        padding: 8px 0;
+    }
+
+    .hours-head {
+        border-bottom: 1px solid var(--nails-border);
+        color: var(--nails-muted);
+        font-size: 11px;
+        font-weight: 900;
+        text-transform: uppercase;
+    }
+
+    .hours-row {
+        border-bottom: 1px solid #f2f3f8;
+    }
+
+    .hours-row:last-child {
+        border-bottom: 0;
+    }
+
+    .hours-day {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .hours-row .form-control {
+        min-height: 34px;
+        font-size: 12px;
+    }
+
+    .save-card {
+        background: linear-gradient(180deg, #fff, var(--nails-primary-soft));
+    }
+
+    @media (max-width: 1120px) {
+        .settings-form {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 720px) {
+        .settings-card {
+            padding: 16px;
+        }
+
+        .settings-logo-row,
+        .color-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .settings-logo-preview {
+            height: 88px;
+            width: 88px;
+        }
+
+        .hours-head {
+            display: none;
+        }
+
+        .hours-row {
+            background: var(--nails-subtle);
+            border: 1px solid var(--nails-border);
+            border-radius: 10px;
+            grid-template-columns: 1fr 1fr;
+            margin-bottom: 10px;
+            padding: 12px;
+        }
+
+        .hours-day {
+            grid-column: 1 / -1;
+        }
+
+        .hours-row .form-check {
+            grid-column: 1 / -1;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<form method="POST" class="settings-form" enctype="multipart/form-data">
+    <section class="settings-column">
+        <article class="settings-card">
+            <div class="settings-card-head">
+                <h2 class="settings-title"><i class="fa-regular fa-clipboard"></i>Datos del salón</h2>
+                <div class="settings-subtitle">Información básica que verán tus clientes.</div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Nombre del salón</label>
+                    <input type="text" name="name" class="form-control" value="{{ business.name or '' }}" required>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Correo registrado</label>
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fa-regular fa-envelope"></i></span>
+                        <input type="email" class="form-control" value="{{ registered_email or 'Sin correo registrado' }}" disabled>
+                    </div>
+                    <div class="form-text">Cuenta con la que se registró este salón.</div>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">WhatsApp</label>
+                    <input type="text" name="whatsapp" class="form-control" value="{{ business.whatsapp or '' }}" placeholder="Ej. 8112345678">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Instagram</label>
+                    <input type="text" name="instagram" class="form-control" value="{{ business.instagram or '' }}" placeholder="Ej. @garritas">
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Dirección</label>
+                    <input type="text" name="address" class="form-control" value="{{ business.address or '' }}" placeholder="Ej. San Pedro Garza García">
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Zona horaria</label>
+                    <select name="timezone" class="form-select">
+                        <option value="America/Monterrey" {% if business.timezone=='America/Monterrey' %}selected{% endif %}>Monterrey / México</option>
+                        <option value="America/Mexico_City" {% if business.timezone=='America/Mexico_City' %}selected{% endif %}>Ciudad de México</option>
+                        <option value="America/Cancun" {% if business.timezone=='America/Cancun' %}selected{% endif %}>Cancún</option>
+                        <option value="America/Tijuana" {% if business.timezone=='America/Tijuana' %}selected{% endif %}>Tijuana</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Moneda</label>
+                    <select name="currency" class="form-select">
+                        <option value="MXN" {% if business.currency=='MXN' %}selected{% endif %}>MXN - Peso mexicano</option>
+                        <option value="USD" {% if business.currency=='USD' %}selected{% endif %}>USD - Dólar</option>
+                    </select>
+                </div>
+                <div class="col-12">
+                    <label class="form-label">Frase del catálogo</label>
+                    <textarea name="catalog_tagline" class="form-control" rows="2" maxlength="240" placeholder="Ej. Uñas bonitas, cuidadas y hechas a tu estilo.">{{ business.catalog_tagline or 'Uñas que expresan tu estilo, hechas con amor y detalle.' }}</textarea>
+                    <div class="form-text">Esta frase aparece debajo del nombre de tu salón en el catálogo público.</div>
+                </div>
+            </div>
+        </article>
+
+        <article class="settings-card">
+            <div class="settings-card-head">
+                <h2 class="settings-title"><i class="fa-regular fa-image"></i>Logo</h2>
+                <div class="settings-subtitle">Este logo se mostrará en tu perfil público y tickets.</div>
+            </div>
+
+            <input type="hidden" name="logo_url" id="logo_url" value="{{ business.logo_url or '' }}">
+            <div class="settings-logo-row">
+                <div class="settings-logo-preview">
+                    {% if business.logo_url %}
+                        <img id="settings_logo_preview" src="{{ business.logo_url }}" alt="Logo actual">
+                    {% else %}
+                        <img id="settings_logo_preview" src="" alt="Logo actual" style="display:none;">
+                        <span id="settings_logo_fallback">S</span>
+                    {% endif %}
+                    {% if business.logo_url %}
+                        <span id="settings_logo_fallback" style="display:none;">S</span>
+                    {% endif %}
+                </div>
+
+                <label class="settings-logo-drop">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <span>Arrastra tu archivo aquí o selecciona uno</span>
+                    <small id="logo_upload_status">Formatos: PNG, JPG, SVG, WebP. Máx. 8MB</small>
+                    <input type="file" name="logo_file" id="logo_file" accept="image/png,image/jpeg,image/svg+xml,image/webp">
+                </label>
+
+                <label class="btn btn-sm btn-outline-primary mb-0" for="logo_file">
+                    Cambiar logo
+                </label>
+            </div>
+        </article>
+
+        <article class="settings-card">
+            <div class="settings-card-head">
+                <h2 class="settings-title"><i class="fa-solid fa-shield-halved"></i>Políticas del salón</h2>
+                <div class="settings-subtitle">Estas políticas se mostrarán a tus clientes al reservar.</div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label">Política de anticipo</label>
+                    <textarea name="deposit_policy" class="form-control" rows="3" placeholder="Para reservar se solicita anticipo.">{{ business.deposit_policy or '' }}</textarea>
+                </div>
+                <div class="col-md-6">
+                    <label class="form-label">Política de cancelación</label>
+                    <textarea name="cancellation_policy" class="form-control" rows="3" placeholder="Cancelaciones pierden anticipo por lentos.">{{ business.cancellation_policy or '' }}</textarea>
+                </div>
+            </div>
+        </article>
+
+        <article class="settings-card">
+            <div class="settings-card-head">
+                <h2 class="settings-title"><i class="fa-regular fa-clock"></i>Horarios</h2>
+                <div class="settings-subtitle">Define los horarios disponibles para reservar.</div>
+            </div>
+
+            <div class="hours-table">
+                <div class="hours-head">
+                    <span>Día</span>
+                    <span>Estado</span>
+                    <span>Apertura</span>
+                    <span>Cierre</span>
+                </div>
+                {% set day_labels = {
+                    'monday': 'Lunes',
+                    'tuesday': 'Martes',
+                    'wednesday': 'Miércoles',
+                    'thursday': 'Jueves',
+                    'friday': 'Viernes',
+                    'saturday': 'Sábado',
+                    'sunday': 'Domingo'
+                } %}
+                {% for day_key, day_label in day_labels.items() %}
+                {% set control = business_hours_controls.get(day_key, {}) %}
+                <div class="hours-row" data-hours-row>
+                    <div class="hours-day"><i class="fa-regular fa-calendar me-2 text-muted"></i>{{ day_label }}</div>
+                    <div class="form-check form-switch m-0">
+                        <input class="form-check-input" type="checkbox" role="switch" name="{{ day_key }}_closed" id="{{ day_key }}_closed" data-hours-closed {% if control.closed %}checked{% endif %}>
+                        <label class="form-check-label fw-bold small" for="{{ day_key }}_closed">
+                            {% if control.closed %}Cerrado{% else %}Abierto{% endif %}
+                        </label>
+                    </div>
+                    <input type="time" name="{{ day_key }}_open" id="{{ day_key }}_open" class="form-control" value="{{ control.open or '' }}" data-hours-input {% if control.closed %}disabled{% endif %}>
+                    <input type="time" name="{{ day_key }}_close" id="{{ day_key }}_close" class="form-control" value="{{ control.close or '' }}" data-hours-input {% if control.closed %}disabled{% endif %}>
+                </div>
+                {% endfor %}
+            </div>
+        </article>
+    </section>
+
+    <section class="settings-column">
+        <article class="settings-card">
+            <div class="settings-card-head">
+                <h2 class="settings-title"><i class="fa-solid fa-droplet"></i>Branding</h2>
+                <div class="settings-subtitle">Elige los colores que representan tu marca.</div>
+            </div>
+
+            <div class="color-grid">
+                <div class="color-field">
+                    <label>Color principal</label>
+                    <div class="color-control">
+                        <input type="color" name="primary_color" value="{{ business.primary_color or '#d946ef' }}">
+                        <span class="color-hex" data-color-label="primary_color">{{ business.primary_color or '#d946ef' }}</span>
+                    </div>
+                </div>
+                <div class="color-field">
+                    <label>Color secundario</label>
+                    <div class="color-control">
+                        <input type="color" name="secondary_color" value="{{ business.secondary_color or '#fce7f3' }}">
+                        <span class="color-hex" data-color-label="secondary_color">{{ business.secondary_color or '#fce7f3' }}</span>
+                    </div>
+                </div>
+                <div class="color-field">
+                    <label>Color acento</label>
+                    <div class="color-control">
+                        <input type="color" name="accent_color" value="{{ business.accent_color or '#f0abfc' }}">
+                        <span class="color-hex" data-color-label="accent_color">{{ business.accent_color or '#f0abfc' }}</span>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <article class="settings-card">
+            <div class="settings-card-head">
+                <h2 class="settings-title"><i class="fa-regular fa-eye"></i>Vista previa</h2>
+                <div class="settings-subtitle">Así se verá tu salón en el catálogo público.</div>
+            </div>
+
+            <div class="settings-preview-card" id="preview_card">
+                <div class="settings-preview-content">
+                    <div class="settings-preview-logo">
+                        {% if business.logo_url %}
+                            <img id="preview_logo" src="{{ business.logo_url }}" alt="Logo">
+                            <span id="preview_logo_fallback" style="display:none;">S</span>
+                        {% else %}
+                            <img id="preview_logo" src="" alt="Logo" style="display:none;">
+                            <span id="preview_logo_fallback">S</span>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="settings-preview-name" id="preview_name">{{ business.name or 'Sianeffects Nails' }}</div>
+                        <div id="preview_instagram" class="text-muted small fw-bold">{{ business.instagram or '@tusalon' }}</div>
+                        <button type="button" id="preview_button" class="settings-preview-action">
+                            <i class="fa-regular fa-calendar-check me-1"></i>Agendar cita
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </article>
+
+        <article class="settings-card">
+            <div class="settings-card-head">
+                <h2 class="settings-title"><i class="fa-solid fa-link"></i>Enlace público</h2>
+                <div class="settings-subtitle">Este es tu enlace público para que los clientes te encuentren.</div>
+            </div>
+
+            <label class="form-label">Slug personalizado</label>
+            <div class="input-group mb-3">
+                <input type="text" class="form-control" value="{{ business.slug }}" readonly>
+                <span class="input-group-text"><i class="fa-regular fa-circle-check text-success"></i></span>
+            </div>
+
+            <div class="settings-link-box">
+                <code>/b/{{ business.slug }}</code>
+                <a href="/b/{{ business.slug }}" class="btn btn-sm btn-outline-primary" target="_blank">Abrir</a>
+            </div>
+        </article>
+
+        {% if is_owner %}
+        <article class="settings-card">
+            <div class="settings-card-head">
+                <h2 class="settings-title"><i class="fa-solid fa-key"></i>Código del salón</h2>
+                <div class="settings-subtitle">Compártelo con una técnica para que se registre y se una a tu salón.</div>
+            </div>
+
+            <label class="form-label">Código único</label>
+            <div class="input-group mb-2">
+                <input type="text" class="form-control fw-black" id="join_code_field" value="{{ business.join_code or '' }}" readonly>
+                <button type="button" class="btn btn-outline-primary" id="copy_join_code">
+                    <i class="fa-regular fa-copy me-1"></i>Copiar
+                </button>
+            </div>
+            <div class="settings-link-box">
+                <code>{{ url_for('auth.registro_nails', _external=True) }}?codigo={{ business.join_code or '' }}</code>
+            </div>
+        </article>
+        {% endif %}
+
+        <article class="settings-card save-card">
+            <div class="settings-card-head">
+                <h2 class="settings-title"><i class="fa-solid fa-cloud-arrow-up"></i>Guardar cambios</h2>
+                <div class="settings-subtitle">Tus cambios se aplicarán en tickets, catálogo público y pantallas del módulo Nails.</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 py-3">
+                <i class="fa-regular fa-floppy-disk me-2"></i>Guardar configuración
+            </button>
+        </article>
+    </section>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const nameInput = document.querySelector('input[name="name"]');
+    const instagramInput = document.querySelector('input[name="instagram"]');
+    const logoInput = document.querySelector('input[name="logo_url"]');
+    const logoFileInput = document.getElementById("logo_file");
+    const logoStatus = document.getElementById("logo_upload_status");
+
+    const primaryInput = document.querySelector('input[name="primary_color"]');
+    const secondaryInput = document.querySelector('input[name="secondary_color"]');
+    const accentInput = document.querySelector('input[name="accent_color"]');
+
+    const previewCard = document.getElementById("preview_card");
+    const previewName = document.getElementById("preview_name");
+    const previewInstagram = document.getElementById("preview_instagram");
+    const previewButton = document.getElementById("preview_button");
+    const previewLogo = document.getElementById("preview_logo");
+    const previewLogoFallback = document.getElementById("preview_logo_fallback");
+    const settingsLogoPreview = document.getElementById("settings_logo_preview");
+    const settingsLogoFallback = document.getElementById("settings_logo_fallback");
+    const sidebarLogo = document.getElementById("nails_sidebar_logo");
+    const sidebarLogoFallback = document.getElementById("nails_sidebar_logo_fallback");
+    const copyJoinCode = document.getElementById("copy_join_code");
+    const joinCodeField = document.getElementById("join_code_field");
+
+    function setLogoPreview(url) {
+        [
+            [previewLogo, previewLogoFallback],
+            [settingsLogoPreview, settingsLogoFallback],
+            [sidebarLogo, sidebarLogoFallback]
+        ].forEach(function (pair) {
+            const img = pair[0];
+            const fallback = pair[1];
+            if (!img || !fallback) return;
+
+            if (url) {
+                img.src = url;
+                img.style.display = "block";
+                fallback.style.display = "none";
+                img.onerror = function () {
+                    img.style.display = "none";
+                    fallback.style.display = "block";
+                };
+            } else {
+                img.removeAttribute("src");
+                img.style.display = "none";
+                fallback.style.display = "block";
+            }
+        });
+    }
+
+    function updatePreview() {
+        const name = nameInput?.value?.trim() || "Sianeffects Nails";
+        const instagram = instagramInput?.value?.trim() || "@tusalon";
+        const logoUrl = logoInput?.value?.trim() || "";
+        const primary = primaryInput?.value || "#d946ef";
+        const secondary = secondaryInput?.value || "#fce7f3";
+        const accent = accentInput?.value || "#f0abfc";
+
+        document.documentElement.style.setProperty("--nails-primary", primary);
+        document.documentElement.style.setProperty("--nails-secondary", secondary);
+        document.documentElement.style.setProperty("--nails-teal", accent);
+        document.documentElement.style.setProperty("--nails-primary-strong", `color-mix(in srgb, ${primary}, #8f1430 24%)`);
+        document.documentElement.style.setProperty("--nails-primary-soft", `color-mix(in srgb, ${secondary}, #ffffff 30%)`);
+        document.documentElement.style.setProperty("--nails-teal-soft", `color-mix(in srgb, ${accent}, #ffffff 86%)`);
+
+        document.querySelectorAll("[data-color-label]").forEach(function (label) {
+            const input = document.querySelector(`input[name="${label.dataset.colorLabel}"]`);
+            if (input) label.textContent = input.value;
+        });
+
+        if (previewName) previewName.textContent = name;
+        if (previewInstagram) previewInstagram.textContent = instagram;
+        if (previewCard) previewCard.style.background = `linear-gradient(120deg, ${secondary}, #fff 78%)`;
+        if (previewButton) previewButton.style.background = primary;
+        setLogoPreview(logoUrl);
+    }
+
+    [nameInput, instagramInput, logoInput, primaryInput, secondaryInput, accentInput].forEach(function (input) {
+        if (input) {
+            input.addEventListener("input", updatePreview);
+            input.addEventListener("change", updatePreview);
+        }
+    });
+
+    function handleLogoFile(input) {
+        const file = input?.files?.[0];
+        if (!file) return;
+
+        const previewUrl = URL.createObjectURL(file);
+        setLogoPreview(previewUrl);
+        if (logoStatus) logoStatus.textContent = "Logo listo. Presiona Guardar configuración para subirlo.";
+    }
+
+    logoFileInput?.addEventListener("change", function () {
+        handleLogoFile(logoFileInput);
+    });
+
+    copyJoinCode?.addEventListener("click", async function () {
+        const code = joinCodeField?.value || "";
+        if (!code) return;
+
+        try {
+            await navigator.clipboard.writeText(code);
+            copyJoinCode.innerHTML = '<i class="fa-regular fa-circle-check me-1"></i>Copiado';
+            setTimeout(function () {
+                copyJoinCode.innerHTML = '<i class="fa-regular fa-copy me-1"></i>Copiar';
+            }, 1400);
+        } catch (error) {
+            joinCodeField?.select();
+        }
+    });
+
+    document.querySelectorAll("[data-hours-row]").forEach(function (row) {
+        const closedSwitch = row.querySelector("[data-hours-closed]");
+        const inputs = Array.from(row.querySelectorAll("[data-hours-input]"));
+        const label = row.querySelector(".form-check-label");
+
+        if (!closedSwitch) return;
+
+        const syncHoursState = function () {
+            inputs.forEach(function (input) {
+                input.disabled = closedSwitch.checked;
+            });
+            if (label) label.textContent = closedSwitch.checked ? "Cerrado" : "Abierto";
+        };
+
+        closedSwitch.addEventListener("change", syncHoursState);
+        syncHoursState();
+    });
+
+    updatePreview();
+});
+</script>
+{% endblock %}

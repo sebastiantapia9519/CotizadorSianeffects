@@ -1,0 +1,808 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Inicio | Sianeffects Nails{% endblock %}
+{% block page_title %}Inicio{% endblock %}
+{% block page_subtitle %}Así va tu salón hoy.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .nails-topbar {
+        display: none;
+    }
+
+    .nails-content {
+        max-width: 1440px;
+    }
+
+    .home-shell {
+        display: grid;
+        gap: 16px;
+    }
+
+    .home-header {
+        align-items: flex-start;
+        display: flex;
+        gap: 18px;
+        justify-content: space-between;
+        margin-bottom: 4px;
+    }
+
+    .home-kicker {
+        color: var(--nails-muted);
+        font-size: 13px;
+        font-weight: 900;
+        margin-bottom: 6px;
+    }
+
+    .home-title {
+        color: var(--nails-ink);
+        font-size: clamp(24px, 3vw, 34px);
+        font-weight: 900;
+        letter-spacing: 0;
+        line-height: 1.05;
+        margin: 0;
+    }
+
+    .home-date {
+        color: var(--nails-muted);
+        font-weight: 800;
+        margin: 8px 0 0;
+    }
+
+    .home-user {
+        align-items: center;
+        background: rgba(255, 255, 255, .76);
+        border: 1px solid var(--nails-border);
+        border-radius: 999px;
+        display: flex;
+        gap: 10px;
+        padding: 8px 12px;
+        white-space: nowrap;
+    }
+
+    .home-user-avatar {
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 72%);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        font-weight: 900;
+        height: 38px;
+        justify-content: center;
+        width: 38px;
+    }
+
+    .home-summary {
+        background: rgba(255, 255, 255, .88);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 18px 46px rgba(26, 31, 44, .07);
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        overflow: hidden;
+    }
+
+    .home-stat {
+        align-items: center;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 48px minmax(0, 1fr);
+        min-height: 92px;
+        padding: 18px 20px;
+        position: relative;
+    }
+
+    .home-stat + .home-stat {
+        border-left: 1px solid var(--nails-border);
+    }
+
+    .home-stat-icon {
+        align-items: center;
+        background: var(--stat-bg, var(--nails-primary-soft));
+        border-radius: 10px;
+        color: var(--stat-color, var(--nails-primary-strong));
+        display: flex;
+        font-size: 20px;
+        height: 48px;
+        justify-content: center;
+        width: 48px;
+    }
+
+    .home-stat-label {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 900;
+    }
+
+    .home-stat-value {
+        color: var(--nails-ink);
+        font-size: 24px;
+        font-weight: 900;
+        line-height: 1.05;
+        margin-top: 3px;
+    }
+
+    .home-stat-note {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 3px;
+    }
+
+    .home-main-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, 1.2fr) minmax(340px, .8fr);
+    }
+
+    .home-right-grid,
+    .home-lower-grid {
+        display: grid;
+        gap: 16px;
+    }
+
+    .home-lower-grid {
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) minmax(280px, .86fr);
+    }
+
+    .home-panel {
+        background: rgba(255, 255, 255, .92);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 16px 42px rgba(26, 31, 44, .06);
+        min-width: 0;
+        padding: 18px;
+    }
+
+    .home-panel-tint {
+        background:
+            radial-gradient(circle at 80% 10%, color-mix(in srgb, var(--nails-primary), transparent 82%), transparent 42%),
+            linear-gradient(135deg, color-mix(in srgb, var(--nails-primary-soft), #fff 20%), #fff);
+    }
+
+    .home-panel-head {
+        align-items: center;
+        display: flex;
+        gap: 12px;
+        justify-content: space-between;
+        margin-bottom: 14px;
+    }
+
+    .home-panel-title {
+        align-items: center;
+        color: var(--nails-ink);
+        display: flex;
+        font-size: 16px;
+        font-weight: 900;
+        gap: 8px;
+        margin: 0;
+    }
+
+    .home-mini-link {
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 72%);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        font-size: 12px;
+        font-weight: 900;
+        padding: 6px 10px;
+        text-decoration: none;
+        white-space: nowrap;
+    }
+
+    .home-agenda-list,
+    .home-client-list,
+    .home-pending-list,
+    .home-service-list {
+        display: grid;
+        gap: 10px;
+    }
+
+    .home-agenda-row {
+        align-items: center;
+        border-bottom: 1px solid color-mix(in srgb, var(--nails-border), transparent 35%);
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 58px 1fr 64px 88px 76px;
+        padding: 8px 0;
+    }
+
+    .home-agenda-row:last-child {
+        border-bottom: 0;
+    }
+
+    .home-time {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+        line-height: 1.05;
+    }
+
+    .home-dot {
+        background: var(--dot, var(--nails-primary));
+        border-radius: 999px;
+        height: 8px;
+        width: 8px;
+    }
+
+    .home-agenda-client {
+        align-items: center;
+        display: grid;
+        gap: 8px;
+        grid-template-columns: 8px minmax(0, 1fr);
+        min-width: 0;
+    }
+
+    .home-name {
+        color: var(--nails-ink);
+        font-weight: 900;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .home-sub {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .home-status {
+        background: var(--status-bg, var(--nails-primary-soft));
+        border: 1px solid var(--status-border, color-mix(in srgb, var(--nails-primary), transparent 78%));
+        border-radius: 999px;
+        color: var(--status-color, var(--nails-primary-strong));
+        display: inline-flex;
+        font-size: 11px;
+        font-weight: 900;
+        justify-content: center;
+        padding: 5px 9px;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .home-next-time {
+        color: var(--nails-ink);
+        font-size: 42px;
+        font-weight: 800;
+        letter-spacing: 0;
+        line-height: 1;
+        margin: 12px 0 10px;
+    }
+
+    .home-next-time span {
+        color: var(--nails-muted);
+        font-size: 15px;
+        font-weight: 900;
+        margin-left: 2px;
+    }
+
+    .home-next-client {
+        align-items: center;
+        display: flex;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+
+    .home-mini-avatar {
+        align-items: center;
+        background: var(--nails-teal-soft);
+        border: 1px solid color-mix(in srgb, var(--nails-teal), transparent 72%);
+        border-radius: 999px;
+        color: var(--nails-teal);
+        display: flex;
+        flex: 0 0 auto;
+        font-weight: 900;
+        height: 42px;
+        justify-content: center;
+        width: 42px;
+    }
+
+    .home-next-meta {
+        color: var(--nails-muted);
+        display: flex;
+        flex-wrap: wrap;
+        font-size: 12px;
+        font-weight: 800;
+        gap: 12px;
+        margin: 12px 0 16px;
+    }
+
+    .home-actions-grid {
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .home-action {
+        align-items: center;
+        background: var(--action-bg, var(--nails-primary-soft));
+        border: 1px solid color-mix(in srgb, var(--action-color, var(--nails-primary)), transparent 78%);
+        border-radius: 8px;
+        color: var(--nails-ink);
+        display: flex;
+        gap: 12px;
+        min-height: 78px;
+        padding: 14px;
+        text-decoration: none;
+        transition: transform .18s ease, box-shadow .18s ease;
+    }
+
+    .home-action:hover {
+        box-shadow: 0 12px 28px rgba(26, 31, 44, .08);
+        color: var(--nails-ink);
+        transform: translateY(-1px);
+    }
+
+    .home-action i {
+        color: var(--action-color, var(--nails-primary-strong));
+        font-size: 24px;
+        width: 28px;
+    }
+
+    .home-action strong {
+        display: block;
+        font-size: 13px;
+        font-weight: 900;
+    }
+
+    .home-action span {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .home-client-row,
+    .home-pending-row,
+    .home-service-row {
+        align-items: center;
+        border-bottom: 1px solid color-mix(in srgb, var(--nails-border), transparent 35%);
+        display: grid;
+        gap: 12px;
+        padding: 8px 0;
+    }
+
+    .home-client-row {
+        grid-template-columns: 42px minmax(0, 1fr) auto;
+    }
+
+    .home-pending-row {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+    }
+
+    .home-service-row {
+        grid-template-columns: 26px minmax(0, 1fr) auto;
+    }
+
+    .home-client-row:last-child,
+    .home-pending-row:last-child,
+    .home-service-row:last-child {
+        border-bottom: 0;
+    }
+
+    .home-client-tag,
+    .home-rank {
+        background: var(--nails-primary-soft);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        font-size: 11px;
+        font-weight: 900;
+        padding: 5px 8px;
+        white-space: nowrap;
+    }
+
+    .home-rank {
+        align-items: center;
+        display: inline-flex;
+        height: 24px;
+        justify-content: center;
+        padding: 0;
+        width: 24px;
+    }
+
+    .home-slot-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    .home-slot {
+        background: var(--nails-primary-soft);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 76%);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: inline-flex;
+        font-size: 12px;
+        font-weight: 900;
+        padding: 7px 12px;
+        text-decoration: none;
+        transition: background .16s ease, border-color .16s ease, transform .16s ease;
+    }
+
+    .home-slot:hover {
+        background: color-mix(in srgb, var(--nails-primary-soft), var(--nails-primary) 9%);
+        border-color: color-mix(in srgb, var(--nails-primary), transparent 58%);
+        color: var(--nails-primary-strong);
+        transform: translateY(-1px);
+    }
+
+    .home-empty {
+        align-items: center;
+        background: #fff;
+        border: 1px dashed var(--nails-border);
+        border-radius: 8px;
+        color: var(--nails-muted);
+        display: flex;
+        font-weight: 800;
+        min-height: 76px;
+        padding: 14px;
+    }
+
+    .home-reminder {
+        align-items: center;
+        background: rgba(255, 255, 255, .82);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        color: var(--nails-muted);
+        display: flex;
+        gap: 14px;
+        justify-content: space-between;
+        padding: 12px 16px;
+    }
+
+    @media (max-width: 1200px) {
+        .home-summary {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .home-stat + .home-stat {
+            border-left: 0;
+        }
+
+        .home-main-grid,
+        .home-lower-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .home-header {
+            flex-direction: column;
+        }
+
+        .home-user {
+            width: 100%;
+        }
+
+        .home-summary {
+            grid-template-columns: 1fr;
+        }
+
+        .home-stat {
+            min-height: auto;
+        }
+
+        .home-agenda-row {
+            align-items: flex-start;
+            grid-template-columns: 56px minmax(0, 1fr);
+        }
+
+        .home-agenda-row > :nth-child(n+3) {
+            grid-column: 2;
+        }
+
+        .home-actions-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .home-reminder {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set greeting_name = (session.get('username') or business.name or 'Equipo').split(' ')[0] %}
+{% set weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'] %}
+{% set months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'] %}
+{% set confirmed_pct = ((stats.confirmed_today or 0) * 100 / (stats.appointments_today or 1))|round(0, 'floor') %}
+
+<div class="home-shell">
+    <section class="home-header">
+        <div>
+            <div class="home-kicker">Así va tu salón hoy</div>
+            <h1 class="home-title">Buenos días, {{ greeting_name }}</h1>
+            <p class="home-date">
+                Hoy, {{ weekdays[now_local.weekday()] }} {{ now_local.day }} de {{ months[now_local.month - 1] }}
+            </p>
+        </div>
+
+        <div class="home-user">
+            <div class="home-user-avatar">{{ greeting_name[0]|upper }}</div>
+            <div>
+                <div class="home-name">{{ session.get('username') or business.name }}</div>
+                <div class="home-sub">{{ current_nails_role or 'Usuario Nails' }}</div>
+            </div>
+        </div>
+    </section>
+
+    <section class="home-summary">
+        <article class="home-stat" style="--stat-bg: var(--nails-primary-soft); --stat-color: var(--nails-primary-strong);">
+            <div class="home-stat-icon"><i class="fa-regular fa-calendar-check"></i></div>
+            <div>
+                <div class="home-stat-label">Citas hoy</div>
+                <div class="home-stat-value">{{ stats.appointments_today or 0 }}</div>
+                <div class="home-stat-note"><a href="{{ url_for('nails.agenda') }}" class="text-decoration-none">Ver agenda</a></div>
+            </div>
+        </article>
+
+        <article class="home-stat" style="--stat-bg: #ecfdf3; --stat-color: #027a48;">
+            <div class="home-stat-icon"><i class="fa-regular fa-circle-check"></i></div>
+            <div>
+                <div class="home-stat-label">Confirmadas</div>
+                <div class="home-stat-value">{{ stats.confirmed_today or 0 }}</div>
+                <div class="home-stat-note">{{ confirmed_pct|int }}% confirmadas</div>
+            </div>
+        </article>
+
+        <article class="home-stat" style="--stat-bg: #fff7ed; --stat-color: #ea580c;">
+            <div class="home-stat-icon"><i class="fa-regular fa-clock"></i></div>
+            <div>
+                <div class="home-stat-label">Por llegar pronto</div>
+                <div class="home-stat-value">{{ stats.arriving_soon or 0 }}</div>
+                <div class="home-stat-note">En 30 min</div>
+            </div>
+        </article>
+
+        <article class="home-stat" style="--stat-bg: #fdf2f8; --stat-color: #db2777;">
+            <div class="home-stat-icon"><i class="fa-regular fa-credit-card"></i></div>
+            <div>
+                <div class="home-stat-label">Pendiente de pago</div>
+                <div class="home-stat-value">{{ stats.pending_payments_count or 0 }}</div>
+                <div class="home-stat-note">${{ "%.2f"|format(stats.pending_balance or 0) }} MXN</div>
+            </div>
+        </article>
+
+        <article class="home-stat" style="--stat-bg: #f5f3ff; --stat-color: #7c3aed;">
+            <div class="home-stat-icon"><i class="fa-solid fa-dollar-sign"></i></div>
+            <div>
+                <div class="home-stat-label">Ventas del día</div>
+                <div class="home-stat-value">${{ "%.2f"|format(stats.total_today or 0) }}</div>
+                <div class="home-stat-note"><a href="{{ url_for('nails.ventas') }}" class="text-decoration-none">Ver ventas</a></div>
+            </div>
+        </article>
+    </section>
+
+    <section class="home-main-grid">
+        <article class="home-panel">
+            <div class="home-panel-head">
+                <h2 class="home-panel-title"><i class="fa-regular fa-calendar-days text-primary"></i>Agenda de hoy</h2>
+                <a href="{{ url_for('nails.agenda') }}" class="home-mini-link">Ver agenda completa</a>
+            </div>
+
+            {% if today_appointments %}
+            <div class="home-agenda-list">
+                {% for appointment in today_appointments %}
+                {% set status_style = {
+                    'confirmada': '--status-bg:#ecfdf3;--status-color:#027a48;--status-border:#bbf7d0;',
+                    'pendiente': '--status-bg:#fff7ed;--status-color:#ea580c;--status-border:#fed7aa;',
+                    'atendida': '--status-bg:#eff6ff;--status-color:#2563eb;--status-border:#bfdbfe;'
+                }.get(appointment.status, '') %}
+                <div class="home-agenda-row">
+                    <div class="home-time">{{ appointment.start_time_label }}</div>
+                    <div class="home-agenda-client">
+                        <span class="home-dot" style="--dot: {{ ['var(--nails-primary)', 'var(--nails-teal)', '#8b5cf6', '#f97316', '#0ea5e9'][loop.index0 % 5] }};"></span>
+                        <div class="min-w-0">
+                            <div class="home-name">{{ appointment.client_name or 'Cliente General' }}</div>
+                            <div class="home-sub">{{ appointment.service_name or appointment.title or 'Servicio Nails' }}</div>
+                        </div>
+                    </div>
+                    <div class="home-sub text-end">{{ appointment.duration_minutes }} min</div>
+                    <div><span class="home-status" style="{{ status_style }}">{{ appointment.status|replace('_', ' ')|title }}</span></div>
+                    <div class="home-sub text-end">{{ appointment.staff_name or 'Sin técnica' }}</div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="home-empty">No hay citas activas para hoy.</div>
+            {% endif %}
+        </article>
+
+        <div class="home-right-grid">
+            <article class="home-panel home-panel-tint">
+                <div class="home-panel-head">
+                    <h2 class="home-panel-title">Próxima cita</h2>
+                    {% if next_appointment %}
+                    <span class="home-status">Próxima</span>
+                    {% endif %}
+                </div>
+
+                {% if next_appointment %}
+                {% set next_parts = (next_appointment.start_time_formatted or '').split(' ') %}
+                <div class="home-next-time">
+                    {{ next_parts[-1] if next_parts|length > 1 else next_appointment.start_time_formatted }}
+                    <span>{{ next_parts[-2] if next_parts|length > 2 else '' }}</span>
+                </div>
+                <div class="home-next-client">
+                    <div class="home-mini-avatar">{{ (next_appointment.client_name or 'C')[0]|upper }}</div>
+                    <div class="min-w-0">
+                        <div class="home-name">{{ next_appointment.client_name or 'Cliente General' }}</div>
+                        <div class="home-sub">{{ next_appointment.service_name or next_appointment.title or 'Servicio Nails' }}</div>
+                    </div>
+                </div>
+                <div class="home-next-meta">
+                    {% if next_appointment.client_phone %}<span><i class="fa-brands fa-whatsapp"></i> {{ next_appointment.client_phone }}</span>{% endif %}
+                    {% if next_appointment.staff_name %}<span><i class="fa-regular fa-user"></i> {{ next_appointment.staff_name }}</span>{% endif %}
+                    <span><i class="fa-regular fa-clock"></i> {{ next_appointment.start_time_formatted }}</span>
+                </div>
+                <div class="d-grid gap-2">
+                    <a href="{{ url_for('nails.agenda') }}" class="btn btn-primary btn-sm">Ver detalle</a>
+                    <a href="{{ url_for('nails.ventas', appointment_id=next_appointment.id) }}" class="btn btn-outline-primary btn-sm">Generar venta</a>
+                </div>
+                {% else %}
+                <div class="home-empty">No hay próximas citas pendientes o confirmadas.</div>
+                <a href="{{ url_for('nails.agenda') }}" class="btn btn-primary btn-sm mt-3">Crear cita</a>
+                {% endif %}
+            </article>
+
+            <article class="home-panel">
+                <div class="home-panel-head">
+                    <h2 class="home-panel-title"><i class="fa-solid fa-wand-magic-sparkles text-primary"></i>Acciones rápidas</h2>
+                </div>
+
+                <div class="home-actions-grid">
+                    <a href="{{ url_for('nails.agenda') }}" class="home-action" style="--action-bg:#faf5ff;--action-color:#9333ea;">
+                        <i class="fa-regular fa-calendar-plus"></i>
+                        <div><strong>Nueva cita</strong><span>Agendar cliente</span></div>
+                    </a>
+                    <a href="{{ url_for('nails.ventas') }}" class="home-action" style="--action-bg:#fdf2f8;--action-color:#db2777;">
+                        <i class="fa-solid fa-bag-shopping"></i>
+                        <div><strong>Registrar venta</strong><span>Añadir venta</span></div>
+                    </a>
+                    <a href="{{ url_for('nails.clientes') }}" class="home-action" style="--action-bg:#ecfdf3;--action-color:#059669;">
+                        <i class="fa-regular fa-user-plus"></i>
+                        <div><strong>Agregar cliente</strong><span>Nuevo registro</span></div>
+                    </a>
+                    <a href="{{ url_for('nails.galeria') }}" class="home-action" style="--action-bg:#fff7ed;--action-color:#ea580c;">
+                        <i class="fa-regular fa-image"></i>
+                        <div><strong>Subir foto</strong><span>Añadir a galería</span></div>
+                    </a>
+                </div>
+            </article>
+        </div>
+    </section>
+
+    <section class="home-lower-grid">
+        <article class="home-panel">
+            <div class="home-panel-head">
+                <h2 class="home-panel-title"><i class="fa-regular fa-address-book text-primary"></i>Clientes de hoy</h2>
+                <a href="{{ url_for('nails.clientes') }}" class="home-mini-link">Ver todos</a>
+            </div>
+
+            {% if today_clients %}
+            <div class="home-client-list">
+                {% for client in today_clients %}
+                <div class="home-client-row">
+                    <div class="home-mini-avatar">{{ (client.name or 'C')[0]|upper }}</div>
+                    <div class="min-w-0">
+                        <div class="home-name">{{ client.name }}</div>
+                        <div class="home-sub">{{ client.appointment_time }} · {{ client.service_name or 'Servicio Nails' }}</div>
+                    </div>
+                    <span class="home-client-tag">
+                        {% if client.birthday and client.birthday.month == now_local.month and client.birthday.day == now_local.day %}
+                            Cumpleaños
+                        {% elif client.total_visits and client.total_visits > 1 %}
+                            Frecuente
+                        {% else %}
+                            Primera visita
+                        {% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="home-empty">Hoy todavía no hay clientes en agenda.</div>
+            {% endif %}
+        </article>
+
+        <article class="home-panel">
+            <div class="home-panel-head">
+                <h2 class="home-panel-title"><i class="fa-solid fa-sack-dollar text-primary"></i>Saldos pendientes</h2>
+                <a href="{{ url_for('nails.ventas') }}" class="home-mini-link">Ver todos</a>
+            </div>
+
+            {% if pending_sales %}
+            <div class="home-pending-list">
+                {% for sale in pending_sales %}
+                <div class="home-pending-row">
+                    <div class="min-w-0">
+                        <div class="home-name">{{ sale.client_name or 'Cliente General' }}</div>
+                        <div class="home-sub">{{ sale.service_name or sale.sale_number or ('Venta #' ~ sale.id) }}</div>
+                    </div>
+                    <strong>${{ "%.2f"|format(sale.balance_due or 0) }}</strong>
+                    <span class="home-status" style="--status-bg:#fff7ed;--status-color:#ea580c;--status-border:#fed7aa;">Pendiente</span>
+                </div>
+                {% endfor %}
+                <div class="d-flex justify-content-between pt-2">
+                    <span class="home-sub">Total pendiente</span>
+                    <strong style="color: var(--nails-primary-strong);">${{ "%.2f"|format(stats.pending_balance or 0) }} MXN</strong>
+                </div>
+            </div>
+            {% else %}
+            <div class="home-empty">No tienes saldos pendientes.</div>
+            {% endif %}
+        </article>
+
+        <div class="home-right-grid">
+            <article class="home-panel">
+                <div class="home-panel-head">
+                    <div>
+                        <h2 class="home-panel-title"><i class="fa-regular fa-clock text-primary"></i>Huecos disponibles hoy</h2>
+                        <div class="home-sub mt-1">
+                            Horario: {{ today_business_hours.label if today_business_hours else '08:00 - 21:00' }}
+                        </div>
+                    </div>
+                    <a href="{{ url_for('nails.agenda') }}" class="home-mini-link">Ver agenda</a>
+                </div>
+
+                {% if available_slots %}
+                <div class="home-slot-list">
+                    {% for slot in available_slots %}
+                    <a
+                        href="{{ url_for('nails.agenda', new=1, date=slot.date_value, time=slot.time_value) }}"
+                        class="home-slot"
+                        title="Agendar a las {{ slot.time_label }}"
+                    >{{ slot.time_label }}</a>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="home-empty">
+                    {% if today_business_hours and not today_business_hours.is_open %}
+                        El salón está marcado como cerrado hoy.
+                    {% else %}
+                        No hay huecos disponibles por ahora dentro del horario de servicio.
+                    {% endif %}
+                </div>
+                {% endif %}
+            </article>
+
+            <article class="home-panel">
+                <div class="home-panel-head">
+                    <h2 class="home-panel-title"><i class="fa-regular fa-star text-primary"></i>Servicios más reservados hoy</h2>
+                </div>
+
+                {% if top_services_today %}
+                <div class="home-service-list">
+                    {% for service in top_services_today %}
+                    <div class="home-service-row">
+                        <span class="home-rank">{{ loop.index }}</span>
+                        <div class="home-name">{{ service.name }}</div>
+                        <div class="home-sub text-end">{{ service.bookings_count }} cita{{ '' if service.bookings_count == 1 else 's' }}</div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="home-empty">Aún no hay servicios reservados hoy.</div>
+                {% endif %}
+            </article>
+        </div>
+    </section>
+
+    <section class="home-reminder">
+        <div>
+            <strong style="color: var(--nails-ink);"><i class="fa-regular fa-bell me-2"></i>Recordatorios enviados hoy:</strong>
+            <span>{{ today_appointments|selectattr('reminder_sent')|list|length }}</span>
+            <span class="mx-2 text-muted">|</span>
+            <span>Próximo recordatorio automático: 30 min antes de cada cita</span>
+        </div>
+        <a href="{{ url_for('nails.agenda') }}" class="home-mini-link">Enviar recordatorio ahora</a>
+    </section>
+</div>
+{% endblock %}

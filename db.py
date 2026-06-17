@@ -391,7 +391,8 @@ def init_db():
         recordatorio_enviado BOOLEAN DEFAULT FALSE,
         stripe_customer_id TEXT,
         verificado BOOLEAN DEFAULT FALSE,
-        tutorial_visto BOOLEAN DEFAULT FALSE
+        tutorial_visto BOOLEAN DEFAULT FALSE,
+        active_module TEXT DEFAULT 'cotizador'
     )
     """)
     print("  ✓ Tabla: usuarios")
@@ -1529,7 +1530,885 @@ def init_db():
     """)
 
     # =============================
-    # 4.34 CREAR USUARIO ADMIN
+    # 4.34 TABLAS: SIANEFFECTS NAILS
+    # =============================
+    """
+    Módulo Sianeffects Nails separado del cotizador actual.
+    Solo comparte la tabla usuarios mediante active_module.
+    """
+    cursor.execute("""
+-- ============================================================
+-- SIANEFFECTS NAILS - MIGRACIÓN INICIAL
+-- ============================================================
+-- Objetivo:
+-- Agregar módulo Sianeffects Nails separado del cotizador actual.
+-- Solo se comparte la tabla usuarios.
+-- ============================================================
+
+
+-- ============================================================
+-- 1. USUARIOS: módulo activo
+-- ============================================================
+
+ALTER TABLE usuarios
+ADD COLUMN IF NOT EXISTS active_module TEXT DEFAULT 'cotizador';
+
+UPDATE usuarios
+SET active_module = 'cotizador'
+WHERE active_module IS NULL;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_usuarios_active_module'
+    ) THEN
+        ALTER TABLE usuarios
+        ADD CONSTRAINT chk_usuarios_active_module
+        CHECK (active_module IN ('cotizador', 'nails'));
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_usuarios_active_module
+ON usuarios(active_module);
+
+
+-- ============================================================
+-- 2. NAILS_BUSINESSES
+-- Negocio/salón ligado a un usuario.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_businesses (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+
+    name TEXT NOT NULL,
+    slug TEXT UNIQUE,
+
+    logo_url TEXT,
+    primary_color TEXT DEFAULT '#d946ef',
+    secondary_color TEXT DEFAULT '#fce7f3',
+    accent_color TEXT DEFAULT '#f0abfc',
+
+    whatsapp TEXT,
+    instagram TEXT,
+    address TEXT,
+
+    timezone TEXT DEFAULT 'America/Monterrey',
+    currency TEXT DEFAULT 'MXN',
+
+    business_hours_json TEXT DEFAULT '{}',
+    cancellation_policy TEXT,
+    deposit_policy TEXT,
+    catalog_tagline TEXT DEFAULT 'Uñas que expresan tu estilo, hechas con amor y detalle.',
+    join_code TEXT NOT NULL,
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_nails_businesses_user_id
+ON nails_businesses(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_businesses_slug
+ON nails_businesses(slug);
+
+ALTER TABLE nails_businesses
+ADD COLUMN IF NOT EXISTS catalog_tagline TEXT DEFAULT 'Uñas que expresan tu estilo, hechas con amor y detalle.';
+
+ALTER TABLE nails_businesses
+ADD COLUMN IF NOT EXISTS join_code TEXT;
+
+UPDATE nails_businesses
+SET join_code = UPPER(SUBSTRING(MD5(id::text || '-' || COALESCE(slug, '') || '-' || created_at::text), 1, 8))
+WHERE join_code IS NULL OR TRIM(join_code) = '';
+
+ALTER TABLE nails_businesses
+ALTER COLUMN join_code SET NOT NULL;
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_nails_businesses_join_code
+ON nails_businesses(join_code);
+
+CREATE INDEX IF NOT EXISTS idx_nails_businesses_is_active
+ON nails_businesses(is_active)
+WHERE is_active = TRUE;
+
+
+-- ============================================================
+-- 3. NAILS_STAFF
+-- Personal/técnicas. Preparado para multi-staff.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_staff (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+
+    name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+
+    role TEXT DEFAULT 'owner',
+    color TEXT DEFAULT '#d946ef',
+
+    commission_type TEXT DEFAULT 'none',
+    commission_value NUMERIC(10,2) DEFAULT 0,
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_staff_role'
+    ) THEN
+        ALTER TABLE nails_staff
+        ADD CONSTRAINT chk_nails_staff_role
+        CHECK (role IN ('owner', 'admin', 'staff', 'reception'));
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_staff_commission_type'
+    ) THEN
+        ALTER TABLE nails_staff
+        ADD CONSTRAINT chk_nails_staff_commission_type
+        CHECK (commission_type IN ('none', 'percent', 'fixed'));
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_nails_staff_business_id
+ON nails_staff(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_staff_user_id
+ON nails_staff(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_staff_is_active
+ON nails_staff(is_active)
+WHERE is_active = TRUE;
+
+
+-- ============================================================
+-- 4. NAILS_CLIENTS
+-- Clientas del salón.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_clients (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+
+    name TEXT NOT NULL,
+    phone TEXT,
+    email TEXT,
+    instagram TEXT,
+
+    birthday DATE,
+
+    notes TEXT,
+    preferences TEXT,
+    allergies_notes TEXT,
+
+    total_visits INTEGER DEFAULT 0,
+    total_spent NUMERIC(10,2) DEFAULT 0,
+
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_nails_clients_business_id
+ON nails_clients(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_clients_name
+ON nails_clients(name);
+
+CREATE INDEX IF NOT EXISTS idx_nails_clients_phone
+ON nails_clients(phone);
+
+CREATE INDEX IF NOT EXISTS idx_nails_clients_is_active
+ON nails_clients(is_active)
+WHERE is_active = TRUE;
+
+
+-- ============================================================
+-- 5. NAILS_SERVICE_CATEGORIES
+-- Categorías de servicios.
+-- Ejemplo: Manos, Pies, Acrílico, Gelish, Extras.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_service_categories (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+
+    name TEXT NOT NULL,
+    description TEXT,
+    sort_order INTEGER DEFAULT 0,
+    is_active BOOLEAN DEFAULT TRUE,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_nails_service_categories_business_id
+ON nails_service_categories(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_service_categories_active
+ON nails_service_categories(is_active)
+WHERE is_active = TRUE;
+
+
+-- ============================================================
+-- 6. NAILS_SERVICES
+-- Servicios principales del salón.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_services (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+    category_id INTEGER REFERENCES nails_service_categories(id) ON DELETE SET NULL,
+
+    name TEXT NOT NULL,
+    description TEXT,
+
+    base_price NUMERIC(10,2) DEFAULT 0,
+    duration_minutes INTEGER DEFAULT 60,
+
+    image_url TEXT,
+    service_icon TEXT DEFAULT 'hand-sparkles',
+
+    requires_deposit BOOLEAN DEFAULT FALSE,
+    deposit_amount NUMERIC(10,2) DEFAULT 0,
+
+    is_public BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT TRUE,
+
+    sort_order INTEGER DEFAULT 0,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE nails_services
+ADD COLUMN IF NOT EXISTS service_icon TEXT DEFAULT 'hand-sparkles';
+
+CREATE INDEX IF NOT EXISTS idx_nails_services_business_id
+ON nails_services(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_services_category_id
+ON nails_services(category_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_services_is_public
+ON nails_services(is_public)
+WHERE is_public = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_nails_services_is_active
+ON nails_services(is_active)
+WHERE is_active = TRUE;
+
+
+-- ============================================================
+-- 7. NAILS_EXTRAS
+-- Extras vendibles.
+-- Ejemplo: pedrería, diseño, largo extra, retiro.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_extras (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+
+    name TEXT NOT NULL,
+    description TEXT,
+
+    price NUMERIC(10,2) DEFAULT 0,
+    duration_minutes INTEGER DEFAULT 0,
+
+    is_active BOOLEAN DEFAULT TRUE,
+    sort_order INTEGER DEFAULT 0,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_nails_extras_business_id
+ON nails_extras(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_extras_is_active
+ON nails_extras(is_active)
+WHERE is_active = TRUE;
+
+
+-- ============================================================
+-- 8. NAILS_APPOINTMENTS
+-- Agenda de citas.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_appointments (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+
+    client_id INTEGER REFERENCES nails_clients(id) ON DELETE SET NULL,
+    staff_id INTEGER REFERENCES nails_staff(id) ON DELETE SET NULL,
+    service_id INTEGER REFERENCES nails_services(id) ON DELETE SET NULL,
+
+    title TEXT,
+
+    start_time TIMESTAMPTZ NOT NULL,
+    end_time TIMESTAMPTZ NOT NULL,
+
+    status TEXT DEFAULT 'pendiente',
+
+    estimated_total NUMERIC(10,2) DEFAULT 0,
+    deposit_amount NUMERIC(10,2) DEFAULT 0,
+
+    notes TEXT,
+    internal_notes TEXT,
+
+    reminder_sent BOOLEAN DEFAULT FALSE,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_appointments_status'
+    ) THEN
+        ALTER TABLE nails_appointments
+        ADD CONSTRAINT chk_nails_appointments_status
+        CHECK (status IN ('pendiente', 'confirmada', 'atendida', 'cancelada', 'no_asistio'));
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointments_business_id
+ON nails_appointments(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointments_client_id
+ON nails_appointments(client_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointments_staff_id
+ON nails_appointments(staff_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointments_service_id
+ON nails_appointments(service_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointments_start_time
+ON nails_appointments(start_time DESC);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointments_status
+ON nails_appointments(status);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointments_business_start
+ON nails_appointments(business_id, start_time DESC);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointments_business_status
+ON nails_appointments(business_id, status);
+
+
+-- ============================================================
+-- 9. NAILS_APPOINTMENT_EXTRAS
+-- Extras ligados a una cita.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_appointment_extras (
+    id SERIAL PRIMARY KEY,
+    appointment_id INTEGER NOT NULL REFERENCES nails_appointments(id) ON DELETE CASCADE,
+    extra_id INTEGER REFERENCES nails_extras(id) ON DELETE SET NULL,
+
+    name TEXT NOT NULL,
+    price NUMERIC(10,2) DEFAULT 0,
+    duration_minutes INTEGER DEFAULT 0,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointment_extras_appointment_id
+ON nails_appointment_extras(appointment_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointment_extras_extra_id
+ON nails_appointment_extras(extra_id);
+
+
+-- ============================================================
+-- 9B. NAILS_APPOINTMENT_SERVICES
+-- Servicios ligados a una cita.
+-- Permite que una misma clienta agende varios servicios en una visita.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_appointment_services (
+    id SERIAL PRIMARY KEY,
+    appointment_id INTEGER NOT NULL REFERENCES nails_appointments(id) ON DELETE CASCADE,
+    service_id INTEGER REFERENCES nails_services(id) ON DELETE SET NULL,
+
+    name TEXT NOT NULL,
+    price NUMERIC(10,2) DEFAULT 0,
+    duration_minutes INTEGER DEFAULT 0,
+    sort_order INTEGER DEFAULT 0,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointment_services_appointment_id
+ON nails_appointment_services(appointment_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_appointment_services_service_id
+ON nails_appointment_services(service_id);
+
+
+-- ============================================================
+-- 10. NAILS_SALES
+-- Ventas/tickets del salón.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_sales (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+
+    client_id INTEGER REFERENCES nails_clients(id) ON DELETE SET NULL,
+    appointment_id INTEGER REFERENCES nails_appointments(id) ON DELETE SET NULL,
+    staff_id INTEGER REFERENCES nails_staff(id) ON DELETE SET NULL,
+
+    sale_number TEXT,
+
+    subtotal NUMERIC(10,2) DEFAULT 0,
+    discount_amount NUMERIC(10,2) DEFAULT 0,
+    discount_percentage NUMERIC(10,2) DEFAULT 0,
+
+    tax_amount NUMERIC(10,2) DEFAULT 0,
+    total NUMERIC(10,2) DEFAULT 0,
+
+    paid_amount NUMERIC(10,2) DEFAULT 0,
+    balance_due NUMERIC(10,2) DEFAULT 0,
+
+    payment_method TEXT,
+    status TEXT DEFAULT 'pagada',
+
+    notes TEXT,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_sales_status'
+    ) THEN
+        ALTER TABLE nails_sales
+        ADD CONSTRAINT chk_nails_sales_status
+        CHECK (status IN ('pendiente', 'anticipo', 'pagada', 'cancelada'));
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_sales_payment_method'
+    ) THEN
+        ALTER TABLE nails_sales
+        ADD CONSTRAINT chk_nails_sales_payment_method
+        CHECK (
+            payment_method IS NULL
+            OR payment_method IN ('efectivo', 'transferencia', 'tarjeta', 'mixto', 'otro')
+        );
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_nails_sales_business_id
+ON nails_sales(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_sales_client_id
+ON nails_sales(client_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_sales_appointment_id
+ON nails_sales(appointment_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_sales_staff_id
+ON nails_sales(staff_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_sales_created_at
+ON nails_sales(created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_nails_sales_status
+ON nails_sales(status);
+
+CREATE INDEX IF NOT EXISTS idx_nails_sales_business_created
+ON nails_sales(business_id, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_nails_sales_business_status
+ON nails_sales(business_id, status);
+
+CREATE INDEX IF NOT EXISTS idx_nails_sales_sale_number
+ON nails_sales(sale_number);
+
+
+-- ============================================================
+-- 11. NAILS_SALE_DETAILS
+-- Detalle de cada venta/ticket.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_sale_details (
+    id SERIAL PRIMARY KEY,
+    sale_id INTEGER NOT NULL REFERENCES nails_sales(id) ON DELETE CASCADE,
+
+    item_type TEXT NOT NULL,
+    item_id INTEGER,
+
+    name TEXT NOT NULL,
+    description TEXT,
+
+    quantity NUMERIC(10,2) DEFAULT 1,
+    unit_price NUMERIC(10,2) DEFAULT 0,
+    total NUMERIC(10,2) DEFAULT 0,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_sale_details_item_type'
+    ) THEN
+        ALTER TABLE nails_sale_details
+        ADD CONSTRAINT chk_nails_sale_details_item_type
+        CHECK (item_type IN ('service', 'extra', 'product', 'custom'));
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_nails_sale_details_sale_id
+ON nails_sale_details(sale_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_sale_details_item_type
+ON nails_sale_details(item_type);
+
+
+-- ============================================================
+-- 12. NAILS_PAYMENTS
+-- Pagos/anticipos ligados a ventas.
+-- Sirve para pagos parciales, anticipos y saldos.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_payments (
+    id SERIAL PRIMARY KEY,
+    sale_id INTEGER NOT NULL REFERENCES nails_sales(id) ON DELETE CASCADE,
+
+    amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+    payment_method TEXT DEFAULT 'efectivo',
+
+    payment_type TEXT DEFAULT 'pago',
+    notes TEXT,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_payments_method'
+    ) THEN
+        ALTER TABLE nails_payments
+        ADD CONSTRAINT chk_nails_payments_method
+        CHECK (payment_method IN ('efectivo', 'transferencia', 'tarjeta', 'mixto', 'otro'));
+    END IF;
+END $$;
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_payments_type'
+    ) THEN
+        ALTER TABLE nails_payments
+        ADD CONSTRAINT chk_nails_payments_type
+        CHECK (payment_type IN ('anticipo', 'pago', 'ajuste', 'reembolso'));
+    END IF;
+END $$;
+
+CREATE INDEX IF NOT EXISTS idx_nails_payments_sale_id
+ON nails_payments(sale_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_payments_created_at
+ON nails_payments(created_at DESC);
+
+
+-- ============================================================
+-- 13. NAILS_GALLERY
+-- Galería/catálogo público de trabajos.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_gallery (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+    service_id INTEGER REFERENCES nails_services(id) ON DELETE SET NULL,
+
+    title TEXT,
+    description TEXT,
+    image_url TEXT NOT NULL,
+
+    is_public BOOLEAN DEFAULT TRUE,
+    is_active BOOLEAN DEFAULT TRUE,
+    sort_order INTEGER DEFAULT 0,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE nails_gallery
+ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT TRUE;
+
+UPDATE nails_gallery
+SET is_active = TRUE
+WHERE is_active IS NULL;
+
+CREATE INDEX IF NOT EXISTS idx_nails_gallery_business_id
+ON nails_gallery(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_gallery_service_id
+ON nails_gallery(service_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_gallery_is_public
+ON nails_gallery(is_public)
+WHERE is_public = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_nails_gallery_is_active
+ON nails_gallery(is_active)
+WHERE is_active = TRUE;
+
+
+-- ============================================================
+-- 14. NAILS_ACTIVITY_LOGS
+-- Auditoría específica de Nails.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_activity_logs (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+    user_id INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+
+    action TEXT NOT NULL,
+    module TEXT,
+    detail TEXT,
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_nails_activity_logs_business_id
+ON nails_activity_logs(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_activity_logs_user_id
+ON nails_activity_logs(user_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_activity_logs_created_at
+ON nails_activity_logs(created_at DESC);
+
+
+-- ============================================================
+-- 15. NAILS_EXPENSES
+-- Gastos del salón.
+-- Sirve para registrar materiales, renta, luz, servicios,
+-- publicidad, sueldos, comisiones y gastos recurrentes.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS nails_expenses (
+    id SERIAL PRIMARY KEY,
+    business_id INTEGER NOT NULL REFERENCES nails_businesses(id) ON DELETE CASCADE,
+
+    title TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'otros',
+
+    amount NUMERIC(10,2) NOT NULL DEFAULT 0,
+
+    expense_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    payment_method TEXT DEFAULT 'efectivo',
+
+    is_recurring BOOLEAN DEFAULT FALSE,
+    recurring_day INTEGER,
+    recurring_frequency TEXT,
+
+    notes TEXT,
+
+    status TEXT DEFAULT 'activo',
+
+    created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
+);
+
+
+-- ============================================================
+-- Constraints
+-- ============================================================
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_expenses_category'
+    ) THEN
+        ALTER TABLE nails_expenses
+        ADD CONSTRAINT chk_nails_expenses_category
+        CHECK (
+            category IN (
+                'materiales',
+                'renta',
+                'servicios',
+                'sueldos',
+                'comisiones',
+                'publicidad',
+                'mantenimiento',
+                'capacitacion',
+                'otros'
+            )
+        );
+    END IF;
+END $$;
+
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_expenses_payment_method'
+    ) THEN
+        ALTER TABLE nails_expenses
+        ADD CONSTRAINT chk_nails_expenses_payment_method
+        CHECK (
+            payment_method IN (
+                'efectivo',
+                'transferencia',
+                'tarjeta',
+                'mixto',
+                'otro'
+            )
+        );
+    END IF;
+END $$;
+
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_expenses_recurring_frequency'
+    ) THEN
+        ALTER TABLE nails_expenses
+        ADD CONSTRAINT chk_nails_expenses_recurring_frequency
+        CHECK (
+            recurring_frequency IS NULL
+            OR recurring_frequency IN (
+                'semanal',
+                'quincenal',
+                'mensual',
+                'bimestral',
+                'anual'
+            )
+        );
+    END IF;
+END $$;
+
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_expenses_status'
+    ) THEN
+        ALTER TABLE nails_expenses
+        ADD CONSTRAINT chk_nails_expenses_status
+        CHECK (
+            status IN ('activo', 'cancelado')
+        );
+    END IF;
+END $$;
+
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_expenses_amount_positive'
+    ) THEN
+        ALTER TABLE nails_expenses
+        ADD CONSTRAINT chk_nails_expenses_amount_positive
+        CHECK (amount >= 0);
+    END IF;
+END $$;
+
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_constraint
+        WHERE conname = 'chk_nails_expenses_recurring_day'
+    ) THEN
+        ALTER TABLE nails_expenses
+        ADD CONSTRAINT chk_nails_expenses_recurring_day
+        CHECK (
+            recurring_day IS NULL
+            OR recurring_day BETWEEN 1 AND 31
+        );
+    END IF;
+END $$;
+
+
+-- ============================================================
+-- Índices
+-- ============================================================
+
+CREATE INDEX IF NOT EXISTS idx_nails_expenses_business_id
+ON nails_expenses(business_id);
+
+CREATE INDEX IF NOT EXISTS idx_nails_expenses_category
+ON nails_expenses(category);
+
+CREATE INDEX IF NOT EXISTS idx_nails_expenses_expense_date
+ON nails_expenses(expense_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_nails_expenses_business_date
+ON nails_expenses(business_id, expense_date DESC);
+
+CREATE INDEX IF NOT EXISTS idx_nails_expenses_business_category
+ON nails_expenses(business_id, category);
+
+CREATE INDEX IF NOT EXISTS idx_nails_expenses_recurring
+ON nails_expenses(business_id, is_recurring)
+WHERE is_recurring = TRUE;
+
+CREATE INDEX IF NOT EXISTS idx_nails_expenses_status
+ON nails_expenses(status);
+    """)
+    print("  ✓ Tablas: Sianeffects Nails")
+
+    # =============================
+    # 4.35 CREAR USUARIO ADMIN
     # =============================
     """
     Crea usuario admin por defecto (seed data).
@@ -1598,7 +2477,7 @@ def init_db():
         print("  ✓ Usuario admin ya existe")
 
     # =============================
-    # 4.35 GUARDAR CAMBIOS Y CERRAR
+    # 4.36 GUARDAR CAMBIOS Y CERRAR
     # =============================
     """
     commit(): guardar TODOS los cambios (CREATE TABLE, CREATE INDEX, INSERT)
