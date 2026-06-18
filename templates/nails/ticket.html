@@ -648,7 +648,7 @@
 </main>
 
 <div class="ticket-actions">
-    <button id="btnShare" type="button" onclick="generarYCompartir()" class="btn-accion btn-share" disabled>
+    <button id="btnShare" type="button" onclick="generarYCompartir()" class="btn-accion btn-share">
         <i class="fa-solid fa-share-nodes"></i> Compartir
     </button>
 
@@ -662,171 +662,63 @@
 </div>
 
 <script>
+    // Igual que el ticket del cotizador: guardamos el archivo del ticket ya listo.
     let ticketPreparado = null;
-    let ticketPreparando = null;
-    const ticketTitle = {{ ("Ticket " ~ (sale.sale_number or sale.id))|tojson }};
-    const ticketFileName = "ticket_nails_{{ sale.sale_number or sale.id }}.png";
-    const ticketImageUrl = "{{ url_for('nails.ticket_imagen', sale_id=sale.id) }}";
 
-    function setShareState(state) {
-        const btn = document.getElementById("btnShare");
-        if (!btn) return;
-
-        if (state === "loading") {
-            btn.disabled = true;
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparando...';
-            return;
-        }
-
-        btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Compartir';
-    }
-
-    function waitImages(element) {
-        const images = Array.from(element.querySelectorAll("img"));
-        return Promise.all(images.map(function (img) {
-            if (img.complete) return Promise.resolve();
-            return new Promise(function (resolve) {
-                const timer = window.setTimeout(resolve, 2500);
-                const done = function () {
-                    window.clearTimeout(timer);
-                    resolve();
-                };
-                img.onload = done;
-                img.onerror = done;
-            });
-        }));
-    }
-
-    function canvasToFile(canvas) {
-        return new Promise(function (resolve, reject) {
-            if (!canvas || !canvas.toBlob) {
-                reject(new Error("Canvas no disponible"));
-                return;
-            }
-            canvas.toBlob(function (blob) {
-                if (!blob) {
-                    reject(new Error("Blob vacío"));
-                    return;
-                }
-                resolve(new File([blob], ticketFileName, { type: "image/png" }));
-            }, "image/png");
-        });
-    }
-
-    function timeout(promise, ms) {
-        return Promise.race([
-            promise,
-            new Promise(function (_, reject) {
-                window.setTimeout(function () {
-                    reject(new Error("Timeout preparando imagen"));
-                }, ms);
-            })
-        ]);
-    }
-
-    async function prepareFromHtml() {
-        const ticket = document.getElementById("ticketVisual");
-        if (!ticket || !window.html2canvas) {
-            throw new Error("html2canvas no disponible");
-        }
-
-        await waitImages(ticket);
-        const canvas = await timeout(html2canvas(ticket, {
-            scale: Math.min(2, window.devicePixelRatio || 2),
-            backgroundColor: "#ffffff",
-            useCORS: true,
-            allowTaint: false,
-            imageTimeout: 4000,
-            logging: false
-        }), 9000);
-        return await canvasToFile(canvas);
-    }
-
-    async function prepareFromServer() {
-        const response = await fetch(ticketImageUrl, {
-            credentials: "same-origin",
-            cache: "no-store"
-        });
-        if (!response.ok) {
-            throw new Error("No se pudo generar PNG del servidor");
-        }
-        const blob = await response.blob();
-        if (!blob || !blob.size) {
-            throw new Error("PNG vacío del servidor");
-        }
-        return new File([blob], ticketFileName, { type: "image/png" });
-    }
-
-    async function prepararTicket() {
-        if (ticketPreparado) return ticketPreparado;
-        if (ticketPreparando) return ticketPreparando;
-
-        setShareState("loading");
-        ticketPreparando = (async function () {
-            try {
-                ticketPreparado = await prepareFromHtml();
-            } catch (clientError) {
-                console.warn("Ticket Nails: usando PNG del servidor.", clientError);
-                ticketPreparado = await prepareFromServer();
-            }
-            setShareState("ready");
-            return ticketPreparado;
-        })();
-
+    window.addEventListener("DOMContentLoaded", async function () {
         try {
-            return await ticketPreparando;
-        } catch (error) {
-            ticketPreparando = null;
-            setShareState("ready");
-            throw error;
-        }
-    }
+            const canvas = await html2canvas(document.getElementById("ticketVisual"), {
+                scale: 2,
+                backgroundColor: "#ffffff",
+                useCORS: true
+            });
 
-    window.addEventListener("DOMContentLoaded", function () {
-        prepararTicket().catch(function (error) {
-            console.error("No se pudo preparar imagen del ticket:", error);
-        });
+            canvas.toBlob(function (blob) {
+                ticketPreparado = new File(
+                    [blob],
+                    "ticket_nails_{{ sale.sale_number or sale.id }}.png",
+                    { type: "image/png" }
+                );
+            }, "image/png");
+
+        } catch (error) {
+            console.error("Error preparando el ticket Nails de fondo:", error);
+        }
     });
 
     async function generarYCompartir() {
-        let file;
-        try {
-            file = await prepararTicket();
-        } catch (error) {
-            console.error("No se pudo preparar el ticket para compartir:", error);
+        if (!ticketPreparado) {
             Swal.fire({
-                icon: "error",
-                title: "No se pudo preparar",
-                text: "No pude crear la imagen del ticket. Recarga la página e inténtalo de nuevo.",
+                icon: "info",
+                title: "Procesando...",
+                text: "Dame un segundito, apenas estoy terminando de preparar la imagen...",
                 confirmButtonColor: "{{ business.primary_color or '#ff6b81' }}"
             });
             return;
         }
 
         try {
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+            if (navigator.share && navigator.canShare && navigator.canShare({ files: [ticketPreparado] })) {
                 await navigator.share({
-                    files: [file],
-                    title: ticketTitle,
+                    files: [ticketPreparado],
+                    title: "Ticket {{ (business.name or 'Sianeffects Nails')|upper }}",
                     text: "Aquí tienes tu comprobante."
                 });
-                return;
+            } else {
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(ticketPreparado);
+                a.download = ticketPreparado.name;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
             }
-
-            const a = document.createElement("a");
-            a.href = URL.createObjectURL(file);
-            a.download = file.name;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
         } catch (error) {
             if (error.name !== "AbortError") {
-                console.error("No se pudo compartir el ticket:", error);
+                console.error("Fallo detectado:", error);
                 Swal.fire({
                     icon: "error",
-                    title: "No se pudo compartir",
-                    text: "El navegador no permitió abrir el menú de compartir.",
+                    title: "¡Oops!",
+                    text: "No se pudo abrir el menú de compartir.",
                     confirmButtonColor: "{{ business.primary_color or '#ff6b81' }}"
                 });
             }
