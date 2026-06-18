@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <title>Ticket {{ sale.sale_number or sale.id }} | Sianeffects Nails</title>
@@ -12,8 +13,10 @@
     <style>
         :root {
             --primary: {{ business.primary_color or '#b15aa3' }};
-            --primary-strong: color-mix(in srgb, var(--primary), #5d2054 28%);
+            --primary-strong: {{ business.primary_color or '#7d3b78' }};
+
             --secondary: {{ business.secondary_color or '#f8e7f4' }};
+
             --accent: {{ business.accent_color or '#9b7aa0' }};
             --ink: #28202a;
             --text: #443b46;
@@ -31,9 +34,7 @@
         body {
             margin: 0;
             min-height: 100vh;
-            background:
-                radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--secondary), #fff 25%), transparent 360px),
-                #f5f2f5;
+            background: #f5f2f5;
             color: var(--text);
             font-family: "Nunito", Arial, sans-serif;
             padding: 22px 14px 112px;
@@ -60,9 +61,9 @@
         .ticket-logo {
             align-items: center;
             background: var(--secondary);
-            border: 1px solid color-mix(in srgb, var(--primary), #fff 62%);
+            border: 1px solid #eaddec;
             border-radius: 999px;
-            box-shadow: 0 12px 28px color-mix(in srgb, var(--primary), transparent 82%);
+            box-shadow: 0 12px 28px rgba(177, 90, 163, .16);
             color: var(--primary-strong);
             display: flex;
             font-size: 22px;
@@ -135,7 +136,7 @@
 
         .ticket-status {
             align-items: center;
-            background: color-mix(in srgb, var(--secondary), #fff 8%);
+            background: #fbf7fb;
             border-radius: 999px;
             color: var(--primary-strong);
             display: inline-flex;
@@ -474,266 +475,328 @@
         }
     </style>
 </head>
+
 <body>
 
-{% set status_label = {
+    {% set status_label = {
     'pagada': 'Pagada',
     'anticipo': 'Anticipo',
     'pendiente': 'Pendiente',
     'cancelada': 'Cancelada'
-}.get(sale.status, sale.status|title) %}
+    }.get(sale.status, sale.status|title) %}
+    {% set business_label = (business.name or 'Sianeffects Nails')|upper %}
+    {% set ticket_filename = 'ticket_nails_' ~ (sale.sale_number or sale.id) ~ '.png' %}
+    {% set ticket_share_title = 'Ticket ' ~ business_label %}
 
-<main class="ticket-shell">
-    <div class="ticket-wrapper" id="ticketVisual">
-        <header class="ticket-header">
-            <div class="ticket-logo">
-                {% if ticket_logo_url %}
-                    <img src="{{ ticket_logo_url }}" alt="Logo" crossorigin="anonymous">
-                {% else %}
+    <main class="ticket-shell">
+        <div class="ticket-wrapper" id="ticketVisual">
+            <header class="ticket-header">
+                <div class="ticket-logo">
+                    {% if ticket_logo_url %}
+                    <img src="{{ ticket_logo_url }}" alt="Logo" crossorigin="anonymous"
+                        onerror="this.nextElementSibling.removeAttribute('style'); this.remove();">
+                    <span style="display:none;">{{ (business.name or 'S')[:1]|upper }}</span>
+                    {% else %}
                     <span>{{ (business.name or 'S')[:1]|upper }}</span>
-                {% endif %}
-            </div>
+                    {% endif %}
+                </div>
 
-            <div class="ticket-business">{{ (business.name or 'Sianeffects Nails')|upper }}</div>
+                <div class="ticket-business">{{ business_label }}</div>
 
-            {% if business.whatsapp %}
+                {% if business.whatsapp %}
                 <div class="ticket-contact">
                     <i class="fa-brands fa-whatsapp"></i>
                     <span>WhatsApp: {{ business.whatsapp }}</span>
                 </div>
-            {% endif %}
+                {% endif %}
 
-            {% if business.instagram %}
+                {% if business.instagram %}
                 <div class="ticket-contact">
                     <i class="fa-brands fa-instagram"></i>
                     <span>Instagram: {{ business.instagram }}</span>
                 </div>
-            {% endif %}
-        </header>
+                {% endif %}
+            </header>
 
-        <section class="ticket-band">
-            <div>
-                <span class="ticket-band-label">Ticket</span>
-                <strong class="ticket-number">{{ sale.sale_number or ('N-' ~ sale.id) }}</strong>
-            </div>
-            <span class="ticket-status">
-                <i class="fa-regular fa-circle-check"></i>
-                {{ status_label }}
-            </span>
-        </section>
-
-        <section class="ticket-body">
-            <div class="ticket-info">
-                <div class="ticket-row">
-                    <span class="ticket-row-label"><i class="fa-regular fa-calendar"></i>Fecha y hora</span>
-                    <strong>{{ sale.created_at_formatted or sale.created_at }}</strong>
+            <section class="ticket-band">
+                <div>
+                    <span class="ticket-band-label">Ticket</span>
+                    <strong class="ticket-number">{{ sale.sale_number or ('N-' ~ sale.id) }}</strong>
                 </div>
+                <span class="ticket-status">
+                    <i class="fa-regular fa-circle-check"></i>
+                    {{ status_label }}
+                </span>
+            </section>
 
-                <div class="ticket-row">
-                    <span class="ticket-row-label"><i class="fa-regular fa-user"></i>Cliente</span>
-                    <strong>{{ sale.client_name or 'Cliente General' }}</strong>
-                </div>
+            <section class="ticket-body">
+                <div class="ticket-info">
+                    <div class="ticket-row">
+                        <span class="ticket-row-label"><i class="fa-regular fa-calendar"></i>Fecha y hora</span>
+                        <strong>{{ sale.created_at_formatted or sale.created_at }}</strong>
+                    </div>
 
-                {% if sale.client_phone %}
+                    <div class="ticket-row">
+                        <span class="ticket-row-label"><i class="fa-regular fa-user"></i>Cliente</span>
+                        <strong>{{ sale.client_name or 'Cliente General' }}</strong>
+                    </div>
+
+                    {% if sale.client_phone %}
                     <div class="ticket-row">
                         <span class="ticket-row-label"><i class="fa-solid fa-phone"></i>Teléfono</span>
                         <strong>{{ sale.client_phone }}</strong>
                     </div>
-                {% endif %}
+                    {% endif %}
 
-                {% if sale.staff_name %}
+                    {% if sale.staff_name %}
                     <div class="ticket-row">
                         <span class="ticket-row-label"><i class="fa-regular fa-id-badge"></i>Técnica</span>
                         <strong>{{ sale.staff_name|upper }}</strong>
                     </div>
-                {% endif %}
+                    {% endif %}
 
-                <div class="ticket-row">
-                    <span class="ticket-row-label"><i class="fa-regular fa-credit-card"></i>Método de pago</span>
-                    <strong>{{ (sale.payment_method or 'No registrado')|title }}</strong>
+                    <div class="ticket-row">
+                        <span class="ticket-row-label"><i class="fa-regular fa-credit-card"></i>Método de pago</span>
+                        <strong>{{ (sale.payment_method or 'No registrado')|title }}</strong>
+                    </div>
                 </div>
-            </div>
 
-            <section class="ticket-section">
-                <div class="ticket-section-title">Detalle</div>
-                {% if details %}
+                <section class="ticket-section">
+                    <div class="ticket-section-title">Detalle</div>
+                    {% if details %}
                     {% for item in details %}
-                        <div class="ticket-item">
-                            <div class="ticket-item-main">
-                                <div>
-                                    <span class="ticket-item-name">{{ item.name }}</span>
-                                    <small>{{ item.quantity or 1 }} x ${{ "%.2f"|format(item.unit_price or 0) }}</small>
-                                    {% if item.description %}
-                                        <small>{{ item.description }}</small>
-                                    {% endif %}
-                                </div>
-                                <strong class="ticket-item-price">${{ "%.2f"|format(item.total or 0) }}</strong>
+                    <div class="ticket-item">
+                        <div class="ticket-item-main">
+                            <div>
+                                <span class="ticket-item-name">{{ item.name }}</span>
+                                <small>{{ item.quantity or 1 }} x ${{ "%.2f"|format(item.unit_price or 0) }}</small>
+                                {% if item.description %}
+                                <small>{{ item.description }}</small>
+                                {% endif %}
                             </div>
+                            <strong class="ticket-item-price">${{ "%.2f"|format(item.total or 0) }}</strong>
                         </div>
+                    </div>
                     {% endfor %}
-                {% else %}
+                    {% else %}
                     <p class="ticket-notes">No hay detalles registrados.</p>
-                {% endif %}
-            </section>
+                    {% endif %}
+                </section>
 
-            <section class="ticket-section">
-                <div class="ticket-section-title">Resumen</div>
-                <div class="ticket-summary">
-                    <div class="ticket-row">
-                        <span class="ticket-row-label">Subtotal</span>
-                        <strong>${{ "%.2f"|format(sale.subtotal or 0) }}</strong>
-                    </div>
+                <section class="ticket-section">
+                    <div class="ticket-section-title">Resumen</div>
+                    <div class="ticket-summary">
+                        <div class="ticket-row">
+                            <span class="ticket-row-label">Subtotal</span>
+                            <strong>${{ "%.2f"|format(sale.subtotal or 0) }}</strong>
+                        </div>
 
-                    <div class="ticket-row">
-                        <span class="ticket-row-label">Descuento</span>
-                        <strong>${{ "%.2f"|format(sale.discount_amount or 0) }}</strong>
-                    </div>
+                        <div class="ticket-row">
+                            <span class="ticket-row-label">Descuento</span>
+                            <strong>${{ "%.2f"|format(sale.discount_amount or 0) }}</strong>
+                        </div>
 
-                    {% if sale.tax_amount and sale.tax_amount > 0 %}
+                        {% if sale.tax_amount and sale.tax_amount > 0 %}
                         <div class="ticket-row">
                             <span class="ticket-row-label">Impuestos</span>
                             <strong>${{ "%.2f"|format(sale.tax_amount or 0) }}</strong>
                         </div>
-                    {% endif %}
+                        {% endif %}
 
-                    <div class="ticket-row ticket-total-final">
-                        <span class="ticket-row-label">Total</span>
-                        <strong>${{ "%.2f"|format(sale.total or 0) }}</strong>
+                        <div class="ticket-row ticket-total-final">
+                            <span class="ticket-row-label">Total</span>
+                            <strong>${{ "%.2f"|format(sale.total or 0) }}</strong>
+                        </div>
+
+                        <div class="ticket-row">
+                            <span class="ticket-row-label">Pagado</span>
+                            <strong>${{ "%.2f"|format(sale.paid_amount or 0) }}</strong>
+                        </div>
+
+                        <div class="ticket-row">
+                            <span class="ticket-row-label">Por cobrar</span>
+                            <strong>${{ "%.2f"|format(sale.balance_due or 0) }}</strong>
+                        </div>
                     </div>
+                </section>
 
-                    <div class="ticket-row">
-                        <span class="ticket-row-label">Pagado</span>
-                        <strong>${{ "%.2f"|format(sale.paid_amount or 0) }}</strong>
-                    </div>
-
-                    <div class="ticket-row">
-                        <span class="ticket-row-label">Por cobrar</span>
-                        <strong>${{ "%.2f"|format(sale.balance_due or 0) }}</strong>
-                    </div>
-                </div>
-            </section>
-
-            {% if payments %}
+                {% if payments %}
                 <section class="ticket-section">
                     <div class="ticket-section-title">Pagos</div>
                     {% for payment in payments %}
-                        <div class="ticket-payment">
-                            <div class="ticket-payment-left">
-                                <span class="ticket-payment-icon"><i class="fa-solid fa-money-bill-wave"></i></span>
-                                <div class="ticket-payment-meta">
-                                    <span>{{ payment.created_at_formatted or payment.created_at }}</span>
-                                    <span>{{ (payment.payment_type or 'pago')|title }} · {{ (payment.payment_method or 'efectivo')|title }}</span>
-                                </div>
+                    <div class="ticket-payment">
+                        <div class="ticket-payment-left">
+                            <span class="ticket-payment-icon"><i class="fa-solid fa-money-bill-wave"></i></span>
+                            <div class="ticket-payment-meta">
+                                <span>{{ payment.created_at_formatted or payment.created_at }}</span>
+                                <span>{{ (payment.payment_type or 'pago')|title }} · {{ (payment.payment_method or
+                                    'efectivo')|title }}</span>
                             </div>
-                            <strong>${{ "%.2f"|format(payment.amount or 0) }}</strong>
                         </div>
+                        <strong>${{ "%.2f"|format(payment.amount or 0) }}</strong>
+                    </div>
                     {% endfor %}
                 </section>
-            {% endif %}
+                {% endif %}
 
-            {% if sale.notes %}
+                {% if sale.notes %}
                 <section class="ticket-section">
                     <div class="ticket-section-title">Notas</div>
                     <p class="ticket-notes">{{ sale.notes }}</p>
                 </section>
-            {% endif %}
+                {% endif %}
 
-            <footer class="ticket-footer">
-                Gracias por tu preferencia
-                <div class="ticket-footer-line"><i class="fa-regular fa-heart"></i></div>
-                {{ (business.name or 'Sianeffects Nails')|upper }}
-            </footer>
-        </section>
+                <footer class="ticket-footer">
+                    Gracias por tu preferencia
+                    <div class="ticket-footer-line"><i class="fa-regular fa-heart"></i></div>
+                    {{ business_label }}
+                </footer>
+            </section>
+        </div>
+    </main>
+
+    <div class="ticket-actions">
+        <button id="btnShare" type="button" onclick="generarYCompartir()" class="btn-accion btn-share">
+            <i class="fa-solid fa-share-nodes"></i> Compartir
+        </button>
+
+        <button type="button" onclick="window.print()" class="btn-accion btn-print">
+            <i class="fa-solid fa-print"></i> Imprimir
+        </button>
+
+        <button type="button" onclick="cerrarTicket()" class="btn-accion btn-close">
+            <i class="fa-solid fa-xmark"></i> Cerrar
+        </button>
     </div>
-</main>
 
-<div class="ticket-actions">
-    <button id="btnShare" type="button" onclick="generarYCompartir()" class="btn-accion btn-share">
-        <i class="fa-solid fa-share-nodes"></i> Compartir
-    </button>
+    <script>
+        // ticketPreparado guarda el archivo ya listo. preparandoTicket evita generarlo dos veces a la vez.
+        let ticketPreparado = null;
+        let preparandoTicket = null;
+        let ultimoErrorTicket = null;
 
-    <button onclick="window.print()" class="btn-accion btn-print">
-        <i class="fa-solid fa-print"></i> Imprimir
-    </button>
-
-    <button type="button" onclick="cerrarTicket()" class="btn-accion btn-close">
-        <i class="fa-solid fa-xmark"></i> Cerrar
-    </button>
-</div>
-
-<script>
-    // Igual que el ticket del cotizador: guardamos el archivo del ticket ya listo.
-    let ticketPreparado = null;
-
-    window.addEventListener("DOMContentLoaded", async function () {
-        try {
-            const canvas = await html2canvas(document.getElementById("ticketVisual"), {
-                scale: 2,
-                backgroundColor: "#ffffff",
-                useCORS: true
-            });
-
-            canvas.toBlob(function (blob) {
-                ticketPreparado = new File(
-                    [blob],
-                    "ticket_nails_{{ sale.sale_number or sale.id }}.png",
-                    { type: "image/png" }
-                );
-            }, "image/png");
-
-        } catch (error) {
-            console.error("Error preparando el ticket Nails de fondo:", error);
-        }
-    });
-
-    async function generarYCompartir() {
-        if (!ticketPreparado) {
-            Swal.fire({
-                icon: "info",
-                title: "Procesando...",
-                text: "Dame un segundito, apenas estoy terminando de preparar la imagen...",
-                confirmButtonColor: "{{ business.primary_color or '#ff6b81' }}"
-            });
-            return;
-        }
-
-        try {
-            if (navigator.share && navigator.canShare && navigator.canShare({ files: [ticketPreparado] })) {
-                await navigator.share({
-                    files: [ticketPreparado],
-                    title: "Ticket {{ (business.name or 'Sianeffects Nails')|upper }}",
-                    text: "Aquí tienes tu comprobante."
+        function esperarImagenes(contenedor) {
+            const imgs = Array.from(contenedor.querySelectorAll("img"));
+            return Promise.all(imgs.map(function (img) {
+                if (img.complete) return Promise.resolve();
+                return new Promise(function (resolve) {
+                    img.addEventListener("load", resolve, { once: true });
+                    img.addEventListener("error", resolve, { once: true });
                 });
-            } else {
-                const a = document.createElement("a");
-                a.href = URL.createObjectURL(ticketPreparado);
-                a.download = ticketPreparado.name;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+            }));
+        }
+
+        function prepararTicket() {
+            if (preparandoTicket) return preparandoTicket;
+
+            preparandoTicket = (async function () {
+                try {
+                    if (document.fonts && document.fonts.ready) {
+                        await document.fonts.ready;
+                    }
+
+                    // Esperamos a que el logo termine de cargar (o falle) antes de capturar,
+                    // así si truena por CORS ya alcanzó a ocultarse vía onerror.
+                    await esperarImagenes(document.getElementById("ticketVisual"));
+
+                    const canvas = await html2canvas(document.getElementById("ticketVisual"), {
+                        scale: 2,
+                        backgroundColor: "#ffffff",
+                        useCORS: true
+                    });
+
+                    const blob = await new Promise(function (resolve) {
+                        canvas.toBlob(resolve, "image/png");
+                    });
+
+                    if (!blob) throw new Error("toBlob devolvió null");
+
+                    ticketPreparado = new File([blob], {{ ticket_filename | tojson }}, { type: "image/png" });
+                    ultimoErrorTicket = null;
+                    return ticketPreparado;
+                } catch (error) {
+            console.error("Error preparando el ticket Nails:", error);
+            ultimoErrorTicket = error;
+            ticketPreparado = null;
+            return null;
+        } finally {
+            preparandoTicket = null;
+        }
+        }) ();
+
+        return preparandoTicket;
+    }
+
+        window.addEventListener("DOMContentLoaded", function () {
+            prepararTicket();
+        });
+
+        async function generarYCompartir() {
+            let archivo = ticketPreparado;
+
+            if (!archivo) {
+                Swal.fire({
+                    title: "Preparando ticket...",
+                    text: "Dame un segundito.",
+                    allowOutsideClick: false,
+                    allowEscapeKey: false,
+                    showConfirmButton: false,
+                    didOpen: function () { Swal.showLoading(); }
+                });
+
+                archivo = await prepararTicket();
+                Swal.close();
             }
-        } catch (error) {
-            if (error.name !== "AbortError") {
-                console.error("Fallo detectado:", error);
+
+            if (!archivo) {
                 Swal.fire({
                     icon: "error",
                     title: "¡Oops!",
-                    text: "No se pudo abrir el menú de compartir.",
-                    confirmButtonColor: "{{ business.primary_color or '#ff6b81' }}"
+                    text: "No se pudo generar la imagen del ticket. Intenta de nuevo o usa Imprimir.",
+                    footer: ultimoErrorTicket ? ("Detalle técnico: " + (ultimoErrorTicket.message || ultimoErrorTicket)) : "",
+                    confirmButtonColor: {{ (business.primary_color or '#ff6b81') | tojson }}
                 });
+                return;
+            }
+
+            try {
+                if (navigator.share && navigator.canShare && navigator.canShare({ files: [archivo] })) {
+                    await navigator.share({
+                        files: [archivo],
+                        title: {{ ticket_share_title | tojson }},
+                        text: "Aquí tienes tu comprobante."
+                    });
+                } else {
+                    const a = document.createElement("a");
+                    a.href = URL.createObjectURL(archivo);
+                    a.download = archivo.name;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+            } catch (error) {
+                if (error.name !== "AbortError") {
+                    console.error("Fallo al compartir:", error);
+                    Swal.fire({
+                        icon: "error",
+                        title: "¡Oops!",
+                        text: "No se pudo abrir el menú de compartir.",
+                        confirmButtonColor: {{ (business.primary_color or '#ff6b81') | tojson }}
+                    });
+                }
             }
         }
-    }
 
-    function cerrarTicket() {
-        window.close();
-        window.setTimeout(function () {
-            if (!window.closed) {
-                window.location.href = "{{ url_for('nails.ventas') }}";
-            }
-        }, 180);
-    }
-</script>
+        function cerrarTicket() {
+            window.close();
+            window.setTimeout(function () {
+                if (!window.closed) {
+                    window.location.href = {{ url_for('nails.ventas') | tojson }};
+                }
+            }, 180);
+        }
+    </script>
 
 </body>
+
 </html>
