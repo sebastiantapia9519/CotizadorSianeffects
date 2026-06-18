@@ -7,7 +7,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
 
     <style>
@@ -674,6 +673,32 @@
         let ticketPreparado = null;
         let preparandoTicket = null;
         let ultimoErrorTicket = null;
+        let swalPromise = null;
+
+        function cargarSwal() {
+            if (window.Swal) return Promise.resolve(window.Swal);
+            if (swalPromise) return swalPromise;
+
+            swalPromise = new Promise(function (resolve, reject) {
+                const script = document.createElement("script");
+                script.src = "https://cdn.jsdelivr.net/npm/sweetalert2@11";
+                script.onload = function () { resolve(window.Swal); };
+                script.onerror = reject;
+                document.head.appendChild(script);
+            });
+
+            return swalPromise;
+        }
+
+        async function mostrarSwal(opciones) {
+            try {
+                const SwalLib = await cargarSwal();
+                return SwalLib.fire(opciones);
+            } catch (error) {
+                alert(opciones.text || opciones.title || "No se pudo completar la acción.");
+                return null;
+            }
+        }
 
         function esperarImagenes(contenedor) {
             const imgs = Array.from(contenedor.querySelectorAll("img"));
@@ -686,10 +711,35 @@
             }));
         }
 
+        function pausarEstilosNoCompatiblesParaCaptura() {
+            const removidos = [];
+
+            document.querySelectorAll("style").forEach(function (estilo) {
+                const contenido = estilo.textContent || "";
+                if (!contenido.includes("color-mix(") && !contenido.includes("color(")) return;
+                if (!estilo.parentNode) return;
+
+                removidos.push({
+                    estilo: estilo,
+                    padre: estilo.parentNode,
+                    siguiente: estilo.nextSibling
+                });
+                estilo.parentNode.removeChild(estilo);
+            });
+
+            return function restaurarEstilos() {
+                removidos.forEach(function (item) {
+                    if (!item.padre || item.estilo.parentNode) return;
+                    item.padre.insertBefore(item.estilo, item.siguiente);
+                });
+            };
+        }
+
         function prepararTicket() {
             if (preparandoTicket) return preparandoTicket;
 
             preparandoTicket = (async function () {
+                let restaurarEstilos = null;
                 try {
                     if (document.fonts && document.fonts.ready) {
                         await document.fonts.ready;
@@ -698,6 +748,8 @@
                     // Esperamos a que el logo termine de cargar (o falle) antes de capturar,
                     // así si truena por CORS ya alcanzó a ocultarse vía onerror.
                     await esperarImagenes(document.getElementById("ticketVisual"));
+
+                    restaurarEstilos = pausarEstilosNoCompatiblesParaCaptura();
 
                     const canvas = await html2canvas(document.getElementById("ticketVisual"), {
                         scale: 2,
@@ -720,6 +772,7 @@
             ticketPreparado = null;
             return null;
         } finally {
+            if (restaurarEstilos) restaurarEstilos();
             preparandoTicket = null;
         }
         }) ();
@@ -728,28 +781,36 @@
     }
 
         window.addEventListener("DOMContentLoaded", function () {
-            prepararTicket();
+            prepararTicket().finally(function () {
+                cargarSwal().catch(function () {});
+            });
         });
 
         async function generarYCompartir() {
             let archivo = ticketPreparado;
 
             if (!archivo) {
-                Swal.fire({
-                    title: "Preparando ticket...",
-                    text: "Dame un segundito.",
-                    allowOutsideClick: false,
-                    allowEscapeKey: false,
-                    showConfirmButton: false,
-                    didOpen: function () { Swal.showLoading(); }
-                });
+                if (preparandoTicket) {
+                    const boton = document.getElementById("btnShare");
+                    const textoOriginal = boton ? boton.innerHTML : "";
+                    if (boton) {
+                        boton.disabled = true;
+                        boton.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Preparando';
+                    }
 
-                archivo = await prepararTicket();
-                Swal.close();
+                    archivo = await preparandoTicket;
+
+                    if (boton) {
+                        boton.disabled = false;
+                        boton.innerHTML = textoOriginal;
+                    }
+                } else {
+                    archivo = await prepararTicket();
+                }
             }
 
             if (!archivo) {
-                Swal.fire({
+                await mostrarSwal({
                     icon: "error",
                     title: "¡Oops!",
                     text: "No se pudo generar la imagen del ticket. Intenta de nuevo o usa Imprimir.",
@@ -764,7 +825,11 @@
                     await navigator.share({
                         files: [archivo],
                         title: {{ ticket_share_title | tojson }},
-                        text: "Aquí tienes tu comprobante."
+                        text: [
+                            {{ ("✨ " ~ (business.name or 'Sianeffects Nails')|upper ~ " ✨")|tojson }},
+                            "💅 ¡Gracias por confiar en nosotros para lucir unas uñas hermosas!",
+                            "¡Te esperamos pronto! 💖"
+                        ].join("\n");
                     });
                 } else {
                     const a = document.createElement("a");
@@ -777,7 +842,7 @@
             } catch (error) {
                 if (error.name !== "AbortError") {
                     console.error("Fallo al compartir:", error);
-                    Swal.fire({
+                    await mostrarSwal({
                         icon: "error",
                         title: "¡Oops!",
                         text: "No se pudo abrir el menú de compartir.",
