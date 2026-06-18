@@ -16,6 +16,7 @@ import requests
 import boto3
 from botocore.config import Config
 from datetime import date, datetime, timedelta
+from PIL import Image, ImageDraw, ImageFont
 from werkzeug.utils import secure_filename
 from flask import (
     Blueprint, render_template, redirect, url_for,
@@ -5572,6 +5573,201 @@ def ticket(sale_id):
     except Exception as e:
         current_app.logger.error(f"Error al cargar ticket Nails #{sale_id}: {e}")
         return "Error al cargar ticket", 500
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+@nails_bp.route("/ventas/<int:sale_id>/ticket/imagen")
+def ticket_imagen(sale_id):
+    if not require_login():
+        return redirect(url_for("auth.login"))
+
+    user_id = session.get("user_id")
+    business = get_user_nails_business(user_id)
+
+    if not business:
+        return redirect(url_for("nails.onboarding"))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        business_timezone = business["timezone"] or "America/Monterrey"
+        cur.execute(
+            """
+            SELECT
+                v.*,
+                c.name AS client_name,
+                c.phone AS client_phone,
+                st.name AS staff_name,
+                TO_CHAR(v.created_at AT TIME ZONE %s, 'DD/MM/YYYY HH24:MI') AS created_at_formatted
+            FROM nails_sales v
+            LEFT JOIN nails_clients c ON c.id = v.client_id
+            LEFT JOIN nails_staff st ON st.id = v.staff_id
+            WHERE v.id = %s AND v.business_id = %s
+            LIMIT 1
+            """,
+            (business_timezone, sale_id, business["id"]),
+        )
+        sale = cur.fetchone()
+
+        if not sale:
+            return "Ticket no encontrado", 404
+
+        cur.execute(
+            "SELECT * FROM nails_sale_details WHERE sale_id = %s ORDER BY id ASC",
+            (sale_id,),
+        )
+        details = cur.fetchall()
+
+        def font(size, bold=False):
+            candidates = [
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if bold else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+                "/System/Library/Fonts/Supplemental/Arial Bold.ttf" if bold else "/System/Library/Fonts/Supplemental/Arial.ttf",
+                "/Library/Fonts/Arial Bold.ttf" if bold else "/Library/Fonts/Arial.ttf",
+            ]
+            for path in candidates:
+                if path and os.path.exists(path):
+                    return ImageFont.truetype(path, size)
+            return ImageFont.load_default()
+
+        title_font = font(42, True)
+        h_font = font(26, True)
+        body_font = font(22)
+        small_font = font(18)
+        total_font = font(34, True)
+
+        width = 900
+        margin = 56
+        line = 32
+        details_count = max(1, len(details))
+        height = 720 + (details_count * 76)
+        image = Image.new("RGB", (width, height), "#ffffff")
+        draw = ImageDraw.Draw(image)
+
+        primary = business["primary_color"] or "#d946ef"
+        secondary = "#fff4fb"
+        ink = "#27212b"
+        muted = "#6f6576"
+        border = "#eaddec"
+
+        def money(value):
+            try:
+                return f"${float(value or 0):,.2f}"
+            except Exception:
+                return "$0.00"
+
+        def draw_text(text, xy, fill=ink, font_obj=body_font):
+            draw.text(xy, str(text or ""), fill=fill, font=font_obj)
+
+        def draw_right(text, y, font_obj=body_font, fill=ink):
+            text = str(text or "")
+            bbox = draw.textbbox((0, 0), text, font=font_obj)
+            draw.text((width - margin - (bbox[2] - bbox[0]), y), text, fill=fill, font=font_obj)
+
+        def wrap_text(text, max_width, font_obj):
+            words = str(text or "").split()
+            lines = []
+            current = ""
+            for word in words:
+                candidate = f"{current} {word}".strip()
+                bbox = draw.textbbox((0, 0), candidate, font=font_obj)
+                if bbox[2] - bbox[0] <= max_width:
+                    current = candidate
+                else:
+                    if current:
+                        lines.append(current)
+                    current = word
+            if current:
+                lines.append(current)
+            return lines or [""]
+
+        y = 48
+        draw.rounded_rectangle((margin, y, width - margin, y + 128), radius=28, fill=secondary, outline=border)
+        draw.rounded_rectangle((margin + 24, y + 24, margin + 104, y + 104), radius=24, fill=primary)
+        initial = (business["name"] or "S")[:1].upper()
+        ib = draw.textbbox((0, 0), initial, font=title_font)
+        draw.text((margin + 64 - (ib[2] - ib[0]) / 2, y + 64 - (ib[3] - ib[1]) / 2 - 4), initial, fill="#ffffff", font=title_font)
+        draw_text((business["name"] or "Sianeffects Nails").upper(), (margin + 130, y + 30), font_obj=title_font)
+        draw_text(f"Ticket {sale['sale_number'] or ('N-' + str(sale['id']))}", (margin + 132, y + 86), fill=muted, font_obj=body_font)
+
+        y += 164
+        draw_text("DATOS", (margin, y), font_obj=h_font)
+        y += 44
+        info = [
+            ("Fecha", sale["created_at_formatted"] or sale["created_at"]),
+            ("Cliente", sale["client_name"] or "Cliente General"),
+            ("Técnica", (sale["staff_name"] or "Sin asignar").upper()),
+            ("Método", (sale["payment_method"] or "Sin método").title()),
+        ]
+        for label, value in info:
+            draw_text(label, (margin, y), fill=muted, font_obj=small_font)
+            draw_right(value, y - 2, font_obj=body_font)
+            y += line
+
+        y += 24
+        draw.line((margin, y, width - margin, y), fill=border, width=2)
+        y += 28
+        draw_text("DETALLE", (margin, y), font_obj=h_font)
+        y += 48
+
+        if details:
+            for item in details:
+                item_name = item["name"] or "Servicio"
+                lines = wrap_text(item_name, 520, body_font)
+                draw_text(lines[0], (margin, y), font_obj=body_font)
+                draw_right(money(item["total"]), y, font_obj=body_font)
+                y += 30
+                draw_text(f"{item['quantity'] or 1} x {money(item['unit_price'])}", (margin, y), fill=muted, font_obj=small_font)
+                for extra_line in lines[1:2]:
+                    y += 24
+                    draw_text(extra_line, (margin, y), fill=muted, font_obj=small_font)
+                y += 34
+        else:
+            draw_text("Sin detalles registrados", (margin, y), fill=muted, font_obj=body_font)
+            y += 52
+
+        y += 10
+        draw.line((margin, y, width - margin, y), fill=border, width=2)
+        y += 28
+        rows = [
+            ("Subtotal", money(sale["subtotal"])),
+            ("Descuento", money(sale["discount_amount"])),
+            ("Pagado", money(sale["paid_amount"])),
+            ("Por cobrar", money(sale["balance_due"])),
+        ]
+        for label, value in rows:
+            draw_text(label, (margin, y), fill=muted, font_obj=body_font)
+            draw_right(value, y, font_obj=body_font)
+            y += 38
+
+        y += 18
+        draw.rounded_rectangle((margin, y, width - margin, y + 92), radius=24, fill=primary)
+        draw.text((margin + 28, y + 27), "TOTAL", fill="#ffffff", font=h_font)
+        total_text = money(sale["total"])
+        bbox = draw.textbbox((0, 0), total_text, font=total_font)
+        draw.text((width - margin - 28 - (bbox[2] - bbox[0]), y + 24), total_text, fill="#ffffff", font=total_font)
+
+        y += 132
+        footer = "Gracias por tu preferencia"
+        bbox = draw.textbbox((0, 0), footer, font=body_font)
+        draw.text(((width - (bbox[2] - bbox[0])) / 2, y), footer, fill=muted, font=body_font)
+
+        output = io.BytesIO()
+        image.crop((0, 0, width, min(height, y + 86))).save(output, format="PNG")
+        output.seek(0)
+        return send_file(
+            output,
+            mimetype="image/png",
+            as_attachment=False,
+            download_name=f"ticket_nails_{sale['sale_number'] or sale['id']}.png",
+        )
+
+    except Exception as e:
+        current_app.logger.error(f"NAILS_TICKET_IMAGE_ERROR: {e}")
+        return "No se pudo generar la imagen del ticket", 500
 
     finally:
         cur.close()
