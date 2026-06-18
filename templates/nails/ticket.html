@@ -488,7 +488,7 @@
         <header class="ticket-header">
             <div class="ticket-logo">
                 {% if ticket_logo_url %}
-                    <img src="{{ ticket_logo_url }}" alt="Logo">
+                    <img src="{{ ticket_logo_url }}" alt="Logo" crossorigin="anonymous">
                 {% else %}
                     <span>{{ (business.name or 'S')[:1]|upper }}</span>
                 {% endif %}
@@ -665,6 +665,14 @@
     let ticketPreparado = null;
     let ticketPreparando = null;
     let ticketError = null;
+    const ticketFallbackTitle = {{ ("Ticket " ~ (sale.sale_number or sale.id))|tojson }};
+    const ticketFallbackText = [
+        {{ ((business.name or 'Sianeffects Nails')|upper)|tojson }},
+        {{ ("Ticket: " ~ (sale.sale_number or ('N-' ~ sale.id)))|tojson }},
+        {{ ("Cliente: " ~ (sale.client_name or 'Cliente General'))|tojson }},
+        {{ ("Total: $" ~ "%.2f"|format(sale.total or 0))|tojson }},
+        "Gracias por tu compra."
+    ].join("\\n");
 
     function esperarImagenes(elemento) {
         const imagenes = Array.from(elemento.querySelectorAll("img"));
@@ -711,9 +719,9 @@
             return;
         }
 
-        if (estado === "error") {
+        if (estado === "error" || estado === "fallback") {
             boton.disabled = false;
-            boton.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Reintentar';
+            boton.innerHTML = '<i class="fa-solid fa-share-nodes"></i> Compartir';
             return;
         }
 
@@ -804,29 +812,55 @@
             console.error("Error preparando el ticket Nails:", error);
             ticketError = error;
             ticketPreparando = null;
-            actualizarBotonCompartir("error");
+            actualizarBotonCompartir("fallback");
             throw error;
         }
     }
 
     window.addEventListener("DOMContentLoaded", function () {
         prepararTicket().catch(function () {
-            // El botón queda como Reintentar y el mensaje detallado se muestra al tocarlo.
+            // Si el navegador no permite crear imagen, el botón comparte texto del ticket.
         });
     });
+
+    async function compartirTicketTexto() {
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: ticketFallbackTitle,
+                    text: ticketFallbackText
+                });
+                return;
+            }
+
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                await navigator.clipboard.writeText(ticketFallbackText);
+                avisarTicket("success", "Ticket copiado", "Copié el resumen del ticket para que puedas pegarlo y enviarlo.");
+                return;
+            }
+
+            avisarTicket("info", "Ticket listo", ticketFallbackText);
+        } catch (error) {
+            if (error.name !== "AbortError") {
+                console.error("No se pudo compartir el texto del ticket Nails:", error);
+                avisarTicket("error", "Oops", "No se pudo compartir el ticket desde este navegador.");
+            }
+        }
+    }
 
     async function generarYCompartir() {
         let archivo = ticketPreparado;
 
         if (!archivo) {
+            if (ticketError) {
+                await compartirTicketTexto();
+                return;
+            }
+
             try {
                 archivo = await prepararTicket();
             } catch (error) {
-                avisarTicket(
-                    "error",
-                    "No se pudo preparar",
-                    "No pude crear la imagen del ticket en este navegador. Usa Imprimir o intenta de nuevo."
-                );
+                await compartirTicketTexto();
                 return;
             }
         }
