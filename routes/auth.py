@@ -23,6 +23,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from db import get_db_connection as get_db
 from datetime import timedelta
 import re
+import secrets
 
 # Utilidades y servicios del proyecto
 from utils.email_validators import is_disposable_email
@@ -162,9 +163,6 @@ def login():
                             session['is_pro_active'] = False
                     else:
                         session['is_pro_active'] = False
-                except Exception as e:
-                    current_app.logger.error(f"Error comparando fechas en login: {e}")
-                    session['is_pro_active'] = False
                 except Exception as e:
                     current_app.logger.error(f"Error comparando fechas en login: {e}")
                     session['is_pro_active'] = False
