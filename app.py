@@ -745,10 +745,23 @@ def inject_user_config():
 
 @app.context_processor
 def inject_stripe_prices():
-    """Hace que los IDs de Stripe estén disponibles en todos los templates HTML"""
+    """Hace que variables globales estén disponibles en todos los templates HTML."""
+    cotizador_telefono = ''.join(
+        ch for ch in os.getenv('COTIZADOR_TELEFONO', '8135831923') if ch.isdigit()
+    )
+    if len(cotizador_telefono) == 10:
+        cotizador_telefono_whatsapp = f'52{cotizador_telefono}'
+        cotizador_telefono_display = f'+52 {cotizador_telefono[:2]} {cotizador_telefono[2:6]} {cotizador_telefono[6:]}'
+    else:
+        cotizador_telefono_whatsapp = cotizador_telefono
+        cotizador_telefono_display = f'+{cotizador_telefono}' if cotizador_telefono else ''
+
     return dict(
         stripe_mensual=os.getenv('STRIPE_PRICE_MENSUAL'),
-        stripe_anual=os.getenv('STRIPE_PRICE_ANUAL')
+        stripe_anual=os.getenv('STRIPE_PRICE_ANUAL'),
+        cotizador_telefono=cotizador_telefono,
+        cotizador_telefono_whatsapp=cotizador_telefono_whatsapp,
+        cotizador_telefono_display=cotizador_telefono_display,
     )
 
 
