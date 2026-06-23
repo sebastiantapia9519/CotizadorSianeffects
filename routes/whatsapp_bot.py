@@ -98,20 +98,18 @@ def send_whatsapp_message(to_number, text_body):
         'Content-Type': 'application/json',
     }
     
+    # ¡Aquí está el cambio! Estructura simplificada para Evolution v2
     data = {
         'number': to_number,
-        'options': {
-            'delay': 1200, 
-            'presence': 'composing' 
-        },
-        'textMessage': {
-            'text': text_body
-        }
+        'text': text_body,
+        'delay': 1200,             # Pequeña pausa (1.2 segundos)
+        'presence': 'composing'    # Muestra "Escribiendo..."
     }
 
     print('================ EVOLUTION DEBUG ================')
     print('URL usada:', url)
     print('Número destino:', to_number)
+    print('Texto a enviar:', text_body[:50] + '...') # Imprime un pedacito del texto para confirmar
     print('=================================================')
 
     response = requests.post(url, headers=headers, json=data, timeout=15)
