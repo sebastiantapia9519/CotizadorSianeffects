@@ -32,6 +32,8 @@ CONTEXTO DEL SISTEMA:
 - Hay catálogo público/admin para mostrar productos y recibir pedidos o cotizaciones por WhatsApp.
 - La suscripción se maneja con Stripe: prueba gratis, plan mensual/anual, renovaciones, portal de cliente, pagos fallidos,
   plan vencido y correos de aviso.
+- Además de tarjeta, Sianeffects acepta pago por transferencia bancaria, depósito en OXXO/SPIN y PayPal. Siempre se debe pedir
+  que envíen el comprobante por WhatsApp para aplicar o revisar el pago.
 - También existen módulos conectados como invitaciones/planners y Nails, pero si la duda no es del cotizador contesta de forma
   general y ofrece canalizar con una persona.
 
@@ -45,14 +47,29 @@ REGLAS:
 - No uses jerga técnica. Di "la plataforma", "tu cuenta", "el panel", "el cotizador" o "tu historial".
 - No inventes precios, promociones, fechas, estados de pago ni datos de la cuenta. Si no lo sabes, dilo y pide que un agente lo revise.
 - Si preguntan por registro, inicio de sesión o planes, indica que pueden hacerlo en sianeffects.com y ofrece ayudar con el paso puntual.
-- Si preguntan por un pago fallido, renovación, transferencia, factura, cargo duplicado o cancelación, pide el correo de la cuenta y
-  explica que lo revisará soporte humano.
+- Si preguntan por renovación, transferencia, depósito, PayPal o alternativas a tarjeta, comparte estos datos de pago exactamente:
+  "✨ Datos de pago - Sianeffects ✨
+
+  💳 Transferencia bancaria (Santander)
+  A nombre de: Diana Laura Reyes Ledezma
+  Cuenta: 5579 0870 0921 2116
+
+  🏪 Depósito en OXXO o transferencia SPIN
+  Tarjeta: 4217 4701 0296 5239
+
+  🌎 Pagos internacionales (PayPal)
+  https://paypal.me/sianeffects
+
+  Cuando hagas el pago, mándanos tu comprobante por aquí para aplicarlo a tu cuenta."
+- Si preguntan por pago fallido con tarjeta, factura, cargo duplicado, cancelación o estado de pago, pide el correo de la cuenta y
+  explica que soporte humano lo revisará.
 - Si reportan error, pide: correo de la cuenta, qué pantalla estaban usando, qué intentaban hacer y captura si la tienen.
 - Si preguntan cómo cotizar, explica el flujo: registrar materiales/equipos, armar receta/producto, ajustar margen/gastos,
   agregar envío/descuento/anticipo si aplica y guardar o compartir ticket.
 - Si la persona está molesta o confundida, valida primero y luego da el siguiente paso concreto.
 - Nunca pidas contraseñas, códigos de verificación ni datos completos de tarjeta.
 - No prometas acciones que no puedes ejecutar. Puedes decir "te ayudo a revisarlo" o "lo paso con el equipo".
+- Termina siempre con una frase completa. No dejes palabras sueltas como "Con", "Para" o "También" al final.
 """
 
 
@@ -218,6 +235,23 @@ def build_gemini_contents(history):
     return contents
 
 
+def clean_ai_reply(text):
+    reply = (text or '').strip()
+    if not reply:
+        return ''
+
+    sentence_marks = '.!?'
+    last_sentence_end = max(reply.rfind(mark) for mark in sentence_marks)
+    if last_sentence_end == -1 or last_sentence_end == len(reply) - 1:
+        return reply
+
+    trailing_fragment = reply[last_sentence_end + 1:].strip()
+    if trailing_fragment and len(trailing_fragment.split()) <= 3:
+        return reply[:last_sentence_end + 1].strip()
+
+    return reply
+
+
 def generate_ai_reply(history):
     if not GEMINI_API_KEY:
         raise RuntimeError('Falta GEMINI_API_KEY en variables de entorno.')
@@ -229,10 +263,10 @@ def generate_ai_reply(history):
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT_WHATSAPP,
             temperature=0.6,
-            max_output_tokens=250,
+            max_output_tokens=450,
         ),
     )
-    return (response.text or '').strip() or 'Gracias por escribirnos. ¿Me cuentas un poquito más para ayudarte mejor?'
+    return clean_ai_reply(response.text) or 'Gracias por escribirnos. ¿Me cuentas un poquito más para ayudarte mejor?'
 
 
 @whatsapp_bot_bp.route('/webhook', methods=['POST'])
