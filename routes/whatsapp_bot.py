@@ -15,7 +15,7 @@ GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
 EVOLUTION_URL = os.environ.get('EVOLUTION_URL')
 EVOLUTION_API_KEY = os.environ.get('EVOLUTION_API_KEY')
 INSTANCE_NAME = os.environ.get('INSTANCE_NAME')
-GEMINI_MODEL = 'models/gemini-2.5-flash-lite'
+GEMINI_MODEL = 'models/gemini-2.5-flash'
 
 SYSTEM_PROMPT_WHATSAPP = """
 Eres el asistente oficial de Sianeffects en WhatsApp.
