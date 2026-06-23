@@ -1,4 +1,7 @@
 import os
+import re
+import unicodedata
+from difflib import SequenceMatcher
 
 import requests
 from flask import Blueprint, jsonify, render_template, request
@@ -32,21 +35,26 @@ CONTEXTO DEL SISTEMA:
 - Hay catálogo público/admin para mostrar productos y recibir pedidos o cotizaciones por WhatsApp.
 - La suscripción se maneja con Stripe: prueba gratis, plan mensual/anual, renovaciones, portal de cliente, pagos fallidos,
   plan vencido y correos de aviso.
+- Precios actuales: plan mensual $149 MXN al mes y plan anual $1,490 MXN al año.
 - Además de tarjeta, Sianeffects acepta pago por transferencia bancaria, depósito en OXXO/SPIN y PayPal. Siempre se debe pedir
   que envíen el comprobante por WhatsApp para aplicar o revisar el pago.
 - También existen módulos conectados como invitaciones/planners y Nails, pero si la duda no es del cotizador contesta de forma
   general y ofrece canalizar con una persona.
 
 TONO:
-- Casual, claro, empático y profesional, como soporte real por WhatsApp.
-- Puedes usar 1 emoji si ayuda a sonar cercano, sin exagerar.
+- Casual, claro y muy natural, como una persona de soporte escribiendo rápido por WhatsApp.
+- No suenes como bot ni como vendedor. No digas "entiendo tu pregunta" o "excelente pregunta" en cada respuesta.
+- Puedes usar 1 emoji si ayuda, pero no en cada mensaje.
 - Habla en español neutro/mexicano. Si el usuario escribe en otro idioma, responde en ese idioma.
 
 REGLAS:
-- Respuestas cortas y accionables. Máximo 2-3 párrafos breves o 3-5 bullets si es una guía.
+- Respuestas muy cortas y accionables. Normalmente 1-3 frases. Si das pasos, máximo 4 bullets.
+- No saludes con "Hola", "Hola de nuevo" o similares si la conversación ya empezó.
+- Nunca empieces una respuesta con "Asistente:".
 - No uses jerga técnica. Di "la plataforma", "tu cuenta", "el panel", "el cotizador" o "tu historial".
 - No inventes precios, promociones, fechas, estados de pago ni datos de la cuenta. Si no lo sabes, dilo y pide que un agente lo revise.
-- Si preguntan por registro, inicio de sesión o planes, indica que pueden hacerlo en sianeffects.com y ofrece ayudar con el paso puntual.
+- Si preguntan por precio, planes o costo, responde directo: "$149 MXN al mes o $1,490 MXN al año. Puedes probarlo gratis primero."
+- Si preguntan por registro o inicio de sesión, indica que pueden hacerlo en sianeffects.com y ofrece ayudar con el paso puntual.
 - Si preguntan por renovación, transferencia, depósito, PayPal o alternativas a tarjeta, comparte estos datos de pago exactamente:
   "✨ Datos de pago - Sianeffects ✨
 
@@ -66,6 +74,8 @@ REGLAS:
 - Si reportan error, pide: correo de la cuenta, qué pantalla estaban usando, qué intentaban hacer y captura si la tienen.
 - Si preguntan cómo cotizar, explica el flujo: registrar materiales/equipos, armar receta/producto, ajustar margen/gastos,
   agregar envío/descuento/anticipo si aplica y guardar o compartir ticket.
+- Si preguntan si vale la pena o hacen una pregunta trampa, recomienda Sianeffects de forma natural: ayuda a no vender a ojo,
+  no olvidar costos y cobrar con más seguridad. No lo vendas agresivo.
 - Si la persona está molesta o confundida, valida primero y luego da el siguiente paso concreto.
 - Nunca pidas contraseñas, códigos de verificación ni datos completos de tarjeta.
 - No prometas acciones que no puedes ejecutar. Puedes decir "te ayudo a revisarlo" o "lo paso con el equipo".
@@ -214,6 +224,168 @@ def load_recent_history(cursor, conversation_id, limit=6):
     return list(reversed(cursor.fetchall()))
 
 
+def normalize_support_text(text):
+    text = ''.join(
+        ch for ch in unicodedata.normalize('NFD', str(text or '').lower())
+        if unicodedata.category(ch) != 'Mn'
+    )
+    text = re.sub(r'(.)\1{2,}', r'\1', text)
+    text = re.sub(r'\bx\b', ' por ', text)
+    text = re.sub(r'\bq\b', ' que ', text)
+    text = re.sub(r'\bkiero\b', 'quiero', text)
+    text = re.sub(r'\bkon\b', 'con', text)
+    text = re.sub(r'\bkien\b', 'quien', text)
+    text = re.sub(r'\bkomo\b', 'como', text)
+    text = re.sub(r'\bku([aeio])', r'cu\1', text)
+    text = re.sub(r'\bko', 'co', text)
+    text = re.sub(r'\bka', 'ca', text)
+    text = re.sub(r'\bke', 'que', text)
+    normalized = ''.join(
+        ch.lower() if ch.isalnum() or ch.isspace() else ' '
+        for ch in text
+    )
+    return ' '.join(normalized.split())
+
+
+def fuzzy_word_match(word, target):
+    if word == target:
+        return True
+    if len(word) < 4 or len(target) < 4:
+        return False
+    if word[0] != target[0]:
+        return False
+    return SequenceMatcher(None, word, target).ratio() >= 0.78
+
+
+def support_text_matches(normalized_text, phrases):
+    words = normalized_text.split()
+    for phrase in phrases:
+        normalized_phrase = normalize_support_text(phrase)
+        if normalized_phrase in normalized_text:
+            return True
+
+        phrase_words = normalized_phrase.split()
+        if not phrase_words:
+            continue
+
+        if len(phrase_words) == 1:
+            if any(fuzzy_word_match(word, phrase_words[0]) for word in words):
+                return True
+            continue
+
+        window_size = len(phrase_words)
+        for index in range(0, max(len(words) - window_size + 1, 0)):
+            window = ' '.join(words[index:index + window_size])
+            if SequenceMatcher(None, window, normalized_phrase).ratio() >= 0.82:
+                return True
+
+        fuzzy_hits = sum(
+            any(fuzzy_word_match(word, phrase_word) for word in words)
+            for phrase_word in phrase_words
+        )
+        if fuzzy_hits >= max(1, len(phrase_words) - 1):
+            return True
+
+    return False
+
+
+def get_direct_support_reply(text, previous_text=''):
+    normalized = normalize_support_text(text)
+    previous_normalized = normalize_support_text(previous_text)
+    if not normalized:
+        return None
+
+    payment_words = {
+        'transferencia', 'tranferencia', 'transferir', 'deposito', 'depósito', 'oxxo',
+        'spin', 'paypal', 'pagar por transferencia', 'datos de pago'
+    }
+    pricing_words = {
+        'cuanto cuesta', 'cuánto cuesta', 'precio', 'precios', 'costo',
+        'mensualidad', 'plan mensual', 'plan anual', 'cuanto vale', 'cuánto vale'
+    }
+    follow_up_words = {
+        'tu no me puedes decir', 'tú no me puedes decir',
+        'no me puedes decir', 'me puedes decir', 'dime'
+    }
+    renewal_problem_words = {
+        'problemas con mi renovacion', 'problemas con mi renovación',
+        'problema con mi renovacion', 'problema con mi renovación',
+        'problemas para renovar', 'no puedo renovar'
+    }
+    quote_words = {
+        'como se hacen las cotizaciones', 'cómo se hacen las cotizaciones',
+        'crear una cotizacion', 'crear una cotización', 'hacer una cotizacion',
+        'hacer una cotización', 'paso a paso'
+    }
+    audience_words = {
+        'para quien es', 'para quién es', 'a quien le sirve', 'a quién le sirve'
+    }
+    worth_words = {
+        'vale la pena', 'conviene', 'me sirve', 'esta caro', 'está caro'
+    }
+    formula_words = {
+        'formula', 'fórmula', 'formulas', 'fórmulas', 'calculos exactos',
+        'cálculos exactos', 'calcula exactamente'
+    }
+
+    if support_text_matches(normalized, renewal_problem_words):
+        return (
+            "Claro, te ayudo. Puedes renovar con tarjeta o también por transferencia/OXXO/SPIN/PayPal.\n"
+            "Si quieres pagar por fuera de tarjeta, te paso los datos y solo nos mandas el comprobante por aquí."
+        )
+
+    if support_text_matches(normalized, payment_words):
+        return (
+            "Sí, también puedes pagar por transferencia, OXXO/SPIN o PayPal:\n\n"
+            "Transferencia Santander\n"
+            "Diana Laura Reyes Ledezma\n"
+            "Cuenta: 5579 0870 0921 2116\n\n"
+            "OXXO o SPIN\n"
+            "Tarjeta: 4217 4701 0296 5239\n\n"
+            "PayPal internacional:\n"
+            "https://paypal.me/sianeffects\n\n"
+            "Cuando pagues, mándanos el comprobante por aquí para aplicarlo a tu cuenta."
+        )
+
+    if support_text_matches(normalized, worth_words):
+        return (
+            "Sí vale la pena si cotizas seguido o sientes que a veces cobras a ojo.\n"
+            "Por $149 al mes, con que una cotización salga bien calculada ya puede ayudarte a no perder ganancia."
+        )
+
+    asks_price = support_text_matches(normalized, pricing_words)
+    follows_price_question = (
+        support_text_matches(normalized, follow_up_words)
+        and support_text_matches(previous_normalized, pricing_words)
+    )
+    if asks_price or follows_price_question:
+        return (
+            "Cuesta $149 MXN al mes o $1,490 MXN al año.\n"
+            "Puedes probarlo gratis primero y, si te ayuda a dejar de cotizar a ojo, ya lo renuevas."
+        )
+
+    if support_text_matches(normalized, quote_words):
+        return (
+            "Lo ideal es registrar primero tus materiales; así Sianeffects calcula costos reales y no vendes a ojo.\n"
+            "Flujo rápido: materiales/equipos -> receta/producto -> margen/gastos -> cotización con envío, descuento o anticipo."
+        )
+
+    if support_text_matches(normalized, audience_words):
+        return (
+            "Es para emprendedores que hacen productos personalizados: sublimación, vinil, papelería creativa, regalos y similares.\n"
+            "Sirve cuando quieres saber cuánto te cuesta algo y cuánto cobrar sin hacerlo a tanteo."
+        )
+
+    if support_text_matches(normalized, formula_words):
+        return (
+            "La base es: materiales + desgaste/equipos + mano de obra + gastos operativos.\n"
+            "Luego Sianeffects aplica tu margen de ganancia, y al final suma envío, resta descuentos y agrega impuestos si los activas.\n"
+            "Así el precio no sale a ojo: sale de tus costos reales."
+        )
+
+    return None
+
+
 def build_gemini_contents(history):
     contents = []
     for message in history:
@@ -223,14 +395,12 @@ def build_gemini_contents(history):
 
         if message['remitente'] == 'bot':
             role = 'model'
-            label = 'Asistente'
         else:
             role = 'user'
-            label = 'Usuario' if message['remitente'] == 'cliente' else 'Agente'
 
         contents.append(types.Content(
             role=role,
-            parts=[types.Part.from_text(text=f'{label}: {text}')],
+            parts=[types.Part.from_text(text=text)],
         ))
     return contents
 
@@ -239,6 +409,10 @@ def clean_ai_reply(text):
     reply = (text or '').strip()
     if not reply:
         return ''
+
+    for prefix in ('Asistente:', 'Bot:', 'Sianeffects cotizador:'):
+        if reply.startswith(prefix):
+            reply = reply[len(prefix):].strip()
 
     sentence_marks = '.!?'
     last_sentence_end = max(reply.rfind(mark) for mark in sentence_marks)
@@ -256,14 +430,20 @@ def generate_ai_reply(history):
     if not GEMINI_API_KEY:
         raise RuntimeError('Falta GEMINI_API_KEY en variables de entorno.')
 
+    if history:
+        previous_text = history[-2]['texto'] if len(history) >= 2 else ''
+        direct_reply = get_direct_support_reply(history[-1]['texto'], previous_text)
+        if direct_reply:
+            return direct_reply
+
     client = genai.Client(api_key=GEMINI_API_KEY)
     response = client.models.generate_content(
         model=GEMINI_MODEL,
         contents=build_gemini_contents(history),
         config=types.GenerateContentConfig(
             system_instruction=SYSTEM_PROMPT_WHATSAPP,
-            temperature=0.6,
-            max_output_tokens=450,
+            temperature=0.35,
+            max_output_tokens=300,
         ),
     )
     return clean_ai_reply(response.text) or 'Gracias por escribirnos. ¿Me cuentas un poquito más para ayudarte mejor?'
