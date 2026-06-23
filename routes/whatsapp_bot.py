@@ -8,13 +8,13 @@ from google.genai import types
 from db import get_db_connection
 from helpers import admin_required
 
-
 whatsapp_bot_bp = Blueprint('whatsapp', __name__)
 
+# --- VARIABLES DE ENTORNO ---
 GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY')
-WHATSAPP_TOKEN = os.environ.get('WHATSAPP_TOKEN')
-WHATSAPP_PHONE_ID = os.environ.get('WHATSAPP_PHONE_ID')
-VERIFY_TOKEN = os.environ.get('VERIFY_TOKEN', 'sianeffects_bot_seguro')
+EVOLUTION_URL = os.environ.get('EVOLUTION_URL')
+EVOLUTION_API_KEY = os.environ.get('EVOLUTION_API_KEY')
+INSTANCE_NAME = os.environ.get('INSTANCE_NAME')
 GEMINI_MODEL = 'models/gemini-2.5-flash-lite'
 
 SYSTEM_PROMPT_WHATSAPP = """
@@ -43,65 +43,80 @@ def normalize_whatsapp_number(number):
 
 
 def extract_text_message(body):
-    for entry in body.get('entry', []):
-        for change in entry.get('changes', []):
-            value = change.get('value') or {}
-            messages = value.get('messages') or []
-            if not messages:
-                continue
+    # Verificar si es un evento válido de Evolution API
+    event = body.get('event')
+    if event != 'messages.upsert':
+        return None
 
-            message = messages[0]
-            if message.get('type') != 'text' or 'text' not in message:
-                return None
+    data = body.get('data', {})
+    
+    # Extraer la llave del mensaje
+    key = data.get('key', {})
+    
+    # Ignorar mensajes enviados por el bot mismo para evitar bucles infinitos
+    if key.get('fromMe') == True:
+        return None
 
-            text = (message.get('text') or {}).get('body', '').strip()
-            message_id = message.get('id')
-            sender = normalize_whatsapp_number(message.get('from'))
-            if not text or not message_id or not sender:
-                return None
+    message_info = data.get('message', {})
+    if not message_info:
+        return None
 
-            contact_name = None
-            contacts = value.get('contacts') or []
-            if contacts:
-                contact_name = (contacts[0].get('profile') or {}).get('name')
+    # Evolution a veces manda el texto en 'conversation' o dentro de 'extendedTextMessage'
+    text = message_info.get('conversation')
+    if not text and 'extendedTextMessage' in message_info:
+        text = message_info['extendedTextMessage'].get('text')
+        
+    if not text:
+        return None
+        
+    text = text.strip()
 
-            return {
-                'message_id': message_id,
-                'sender': sender,
-                'text': text,
-                'contact_name': contact_name,
-            }
+    # Extraer el remitente y limpiar el formato (viene como 52181XXXXXXXX@s.whatsapp.net)
+    raw_sender = key.get('remoteJid', '')
+    sender = raw_sender.split('@')[0] if '@' in raw_sender else raw_sender
+    sender = normalize_whatsapp_number(sender)
+    
+    message_id = key.get('id')
+    contact_name = data.get('pushName')
 
-    return None
+    if not text or not message_id or not sender:
+        return None
+
+    return {
+        'message_id': message_id,
+        'sender': sender,
+        'text': text,
+        'contact_name': contact_name,
+    }
 
 
 def send_whatsapp_message(to_number, text_body):
-    if not WHATSAPP_TOKEN or not WHATSAPP_PHONE_ID:
-        raise RuntimeError('Faltan WHATSAPP_TOKEN o WHATSAPP_PHONE_ID en variables de entorno.')
-
-
-    url = f'https://graph.facebook.com/v18.0/{WHATSAPP_PHONE_ID}/messages'
+    url = f'{EVOLUTION_URL}/message/sendText/{INSTANCE_NAME}'
+    
     headers = {
-        'Authorization': f'Bearer {WHATSAPP_TOKEN}',
+        'apikey': EVOLUTION_API_KEY,
         'Content-Type': 'application/json',
     }
+    
     data = {
-        'messaging_product': 'whatsapp',
-        'to': to_number,
-        'type': 'text',
-        'text': {'body': text_body},
+        'number': to_number,
+        'options': {
+            'delay': 1200, 
+            'presence': 'composing' 
+        },
+        'textMessage': {
+            'text': text_body
+        }
     }
 
-    print('================ WHATSAPP DEBUG ================')
-    print('WHATSAPP_PHONE_ID usado:', WHATSAPP_PHONE_ID)
+    print('================ EVOLUTION DEBUG ================')
     print('URL usada:', url)
     print('Número destino:', to_number)
-    print('Token existe:', bool(WHATSAPP_TOKEN))
-    print('================================================')
+    print('=================================================')
 
     response = requests.post(url, headers=headers, json=data, timeout=15)
     if response.status_code >= 400:
-        print('Error al enviar mensaje a WhatsApp:', response.status_code, response.text)
+        print('Error al enviar mensaje vía Evolution:', response.status_code, response.text)
     response.raise_for_status()
     return response
 
@@ -201,18 +216,9 @@ def generate_ai_reply(history):
     return (response.text or '').strip() or 'Gracias por escribirnos. ¿Me cuentas un poquito más para ayudarte mejor?'
 
 
-@whatsapp_bot_bp.route('/webhook', methods=['GET', 'POST'])
+@whatsapp_bot_bp.route('/webhook', methods=['POST'])
 def webhook():
-    if request.method == 'GET':
-        mode = request.args.get('hub.mode')
-        token = request.args.get('hub.verify_token')
-        challenge = request.args.get('hub.challenge')
-
-        if mode == 'subscribe' and token == VERIFY_TOKEN:
-            print('Webhook de WhatsApp verificado exitosamente.')
-            return challenge or '', 200
-        return 'Error de verificación', 403
-
+    # Eliminamos el manejo de GET porque Evolution solo envía POST
     body = request.get_json(silent=True) or {}
     incoming = extract_text_message(body)
     if incoming is None:
