@@ -78,6 +78,7 @@ NAILS_SERVICE_ICON_OPTIONS = [
     ("star", "Especial"),
 ]
 NAILS_SERVICE_ICONS = {icon for icon, _label in NAILS_SERVICE_ICON_OPTIONS}
+PUBLIC_BOOKING_STAFF_ROLES = ("staff", "owner", "admin")
 
 
 # =========================================================
@@ -188,6 +189,21 @@ def ensure_nails_service_icon_column(cur):
         """
         ALTER TABLE nails_services
         ADD COLUMN IF NOT EXISTS service_icon TEXT DEFAULT 'hand-sparkles'
+        """
+    )
+
+
+def ensure_nails_extra_quantity_columns(cur):
+    cur.execute(
+        """
+        ALTER TABLE nails_extras
+        ADD COLUMN IF NOT EXISTS allow_quantity BOOLEAN DEFAULT FALSE
+        """
+    )
+    cur.execute(
+        """
+        ALTER TABLE nails_appointment_extras
+        ADD COLUMN IF NOT EXISTS quantity INTEGER DEFAULT 1
         """
     )
 
@@ -508,6 +524,7 @@ def find_overlapping_appointment(cur, business_id, start_time_db, end_time_db, t
             a.title,
             a.status,
             a.staff_id,
+            a.service_id,
             c.name AS client_name,
             st.name AS staff_name,
             TO_CHAR(a.start_time AT TIME ZONE %s, 'DD/MM/YYYY HH24:MI') AS start_time_label,
@@ -529,35 +546,85 @@ def find_overlapping_appointment(cur, business_id, start_time_db, end_time_db, t
     return cur.fetchone()
 
 
+def find_available_public_booking_staff(cur, business_id, start_time_db, end_time_db, exclude_appointment_id=None):
+    """
+    Devuelve una persona activa que pueda tomar una cita pública en ese rango.
+    Las citas sin técnica asignada siguen bloqueando a todo el salón porque no
+    hay forma confiable de saber quién las atenderá.
+    """
+    exclude_filter = ""
+    params = [
+        business_id,
+        list(PUBLIC_BOOKING_STAFF_ROLES),
+        business_id,
+        start_time_db,
+        end_time_db,
+    ]
+
+    if exclude_appointment_id:
+        exclude_filter = "AND a.id != %s"
+        params.append(exclude_appointment_id)
+
+    cur.execute(
+        f"""
+        SELECT st.id, st.name, st.role
+        FROM nails_staff st
+        WHERE st.business_id = %s
+          AND st.is_active = TRUE
+          AND st.role = ANY(%s)
+          AND NOT EXISTS (
+              SELECT 1
+              FROM nails_appointments a
+              WHERE a.business_id = %s
+                AND a.status NOT IN ('cancelada', 'no_asistio')
+                AND (a.staff_id = st.id OR a.staff_id IS NULL)
+                AND %s < a.end_time
+                AND %s > a.start_time
+                {exclude_filter}
+          )
+        ORDER BY
+            CASE st.role WHEN 'staff' THEN 1 WHEN 'owner' THEN 2 WHEN 'admin' THEN 3 ELSE 4 END,
+            st.name ASC,
+            st.id ASC
+        LIMIT 1
+        """,
+        params,
+    )
+    return cur.fetchone()
+
+
 def build_overlap_message(overlap, staff_id=None):
     staff_label = overlap["staff_name"] or "sin técnica asignada"
     client_label = overlap["client_name"] or "Cliente General"
+    is_block = overlap["title"] == "Bloqueo de horario" and not overlap["service_id"]
+    item_label = "un bloqueo" if is_block else "una cita"
+    detail_label = f" ({staff_label})" if is_block else f" con {client_label}"
 
     if staff_id and overlap["staff_id"]:
         return (
-            f"Ojo: esta técnica ya tiene una cita programada de "
+            f"Ojo: esta persona ya tiene {item_label} programado de "
             f"{overlap['start_time_label']} a {overlap['end_time_label']} "
-            f"con {client_label}. Se empalman los horarios."
+            f"{detail_label}. Se empalman los horarios."
         )
 
     if staff_id:
         return (
-            f"Ojo: en ese horario ya existe una cita sin técnica asignada, de "
+            f"Ojo: en ese horario ya existe actividad sin técnica asignada, de "
             f"{overlap['start_time_label']} a {overlap['end_time_label']} "
-            f"con {client_label}. Revisa la agenda antes de asignar otra cita."
+            f"con {client_label}. Revisa la agenda antes de asignar otra actividad."
         )
 
     return (
-        f"Ojo: a esta hora ya tienes una cita programada de "
+        f"Ojo: a esta hora ya tienes actividad programada de "
         f"{overlap['start_time_label']} a {overlap['end_time_label']} "
-        f"con {client_label} ({staff_label}). Asigna una técnica libre o cambia el horario."
+        f"con {client_label} ({staff_label}). Asigna una persona libre o cambia el horario."
     )
 
 
-def get_public_available_slots(cur, business, service_ids, appointment_date, extra_ids=None):
+def get_public_available_slots(cur, business, service_ids, appointment_date, extra_ids=None, extra_quantities=None):
     """
     Calcula horarios libres para agendar desde el catálogo público.
-    Como el catálogo no asigna técnica, bloquea cualquier cita activa del salón.
+    Muestra un horario si al menos una persona activa puede atenderlo.
     """
     if not isinstance(service_ids, (list, tuple)):
         service_ids = [service_ids]
@@ -570,6 +637,7 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
     extra_ids = [clean_optional_id(value) for value in extra_ids]
     extra_ids = [value for value in extra_ids if value]
     unique_extra_ids = list(dict.fromkeys(extra_ids))
+    extra_quantities = extra_quantities or {}
     appointment_date_value = parse_date_value(appointment_date)
 
     if not unique_service_ids or not appointment_date_value:
@@ -598,7 +666,7 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
     if unique_extra_ids:
         cur.execute(
             """
-            SELECT id, name, price, duration_minutes
+            SELECT id, name, price, duration_minutes, allow_quantity
             FROM nails_extras
             WHERE id = ANY(%s)
               AND business_id = %s
@@ -611,7 +679,19 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
         if len(extra_rows) != len(unique_extra_ids):
             return [], [], [], "Uno o más extras seleccionados ya no están disponibles."
         extra_map = {extra["id"]: extra for extra in extra_rows}
-        extras = [extra_map[extra_id] for extra_id in extra_ids]
+        extras = []
+        for extra_id in extra_ids:
+            extra = extra_map[extra_id]
+            quantity = parse_positive_int(extra_quantities.get(extra_id, 1), default=1, max_value=50) if extra["allow_quantity"] else 1
+            quantity = max(1, quantity)
+            unit_price = float(extra["price"] or 0)
+            unit_duration = int(extra["duration_minutes"] or 0)
+            extra_item = dict(extra)
+            extra_item["quantity"] = quantity
+            extra_item["unit_price"] = unit_price
+            extra_item["price"] = unit_price * quantity
+            extra_item["duration_minutes"] = unit_duration * quantity
+            extras.append(extra_item)
 
     total_duration = sum(max(15, int(service["duration_minutes"] or 60)) for service in services)
     total_duration += sum(max(0, int(extra["duration_minutes"] or 0)) for extra in extras)
@@ -650,13 +730,21 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
             slot_start + (%s || ' minutes')::interval AS ends_at
         FROM slots
         WHERE slot_start >= NOW()
-          AND NOT EXISTS (
+          AND EXISTS (
               SELECT 1
-              FROM nails_appointments a
-              WHERE a.business_id = %s
-                AND a.status NOT IN ('cancelada', 'no_asistio')
-                AND slot_start < a.end_time
-                AND slot_start + (%s || ' minutes')::interval > a.start_time
+              FROM nails_staff st
+              WHERE st.business_id = %s
+                AND st.is_active = TRUE
+                AND st.role = ANY(%s)
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM nails_appointments a
+                    WHERE a.business_id = %s
+                      AND a.status NOT IN ('cancelada', 'no_asistio')
+                      AND (a.staff_id = st.id OR a.staff_id IS NULL)
+                      AND slot_start < a.end_time
+                      AND slot_start + (%s || ' minutes')::interval > a.start_time
+                )
           )
         ORDER BY slot_start ASC
         """,
@@ -671,6 +759,8 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
             business_timezone,
             business_timezone,
             total_duration,
+            business["id"],
+            list(PUBLIC_BOOKING_STAFF_ROLES),
             business["id"],
             total_duration,
         ),
@@ -1982,14 +2072,20 @@ def agenda():
 
     try:
         ensure_nails_appointment_services_table(cur)
+        ensure_nails_extra_quantity_columns(cur)
         conn.commit()
 
         if request.method == "POST":
             # ── Leer y sanitizar campos del formulario ─────
+            appointment_type   = clean_text(request.form.get("appointment_type", "appointment"))
+            end_time_raw       = clean_text(request.form.get("end_time"))
+            all_day_block      = request.form.get("all_day") == "1"
+            
             client_id          = clean_optional_id(request.form.get("client_id"))
             quick_client_name  = clean_text(request.form.get("quick_client_name"), 120)
             quick_client_phone = clean_text(request.form.get("quick_client_phone"), 40)
             staff_id           = clean_optional_id(request.form.get("staff_id"))
+            
             selected_service_ids = [
                 clean_optional_id(value)
                 for value in request.form.getlist("service_ids")
@@ -1999,6 +2095,7 @@ def agenda():
             if not selected_service_ids and service_id_from_picker:
                 selected_service_ids = [service_id_from_picker]
             service_id         = selected_service_ids[0] if selected_service_ids else None
+            
             appointment_date   = clean_text(request.form.get("appointment_date"))
             start_time         = clean_text(request.form.get("start_time"))
             status             = clean_text(request.form.get("status", "pendiente"))
@@ -2006,130 +2103,183 @@ def agenda():
             notes              = clean_text(request.form.get("notes"), 1000)
             selected_extras    = request.form.getlist("extras")
 
-            # ── Validaciones básicas ───────────────────────
-            if not service_id or not appointment_date or not start_time:
-                flash("Servicio, fecha y hora son obligatorios.", "warning")
-                return redirect(url_for("nails.agenda"))
+            # ── Validaciones según el tipo de registro ──────────
+            if appointment_type == "block":
+                if all_day_block:
+                    start_time = "00:00"
+                    end_time_raw = "23:59"
 
-            if status not in APPOINTMENT_STATUSES:
-                flash("Estado de cita inválido.", "warning")
+                if not staff_id:
+                    flash("Elige quién bloquea su horario.", "warning")
+                    return redirect(url_for("nails.agenda"))
+
+                if not appointment_date or not start_time or not end_time_raw:
+                    flash("Fecha, hora de inicio y hora de fin son obligatorias para el bloqueo.", "warning")
+                    return redirect(url_for("nails.agenda"))
+                
+                status = "confirmada"  # Para que ocupe el espacio visual en la agenda
+                appointment_title = "Bloqueo de horario"
+                estimated_total = 0
+                deposit_amount = 0
+                services_to_insert = []
+                extras_to_insert = []
+                total_duration = 0
+                
+            else:
+                if not service_id or not appointment_date or not start_time:
+                    flash("Servicio, fecha y hora son obligatorios.", "warning")
+                    return redirect(url_for("nails.agenda"))
+
+                if status not in APPOINTMENT_STATUSES:
+                    flash("Estado de cita inválido.", "warning")
+                    return redirect(url_for("nails.agenda"))
+
+                deposit_amount = parse_positive_float(deposit_amount_raw)
+
+                if client_id and not row_belongs_to_business(cur, "nails_clients", client_id, business["id"]):
+                    flash("La clienta seleccionada no pertenece a este salón.", "warning")
+                    return redirect(url_for("nails.agenda"))
+
+                # ── Creación rápida de clienta nueva ──────────
+                if not client_id and quick_client_name and not is_general_customer_name(quick_client_name):
+                    cur.execute(
+                        """
+                        INSERT INTO nails_clients (business_id, name, phone)
+                        VALUES (%s, %s, %s)
+                        RETURNING id
+                        """,
+                        (business["id"], quick_client_name, quick_client_phone),
+                    )
+                    client_id = cur.fetchone()["id"]
+
+                # ── Obtener servicios y calcular precio/duración ──
+                unique_service_ids = list(dict.fromkeys(selected_service_ids))
+
+                cur.execute(
+                    """
+                    SELECT id, name, base_price, duration_minutes
+                    FROM nails_services
+                    WHERE id = ANY(%s)
+                      AND business_id = %s
+                      AND is_active = TRUE
+                    ORDER BY array_position(%s, id)
+                    """,
+                    (unique_service_ids, business["id"], unique_service_ids),
+                )
+                service_rows = cur.fetchall()
+
+                if len(service_rows) != len(unique_service_ids):
+                    flash("Uno o más servicios seleccionados no existen.", "warning")
+                    return redirect(url_for("nails.agenda"))
+
+                service_map = {service["id"]: service for service in service_rows}
+                services_to_insert = []
+                total_duration = 0
+                estimated_total = 0
+
+                for index, selected_service_id in enumerate(selected_service_ids):
+                    service = service_map[selected_service_id]
+                    service_price = float(service["base_price"] or 0)
+                    service_duration = int(service["duration_minutes"] or 60)
+                    estimated_total += service_price
+                    total_duration += service_duration
+                    services_to_insert.append({
+                        "id": service["id"],
+                        "name": service["name"],
+                        "price": service_price,
+                        "duration_minutes": service_duration,
+                        "sort_order": index,
+                    })
+
+                extras_to_insert = []
+
+                for extra_id in selected_extras:
+                    cur.execute(
+                        """
+                        SELECT id, name, price, duration_minutes, allow_quantity
+                        FROM nails_extras
+                        WHERE id = %s
+                          AND business_id = %s
+                          AND is_active = TRUE
+                        LIMIT 1
+                        """,
+                        (extra_id, business["id"]),
+                    )
+                    extra = cur.fetchone()
+
+                    if extra:
+                        extra_price    = float(extra["price"]            or 0)
+                        extra_duration = int(extra["duration_minutes"]   or 0)
+                        extra_quantity = parse_positive_int(
+                            request.form.get(f"qty_{extra_id}", 1),
+                            default=1,
+                            max_value=50,
+                        ) if extra["allow_quantity"] else 1
+                        extra_quantity = max(1, extra_quantity)
+                        total_extra_price = extra_price * extra_quantity
+                        total_extra_duration = extra_duration * extra_quantity
+                        estimated_total += total_extra_price
+                        total_duration  += total_extra_duration
+                        extras_to_insert.append({
+                            "id":               extra["id"],
+                            "name":             extra["name"],
+                            "unit_price":       extra_price,
+                            "price":            total_extra_price,
+                            "quantity":         extra_quantity,
+                            "duration_minutes": total_extra_duration,
+                        })
+
+                appointment_title = " + ".join(item["name"] for item in services_to_insert[:3])
+
+            # ── Validaciones comunes (Staff y Fechas) ──
+            if staff_id and not row_belongs_to_business(cur, "nails_staff", staff_id, business["id"]):
+                flash("La técnica seleccionada no pertenece a este salón.", "warning")
                 return redirect(url_for("nails.agenda"))
 
             if not parse_date_value(appointment_date) or not re.fullmatch(r"\d{2}:\d{2}", start_time):
                 flash("Fecha u hora inválida.", "warning")
                 return redirect(url_for("nails.agenda"))
 
-            deposit_amount = parse_positive_float(deposit_amount_raw)
-
-            # ── Validar ownership de IDs foráneos ──────────
-            if client_id and not row_belongs_to_business(cur, "nails_clients", client_id, business["id"]):
-                flash("La clienta seleccionada no pertenece a este salón.", "warning")
+            if appointment_type == "block" and not re.fullmatch(r"\d{2}:\d{2}", end_time_raw):
+                flash("Hora de fin inválida.", "warning")
                 return redirect(url_for("nails.agenda"))
-
-            if staff_id and not row_belongs_to_business(cur, "nails_staff", staff_id, business["id"]):
-                flash("La técnica seleccionada no pertenece a este salón.", "warning")
-                return redirect(url_for("nails.agenda"))
-
-            # ── Creación rápida de clienta nueva ──────────
-            if not client_id and quick_client_name and not is_general_customer_name(quick_client_name):
-                cur.execute(
-                    """
-                    INSERT INTO nails_clients (business_id, name, phone)
-                    VALUES (%s, %s, %s)
-                    RETURNING id
-                    """,
-                    (business["id"], quick_client_name, quick_client_phone),
-                )
-                client_id = cur.fetchone()["id"]
-
-            # ── Obtener servicios y calcular precio/duración ──
-            unique_service_ids = list(dict.fromkeys(selected_service_ids))
-
-            cur.execute(
-                """
-                SELECT id, name, base_price, duration_minutes
-                FROM nails_services
-                WHERE id = ANY(%s)
-                  AND business_id = %s
-                  AND is_active = TRUE
-                ORDER BY array_position(%s, id)
-                """,
-                (unique_service_ids, business["id"], unique_service_ids),
-            )
-            service_rows = cur.fetchall()
-
-            if len(service_rows) != len(unique_service_ids):
-                flash("Uno o más servicios seleccionados no existen.", "warning")
-                return redirect(url_for("nails.agenda"))
-
-            service_map = {service["id"]: service for service in service_rows}
-            services_to_insert = []
-            total_duration = 0
-            estimated_total = 0
-
-            for index, selected_service_id in enumerate(selected_service_ids):
-                service = service_map[selected_service_id]
-                service_price = float(service["base_price"] or 0)
-                service_duration = int(service["duration_minutes"] or 60)
-                estimated_total += service_price
-                total_duration += service_duration
-                services_to_insert.append({
-                    "id": service["id"],
-                    "name": service["name"],
-                    "price": service_price,
-                    "duration_minutes": service_duration,
-                    "sort_order": index,
-                })
-
-            extras_to_insert = []
-
-            # ── Acumular extras válidos ────────────────────
-            for extra_id in selected_extras:
-                cur.execute(
-                    """
-                    SELECT id, name, price, duration_minutes
-                    FROM nails_extras
-                    WHERE id = %s
-                      AND business_id = %s
-                      AND is_active = TRUE
-                    LIMIT 1
-                    """,
-                    (extra_id, business["id"]),
-                )
-                extra = cur.fetchone()
-
-                if extra:
-                    extra_price    = float(extra["price"]            or 0)
-                    extra_duration = int(extra["duration_minutes"]   or 0)
-                    estimated_total += extra_price
-                    total_duration  += extra_duration
-                    extras_to_insert.append({
-                        "id":               extra["id"],
-                        "name":             extra["name"],
-                        "price":            extra_price,
-                        "duration_minutes": extra_duration,
-                    })
 
             # ── Convertir fecha/hora local a UTC (vía PostgreSQL) ──
-            business_timezone    = business["timezone"] or "America/Monterrey"
-            start_datetime_str   = f"{appointment_date} {start_time}:00"
+            business_timezone  = business["timezone"] or "America/Monterrey"
+            start_datetime_str = f"{appointment_date} {start_time}:00"
 
-            cur.execute(
-                """
-                SELECT
-                    (%s::timestamp AT TIME ZONE %s) AS start_time_db,
-                    ((%s::timestamp AT TIME ZONE %s)
-                     + (%s || ' minutes')::interval) AS end_time_db
-                """,
-                (
-                    start_datetime_str, business_timezone,
-                    start_datetime_str, business_timezone,
-                    total_duration,
-                ),
-            )
-            time_row     = cur.fetchone()
+            if appointment_type == "block":
+                end_datetime_str = f"{appointment_date} {end_time_raw}:00"
+                cur.execute(
+                    """
+                    SELECT
+                        (%s::timestamp AT TIME ZONE %s) AS start_time_db,
+                        (%s::timestamp AT TIME ZONE %s) AS end_time_db
+                    """,
+                    (start_datetime_str, business_timezone, end_datetime_str, business_timezone),
+                )
+            else:
+                cur.execute(
+                    """
+                    SELECT
+                        (%s::timestamp AT TIME ZONE %s) AS start_time_db,
+                        ((%s::timestamp AT TIME ZONE %s)
+                         + (%s || ' minutes')::interval) AS end_time_db
+                    """,
+                    (
+                        start_datetime_str, business_timezone,
+                        start_datetime_str, business_timezone,
+                        total_duration,
+                    ),
+                )
+
+            time_row      = cur.fetchone()
             start_time_db = time_row["start_time_db"]
             end_time_db   = time_row["end_time_db"]
+
+            if appointment_type == "block" and end_time_db <= start_time_db:
+                flash("La hora de fin debe ser posterior a la hora de inicio.", "warning")
+                return redirect(url_for("nails.agenda"))
 
             overlap = find_overlapping_appointment(
                 cur,
@@ -2144,7 +2294,7 @@ def agenda():
                 flash(build_overlap_message(overlap, staff_id=staff_id), "warning")
                 return redirect(url_for("nails.agenda"))
 
-            # ── Insertar la cita ───────────────────────────
+            # ── Insertar la cita o el bloqueo ──────────────
             cur.execute(
                 """
                 INSERT INTO nails_appointments (
@@ -2157,10 +2307,10 @@ def agenda():
                 """,
                 (
                     business["id"],
-                    client_id if client_id else None,
+                    client_id if client_id and appointment_type != "block" else None,
                     staff_id  if staff_id  else None,
-                    service_id,
-                    " + ".join(item["name"] for item in services_to_insert[:3]),
+                    service_id if appointment_type != "block" else None,
+                    appointment_title,
                     start_time_db,
                     end_time_db,
                     status,
@@ -2171,95 +2321,103 @@ def agenda():
             )
             appointment_id = cur.fetchone()["id"]
 
-            # ── Insertar servicios de la cita ──────────────
-            for service_item in services_to_insert:
-                cur.execute(
-                    """
-                    INSERT INTO nails_appointment_services (
-                        appointment_id, service_id, name, price, duration_minutes, sort_order
+            # ── Solo insertar detalles y venta si es CITA ──
+            if appointment_type != "block":
+                for service_item in services_to_insert:
+                    cur.execute(
+                        """
+                        INSERT INTO nails_appointment_services (
+                            appointment_id, service_id, name, price, duration_minutes, sort_order
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            appointment_id,
+                            service_item["id"],
+                            service_item["name"],
+                            service_item["price"],
+                            service_item["duration_minutes"],
+                            service_item["sort_order"],
+                        ),
                     )
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    """,
-                    (
-                        appointment_id,
-                        service_item["id"],
-                        service_item["name"],
-                        service_item["price"],
-                        service_item["duration_minutes"],
-                        service_item["sort_order"],
-                    ),
-                )
 
-            # ── Insertar extras de la cita ─────────────────
-            for extra in extras_to_insert:
-                cur.execute(
-                    """
-                    INSERT INTO nails_appointment_extras (
-                        appointment_id, extra_id, name, price, duration_minutes
+                for extra in extras_to_insert:
+                    cur.execute(
+                        """
+                        INSERT INTO nails_appointment_extras (
+                            appointment_id, extra_id, name, price, duration_minutes, quantity
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s)
+                        """,
+                        (
+                            appointment_id,
+                            extra["id"],
+                            extra["name"],
+                            extra["price"],
+                            extra["duration_minutes"],
+                            extra["quantity"],
+                        ),
                     )
-                    VALUES (%s, %s, %s, %s, %s)
-                    """,
-                    (
-                        appointment_id,
-                        extra["id"],
-                        extra["name"],
-                        extra["price"],
-                        extra["duration_minutes"],
-                    ),
+
+                sale_detail_items = [
+                    {
+                        "item_type": "service",
+                        "item_id": item["id"],
+                        "name": item["name"],
+                        "description": None,
+                        "quantity": 1,
+                        "unit_price": item["price"],
+                        "total": item["price"],
+                    }
+                    for item in services_to_insert
+                ]
+                sale_detail_items.extend(
+                    {
+                        "item_type": "extra",
+                        "item_id": extra["id"],
+                        "name": extra["name"],
+                        "description": None,
+                        "quantity": extra["quantity"],
+                        "unit_price": extra["unit_price"],
+                        "total": extra["price"],
+                    }
+                    for extra in extras_to_insert
+                )
+                
+                sync_sale_for_appointment(
+                    cur,
+                    business["id"],
+                    appointment_id,
+                    client_id,
+                    staff_id,
+                    sale_detail_items,
+                    estimated_total,
+                    initial_paid_amount=deposit_amount,
+                    notes=notes,
                 )
 
-            sale_detail_items = [
-                {
-                    "item_type": "service",
-                    "item_id": item["id"],
-                    "name": item["name"],
-                    "description": None,
-                    "quantity": 1,
-                    "unit_price": item["price"],
-                    "total": item["price"],
-                }
-                for item in services_to_insert
-            ]
-            sale_detail_items.extend(
-                {
-                    "item_type": "extra",
-                    "item_id": extra["id"],
-                    "name": extra["name"],
-                    "description": None,
-                    "quantity": 1,
-                    "unit_price": extra["price"],
-                    "total": extra["price"],
-                }
-                for extra in extras_to_insert
-            )
-            sync_sale_for_appointment(
-                cur,
-                business["id"],
-                appointment_id,
-                client_id,
-                staff_id,
-                sale_detail_items,
-                estimated_total,
-                initial_paid_amount=deposit_amount,
-                notes=notes,
-            )
-
-            if status == "cancelada":
-                cur.execute(
-                    """
-                    UPDATE nails_sales
-                    SET status = 'cancelada',
-                        balance_due = 0,
-                        updated_at = CURRENT_TIMESTAMP
-                    WHERE appointment_id = %s
-                      AND business_id = %s
-                      AND status != 'cancelada'
-                    """,
-                    (appointment_id, business["id"]),
-                )
+                if status == "cancelada":
+                    cur.execute(
+                        """
+                        UPDATE nails_sales
+                        SET status = 'cancelada',
+                            balance_due = 0,
+                            updated_at = CURRENT_TIMESTAMP
+                        WHERE appointment_id = %s
+                          AND business_id = %s
+                          AND status != 'cancelada'
+                        """,
+                        (appointment_id, business["id"]),
+                    )
 
             conn.commit()
-            flash("Cita agregada correctamente con venta pendiente ligada.", "success")
+            
+            # Mensaje de éxito dinámico
+            if appointment_type == "block":
+                flash("Horario bloqueado correctamente.", "success")
+            else:
+                flash("Cita agregada correctamente con venta pendiente ligada.", "success")
+                
             return redirect(url_for("nails.agenda"))
 
         # ── GET: cargar datos para renderizar la vista ─────
@@ -2343,14 +2501,17 @@ def agenda():
                 COUNT(*) FILTER (
                     WHERE DATE(start_time AT TIME ZONE %s) = DATE(NOW() AT TIME ZONE %s)
                       AND status NOT IN ('cancelada', 'no_asistio')
+                      AND NOT (COALESCE(title, '') = 'Bloqueo de horario' AND service_id IS NULL)
                 ) AS appointments_today,
                 COUNT(*) FILTER (
                     WHERE status = 'pendiente'
                       AND start_time >= NOW()
+                      AND NOT (COALESCE(title, '') = 'Bloqueo de horario' AND service_id IS NULL)
                 ) AS pending_count,
                 COALESCE(SUM(deposit_amount) FILTER (
                     WHERE COALESCE(deposit_amount, 0) > 0
                       AND status NOT IN ('cancelada', 'no_asistio')
+                      AND NOT (COALESCE(title, '') = 'Bloqueo de horario' AND service_id IS NULL)
                 ), 0) AS deposits_total
             FROM nails_appointments
             WHERE business_id = %s
@@ -2382,6 +2543,7 @@ def agenda():
             WHERE a.business_id = %s
               AND a.start_time >= NOW()
               AND a.status IN ('pendiente', 'confirmada')
+              AND NOT (COALESCE(a.title, '') = 'Bloqueo de horario' AND a.service_id IS NULL)
             ORDER BY a.start_time ASC
             LIMIT 1
             """,
@@ -2401,7 +2563,7 @@ def agenda():
         # Extras de todas las citas cargadas, agrupados por appointment_id
         cur.execute(
             """
-            SELECT ae.appointment_id, ae.extra_id, ae.name, ae.price, ae.duration_minutes
+            SELECT ae.appointment_id, ae.extra_id, ae.name, ae.price, ae.duration_minutes, ae.quantity
             FROM nails_appointment_extras ae
             INNER JOIN nails_appointments a ON a.id = ae.appointment_id
             WHERE a.business_id = %s
@@ -2758,6 +2920,7 @@ def servicios():
 
     try:
         ensure_nails_service_icon_column(cur)
+        ensure_nails_extra_quantity_columns(cur)
         conn.commit()
 
         if request.method == "POST":
@@ -2829,6 +2992,7 @@ def servicios():
                 description          = clean_text(request.form.get("extra_description"), 1200)
                 price_raw            = request.form.get("extra_price", "0")
                 duration_minutes_raw = request.form.get("extra_duration_minutes", "0")
+                allow_quantity       = request.form.get("extra_allow_quantity") == "on"
 
                 if not name:
                     flash("El nombre del extra es obligatorio.", "warning")
@@ -2840,11 +3004,11 @@ def servicios():
                 cur.execute(
                     """
                     INSERT INTO nails_extras (
-                        business_id, name, description, price, duration_minutes
+                        business_id, name, description, price, duration_minutes, allow_quantity
                     )
-                    VALUES (%s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     """,
-                    (business["id"], name, description, price, duration_minutes),
+                    (business["id"], name, description, price, duration_minutes, allow_quantity),
                 )
                 conn.commit()
                 flash("Extra agregado correctamente.", "success")
@@ -2958,6 +3122,7 @@ def editar_servicio(service_id):
 
     try:
         ensure_nails_service_icon_column(cur)
+        ensure_nails_extra_quantity_columns(cur)
         conn.commit()
 
         cur.execute(
@@ -3103,6 +3268,9 @@ def editar_extra(extra_id):
     cur  = conn.cursor()
 
     try:
+        ensure_nails_extra_quantity_columns(cur)
+        conn.commit()
+
         cur.execute(
             """
             SELECT id
@@ -3120,6 +3288,7 @@ def editar_extra(extra_id):
         description      = clean_text(request.form.get("extra_description"), 1200)
         price            = parse_positive_float(request.form.get("extra_price", "0"))
         duration_minutes = parse_positive_int(request.form.get("extra_duration_minutes", "0"), default=0, max_value=1440)
+        allow_quantity   = request.form.get("extra_allow_quantity") == "on"
 
         if not name:
             flash("El nombre del extra es obligatorio.", "warning")
@@ -3132,10 +3301,11 @@ def editar_extra(extra_id):
                 description = %s,
                 price = %s,
                 duration_minutes = %s,
+                allow_quantity = %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND business_id = %s
             """,
-            (name, description, price, duration_minutes, extra_id, business["id"]),
+            (name, description, price, duration_minutes, allow_quantity, extra_id, business["id"]),
         )
 
         conn.commit()
@@ -3220,7 +3390,23 @@ def ventas():
 
     try:
         ensure_nails_appointment_services_table(cur)
+        ensure_nails_extra_quantity_columns(cur)
         conn.commit()
+
+        cur.execute(
+            """
+            SELECT id
+            FROM nails_staff
+            WHERE business_id = %s
+              AND user_id = %s
+              AND is_active = TRUE
+            ORDER BY id ASC
+            LIMIT 1
+            """,
+            (business["id"], user_id),
+        )
+        current_staff = cur.fetchone()
+        current_staff_id = current_staff["id"] if current_staff else None
 
         if request.method == "POST":
             # ── Leer IDs del formulario ────────────────────
@@ -3254,6 +3440,9 @@ def ventas():
                 if appointment_data:
                     client_id = appointment_data["client_id"] or client_id
                     staff_id  = appointment_data["staff_id"]  or staff_id
+
+            if not staff_id:
+                staff_id = current_staff_id
 
             selected_extras      = request.form.getlist("extras")
             discount_amount_raw  = request.form.get("discount_amount", "0")
@@ -3324,7 +3513,7 @@ def ventas():
             for extra_id in selected_extras:
                 cur.execute(
                     """
-                    SELECT id, name, description, price
+                    SELECT id, name, description, price, allow_quantity
                     FROM nails_extras
                     WHERE id = %s AND business_id = %s AND is_active = TRUE
                     LIMIT 1
@@ -3335,15 +3524,22 @@ def ventas():
 
                 if extra:
                     extra_price = float(extra["price"] or 0)
-                    subtotal   += extra_price
+                    extra_quantity = parse_positive_int(
+                        request.form.get(f"qty_{extra_id}", 1),
+                        default=1,
+                        max_value=50,
+                    ) if extra["allow_quantity"] else 1
+                    extra_quantity = max(1, extra_quantity)
+                    extra_total = extra_price * extra_quantity
+                    subtotal   += extra_total
                     detail_items.append({
                         "item_type":   "extra",
                         "item_id":     extra["id"],
                         "name":        extra["name"],
                         "description": extra["description"],
-                        "quantity":    1,
+                        "quantity":    extra_quantity,
                         "unit_price":  extra_price,
-                        "total":       extra_price,
+                        "total":       extra_total,
                     })
 
             # ── Calcular totales ───────────────────────────
@@ -3518,6 +3714,7 @@ def ventas():
         selected_appointment_sale   = None
         selected_extra_ids          = []
         selected_service_ids        = []
+        selected_extra_quantities   = {}
 
         if appointment_id:
             cur.execute(
@@ -3562,7 +3759,7 @@ def ventas():
 
                 cur.execute(
                     """
-                    SELECT extra_id, name, price
+                    SELECT extra_id, name, price, quantity
                     FROM nails_appointment_extras
                     WHERE appointment_id = %s
                     """,
@@ -3574,6 +3771,11 @@ def ventas():
                     for row in selected_appointment_extras
                     if row["extra_id"]
                 ]
+                selected_extra_quantities = {
+                    row["extra_id"]: int(row["quantity"] or 1)
+                    for row in selected_appointment_extras
+                    if row["extra_id"]
+                }
 
                 cur.execute(
                     """
@@ -3712,6 +3914,8 @@ def ventas():
             selected_appointment_extras=selected_appointment_extras,
             selected_service_ids=selected_service_ids,
             selected_extra_ids=selected_extra_ids,
+            selected_extra_quantities=selected_extra_quantities,
+            current_staff_id=current_staff_id,
             highlight_sale_id=highlight_sale_id,
             can_cancel_sales=can_cancel_sales,
             sales_q=sales_q,
@@ -5684,6 +5888,12 @@ def editar_cita(appointment_id):
 
     try:
         ensure_nails_appointment_services_table(cur)
+        ensure_nails_extra_quantity_columns(cur)
+
+        # ── Nuevos campos para identificar bloqueos ──
+        appointment_type   = clean_text(request.form.get("appointment_type", "appointment"))
+        end_time_raw       = clean_text(request.form.get("end_time"))
+        all_day_block      = request.form.get("all_day") == "1"
 
         client_id          = clean_optional_id(request.form.get("client_id"))
         staff_id           = clean_optional_id(request.form.get("staff_id"))
@@ -5693,146 +5903,159 @@ def editar_cita(appointment_id):
         deposit_amount_raw = request.form.get("deposit_amount", "0")
         notes              = clean_text(request.form.get("notes"), 1000)
 
-        selected_service_ids = [
-            clean_optional_id(value)
-            for value in request.form.getlist("service_ids")
-        ]
+        selected_service_ids = [clean_optional_id(value) for value in request.form.getlist("service_ids")]
         selected_service_ids = [value for value in selected_service_ids if value]
         service_id = selected_service_ids[0] if selected_service_ids else None
 
-        selected_extra_ids = [
-            clean_optional_id(value)
-            for value in request.form.getlist("extras")
-        ]
+        selected_extra_ids = [clean_optional_id(value) for value in request.form.getlist("extras")]
         selected_extra_ids = [value for value in selected_extra_ids if value]
 
-        if not service_id or not appointment_date or not start_time:
-            flash("Servicio, fecha y hora son obligatorios.", "warning")
-            return redirect(url_for("nails.agenda"))
+        # ── Validaciones según el tipo de registro ──────────
+        if appointment_type == "block":
+            if all_day_block:
+                start_time = "00:00"
+                end_time_raw = "23:59"
 
-        if status not in APPOINTMENT_STATUSES:
-            flash("Estado de cita inválido.", "warning")
-            return redirect(url_for("nails.agenda"))
+            if not staff_id:
+                flash("Elige quién bloquea su horario.", "warning")
+                return redirect(url_for("nails.agenda"))
 
-        if not parse_date_value(appointment_date) or not re.fullmatch(r"\d{2}:\d{2}", start_time):
-            flash("Fecha u hora inválida.", "warning")
-            return redirect(url_for("nails.agenda"))
+            if not appointment_date or not start_time or not end_time_raw:
+                flash("Fecha, hora de inicio y hora de fin son obligatorias para el bloqueo.", "warning")
+                return redirect(url_for("nails.agenda"))
+            
+            status = "confirmada"
+            appointment_title = "Bloqueo de horario"
+            estimated_total = 0
+            deposit_amount = 0
+            services_to_insert = []
+            extras_to_insert = []
+            total_duration = 0
+        else:
+            if not service_id or not appointment_date or not start_time:
+                flash("Servicio, fecha y hora son obligatorios.", "warning")
+                return redirect(url_for("nails.agenda"))
 
-        cur.execute(
-            """
-            SELECT id
-            FROM nails_appointments
-            WHERE id = %s AND business_id = %s
-            LIMIT 1
-            """,
-            (appointment_id, business["id"]),
-        )
+            if status not in APPOINTMENT_STATUSES:
+                flash("Estado de cita inválido.", "warning")
+                return redirect(url_for("nails.agenda"))
+
+            deposit_amount = parse_positive_float(deposit_amount_raw)
+
+            if client_id and not row_belongs_to_business(cur, "nails_clients", client_id, business["id"]):
+                flash("La clienta seleccionada no pertenece a este salón.", "warning")
+                return redirect(url_for("nails.agenda"))
+
+            unique_service_ids = list(dict.fromkeys(selected_service_ids))
+
+            cur.execute(
+                """
+                SELECT id, name, base_price, duration_minutes
+                FROM nails_services
+                WHERE id = ANY(%s) AND business_id = %s AND is_active = TRUE
+                ORDER BY array_position(%s, id)
+                """,
+                (unique_service_ids, business["id"], unique_service_ids),
+            )
+            service_rows = cur.fetchall()
+
+            if len(service_rows) != len(unique_service_ids):
+                flash("Uno o más servicios seleccionados no existen.", "warning")
+                return redirect(url_for("nails.agenda"))
+
+            service_map = {service["id"]: service for service in service_rows}
+            services_to_insert = []
+            estimated_total = 0
+            total_duration = 0
+
+            for index, selected_service_id in enumerate(selected_service_ids):
+                service = service_map[selected_service_id]
+                service_price = float(service["base_price"] or 0)
+                service_duration = int(service["duration_minutes"] or 60)
+                estimated_total += service_price
+                total_duration += service_duration
+                services_to_insert.append({
+                    "id": service["id"],
+                    "name": service["name"],
+                    "price": service_price,
+                    "duration_minutes": service_duration,
+                    "sort_order": index,
+                })
+
+            extras_to_insert = []
+
+            for extra_id in selected_extra_ids:
+                cur.execute(
+                    "SELECT id, name, price, duration_minutes, allow_quantity FROM nails_extras WHERE id = %s AND business_id = %s AND is_active = TRUE LIMIT 1",
+                    (extra_id, business["id"]),
+                )
+                extra = cur.fetchone()
+                if extra:
+                    extra_price = float(extra["price"] or 0)
+                    extra_duration = int(extra["duration_minutes"] or 0)
+                    extra_quantity = parse_positive_int(
+                        request.form.get(f"qty_{extra_id}", 1),
+                        default=1,
+                        max_value=50,
+                    ) if extra["allow_quantity"] else 1
+                    extra_quantity = max(1, extra_quantity)
+                    total_extra_price = extra_price * extra_quantity
+                    total_extra_duration = extra_duration * extra_quantity
+                    estimated_total += total_extra_price
+                    total_duration += total_extra_duration
+                    extras_to_insert.append({
+                        "id": extra["id"], "name": extra["name"],
+                        "unit_price": extra_price,
+                        "price": total_extra_price,
+                        "quantity": extra_quantity,
+                        "duration_minutes": total_extra_duration,
+                    })
+
+            appointment_title = " + ".join(item["name"] for item in services_to_insert[:3])
+
+        cur.execute("SELECT id FROM nails_appointments WHERE id = %s AND business_id = %s LIMIT 1", (appointment_id, business["id"]))
         if not cur.fetchone():
             flash("No se encontró la cita.", "warning")
-            return redirect(url_for("nails.agenda"))
-
-        if client_id and not row_belongs_to_business(cur, "nails_clients", client_id, business["id"]):
-            flash("La clienta seleccionada no pertenece a este salón.", "warning")
             return redirect(url_for("nails.agenda"))
 
         if staff_id and not row_belongs_to_business(cur, "nails_staff", staff_id, business["id"]):
             flash("La técnica seleccionada no pertenece a este salón.", "warning")
             return redirect(url_for("nails.agenda"))
 
-        unique_service_ids = list(dict.fromkeys(selected_service_ids))
-
-        cur.execute(
-            """
-            SELECT id, name, base_price, duration_minutes
-            FROM nails_services
-            WHERE id = ANY(%s)
-              AND business_id = %s
-              AND is_active = TRUE
-            ORDER BY array_position(%s, id)
-            """,
-            (unique_service_ids, business["id"], unique_service_ids),
-        )
-        service_rows = cur.fetchall()
-
-        if len(service_rows) != len(unique_service_ids):
-            flash("Uno o más servicios seleccionados no existen.", "warning")
+        if not parse_date_value(appointment_date) or not re.fullmatch(r"\d{2}:\d{2}", start_time):
+            flash("Fecha u hora inválida.", "warning")
             return redirect(url_for("nails.agenda"))
 
-        service_map = {service["id"]: service for service in service_rows}
-        services_to_insert = []
-        estimated_total = 0
-        total_duration = 0
-
-        for index, selected_service_id in enumerate(selected_service_ids):
-            service = service_map[selected_service_id]
-            service_price = float(service["base_price"] or 0)
-            service_duration = int(service["duration_minutes"] or 60)
-            estimated_total += service_price
-            total_duration += service_duration
-            services_to_insert.append({
-                "id": service["id"],
-                "name": service["name"],
-                "price": service_price,
-                "duration_minutes": service_duration,
-                "sort_order": index,
-            })
-
-        extras_to_insert = []
-
-        for extra_id in selected_extra_ids:
-            cur.execute(
-                """
-                SELECT id, name, price, duration_minutes
-                FROM nails_extras
-                WHERE id = %s
-                  AND business_id = %s
-                  AND is_active = TRUE
-                LIMIT 1
-                """,
-                (extra_id, business["id"]),
-            )
-            extra = cur.fetchone()
-
-            if extra:
-                extra_price = float(extra["price"] or 0)
-                extra_duration = int(extra["duration_minutes"] or 0)
-                estimated_total += extra_price
-                total_duration += extra_duration
-                extras_to_insert.append({
-                    "id": extra["id"],
-                    "name": extra["name"],
-                    "price": extra_price,
-                    "duration_minutes": extra_duration,
-                })
+        if appointment_type == "block" and not re.fullmatch(r"\d{2}:\d{2}", end_time_raw):
+            flash("Hora de fin inválida.", "warning")
+            return redirect(url_for("nails.agenda"))
 
         business_timezone = business["timezone"] or "America/Monterrey"
         start_datetime_str = f"{appointment_date} {start_time}:00"
 
-        cur.execute(
-            """
-            SELECT
-                (%s::timestamp AT TIME ZONE %s) AS start_time_db,
-                ((%s::timestamp AT TIME ZONE %s)
-                 + (%s || ' minutes')::interval) AS end_time_db
-            """,
-            (
-                start_datetime_str, business_timezone,
-                start_datetime_str, business_timezone,
-                total_duration,
-            ),
-        )
+        if appointment_type == "block":
+            end_datetime_str = f"{appointment_date} {end_time_raw}:00"
+            cur.execute(
+                "SELECT (%s::timestamp AT TIME ZONE %s) AS start_time_db, (%s::timestamp AT TIME ZONE %s) AS end_time_db",
+                (start_datetime_str, business_timezone, end_datetime_str, business_timezone),
+            )
+        else:
+            cur.execute(
+                "SELECT (%s::timestamp AT TIME ZONE %s) AS start_time_db, ((%s::timestamp AT TIME ZONE %s) + (%s || ' minutes')::interval) AS end_time_db",
+                (start_datetime_str, business_timezone, start_datetime_str, business_timezone, total_duration),
+            )
+
         time_row = cur.fetchone()
         start_time_db = time_row["start_time_db"]
         end_time_db = time_row["end_time_db"]
 
+        if appointment_type == "block" and end_time_db <= start_time_db:
+            flash("La hora de fin debe ser posterior a la hora de inicio.", "warning")
+            return redirect(url_for("nails.agenda"))
+
         overlap = find_overlapping_appointment(
-            cur,
-            business["id"],
-            start_time_db,
-            end_time_db,
-            business_timezone,
-            staff_id=staff_id,
-            exclude_appointment_id=appointment_id,
+            cur, business["id"], start_time_db, end_time_db, business_timezone,
+            staff_id=staff_id, exclude_appointment_id=appointment_id,
         )
         if overlap:
             conn.rollback()
@@ -5842,137 +6065,55 @@ def editar_cita(appointment_id):
         cur.execute(
             """
             UPDATE nails_appointments
-            SET client_id = %s,
-                staff_id = %s,
-                service_id = %s,
-                title = %s,
-                start_time = %s,
-                end_time = %s,
-                status = %s,
-                estimated_total = %s,
-                deposit_amount = %s,
-                notes = %s,
-                updated_at = CURRENT_TIMESTAMP
+            SET client_id = %s, staff_id = %s, service_id = %s, title = %s,
+                start_time = %s, end_time = %s, status = %s,
+                estimated_total = %s, deposit_amount = %s, notes = %s, updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND business_id = %s
             """,
             (
-                client_id if client_id else None,
-                staff_id if staff_id else None,
-                service_id,
-                " + ".join(item["name"] for item in services_to_insert[:3]),
-                start_time_db,
-                end_time_db,
-                status,
-                estimated_total,
-                parse_positive_float(deposit_amount_raw),
-                notes,
-                appointment_id,
-                business["id"],
+                (client_id if client_id and appointment_type != "block" else None), staff_id if staff_id else None,
+                service_id if appointment_type != "block" else None, appointment_title,
+                start_time_db, end_time_db, status, estimated_total, deposit_amount, notes,
+                appointment_id, business["id"],
             ),
         )
 
         cur.execute("DELETE FROM nails_appointment_services WHERE appointment_id = %s", (appointment_id,))
         cur.execute("DELETE FROM nails_appointment_extras WHERE appointment_id = %s", (appointment_id,))
 
-        for service_item in services_to_insert:
-            cur.execute(
-                """
-                INSERT INTO nails_appointment_services (
-                    appointment_id, service_id, name, price, duration_minutes, sort_order
+        if appointment_type != "block":
+            for service_item in services_to_insert:
+                cur.execute(
+                    "INSERT INTO nails_appointment_services (appointment_id, service_id, name, price, duration_minutes, sort_order) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (appointment_id, service_item["id"], service_item["name"], service_item["price"], service_item["duration_minutes"], service_item["sort_order"]),
                 )
-                VALUES (%s, %s, %s, %s, %s, %s)
-                """,
-                (
-                    appointment_id,
-                    service_item["id"],
-                    service_item["name"],
-                    service_item["price"],
-                    service_item["duration_minutes"],
-                    service_item["sort_order"],
-                ),
-            )
 
-        for extra in extras_to_insert:
-            cur.execute(
-                """
-                INSERT INTO nails_appointment_extras (
-                    appointment_id, extra_id, name, price, duration_minutes
+            for extra in extras_to_insert:
+                cur.execute(
+                    "INSERT INTO nails_appointment_extras (appointment_id, extra_id, name, price, duration_minutes, quantity) VALUES (%s, %s, %s, %s, %s, %s)",
+                    (appointment_id, extra["id"], extra["name"], extra["price"], extra["duration_minutes"], extra["quantity"]),
                 )
-                VALUES (%s, %s, %s, %s, %s)
-                """,
-                (
-                    appointment_id,
-                    extra["id"],
-                    extra["name"],
-                    extra["price"],
-                    extra["duration_minutes"],
-                ),
+
+            sale_detail_items = [{"item_type": "service", "item_id": item["id"], "name": item["name"], "description": None, "quantity": 1, "unit_price": item["price"], "total": item["price"]} for item in services_to_insert]
+            sale_detail_items.extend([{"item_type": "extra", "item_id": extra["id"], "name": extra["name"], "description": None, "quantity": extra["quantity"], "unit_price": extra["unit_price"], "total": extra["price"]} for extra in extras_to_insert])
+            
+            sync_sale_for_appointment(
+                cur, business["id"], appointment_id, client_id, staff_id, sale_detail_items, estimated_total, initial_paid_amount=deposit_amount, notes=notes,
             )
 
-        sale_detail_items = [
-            {
-                "item_type": "service",
-                "item_id": item["id"],
-                "name": item["name"],
-                "description": None,
-                "quantity": 1,
-                "unit_price": item["price"],
-                "total": item["price"],
-            }
-            for item in services_to_insert
-        ]
-        sale_detail_items.extend(
-            {
-                "item_type": "extra",
-                "item_id": extra["id"],
-                "name": extra["name"],
-                "description": None,
-                "quantity": 1,
-                "unit_price": extra["price"],
-                "total": extra["price"],
-            }
-            for extra in extras_to_insert
-        )
-        sync_sale_for_appointment(
-            cur,
-            business["id"],
-            appointment_id,
-            client_id,
-            staff_id,
-            sale_detail_items,
-            estimated_total,
-            initial_paid_amount=parse_positive_float(deposit_amount_raw),
-            notes=notes,
-        )
+            if status == "cancelada":
+                cur.execute("UPDATE nails_sales SET status = 'cancelada', balance_due = 0, updated_at = CURRENT_TIMESTAMP WHERE appointment_id = %s AND business_id = %s AND status != 'cancelada'", (appointment_id, business["id"]))
+        else:
+            # Si lo convertimos a bloqueo, cancelamos la venta si existía
+            cur.execute("UPDATE nails_sales SET status = 'cancelada', balance_due = 0, updated_at = CURRENT_TIMESTAMP WHERE appointment_id = %s AND business_id = %s AND status != 'cancelada'", (appointment_id, business["id"]))
 
-        if status == "cancelada":
-            cur.execute(
-                """
-                UPDATE nails_sales
-                SET status = 'cancelada',
-                    balance_due = 0,
-                    updated_at = CURRENT_TIMESTAMP
-                WHERE appointment_id = %s
-                  AND business_id = %s
-                  AND status != 'cancelada'
-                """,
-                (appointment_id, business["id"]),
-            )
-
-        cur.execute(
-            """
-            INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
-            VALUES (%s, %s, %s, %s, %s)
-            """,
-            (
-                business["id"], user_id,
-                "appointment_update", "Agenda",
-                f"Editó la cita #{appointment_id}",
-            ),
-        )
+        cur.execute("INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail) VALUES (%s, %s, %s, %s, %s)", (business["id"], user_id, "appointment_update", "Agenda", f"Editó la cita/bloqueo #{appointment_id}"))
 
         conn.commit()
-        flash("Cita actualizada correctamente.", "success")
+        if appointment_type == "block":
+            flash("Bloqueo actualizado correctamente.", "success")
+        else:
+            flash("Cita actualizada correctamente.", "success")
         return redirect(url_for("nails.agenda"))
 
     except Exception as e:
@@ -6015,6 +6156,7 @@ def eliminar_cita(appointment_id):
             SELECT
                 a.id,
                 a.title,
+                a.service_id,
                 c.name AS client_name,
                 TO_CHAR(a.start_time AT TIME ZONE %s, 'DD/MM/YYYY HH24:MI') AS start_time_label
             FROM nails_appointments a
@@ -6063,7 +6205,7 @@ def eliminar_cita(appointment_id):
                 business["id"], user_id,
                 "appointment_delete", "Agenda",
                 (
-                    f"Eliminó la cita #{appointment_id}: "
+                    f"Eliminó {'el bloqueo' if appointment['title'] == 'Bloqueo de horario' and not appointment['service_id'] else 'la cita'} #{appointment_id}: "
                     f"{appointment['title'] or 'Sin título'} - "
                     f"{appointment['client_name'] or 'Cliente General'} - "
                     f"{appointment['start_time_label']}"
@@ -6071,7 +6213,10 @@ def eliminar_cita(appointment_id):
             ),
         )
         conn.commit()
-        flash("Cita eliminada correctamente.", "success")
+        if appointment["title"] == "Bloqueo de horario" and not appointment["service_id"]:
+            flash("Bloqueo eliminado correctamente.", "success")
+        else:
+            flash("Cita eliminada correctamente.", "success")
         return redirect(url_for("nails.agenda"))
 
     except Exception as e:
@@ -6097,6 +6242,7 @@ def catalogo_publico(slug):
 
     try:
         ensure_nails_service_icon_column(cur)
+        ensure_nails_extra_quantity_columns(cur)
         conn.commit()
 
         cur.execute(
@@ -6122,6 +6268,7 @@ def catalogo_publico(slug):
                 return redirect(url_for("nails.catalogo_publico", slug=slug, agendar="1"))
 
             ensure_nails_appointment_services_table(cur)
+            ensure_nails_extra_quantity_columns(cur)
 
             client_name = clean_text(request.form.get("client_name"), 120)
             client_phone = clean_text(request.form.get("client_phone"), 40)
@@ -6139,6 +6286,10 @@ def catalogo_publico(slug):
                 for value in request.form.getlist("extras")
             ]
             selected_extra_ids = [value for value in selected_extra_ids if value]
+            selected_extra_quantities = {
+                extra_id: parse_positive_int(request.form.get(f"qty_{extra_id}", 1), default=1, max_value=50)
+                for extra_id in selected_extra_ids
+            }
             appointment_date = clean_text(request.form.get("appointment_date"))
             start_time = clean_text(request.form.get("start_time"))
             notes = clean_text(request.form.get("notes"), 1000)
@@ -6157,6 +6308,7 @@ def catalogo_publico(slug):
                 selected_service_ids,
                 appointment_date,
                 selected_extra_ids,
+                selected_extra_quantities,
             )
 
             if not services_selected:
@@ -6200,15 +6352,13 @@ def catalogo_publico(slug):
                 flash("Elige una fecha y hora futura para tu cita.", "warning")
                 return redirect(url_for("nails.catalogo_publico", slug=slug, agendar="1"))
 
-            overlap = find_overlapping_appointment(
+            public_staff = find_available_public_booking_staff(
                 cur,
                 public_business["id"],
                 time_row["start_time_db"],
                 time_row["end_time_db"],
-                business_timezone,
-                staff_id=None,
             )
-            if overlap:
+            if not public_staff:
                 flash("Ese horario ya no está disponible. Elige otra hora para agendar tu cita.", "warning")
                 return redirect(url_for("nails.catalogo_publico", slug=slug, agendar="1"))
 
@@ -6236,12 +6386,13 @@ def catalogo_publico(slug):
                     title, start_time, end_time, status,
                     estimated_total, deposit_amount, notes
                 )
-                VALUES (%s, %s, NULL, %s, %s, %s, %s, 'pendiente', %s, 0, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, 'pendiente', %s, 0, %s)
                 RETURNING id
                 """,
                 (
                     public_business["id"],
                     client_id,
+                    public_staff["id"],
                     service_id,
                     appointment_title,
                     time_row["start_time_db"],
@@ -6274,9 +6425,9 @@ def catalogo_publico(slug):
                 cur.execute(
                     """
                     INSERT INTO nails_appointment_extras (
-                        appointment_id, extra_id, name, price, duration_minutes
+                        appointment_id, extra_id, name, price, duration_minutes, quantity
                     )
-                    VALUES (%s, %s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s, %s, %s)
                     """,
                     (
                         appointment_id,
@@ -6284,6 +6435,7 @@ def catalogo_publico(slug):
                         extra["name"],
                         float(extra["price"] or 0),
                         int(extra["duration_minutes"] or 0),
+                        int(extra.get("quantity") or 1),
                     ),
                 )
 
@@ -6305,8 +6457,8 @@ def catalogo_publico(slug):
                     "item_id": extra["id"],
                     "name": extra["name"],
                     "description": None,
-                    "quantity": 1,
-                    "unit_price": float(extra["price"] or 0),
+                    "quantity": int(extra.get("quantity") or 1),
+                    "unit_price": float(extra.get("unit_price", extra["price"]) or 0),
                     "total": float(extra["price"] or 0),
                 }
                 for extra in extras_selected
@@ -6432,13 +6584,20 @@ def catalogo_horarios_disponibles(slug):
             service_id = request.args.get("service_id")
             service_ids = [service_id] if service_id else []
         extra_ids = request.args.getlist("extras")
+        extra_quantities = {
+            clean_optional_id(extra_id): parse_positive_int(request.args.get(f"qty_{extra_id}", 1), default=1, max_value=50)
+            for extra_id in extra_ids
+            if clean_optional_id(extra_id)
+        }
         appointment_date = clean_text(request.args.get("date"))
+        ensure_nails_extra_quantity_columns(cur)
         slots, services_selected, extras_selected, message = get_public_available_slots(
             cur,
             public_business,
             service_ids,
             appointment_date,
             extra_ids,
+            extra_quantities,
         )
         total_duration = sum(int(service["duration_minutes"] or 60) for service in services_selected)
         total_duration += sum(int(extra["duration_minutes"] or 0) for extra in extras_selected)
@@ -6464,6 +6623,8 @@ def catalogo_horarios_disponibles(slug):
                     "name": extra["name"],
                     "duration_minutes": extra["duration_minutes"],
                     "price": float(extra["price"] or 0),
+                    "quantity": int(extra.get("quantity") or 1),
+                    "unit_price": float(extra.get("unit_price", extra["price"]) or 0),
                 }
                 for extra in extras_selected
             ],

@@ -11,7 +11,13 @@
         gap: 16px;
     }
 
-    .services-forms-grid,
+    .services-forms-grid {
+        display: grid;
+        gap: 16px;
+        grid-template-columns: minmax(0, min(100%, 1040px));
+        justify-content: center;
+    }
+
     .services-lists-grid {
         display: grid;
         gap: 16px;
@@ -66,6 +72,62 @@
         font-size: 12px;
         font-weight: 900;
         padding: 7px 12px;
+    }
+
+    .service-builder-panel {
+        justify-self: center;
+        padding: 24px;
+        width: 100%;
+    }
+
+    .service-builder-panel .form-control,
+    .service-builder-panel .form-select,
+    .service-builder-panel .input-group-text {
+        min-height: 44px;
+    }
+
+    .service-type-toggle {
+        background: color-mix(in srgb, var(--nails-primary-soft), #fff 34%);
+        border-radius: 10px;
+        display: grid;
+        gap: 4px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        margin-bottom: 22px;
+        padding: 4px;
+    }
+
+    .service-type-btn {
+        background: transparent;
+        border: 0;
+        border-radius: 8px;
+        color: var(--nails-primary-strong);
+        font-size: 12px;
+        font-weight: 900;
+        min-height: 36px;
+        padding: 8px 10px;
+        transition: background .16s ease, box-shadow .16s ease, color .16s ease;
+    }
+
+    .service-type-btn.active {
+        background: #fff;
+        box-shadow: 0 6px 16px rgba(26, 31, 44, .08);
+        color: var(--nails-primary-strong);
+    }
+
+    .service-dynamic-form {
+        display: none;
+    }
+
+    .service-dynamic-form.is-active {
+        display: block;
+    }
+
+    .service-form-note {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        line-height: 1.35;
+        margin-top: 5px;
     }
 
     .service-form-actions {
@@ -327,6 +389,132 @@
             min-width: 560px;
         }
     }
+    /* Estilos base */
+    :root {
+        --nails-radius: 12px;
+        --nails-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+
+    .services-shell {
+        display: grid;
+        gap: 24px;
+        padding: 20px clamp(10px, 2vw, 24px);
+    }
+
+    .services-forms-grid { 
+        display: grid; 
+        gap: 24px; 
+        grid-template-columns: minmax(0, min(100%, 1040px)); 
+        justify-content: center; 
+    }
+
+    .services-lists-grid { 
+        display: grid; 
+        gap: 24px; 
+        grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); 
+    }
+
+    /* Tarjetas principales */
+    .service-panel {
+        background: #fff;
+        border: 1px solid #eef0f4;
+        border-radius: var(--nails-radius);
+        box-shadow: var(--nails-shadow);
+        padding: 24px;
+    }
+
+    .service-builder-panel {
+        justify-self: center;
+        width: 100%;
+    }
+
+    .service-builder-panel textarea.form-control {
+        min-height: 92px;
+    }
+
+    .service-panel-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #f1f3f8;
+    }
+
+    .service-panel-title {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: var(--nails-ink);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+    }
+
+    /* Toggle elegante */
+    .service-type-toggle {
+        background: #f8f9fa;
+        padding: 4px;
+        border-radius: 10px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 4px;
+        margin-bottom: 24px;
+    }
+
+    .service-type-btn {
+        padding: 10px;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        font-weight: 800;
+        color: var(--nails-muted);
+        transition: all 0.2s;
+    }
+
+    .service-type-btn.active {
+        background: #fff;
+        color: var(--nails-primary);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    /* Tablas y Listas */
+    .service-table { margin-bottom: 0; }
+    .service-table thead th { 
+        background: transparent; 
+        border: none;
+        color: #94a3b8; 
+        text-transform: uppercase;
+        font-size: 0.75rem;
+        letter-spacing: 0.05em;
+    }
+
+    .extra-item {
+        display: grid;
+        grid-template-columns: 40px 1fr auto 40px;
+        gap: 16px;
+        align-items: center;
+        padding: 16px 0;
+        border-bottom: 1px solid #f1f3f8;
+    }
+
+    /* Botones de acción */
+    .service-action-btn {
+        border-radius: 50%;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+    
+    .service-action-btn:hover { background: #f1f5f9; }
+
+    /* Responsivo */
+    @media (max-width: 768px) {
+        .services-lists-grid { grid-template-columns: 1fr; }
+    }
 </style>
 {% endblock %}
 
@@ -354,17 +542,23 @@
 {% block content %}
 <div class="services-shell">
     <section class="services-forms-grid">
-        <article class="service-panel">
+        <article class="service-panel service-builder-panel">
             <div class="service-panel-head">
                 <h2 class="service-panel-title">
-                    <span class="service-title-icon"><i class="fa-solid fa-bottle-droplet"></i></span>
-                    Agregar servicio
+                    <span class="service-title-icon" id="service_builder_icon"><i class="fa-solid fa-bottle-droplet"></i></span>
+                    <span id="service_builder_title">Agregar servicio</span>
                 </h2>
-                <span class="service-panel-badge"><i class="fa-solid fa-wand-magic-sparkles me-1"></i>Servicio principal</span>
+                <span class="service-panel-badge" id="service_builder_badge"><i class="fa-solid fa-wand-magic-sparkles me-1"></i>Servicio principal</span>
             </div>
 
-            <form method="POST" class="row g-3">
+            <div class="service-type-toggle" role="group" aria-label="Tipo de concepto">
+                <button type="button" class="service-type-btn active" data-service-form-target="service">Servicio</button>
+                <button type="button" class="service-type-btn" data-service-form-target="extra">Extra</button>
+            </div>
+
+            <form method="POST" class="service-dynamic-form is-active" data-service-form="service">
                 <input type="hidden" name="form_type" value="service">
+                <div class="row g-3">
 
                 <div class="col-12">
                     <label class="form-label">Nombre del servicio</label>
@@ -379,7 +573,7 @@
                         <option value="{{ category.name }}"></option>
                         {% endfor %}
                     </datalist>
-                    <div class="form-text">Si la categoría no existe, se crea automáticamente.</div>
+                    <div class="service-form-note">Si la categoría no existe, se crea automáticamente.</div>
                 </div>
 
                 <div class="col-md-6">
@@ -423,23 +617,17 @@
                 </div>
 
                 <div class="col-12 service-form-actions">
-                    <button type="submit" class="btn btn-primary"><i class="fa-regular fa-floppy-disk me-2"></i>Guardar servicio</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-check me-2"></i>Guardar
+                    </button>
                     <button type="reset" class="btn btn-outline-secondary"><i class="fa-solid fa-rotate-right me-2"></i>Limpiar</button>
                 </div>
+                </div>
             </form>
-        </article>
 
-        <article class="service-panel">
-            <div class="service-panel-head">
-                <h2 class="service-panel-title">
-                    <span class="service-title-icon"><i class="fa-solid fa-gift"></i></span>
-                    Agregar extra
-                </h2>
-                <span class="service-panel-badge"><i class="fa-regular fa-star me-1"></i>Complemento</span>
-            </div>
-
-            <form method="POST" class="row g-3">
+            <form method="POST" class="service-dynamic-form" data-service-form="extra">
                 <input type="hidden" name="form_type" value="extra">
+                <div class="row g-3">
 
                 <div class="col-12">
                     <label class="form-label">Nombre del extra</label>
@@ -467,9 +655,20 @@
                     <textarea name="extra_description" class="form-control" rows="4" placeholder="Ej. Aplicación de pedrería por diseño."></textarea>
                 </div>
 
+                <div class="col-12">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="extra_allow_quantity" id="extra_allow_quantity">
+                        <label class="form-check-label fw-bold" for="extra_allow_quantity">Permitir cantidad</label>
+                    </div>
+                    <div class="service-form-note">Úsalo para extras por uña o por pieza. Si lo activas, el precio y el tiempo adicional se multiplican por la cantidad. Ej. 5 uñas x 5 min = 25 min.</div>
+                </div>
+
                 <div class="col-12 service-form-actions">
-                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-gift me-2"></i>Guardar extra</button>
+                    <button type="submit" class="btn btn-primary px-4 fw-bold shadow-sm">
+                        <i class="fa-solid fa-check me-2"></i>Guardar
+                    </button>
                     <button type="reset" class="btn btn-outline-secondary"><i class="fa-solid fa-rotate-right me-2"></i>Limpiar</button>
+                </div>
                 </div>
             </form>
         </article>
@@ -491,7 +690,7 @@
 
             {% if services %}
             <div class="table-responsive">
-                <table class="table service-table align-middle">
+                <table class="table table-hover service-table align-middle">
                     <thead>
                         <tr>
                             <th class="service-table-service">Servicio</th>
@@ -589,6 +788,9 @@
                     <div class="text-end">
                         <div class="fw-bold">${{ "%.2f"|format(extra.price or 0) }}</div>
                         <div class="service-sub">+{{ extra.duration_minutes or 0 }} min</div>
+                        {% if extra.allow_quantity %}
+                        <span class="badge text-bg-light border">Por cantidad</span>
+                        {% endif %}
                     </div>
                     <div class="text-end">
                         <div class="dropdown">
@@ -748,6 +950,14 @@
                         <label class="form-label">Descripción</label>
                         <textarea name="extra_description" class="form-control" rows="3">{{ extra.description or '' }}</textarea>
                     </div>
+
+                    <div class="col-12">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="extra_allow_quantity" id="edit_extra_allow_quantity_{{ extra.id }}" {% if extra.allow_quantity %}checked{% endif %}>
+                            <label class="form-check-label fw-bold" for="edit_extra_allow_quantity_{{ extra.id }}">Permitir cantidad</label>
+                        </div>
+                        <div class="form-text">Actívalo para extras por uña o por pieza. Si está encendido, el precio y el tiempo adicional se multiplican por la cantidad. Si está apagado, se cobrará 1 unidad.</div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
@@ -760,6 +970,11 @@
 {% endfor %}
 <script>
 document.addEventListener("DOMContentLoaded", function () {
+    const formToggleButtons = Array.from(document.querySelectorAll("[data-service-form-target]"));
+    const dynamicForms = Array.from(document.querySelectorAll("[data-service-form]"));
+    const builderTitle = document.getElementById("service_builder_title");
+    const builderBadge = document.getElementById("service_builder_badge");
+    const builderIcon = document.getElementById("service_builder_icon");
     const serviceSearch = document.getElementById("service_list_search");
     const serviceStatus = document.getElementById("service_status_filter");
     const serviceRows = Array.from(document.querySelectorAll("[data-service-row]"));
@@ -767,6 +982,39 @@ document.addEventListener("DOMContentLoaded", function () {
     const extraSearch = document.getElementById("extra_list_search");
     const extraRows = Array.from(document.querySelectorAll("[data-extra-row]"));
     const extraEmpty = document.getElementById("extra_filter_empty");
+
+    const builderCopy = {
+        service: {
+            title: "Agregar servicio",
+            badge: '<i class="fa-solid fa-wand-magic-sparkles me-1"></i>Servicio principal',
+            icon: '<i class="fa-solid fa-bottle-droplet"></i>'
+        },
+        extra: {
+            title: "Agregar extra",
+            badge: '<i class="fa-regular fa-star me-1"></i>Complemento',
+            icon: '<i class="fa-solid fa-gift"></i>'
+        }
+    };
+
+    function setServiceForm(type) {
+        const mode = type === "extra" ? "extra" : "service";
+        formToggleButtons.forEach(function (button) {
+            button.classList.toggle("active", button.dataset.serviceFormTarget === mode);
+        });
+        dynamicForms.forEach(function (form) {
+            form.classList.toggle("is-active", form.dataset.serviceForm === mode);
+        });
+
+        if (builderTitle) builderTitle.textContent = builderCopy[mode].title;
+        if (builderBadge) builderBadge.innerHTML = builderCopy[mode].badge;
+        if (builderIcon) builderIcon.innerHTML = builderCopy[mode].icon;
+    }
+
+    formToggleButtons.forEach(function (button) {
+        button.addEventListener("click", function () {
+            setServiceForm(button.dataset.serviceFormTarget);
+        });
+    });
 
     function applyServiceListFilters() {
         const q = String(serviceSearch?.value || "").trim().toLowerCase();

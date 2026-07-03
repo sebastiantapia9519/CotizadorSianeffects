@@ -687,16 +687,24 @@
                                 value="{{ extra.id }}"
                                 data-name="{{ extra.name }}"
                                 data-price="{{ extra.price or 0 }}"
+                                data-extra-allows-quantity="{{ '1' if extra.allow_quantity else '0' }}"
+                                data-extra-qty-target="sale_qty_{{ extra.id }}"
                                 {% if extra.id in selected_extra_ids %}checked{% endif %}
                             >
                             <span class="sales-extra-body">
                                 <span class="sales-extra-icon"><i class="fa-regular fa-gem"></i></span>
                                 <span class="sales-choice-text">
                                     <strong>{{ extra.name }}</strong>
-                                    <small>+${{ "%.2f"|format(extra.price or 0) }}</small>
+                                    <small>+${{ "%.2f"|format(extra.price or 0) }}{% if extra.allow_quantity %} c/u{% endif %}</small>
                                 </span>
                                 <span class="sales-check"><i class="fa-solid fa-check"></i></span>
                             </span>
+                            {% if extra.allow_quantity %}
+                            <input type="number" name="qty_{{ extra.id }}" id="sale_qty_{{ extra.id }}"
+                                class="form-control form-control-sm mt-2 sales-extra-qty"
+                                value="{{ selected_extra_quantities.get(extra.id, 1) if selected_extra_quantities else 1 }}"
+                                min="1" max="50" style="display: none;">
+                            {% endif %}
                         </label>
                     {% endfor %}
                 </div>
@@ -778,7 +786,13 @@
                                 }.get(person.role, person.role|title) %}
                                 <option
                                     value="{{ person.id }}"
-                                    {% if selected_appointment and selected_appointment.staff_id == person.id %}selected{% endif %}
+                                    {% if selected_appointment_sale and selected_appointment_sale.staff_id == person.id %}
+                                        selected
+                                    {% elif not selected_appointment_sale and selected_appointment and selected_appointment.staff_id == person.id %}
+                                        selected
+                                    {% elif not selected_appointment_sale and (not selected_appointment or not selected_appointment.staff_id) and current_staff_id == person.id %}
+                                        selected
+                                    {% endif %}
                                 >
                                     {{ person.name|upper }} - {{ person_role_label }}
                                 </option>
@@ -1240,10 +1254,19 @@ document.addEventListener("DOMContentLoaded", function () {
     function selectedItems(inputs) {
         return Array.from(inputs)
             .filter(input => input.checked)
-            .map(input => ({
-                name: input.dataset.name || "Concepto",
-                price: Number(input.dataset.price || 0)
-            }));
+            .map(input => {
+                const qtyInput = document.getElementById(input.dataset.extraQtyTarget || "");
+                const quantity = input.dataset.extraAllowsQuantity === "1" && qtyInput
+                    ? Math.max(1, Number(qtyInput.value || 1))
+                    : 1;
+                const unitPrice = Number(input.dataset.price || 0);
+                return {
+                    name: input.dataset.name || "Concepto",
+                    unitPrice: unitPrice,
+                    quantity: quantity,
+                    price: unitPrice * quantity
+                };
+            });
     }
 
     function hasSelectedService() {
@@ -1293,10 +1316,20 @@ document.addEventListener("DOMContentLoaded", function () {
         }
         container.innerHTML = items.map(item => `
             <div class="sales-line">
-                <span>${escapeHtml(item.name)}</span>
+                <span>${escapeHtml(item.name)}${item.quantity > 1 ? " x" + item.quantity : ""}</span>
                 <strong>${money(item.price)}</strong>
             </div>
         `).join("");
+    }
+
+    function updateExtraQuantityInput(input) {
+        const qtyInput = document.getElementById(input.dataset.extraQtyTarget || "");
+        if (!qtyInput) return;
+
+        const show = input.checked && input.dataset.extraAllowsQuantity === "1";
+        qtyInput.style.display = show ? "block" : "none";
+        qtyInput.disabled = !show;
+        if (!show) qtyInput.value = "1";
     }
 
     function updateClientSummary() {
@@ -1449,7 +1482,19 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     serviceChecks.forEach(check => check.addEventListener("change", calculateTotal));
-    extraChecks.forEach(check => check.addEventListener("change", calculateTotal));
+    extraChecks.forEach(function (check) {
+        check.addEventListener("change", function () {
+            updateExtraQuantityInput(check);
+            calculateTotal();
+        });
+        updateExtraQuantityInput(check);
+    });
+    document.querySelectorAll(".sales-extra-qty").forEach(function (input) {
+        input.addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
+        input.addEventListener("input", calculateTotal);
+    });
     discountInput?.addEventListener("input", calculateTotal);
     paidInput?.addEventListener("input", calculateTotal);
     paidInput?.addEventListener("focus", function () {

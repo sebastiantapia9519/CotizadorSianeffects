@@ -1087,16 +1087,56 @@
             border-radius: 14px;
             display: flex;
             font-size: 13px;
+            flex-wrap: wrap;
             font-weight: 900;
             gap: 10px;
-            justify-content: space-between;
+            justify-content: flex-start;
             min-height: 56px;
             padding: 12px 14px;
+        }
+
+        .booking-extra-card > span:first-of-type {
+            flex: 1 1 120px;
+            min-width: 0;
         }
 
         .booking-extra-card strong {
             color: var(--primary-strong);
             white-space: nowrap;
+        }
+
+        .booking-extra-card em {
+            color: var(--muted);
+            font-size: 12px;
+            font-style: normal;
+            font-weight: 800;
+            white-space: nowrap;
+        }
+
+        .booking-extra-card .booking-extra-qty {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            font-size: 13px;
+            font-weight: 900;
+            max-width: 70px;
+            opacity: 1;
+            padding: 7px 8px;
+            pointer-events: auto;
+            position: static;
+            text-align: center;
+        }
+
+        .booking-extra-qty-wrap {
+            align-items: center;
+            display: none;
+            gap: 6px;
+            margin-left: auto;
+        }
+
+        .booking-extra-qty-wrap small {
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 900;
         }
 
         .booking-field {
@@ -2052,7 +2092,7 @@
                     <div class="booking-step-panel" data-booking-step="2">
                         <div class="booking-step-kicker">2. Extras</div>
                         <h3>Extras opcionales</h3>
-                        <p>Agrega complementos a tus servicios.</p>
+                        <p>Agrega complementos a tus servicios. Los extras marcados como <strong>c/u</strong> permiten indicar cantidad, por ejemplo cuántas uñas llevan ese efecto. El precio y el tiempo estimado se multiplican por esa cantidad.</p>
 
                         {% if extras %}
                             <div class="booking-extra-grid">
@@ -2068,9 +2108,21 @@
                                             data-name="{{ extra.name }}"
                                             data-price="{{ extra.price or 0 }}"
                                             data-duration="{{ extra.duration_minutes or 0 }}"
+                                            data-allows-quantity="{{ '1' if extra.allow_quantity else '0' }}"
+                                            data-qty-target="booking_qty_{{ extra.id }}"
                                         >
                                         <span>{{ extra.name }}</span>
-                                        <strong>+${{ "%.2f"|format(extra.price or 0) }}</strong>
+                                        <strong>+${{ "%.2f"|format(extra.price or 0) }}{% if extra.allow_quantity %} c/u{% endif %}</strong>
+                                        {% if extra.duration_minutes %}
+                                            <em>+{{ extra.duration_minutes }} min{% if extra.allow_quantity %} c/u{% endif %}</em>
+                                        {% endif %}
+                                        {% if extra.allow_quantity %}
+                                        <span class="booking-extra-qty-wrap" id="booking_qty_wrap_{{ extra.id }}">
+                                            <small>Cantidad</small>
+                                            <input type="number" name="qty_{{ extra.id }}" id="booking_qty_{{ extra.id }}"
+                                                class="booking-extra-qty" value="1" min="1" max="50" disabled>
+                                        </span>
+                                        {% endif %}
                                     </label>
                                 {% endfor %}
                             </div>
@@ -2354,13 +2406,32 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function selectedBookingExtras() {
         return bookingExtras.filter(input => input.checked).map(function (input) {
+            const qtyInput = document.getElementById(input.dataset.qtyTarget || "");
+            const quantity = input.dataset.allowsQuantity === "1" && qtyInput
+                ? Math.max(1, Number(qtyInput.value || 1))
+                : 1;
+            const unitPrice = Number(input.dataset.price || 0);
+            const unitDuration = Number(input.dataset.duration || 0);
             return {
                 id: input.value,
                 name: input.dataset.name || "Extra",
-                price: Number(input.dataset.price || 0),
-                duration: Number(input.dataset.duration || 0),
+                quantity: quantity,
+                unitPrice: unitPrice,
+                price: unitPrice * quantity,
+                duration: unitDuration * quantity,
             };
         });
+    }
+
+    function updateBookingExtraQuantity(input) {
+        const qtyInput = document.getElementById(input.dataset.qtyTarget || "");
+        const qtyWrap = qtyInput ? qtyInput.closest(".booking-extra-qty-wrap") : null;
+        if (!qtyInput) return;
+
+        const show = input.checked && input.dataset.allowsQuantity === "1";
+        if (qtyWrap) qtyWrap.style.display = show ? "inline-flex" : "none";
+        qtyInput.disabled = !show;
+        if (!show) qtyInput.value = "1";
     }
 
     function selectedBookingTotals() {
@@ -2420,7 +2491,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     return `
                         <div class="booking-selected-line">
                             <div>
-                                <strong>${escapeHTML(item.name)}</strong>
+                                <strong>${escapeHTML(item.name)}${item.quantity > 1 ? " x" + item.quantity : ""}</strong>
                                 <span>${item.duration} min</span>
                             </div>
                             <em>${formatMoney(item.price)}</em>
@@ -2458,7 +2529,7 @@ document.addEventListener("DOMContentLoaded", function () {
             </div>
             <div class="booking-confirm-row"><span>Extras</span><strong>${totals.extras.length || 0}</strong></div>
             <div>
-                ${totals.extras.map(item => `<div class="booking-confirm-row"><span>${escapeHTML(item.name)}</span><strong>${formatMoney(item.price)}</strong></div>`).join("") || "<div class='booking-confirm-row'><span>Sin extras</span><strong>-</strong></div>"}
+                ${totals.extras.map(item => `<div class="booking-confirm-row"><span>${escapeHTML(item.name)}${item.quantity > 1 ? " x" + item.quantity : ""}</span><strong>${formatMoney(item.price)}</strong></div>`).join("") || "<div class='booking-confirm-row'><span>Sin extras</span><strong>-</strong></div>"}
             </div>
             <div class="booking-confirm-row"><span>Fecha y hora</span><strong>${escapeHTML(date)} · ${escapeHTML(time)}</strong></div>
             <div class="booking-confirm-row"><span>Nombre</span><strong>${escapeHTML(name)}</strong></div>
@@ -2577,7 +2648,10 @@ document.addEventListener("DOMContentLoaded", function () {
             const params = new URLSearchParams({ date: selectedDate });
 
             selectedServices.forEach(service => params.append("service_ids", service.id));
-            selectedExtras.forEach(extra => params.append("extras", extra.id));
+            selectedExtras.forEach(function (extra) {
+                params.append("extras", extra.id);
+                params.append("qty_" + extra.id, extra.quantity);
+            });
 
             const response = await fetch(`${availabilityUrl}?${params.toString()}`, {
                 headers: { "Accept": "application/json" }
@@ -2647,6 +2721,18 @@ document.addEventListener("DOMContentLoaded", function () {
 
     bookingExtras.forEach(function (input) {
         input.addEventListener("change", function () {
+            updateBookingExtraQuantity(input);
+            updateBookingSummary();
+            loadAvailableSlots();
+        });
+        updateBookingExtraQuantity(input);
+    });
+
+    document.querySelectorAll(".booking-extra-qty").forEach(function (input) {
+        input.addEventListener("click", function (event) {
+            event.stopPropagation();
+        });
+        input.addEventListener("input", function () {
             updateBookingSummary();
             loadAvailableSlots();
         });

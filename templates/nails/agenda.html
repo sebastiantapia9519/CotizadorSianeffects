@@ -19,10 +19,10 @@
 
     .agenda-stat {
         align-items: center;
-        background: rgba(255,255,255,.96);
+        background: rgba(255, 255, 255, .96);
         border: 1px solid var(--nails-border);
         border-radius: 10px;
-        box-shadow: 0 14px 34px rgba(26,31,44,.06);
+        box-shadow: 0 14px 34px rgba(26, 31, 44, .06);
         display: grid;
         gap: 14px;
         grid-template-columns: 58px minmax(0, 1fr);
@@ -65,10 +65,10 @@
     }
 
     .agenda-board {
-        background: rgba(255,255,255,.96);
+        background: rgba(255, 255, 255, .96);
         border: 1px solid var(--nails-border);
         border-radius: 10px;
-        box-shadow: 0 16px 42px rgba(26,31,44,.06);
+        box-shadow: 0 16px 42px rgba(26, 31, 44, .06);
         overflow: hidden;
     }
 
@@ -510,7 +510,8 @@
         font-weight: 900;
         height: 46px;
         justify-content: center;
-        width: 100%; /* Ajuste a la columna */
+        width: 100%;
+        /* Ajuste a la columna */
     }
 
     .manager-info {
@@ -696,7 +697,7 @@
         line-height: 1;
     }
 
-    .manager-summary-row div > span {
+    .manager-summary-row div>span {
         color: var(--nails-muted);
         display: block;
         font-size: 11px;
@@ -809,6 +810,79 @@
             grid-template-columns: 1fr;
         }
     }
+
+    /* === ESTILOS PARA BLOQUEO DE TIEMPO === */
+    .type-toggle-group {
+        display: flex;
+        background: var(--nails-primary-soft);
+        border-radius: 10px;
+        padding: 4px;
+        margin-bottom: 20px;
+    }
+
+    .type-toggle-btn {
+        flex: 1;
+        border: none;
+        background: transparent;
+        border-radius: 8px;
+        padding: 10px;
+        font-weight: 900;
+        font-size: 13px;
+        color: var(--nails-primary-strong);
+        transition: all 0.2s ease;
+        opacity: 0.7;
+    }
+
+    .type-toggle-btn.active {
+        background: #fff;
+        opacity: 1;
+        box-shadow: 0 4px 12px rgba(26, 31, 44, 0.08);
+    }
+
+    /* Clases utilitarias para ocultar/mostrar según el estado */
+    .state-appointment .only-for-block {
+        display: none !important;
+    }
+
+    .state-block .only-for-appointment {
+        display: none !important;
+    }
+    .all-day-row {
+        align-items: center;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 12px;
+    }
+
+    .all-day-row strong {
+        color: var(--nails-ink);
+        font-size: 13px;
+    }
+
+    .all-day-row small {
+        color: var(--nails-muted);
+        display: block;
+        font-size: 11px;
+        font-weight: 800;
+    }
+
+    .is-block-event {
+        background: #f1f5f9 !important;
+        border-color: #cbd5e1 !important;
+        color: #64748b !important;
+    }
+
+    .is-block-event strong::before {
+        content: "Bloqueado: ";
+    }
+
+    .is-block-panel .agenda-client-avatar {
+        background: #e2e8f0;
+        color: #475569;
+    }
 </style>
 {% endblock %}
 
@@ -816,48 +890,50 @@
 
 <div class="modal fade" id="nuevaCitaModal" tabindex="-1" aria-labelledby="nuevaCitaModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0" style="border-radius: 16px; box-shadow: 0 24px 60px rgba(26, 31, 44, 0.15);">
-            
+        <div class="modal-content border-0"
+            style="border-radius: 16px; box-shadow: 0 24px 60px rgba(26, 31, 44, 0.15);">
+
             <div class="modal-header border-bottom-0 px-4 pt-4 pb-2">
                 <h2 class="modal-title h4 mb-0" id="nuevaCitaModalLabel">Nueva cita</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            
-            <div class="modal-body px-4 pb-4 pt-0">
-                <form method="POST" action="" class="row g-3">
 
-                    <div class="col-12">
+            <div class="modal-body px-4 pb-4 pt-0">
+                <form method="POST" action="" class="row g-3" id="formNuevaCita">
+                    <!-- Selector Cita / Bloqueo -->
+                    <div class="col-12 mb-1">
+                        <div class="type-toggle-group">
+                            <button type="button" class="type-toggle-btn active" data-type="appointment">Cita de
+                                Uñas</button>
+                            <button type="button" class="type-toggle-btn" data-type="block">Bloquear Tiempo</button>
+                        </div>
+                        <input type="hidden" name="appointment_type" id="appointment_type" value="appointment">
+                    </div>
+
+                    <!-- Cliente (Oculto en Bloqueo) -->
+                    <div class="col-12 only-for-appointment">
                         <label class="form-label">Cliente</label>
                         <div class="nails-client-autocomplete">
                             <input type="hidden" name="client_id" id="client_id" value="">
-                            <input
-                                type="text"
-                                name="quick_client_name"
-                                id="quick_client_name"
-                                class="form-control"
-                                placeholder="Buscar clienta o escribir nombre nuevo"
-                                autocomplete="off"
-                            >
+                            <input type="text" name="quick_client_name" id="quick_client_name" class="form-control"
+                                placeholder="Buscar clienta o escribir nombre nuevo" autocomplete="off">
                             <input type="hidden" name="quick_client_phone" id="quick_client_phone" value="">
                             <div id="nails_client_suggestions" class="nails-client-suggestions d-none"></div>
                         </div>
-                        <div class="form-text">
-                            Si ya existe, selecciónala. Si escribes un nombre nuevo, se guardará. Si lo dejas vacío, será Cliente General.
-                        </div>
+                        <div class="form-text">Si ya existe, selecciónala. Si escribes un nombre nuevo, se guardará. Si
+                            lo dejas vacío, será Cliente General.</div>
                     </div>
 
-                    <div class="col-md-6">
+                    <!-- Servicios (Oculto en Bloqueo) -->
+                    <div class="col-md-6 only-for-appointment">
                         <label class="form-label">Servicios</label>
                         <div class="d-flex gap-2">
                             <select id="appointment_service_picker" name="service_id" class="form-select">
                                 <option value="">Seleccionar servicio</option>
                                 {% for service in services %}
-                                <option
-                                    value="{{ service.id }}"
-                                    data-name="{{ service.name }}"
+                                <option value="{{ service.id }}" data-name="{{ service.name }}"
                                     data-price="{{ service.base_price or 0 }}"
-                                    data-duration="{{ service.duration_minutes or 0 }}"
-                                >
+                                    data-duration="{{ service.duration_minutes or 0 }}">
                                     {{ service.name }} - ${{ "%.2f"|format(service.base_price or 0) }}
                                 </option>
                                 {% endfor %}
@@ -871,44 +947,68 @@
                         <div class="form-text">Agrega uno o más servicios para la misma visita.</div>
                     </div>
 
+                    <!-- Staff (Visible en ambos: Ideal para saber a qué técnica le bloqueas la hora) -->
                     <div class="col-md-6">
                         <label class="form-label">Staff / Técnica</label>
-                        <select name="staff_id" class="form-select">
+                        <select name="staff_id" id="appointment_staff_id" class="form-select">
                             <option value="">Sin asignar</option>
                             {% for person in staff %}
-                            {% set person_role_label = {
-                                'owner': 'Jefa',
-                                'admin': 'Administración',
-                                'staff': 'Técnica',
-                                'reception': 'Recepción'
-                            }.get(person.role, person.role|title) %}
-                            <option value="{{ person.id }}">
-                                {{ person.name|upper }} - {{ person_role_label }}
-                            </option>
+                            {% set person_role_label = {'owner': 'Jefa', 'admin': 'Administración', 'staff': 'Técnica',
+                            'reception': 'Recepción'}.get(person.role, person.role|title) %}
+                            <option value="{{ person.id }}">{{ person.name|upper }} - {{ person_role_label }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
+                    <!-- Fecha (Visible en ambos) -->
                     <div class="col-md-6">
                         <label class="form-label">Fecha</label>
                         <input type="date" name="appointment_date" id="appointment_date" class="form-control" required>
                     </div>
+
+                    <!-- Horario Dinámico -->
                     <div class="col-md-6">
-                        <label class="form-label">Hora</label>
-                        <input type="time" name="start_time" id="start_time" class="form-control" required>
+                        <label class="form-label">Horario</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="time" name="start_time" id="start_time" class="form-control" required>
+                            <span class="only-for-block fw-bold text-muted">a</span>
+                            <input type="time" name="end_time" id="end_time" class="form-control only-for-block">
+                        </div>
                     </div>
 
-                    <div class="col-12">
+                    <div class="col-12 only-for-block">
+                        <label class="all-day-row" for="all_day_block">
+                            <span>
+                                <strong>Todo el día</strong>
+                                <small>Bloquea a esta persona de 00:00 a 23:59.</small>
+                            </span>
+                            <span class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" name="all_day" value="1"
+                                    id="all_day_block">
+                            </span>
+                        </label>
+                    </div>
+
+                    <!-- Extras (Oculto en Bloqueo) -->
+                    <div class="col-12 only-for-appointment">
                         <label class="form-label">Extras</label>
                         {% if extras %}
                         <div class="nails-extra-list">
                             {% for extra in extras %}
-                            <label class="nails-extra-option">
-                                <input type="checkbox" name="extras" value="{{ extra.id }}">
-                                <span>
+                            <label class="nails-extra-option align-items-center">
+                                <input type="checkbox" name="extras" value="{{ extra.id }}"
+                                    data-extra-allows-quantity="{{ '1' if extra.allow_quantity else '0' }}"
+                                    data-extra-qty-target="qty_{{ extra.id }}">
+                                <span class="flex-grow-1">
                                     <strong>{{ extra.name }}</strong>
-                                    <small>${{ "%.2f"|format(extra.price or 0) }} {% if extra.duration_minutes %}· +{{ extra.duration_minutes }} min{% endif %}</small>
+                                    <small>${{ "%.2f"|format(extra.price or 0) }}{% if extra.allow_quantity %} c/u{% endif %} {% if extra.duration_minutes %}· +{{
+                                        extra.duration_minutes }} min{% if extra.allow_quantity %} c/u{% endif %}{% endif %}</small>
                                 </span>
+                                {% if extra.allow_quantity %}
+                                <input type="number" name="qty_{{ extra.id }}" id="qty_{{ extra.id }}"
+                                    class="form-control form-control-sm nails-extra-qty" value="1" min="1" max="50"
+                                    style="width: 70px; display: none;">
+                                {% endif %}
                             </label>
                             {% endfor %}
                         </div>
@@ -917,31 +1017,35 @@
                         {% endif %}
                     </div>
 
-                    <div class="col-md-6">
+                    <!-- Estado y Anticipo (Ocultos en Bloqueo) -->
+                    <div class="col-md-6 only-for-appointment">
                         <label class="form-label">Estado</label>
                         <select name="status" class="form-select">
                             <option value="pendiente">Pendiente</option>
                             <option value="confirmada">Confirmada</option>
                             <option value="atendida">Atendida</option>
                             <option value="cancelada">Cancelada</option>
-                            <option value="no_asistio">No asistió</option>
                         </select>
                     </div>
-                    <div class="col-md-6">
+                    <div class="col-md-6 only-for-appointment">
                         <label class="form-label">Anticipo</label>
-                        <input type="number" name="deposit_amount" class="form-control" min="0" step="0.01" value="0" data-clear-zero-on-focus>
+                        <input type="number" name="deposit_amount" class="form-control" min="0" step="0.01" value="0"
+                            data-clear-zero-on-focus>
                     </div>
 
+                    <!-- Notas (Visible en ambos, texto dinámico) -->
                     <div class="col-12">
                         <label class="form-label">Notas</label>
-                        <textarea name="notes" class="form-control" rows="2" placeholder="Ej. Quiere diseño rosa con pedrería."></textarea>
+                        <textarea name="notes" id="appointment_notes" class="form-control" rows="2"
+                            placeholder="Ej. Quiere diseño rosa con pedrería."></textarea>
                     </div>
 
+                    <!-- Botones -->
                     <div class="col-12 mt-4 text-end">
-                        <button type="button" class="btn btn-outline-secondary me-2" data-bs-dismiss="modal">Cancelar</button>
-                        <button type="submit" class="btn btn-primary">Guardar cita</button>
+                        <button type="button" class="btn btn-outline-secondary me-2"
+                            data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" id="btnSubmitCita" class="btn btn-primary">Guardar cita</button>
                     </div>
-
                 </form>
             </div>
         </div>
@@ -997,16 +1101,9 @@
 
             <div class="modal-footer border-top-0">
                 {% if can_delete_appointments %}
-                <form
-                    method="POST"
-                    id="detalle_cita_delete_form"
-                    class="me-auto require-confirm"
-                    data-title="¿Eliminar esta cita?"
-                    data-text="Esta acción no se puede deshacer."
-                    data-icon="warning"
-                    data-btn-text="Sí, eliminar"
-                    data-btn-color="#dc3545"
-                >
+                <form method="POST" id="detalle_cita_delete_form" class="me-auto require-confirm"
+                    data-title="¿Eliminar esta cita?" data-text="Esta acción no se puede deshacer." data-icon="warning"
+                    data-btn-text="Sí, eliminar" data-btn-color="#dc3545">
                     <button type="submit" class="btn btn-outline-danger">
                         <i class="fa-regular fa-trash-can me-1"></i> Eliminar cita
                     </button>
@@ -1023,7 +1120,8 @@
 
 <div class="modal fade" id="editarCitaModal" tabindex="-1" aria-labelledby="editarCitaModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0" style="border-radius: 16px; box-shadow: 0 24px 60px rgba(26, 31, 44, 0.15);">
+        <div class="modal-content border-0"
+            style="border-radius: 16px; box-shadow: 0 24px 60px rgba(26, 31, 44, 0.15);">
             <div class="modal-header border-bottom-0 px-4 pt-4 pb-2">
                 <h2 class="modal-title h4 mb-0" id="editarCitaModalLabel">Editar cita</h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
@@ -1031,12 +1129,22 @@
 
             <div class="modal-body px-4 pb-4 pt-0">
                 <form method="POST" id="editar_cita_form" class="row g-3">
-                    <div class="col-md-6">
+                    <div class="col-12 mb-1">
+                        <div class="type-toggle-group">
+                            <button type="button" class="type-toggle-btn active" data-type="appointment">Cita de
+                                Uñas</button>
+                            <button type="button" class="type-toggle-btn" data-type="block">Bloquear Tiempo</button>
+                        </div>
+                        <input type="hidden" name="appointment_type" id="edit_appointment_type" value="appointment">
+                    </div>
+
+                    <div class="col-md-6 only-for-appointment">
                         <label class="form-label">Cliente</label>
                         <select name="client_id" id="edit_client_id" class="form-select">
                             <option value="">Cliente General</option>
                             {% for client in clients %}
-                            <option value="{{ client.id }}">{{ client.name }}{% if client.phone %} - {{ client.phone }}{% endif %}</option>
+                            <option value="{{ client.id }}">{{ client.name }}{% if client.phone %} - {{ client.phone
+                                }}{% endif %}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -1047,30 +1155,26 @@
                             <option value="">Sin asignar</option>
                             {% for person in staff %}
                             {% set person_role_label = {
-                                'owner': 'Jefa',
-                                'admin': 'Administración',
-                                'staff': 'Técnica',
-                                'reception': 'Recepción'
+                            'owner': 'Jefa',
+                            'admin': 'Administración',
+                            'staff': 'Técnica',
+                            'reception': 'Recepción'
                             }.get(person.role, person.role|title) %}
                             <option value="{{ person.id }}">{{ person.name|upper }} - {{ person_role_label }}</option>
                             {% endfor %}
                         </select>
                     </div>
 
-                    <div class="col-12">
+                    <div class="col-12 only-for-appointment">
                         <label class="form-label">Servicios</label>
                         <div class="nails-extra-list">
                             {% for service in services %}
                             <label class="nails-extra-option">
-                                <input
-                                    type="checkbox"
-                                    name="service_ids"
-                                    value="{{ service.id }}"
-                                    data-edit-service
-                                >
+                                <input type="checkbox" name="service_ids" value="{{ service.id }}" data-edit-service>
                                 <span>
                                     <strong>{{ service.name }}</strong>
-                                    <small>${{ "%.2f"|format(service.base_price or 0) }} {% if service.duration_minutes %}· {{ service.duration_minutes }} min{% endif %}</small>
+                                    <small>${{ "%.2f"|format(service.base_price or 0) }} {% if service.duration_minutes
+                                        %}· {{ service.duration_minutes }} min{% endif %}</small>
                                 </span>
                             </label>
                             {% endfor %}
@@ -1080,15 +1184,33 @@
 
                     <div class="col-md-6">
                         <label class="form-label">Fecha</label>
-                        <input type="date" name="appointment_date" id="edit_appointment_date" class="form-control" required>
+                        <input type="date" name="appointment_date" id="edit_appointment_date" class="form-control"
+                            required>
                     </div>
 
                     <div class="col-md-6">
-                        <label class="form-label">Hora</label>
-                        <input type="time" name="start_time" id="edit_start_time" class="form-control" required>
+                        <label class="form-label">Horario</label>
+                        <div class="d-flex align-items-center gap-2">
+                            <input type="time" name="start_time" id="edit_start_time" class="form-control" required>
+                            <span class="only-for-block fw-bold text-muted">a</span>
+                            <input type="time" name="end_time" id="edit_end_time" class="form-control only-for-block">
+                        </div>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-12 only-for-block">
+                        <label class="all-day-row" for="edit_all_day_block">
+                            <span>
+                                <strong>Todo el día</strong>
+                                <small>Bloquea a esta persona de 00:00 a 23:59.</small>
+                            </span>
+                            <span class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" name="all_day" value="1"
+                                    id="edit_all_day_block">
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="col-md-6 only-for-appointment">
                         <label class="form-label">Estado</label>
                         <select name="status" id="edit_status" class="form-select">
                             <option value="pendiente">Pendiente</option>
@@ -1099,27 +1221,31 @@
                         </select>
                     </div>
 
-                    <div class="col-md-6">
+                    <div class="col-md-6 only-for-appointment">
                         <label class="form-label">Anticipo</label>
-                        <input type="number" name="deposit_amount" id="edit_deposit_amount" class="form-control" min="0" step="0.01" value="0" data-clear-zero-on-focus>
+                        <input type="number" name="deposit_amount" id="edit_deposit_amount" class="form-control" min="0"
+                            step="0.01" value="0" data-clear-zero-on-focus>
                     </div>
 
-                    <div class="col-12">
+                    <div class="col-12 only-for-appointment">
                         <label class="form-label">Extras</label>
                         {% if extras %}
                         <div class="nails-extra-list">
                             {% for extra in extras %}
-                            <label class="nails-extra-option">
-                                <input
-                                    type="checkbox"
-                                    name="extras"
-                                    value="{{ extra.id }}"
-                                    data-edit-extra
-                                >
-                                <span>
+                            <label class="nails-extra-option align-items-center">
+                                <input type="checkbox" name="extras" value="{{ extra.id }}" data-edit-extra
+                                    data-extra-allows-quantity="{{ '1' if extra.allow_quantity else '0' }}"
+                                    data-extra-qty-target="edit_qty_{{ extra.id }}">
+                                <span class="flex-grow-1">
                                     <strong>{{ extra.name }}</strong>
-                                    <small>${{ "%.2f"|format(extra.price or 0) }} {% if extra.duration_minutes %}· +{{ extra.duration_minutes }} min{% endif %}</small>
+                                    <small>${{ "%.2f"|format(extra.price or 0) }}{% if extra.allow_quantity %} c/u{% endif %} {% if extra.duration_minutes %}· +{{
+                                        extra.duration_minutes }} min{% if extra.allow_quantity %} c/u{% endif %}{% endif %}</small>
                                 </span>
+                                {% if extra.allow_quantity %}
+                                <input type="number" name="qty_{{ extra.id }}" id="edit_qty_{{ extra.id }}"
+                                    class="form-control form-control-sm nails-extra-qty" value="1" min="1" max="50"
+                                    style="width: 70px; display: none;">
+                                {% endif %}
                             </label>
                             {% endfor %}
                         </div>
@@ -1135,31 +1261,27 @@
 
                     <div class="col-12 mt-4 d-flex justify-content-between gap-2 flex-wrap">
                         {% if can_delete_appointments %}
-                        <button type="submit" class="btn btn-outline-danger" id="edit_delete_button" form="editar_cita_delete_form">
+                        <button type="submit" class="btn btn-outline-danger" id="edit_delete_button"
+                            form="editar_cita_delete_form">
                             Eliminar cita
                         </button>
                         {% else %}
-                        <span class="text-muted small align-self-center">Solo la dueña del salón puede eliminar citas.</span>
+                        <span class="text-muted small align-self-center">Solo la dueña del salón puede eliminar
+                            citas.</span>
                         {% endif %}
 
                         <div class="d-flex gap-2">
-                            <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+                            <button type="button" class="btn btn-outline-secondary"
+                                data-bs-dismiss="modal">Cancelar</button>
                             <button type="submit" class="btn btn-primary">Guardar cambios</button>
                         </div>
                     </div>
                 </form>
 
                 {% if can_delete_appointments %}
-                <form
-                    method="POST"
-                    id="editar_cita_delete_form"
-                    class="require-confirm"
-                    data-title="¿Eliminar esta cita?"
-                    data-text="Esta acción no se puede deshacer."
-                    data-icon="warning"
-                    data-btn-text="Sí, eliminar"
-                    data-btn-color="#dc3545"
-                ></form>
+                <form method="POST" id="editar_cita_delete_form" class="require-confirm"
+                    data-title="¿Eliminar esta cita?" data-text="Esta acción no se puede deshacer." data-icon="warning"
+                    data-btn-text="Sí, eliminar" data-btn-color="#dc3545"></form>
                 {% endif %}
             </div>
         </div>
@@ -1173,30 +1295,36 @@
             <div>
                 <div class="agenda-stat-label">Citas hoy</div>
                 <div class="agenda-stat-value">{{ agenda_stats.appointments_today or 0 }}</div>
-                <a href="#" class="agenda-stat-link" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">Ver detalle →</a>
+                <a href="#" class="agenda-stat-link" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">Ver
+                    detalle →</a>
             </div>
         </article>
 
         <article class="agenda-stat">
-            <span class="agenda-stat-icon" style="--stat-bg:#fff3e6;--stat-color:#f97316;"><i class="fa-regular fa-clock"></i></span>
+            <span class="agenda-stat-icon" style="--stat-bg:#fff3e6;--stat-color:#f97316;"><i
+                    class="fa-regular fa-clock"></i></span>
             <div>
                 <div class="agenda-stat-label">Pendientes</div>
                 <div class="agenda-stat-value">{{ agenda_stats.pending_count or 0 }}</div>
-                <a href="#" class="agenda-stat-link" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">Ver pendientes →</a>
+                <a href="#" class="agenda-stat-link" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">Ver
+                    pendientes →</a>
             </div>
         </article>
 
         <article class="agenda-stat">
-            <span class="agenda-stat-icon" style="--stat-bg:#e8f8ef;--stat-color:#169b5f;"><i class="fa-solid fa-dollar-sign"></i></span>
+            <span class="agenda-stat-icon" style="--stat-bg:#e8f8ef;--stat-color:#169b5f;"><i
+                    class="fa-solid fa-dollar-sign"></i></span>
             <div>
                 <div class="agenda-stat-label">Anticipos</div>
                 <div class="agenda-stat-value">${{ "%.2f"|format(agenda_stats.deposits_total or 0) }}</div>
-                <a href="#" class="agenda-stat-link" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">Ver anticipos →</a>
+                <a href="#" class="agenda-stat-link" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">Ver
+                    anticipos →</a>
             </div>
         </article>
 
         <article class="agenda-stat">
-            <span class="agenda-stat-icon" style="--stat-bg:#fdf2f8;--stat-color:#db2777;"><i class="fa-regular fa-calendar-check"></i></span>
+            <span class="agenda-stat-icon" style="--stat-bg:#fdf2f8;--stat-color:#db2777;"><i
+                    class="fa-regular fa-calendar-check"></i></span>
             <div>
                 <div class="agenda-stat-label">Próxima cita</div>
                 <div class="agenda-stat-value">{{ agenda_stats.next_time }}</div>
@@ -1213,35 +1341,37 @@
             </div>
 
             <div class="nails-calendar-toolbar d-flex align-items-center gap-2 flex-wrap justify-content-end">
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar_prev_week">
-                            <i class="fa-solid fa-chevron-left"></i>
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar_today">
-                            Hoy
-                        </button>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar_next_week">
-                            <i class="fa-solid fa-chevron-right"></i>
-                        </button>
-                    </div>
-                    <div id="calendar_week_label" class="fw-bold text-nowrap mx-2"></div>
-
-                    <div class="agenda-mode-group d-none d-md-inline-flex" role="group" aria-label="Vista del calendario">
-                        <button type="button" data-calendar-mode="day">Día</button>
-                        <button type="button" class="active" data-calendar-mode="week">Semana</button>
-                        <button type="button" data-calendar-mode="list">Lista</button>
-                    </div>
-
-                    <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#gestionarCitasModal">
-                        <i class="fa-regular fa-calendar-days me-1"></i>
-                        Gestionar
-                        <span class="badge text-bg-light ms-1">{{ appointments|length if appointments else 0 }}</span>
+                <div class="btn-group">
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar_prev_week">
+                        <i class="fa-solid fa-chevron-left"></i>
                     </button>
-                    
-                    <button class="btn btn-sm btn-primary d-none d-md-inline-flex" data-bs-toggle="modal" data-bs-target="#nuevaCitaModal">
-                        <i class="fa-solid fa-plus me-1"></i> Nueva Cita
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar_today">
+                        Hoy
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" id="calendar_next_week">
+                        <i class="fa-solid fa-chevron-right"></i>
                     </button>
                 </div>
+                <div id="calendar_week_label" class="fw-bold text-nowrap mx-2"></div>
+
+                <div class="agenda-mode-group d-none d-md-inline-flex" role="group" aria-label="Vista del calendario">
+                    <button type="button" data-calendar-mode="day">Día</button>
+                    <button type="button" class="active" data-calendar-mode="week">Semana</button>
+                    <button type="button" data-calendar-mode="list">Lista</button>
+                </div>
+
+                <button class="btn btn-sm btn-outline-primary" data-bs-toggle="modal"
+                    data-bs-target="#gestionarCitasModal">
+                    <i class="fa-regular fa-calendar-days me-1"></i>
+                    Gestionar
+                    <span class="badge text-bg-light ms-1">{{ appointments|length if appointments else 0 }}</span>
+                </button>
+
+                <button class="btn btn-sm btn-primary d-none d-md-inline-flex" data-bs-toggle="modal"
+                    data-bs-target="#nuevaCitaModal">
+                    <i class="fa-solid fa-plus me-1"></i> Nueva Cita
+                </button>
+            </div>
         </div>
 
         <button class="nails-fab d-md-none" data-bs-toggle="modal" data-bs-target="#nuevaCitaModal">
@@ -1250,21 +1380,21 @@
 
         <div class="agenda-workspace" id="agenda_workspace">
             <div class="agenda-calendar-pane">
-            <div class="nails-calendar">
-                <div class="nails-calendar-grid" id="main_calendar_grid">
-                    <div class="nails-calendar-time-column">
-                        <div class="nails-calendar-day-header"></div>
-                        <div id="calendar_time_labels"></div>
+                <div class="nails-calendar">
+                    <div class="nails-calendar-grid" id="main_calendar_grid">
+                        <div class="nails-calendar-time-column">
+                            <div class="nails-calendar-day-header"></div>
+                            <div id="calendar_time_labels"></div>
+                        </div>
+                        {% for day_name in ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"] %}
+                        <div class="nails-calendar-day-col" data-day-index="{{ loop.index0 }}">
+                            <div class="nails-calendar-day-header">{{ day_name }}</div>
+                            <div class="nails-calendar-day-body"></div>
+                        </div>
+                        {% endfor %}
                     </div>
-                    {% for day_name in ["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"] %}
-                    <div class="nails-calendar-day-col" data-day-index="{{ loop.index0 }}">
-                        <div class="nails-calendar-day-header">{{ day_name }}</div>
-                        <div class="nails-calendar-day-body"></div>
-                    </div>
-                    {% endfor %}
                 </div>
-            </div>
-            <div class="agenda-list-view" id="agenda_list_view"></div>
+                <div class="agenda-list-view" id="agenda_list_view"></div>
             </div>
 
             <aside class="agenda-detail-panel" id="agenda_detail_panel" aria-live="polite">
@@ -1313,7 +1443,9 @@
                     </div>
                     <div class="agenda-detail-row" id="panel_cita_notas_wrap">
                         <i class="fa-regular fa-note-sticky"></i>
-                        <div><span>Notas</span><p id="panel_cita_notas"></p></div>
+                        <div><span>Notas</span>
+                            <p id="panel_cita_notas"></p>
+                        </div>
                     </div>
                 </div>
 
@@ -1323,21 +1455,15 @@
                         <button type="submit" class="btn btn-primary w-100">Confirmar</button>
                     </form>
                     <a href="#" class="btn btn-outline-primary w-100" id="panel_cita_venta_url">Cobrar venta</a>
-                    <button type="button" class="btn btn-outline-secondary w-100" id="panel_cita_edit_button">Reagendar</button>
+                    <button type="button" class="btn btn-outline-secondary w-100"
+                        id="panel_cita_edit_button">Reagendar</button>
                     <a href="#" class="btn btn-outline-success w-100" id="panel_cita_whatsapp">
                         <i class="fa-brands fa-whatsapp me-1"></i> WhatsApp
                     </a>
                     {% if can_delete_appointments %}
-                    <form
-                        method="POST"
-                        id="panel_cita_delete_form"
-                        class="require-confirm"
-                        data-title="¿Eliminar esta cita?"
-                        data-text="Esta acción no se puede deshacer."
-                        data-icon="warning"
-                        data-btn-text="Sí, eliminar"
-                        data-btn-color="#dc3545"
-                    >
+                    <form method="POST" id="panel_cita_delete_form" class="require-confirm"
+                        data-title="¿Eliminar esta cita?" data-text="Esta acción no se puede deshacer."
+                        data-icon="warning" data-btn-text="Sí, eliminar" data-btn-color="#dc3545">
                         <button type="submit" class="btn btn-outline-danger w-100">
                             <i class="fa-regular fa-trash-can me-1"></i> Cancelar cita
                         </button>
@@ -1347,416 +1473,471 @@
             </aside>
         </div>
 
-            <div id="nails_calendar_appointment_data" class="d-none">
-                {% for appointment in appointments %}
-                <div class="nails-calendar-appointment-data"
-                    data-id="{{ appointment.id }}"
-                    data-start="{{ appointment.start_time_iso or appointment.start_time.strftime('%Y-%m-%dT%H:%M:%S') }}"
-                    data-end="{{ appointment.end_time_iso or appointment.end_time.strftime('%Y-%m-%dT%H:%M:%S') }}"
-                    data-title="{{ appointment.title or appointment.service_name }}"
-                    data-client-id="{{ appointment.client_id or '' }}"
-                    data-client="{{ appointment.client_name or 'Cliente General' }}"
-                    data-phone="{{ appointment.client_phone or '' }}"
-                    data-status="{{ appointment.status }}"
-                    data-staff-id="{{ appointment.staff_id or '' }}"
-                    data-staff="{{ appointment.staff_name or '' }}"
-                    data-total="{{ appointment.estimated_total or 0 }}"
-                    data-deposit="{{ appointment.deposit_amount or 0 }}"
-                    data-notes="{{ appointment.notes or '' }}"
-                    data-start-label="{{ appointment.start_time_formatted or appointment.start_time }}"
-                    data-end-label="{{ appointment.end_time_formatted or appointment.end_time }}"
-                    data-url="{{ url_for('nails.ventas', appointment_id=appointment.id) }}">
-                    <div class="nails-calendar-services-data">
-                        {% if appointment_services and appointment_services.get(appointment.id) %}
-                            {% for service in appointment_services.get(appointment.id) %}
-                            <span
-                                data-id="{{ service.service_id or '' }}"
-                                data-name="{{ service.name }}"
-                                data-price="{{ service.price or 0 }}"
-                                data-duration="{{ service.duration_minutes or 0 }}"
-                            ></span>
-                            {% endfor %}
-                        {% else %}
-                            <span
-                                data-id="{{ appointment.service_id or '' }}"
-                                data-name="{{ appointment.service_name or appointment.title }}"
-                                data-price="{{ appointment.estimated_total or 0 }}"
-                                data-duration="0"
-                            ></span>
-                        {% endif %}
-                    </div>
-                    <div class="nails-calendar-extras-data">
-                        {% if appointment_extras.get(appointment.id) %}
-                            {% for extra in appointment_extras.get(appointment.id) %}
-                            <span
-                                data-id="{{ extra.extra_id or '' }}"
-                                data-name="{{ extra.name }}"
-                                data-price="{{ extra.price or 0 }}"
-                                data-duration="{{ extra.duration_minutes or 0 }}"
-                            ></span>
-                            {% endfor %}
-                        {% endif %}
-                    </div>
+        <div id="nails_calendar_appointment_data" class="d-none">
+            {% for appointment in appointments %}
+            <div class="nails-calendar-appointment-data" data-id="{{ appointment.id }}"
+                data-start="{{ appointment.start_time_iso or appointment.start_time.strftime('%Y-%m-%dT%H:%M:%S') }}"
+                data-end="{{ appointment.end_time_iso or appointment.end_time.strftime('%Y-%m-%dT%H:%M:%S') }}"
+                data-type="{{ 'block' if appointment.title == 'Bloqueo de horario' and not appointment.service_id else 'appointment' }}"
+                data-title="{{ appointment.title or appointment.service_name }}"
+                data-client-id="{{ appointment.client_id or '' }}"
+                data-client="{{ appointment.client_name or 'Cliente General' }}"
+                data-phone="{{ appointment.client_phone or '' }}" data-status="{{ appointment.status }}"
+                data-staff-id="{{ appointment.staff_id or '' }}" data-staff="{{ appointment.staff_name or '' }}"
+                data-total="{{ appointment.estimated_total or 0 }}" data-deposit="{{ appointment.deposit_amount or 0 }}"
+                data-notes="{{ appointment.notes or '' }}"
+                data-start-label="{{ appointment.start_time_formatted or appointment.start_time }}"
+                data-end-label="{{ appointment.end_time_formatted or appointment.end_time }}"
+                data-url="{{ url_for('nails.ventas', appointment_id=appointment.id) }}">
+                <div class="nails-calendar-services-data">
+                    {% if appointment_services and appointment_services.get(appointment.id) %}
+                    {% for service in appointment_services.get(appointment.id) %}
+                    <span data-id="{{ service.service_id or '' }}" data-name="{{ service.name }}"
+                        data-price="{{ service.price or 0 }}"
+                        data-duration="{{ service.duration_minutes or 0 }}"></span>
+                    {% endfor %}
+                    {% else %}
+                    <span data-id="{{ appointment.service_id or '' }}"
+                        data-name="{{ appointment.service_name or appointment.title }}"
+                        data-price="{{ appointment.estimated_total or 0 }}" data-duration="0"></span>
+                    {% endif %}
                 </div>
-                {% endfor %}
+                <div class="nails-calendar-extras-data">
+                    {% if appointment_extras.get(appointment.id) %}
+                    {% for extra in appointment_extras.get(appointment.id) %}
+                    <span data-id="{{ extra.extra_id or '' }}" data-name="{{ extra.name }}"
+                        data-price="{{ extra.price or 0 }}" data-duration="{{ extra.duration_minutes or 0 }}"
+                        data-quantity="{{ extra.quantity or 1 }}"></span>
+                    {% endfor %}
+                    {% endif %}
+                </div>
             </div>
+            {% endfor %}
+        </div>
     </section>
 
-        <div class="modal fade" id="gestionarCitasModal" tabindex="-1" aria-labelledby="gestionarCitasModalLabel" aria-hidden="true">
-            <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
-                <div class="modal-content manager-modal-shell border-0">
-                    <div class="modal-header border-bottom-0 px-4 pt-4 pb-2">
-                        <div>
-                            <h2 class="modal-title manager-title" id="gestionarCitasModalLabel">
-                                Gestionar citas <i class="fa-solid fa-wand-magic-sparkles"></i>
-                            </h2>
-                            <div class="text-muted small fw-bold">Busca, revisa estados y convierte citas en ventas.</div>
+    <div class="modal fade" id="gestionarCitasModal" tabindex="-1" aria-labelledby="gestionarCitasModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-xl modal-dialog-scrollable">
+            <div class="modal-content manager-modal-shell border-0">
+                <div class="modal-header border-bottom-0 px-4 pt-4 pb-2">
+                    <div>
+                        <h2 class="modal-title manager-title" id="gestionarCitasModalLabel">
+                            Gestionar citas <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        </h2>
+                        <div class="text-muted small fw-bold">Busca, revisa estados y convierte citas en ventas.</div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+
+                <div class="modal-body px-4 pb-4 pt-2">
+                    <div class="manager-toolbar">
+                        <div class="manager-search">
+                            <i class="fa-solid fa-magnifying-glass"></i>
+                            <input type="search" id="appointment_manager_search" class="form-control"
+                                placeholder="Buscar por cliente, servicio, técnica o notas..." autocomplete="off">
                         </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                        <div class="manager-date">
+                            <i class="fa-regular fa-calendar"></i>
+                            <input type="date" class="form-control" id="appointment_manager_date">
+                        </div>
                     </div>
 
-                    <div class="modal-body px-4 pb-4 pt-2">
-                        <div class="manager-toolbar">
-                            <div class="manager-search">
-                                <i class="fa-solid fa-magnifying-glass"></i>
-                                <input
-                                    type="search"
-                                    id="appointment_manager_search"
-                                    class="form-control"
-                                    placeholder="Buscar por cliente, servicio, técnica o notas..."
-                                    autocomplete="off"
-                                >
+                    <div class="manager-filters" id="appointment_manager_filters">
+                        <button type="button" class="manager-filter is-active" data-status-filter="all"
+                            style="--filter-bg:#fff;--filter-color:var(--nails-primary-strong);">Todas</button>
+                        <button type="button" class="manager-filter" data-status-filter="pendiente"
+                            style="--filter-bg:#fff8e8;--filter-color:#b7791f;--filter-border:#fde5a8;">Pendientes</button>
+                        <button type="button" class="manager-filter" data-status-filter="confirmada"
+                            style="--filter-bg:#ecfdf3;--filter-color:#15803d;--filter-border:#bbf7d0;">Confirmadas</button>
+                        <button type="button" class="manager-filter" data-status-filter="atendida"
+                            style="--filter-bg:#f5edff;--filter-color:#7e22ce;--filter-border:#ead6ff;">Atendidas</button>
+                        <button type="button" class="manager-filter" data-status-filter="no_asistio"
+                            style="--filter-bg:#f8fafc;--filter-color:#64748b;--filter-border:#e2e8f0;">No
+                            asistió</button>
+                        <button type="button" class="manager-filter" data-status-filter="cancelada"
+                            style="--filter-bg:#fff1f2;--filter-color:#e11d48;--filter-border:#fecdd3;">Canceladas</button>
+                    </div>
+
+                    <div class="manager-layout">
+                        <div>
+                            <div id="appointment_manager_empty" class="alert alert-light border d-none mb-3">
+                                No encontré citas con esa búsqueda.
                             </div>
-                            <div class="manager-date">
-                                <i class="fa-regular fa-calendar"></i>
-                                <input type="date" class="form-control" id="appointment_manager_date">
-                            </div>
-                        </div>
 
-                        <div class="manager-filters" id="appointment_manager_filters">
-                            <button type="button" class="manager-filter is-active" data-status-filter="all" style="--filter-bg:#fff;--filter-color:var(--nails-primary-strong);">Todas</button>
-                            <button type="button" class="manager-filter" data-status-filter="pendiente" style="--filter-bg:#fff8e8;--filter-color:#b7791f;--filter-border:#fde5a8;">Pendientes</button>
-                            <button type="button" class="manager-filter" data-status-filter="confirmada" style="--filter-bg:#ecfdf3;--filter-color:#15803d;--filter-border:#bbf7d0;">Confirmadas</button>
-                            <button type="button" class="manager-filter" data-status-filter="atendida" style="--filter-bg:#f5edff;--filter-color:#7e22ce;--filter-border:#ead6ff;">Atendidas</button>
-                            <button type="button" class="manager-filter" data-status-filter="no_asistio" style="--filter-bg:#f8fafc;--filter-color:#64748b;--filter-border:#e2e8f0;">No asistió</button>
-                            <button type="button" class="manager-filter" data-status-filter="cancelada" style="--filter-bg:#fff1f2;--filter-color:#e11d48;--filter-border:#fecdd3;">Canceladas</button>
-                        </div>
+                            <div id="appointment_manager_list">
+                                {% if appointments %}
+                                <div class="manager-list">
+                                    {% for appointment in appointments %}
+                                    {% set is_block = appointment.title == 'Bloqueo de horario' and not appointment.service_id %}
+                                    {% set client_name = ((appointment.staff_name or 'Sin asignar') ~ ' bloqueó horario') if is_block else (appointment.client_name or 'Cliente General') %}
+                                    {% set initials = client_name.split() %}
+                                    {% set display_services = appointment_services.get(appointment.id) if
+                                    appointment_services else None %}
 
-                        <div class="manager-layout">
-                            <div>
-                                <div id="appointment_manager_empty" class="alert alert-light border d-none mb-3">
-                                    No encontré citas con esa búsqueda.
-                                </div>
+                                    <article class="manager-appointment nails-appointment-item"
+                                        data-status="{{ appointment.status }}"
+                                        data-date="{{ appointment.start_time_iso[:10] if appointment.start_time_iso else '' }}"
+                                        data-search-text="{{ client_name }} {{ 'bloqueo horario' if is_block else (appointment.title or appointment.service_name) }} {{ appointment.staff_name or '' }} {{ appointment.status }} {{ appointment.start_time_formatted or appointment.start_time }} {{ appointment.notes or '' }}">
+                                        <div class="manager-avatar">
+                                            {{ (initials[0][0] if initials else 'C') }}{{ (initials[1][0] if
+                                            initials|length > 1 else '') }}
+                                        </div>
 
-                                <div id="appointment_manager_list">
-                                    {% if appointments %}
-                                    <div class="manager-list">
-                                        {% for appointment in appointments %}
-                                        {% set client_name = appointment.client_name or 'Cliente General' %}
-                                        {% set initials = client_name.split() %}
-                                        {% set display_services = appointment_services.get(appointment.id) if appointment_services else None %}
-                                        
-                                        <article
-                                            class="manager-appointment nails-appointment-item"
-                                            data-status="{{ appointment.status }}"
-                                            data-date="{{ appointment.start_time_iso[:10] if appointment.start_time_iso else '' }}"
-                                            data-search-text="{{ client_name }} {{ appointment.title or appointment.service_name }} {{ appointment.staff_name or '' }} {{ appointment.status }} {{ appointment.start_time_formatted or appointment.start_time }} {{ appointment.notes or '' }}"
-                                        >
-                                            <div class="manager-avatar">
-                                                {{ (initials[0][0] if initials else 'C') }}{{ (initials[1][0] if initials|length > 1 else '') }}
+                                        <div class="manager-info">
+                                            <h3 class="manager-client">{{ client_name }}</h3>
+                                            <div class="manager-service">
+                                                {{ 'Horario no disponible' if is_block else (appointment.title or appointment.service_name or 'Servicio') }}
                                             </div>
+                                        </div>
 
-                                            <div class="manager-info">
-                                                <h3 class="manager-client">{{ client_name }}</h3>
-                                                <div class="manager-service">
-                                                    {{ appointment.title or appointment.service_name or 'Servicio' }}
-                                                </div>
-                                            </div>
+                                        <div class="manager-money">
+                                            {% if is_block %}
+                                            <span class="badge"
+                                                style="background:#f1f5f9;color:#475569;border:1px solid #cbd5e1;font-weight:800;padding:5px 10px;font-size:11px;border-radius:6px;">
+                                                <i class="fa-regular fa-calendar-xmark me-1"></i> Bloqueo
+                                            </span>
+                                            <strong>No disponible</strong>
+                                            {% else %}
+                                            {% set status_styles = {
+                                            'pendiente': {'bg': '#fff8e8', 'text': '#b7791f', 'border': '#fde5a8',
+                                            'icon': 'fa-regular fa-clock'},
+                                            'confirmada': {'bg': '#ecfdf3', 'text': '#15803d', 'border': '#bbf7d0',
+                                            'icon': 'fa-regular fa-circle-check'},
+                                            'atendida': {'bg': '#f5edff', 'text': '#7e22ce', 'border': '#ead6ff',
+                                            'icon': 'fa-solid fa-check'},
+                                            'no_asistio': {'bg': '#f8fafc', 'text': '#64748b', 'border': '#e2e8f0',
+                                            'icon': 'fa-regular fa-circle-xmark'},
+                                            'cancelada': {'bg': '#fff1f2', 'text': '#e11d48', 'border': '#fecdd3',
+                                            'icon': 'fa-regular fa-circle-xmark'}
+                                            } %}
+                                            {% set st = status_styles.get(appointment.status,
+                                            status_styles['pendiente']) %}
+                                            <span class="badge"
+                                                style="background: {{ st.bg }}; color: {{ st.text }}; border: 1px solid {{ st.border }}; font-weight: 800; padding: 5px 10px; font-size: 11px; border-radius: 6px;">
+                                                <i class="{{ st.icon }} me-1"></i> {{ appointment.status|replace('_', '
+                                                ')|title }}
+                                            </span>
+                                            <strong>${{ "%.2f"|format(appointment.estimated_total or 0) }}</strong>
+                                            {% if appointment.deposit_amount and appointment.deposit_amount > 0 %}
+                                            <small>Anticipo: ${{ "%.2f"|format(appointment.deposit_amount or 0)
+                                                }}</small>
+                                            {% endif %}
+                                            {% endif %}
+                                        </div>
 
-                                            <div class="manager-money">
-                                                {% set status_styles = {
-                                                    'pendiente': {'bg': '#fff8e8', 'text': '#b7791f', 'border': '#fde5a8', 'icon': 'fa-regular fa-clock'},
-                                                    'confirmada': {'bg': '#ecfdf3', 'text': '#15803d', 'border': '#bbf7d0', 'icon': 'fa-regular fa-circle-check'},
-                                                    'atendida': {'bg': '#f5edff', 'text': '#7e22ce', 'border': '#ead6ff', 'icon': 'fa-solid fa-check'},
-                                                    'no_asistio': {'bg': '#f8fafc', 'text': '#64748b', 'border': '#e2e8f0', 'icon': 'fa-regular fa-circle-xmark'},
-                                                    'cancelada': {'bg': '#fff1f2', 'text': '#e11d48', 'border': '#fecdd3', 'icon': 'fa-regular fa-circle-xmark'}
-                                                } %}
-                                                {% set st = status_styles.get(appointment.status, status_styles['pendiente']) %}
-                                                <span class="badge" style="background: {{ st.bg }}; color: {{ st.text }}; border: 1px solid {{ st.border }}; font-weight: 800; padding: 5px 10px; font-size: 11px; border-radius: 6px;">
-                                                    <i class="{{ st.icon }} me-1"></i> {{ appointment.status|replace('_', ' ')|title }}
-                                                </span>
-                                                <strong>${{ "%.2f"|format(appointment.estimated_total or 0) }}</strong>
-                                                {% if appointment.deposit_amount and appointment.deposit_amount > 0 %}
-                                                <small>Anticipo: ${{ "%.2f"|format(appointment.deposit_amount or 0) }}</small>
+                                        <div class="manager-details">
+                                            <div class="manager-meta">
+                                                <span><i class="fa-regular fa-calendar"></i>{{
+                                                    appointment.start_time_formatted or appointment.start_time }}</span>
+                                                <span><i class="fa-regular fa-clock"></i>{{
+                                                    appointment.end_time_formatted or appointment.end_time }}</span>
+                                                <span><i class="fa-regular fa-user"></i>{{ (appointment.staff_name or
+                                                    'Sin asignar')|upper }}</span>
+                                                {% if appointment.client_phone %}
+                                                <span><i class="fa-brands fa-whatsapp text-success"></i>{{
+                                                    appointment.client_phone }}</span>
                                                 {% endif %}
                                             </div>
 
-                                            <div class="manager-details">
-                                                <div class="manager-meta">
-                                                    <span><i class="fa-regular fa-calendar"></i>{{ appointment.start_time_formatted or appointment.start_time }}</span>
-                                                    <span><i class="fa-regular fa-clock"></i>{{ appointment.end_time_formatted or appointment.end_time }}</span>
-                                                    <span><i class="fa-regular fa-user"></i>{{ (appointment.staff_name or 'Sin asignar')|upper }}</span>
-                                                    {% if appointment.client_phone %}
-                                                    <span><i class="fa-brands fa-whatsapp text-success"></i>{{ appointment.client_phone }}</span>
+                                            {% if display_services and not is_block %}
+                                            <div class="manager-extra-line">
+                                                <i class="fa-solid fa-tag me-1"></i>
+                                                Servicios:
+                                                {% for service in display_services %}
+                                                {{ service.name }}{% if not loop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+
+                                            {% if appointment_extras.get(appointment.id) and not is_block %}
+                                            <div class="manager-extra-line">
+                                                <i class="fa-solid fa-tags me-1"></i>
+                                                Extras:
+                                                {% for extra in appointment_extras.get(appointment.id) %}
+                                                {{ extra.name }}{% if (extra.quantity or 1) > 1 %} x{{ extra.quantity }}{% endif %} ${{ "%.2f"|format(extra.price or 0) }}{% if not
+                                                loop.last %}, {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                            {% endif %}
+
+                                            <div class="manager-note-line">
+                                                <i class="fa-regular fa-message me-1"></i>
+                                                {% if appointment.notes %}Notas: {{ appointment.notes }}{% else %}Sin
+                                                notas{% endif %}
+                                            </div>
+                                        </div>
+
+                                        <div class="manager-actions">
+                                            <button type="button" class="btn btn-outline-secondary"
+                                                onclick="abrirDetalleCita('{{ appointment.id }}')">
+                                                <i class="fa-regular fa-eye"></i> Ver detalle
+                                            </button>
+
+                                            <button type="button"
+                                                class="btn btn-outline-primary d-none d-md-inline-flex"
+                                                onclick="abrirEditarCita('{{ appointment.id }}')">
+                                                <i class="fa-regular fa-pen-to-square"></i> {{ 'Editar bloqueo' if is_block else 'Editar' }}
+                                            </button>
+
+                                            {% if is_block %}
+                                            {% if can_delete_appointments %}
+                                            <form method="POST"
+                                                action="{{ url_for('nails.eliminar_cita', appointment_id=appointment.id) }}"
+                                                class="require-confirm d-none d-md-block"
+                                                data-title="¿Eliminar este bloqueo?"
+                                                data-text="Se liberará ese horario para la persona seleccionada."
+                                                data-icon="warning" data-btn-text="Sí, eliminar"
+                                                data-btn-color="#dc3545">
+                                                <button type="submit" class="btn btn-outline-danger">
+                                                    <i class="fa-regular fa-trash-can"></i> Eliminar
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                            {% endif %}
+
+                                            {% if appointment.status == 'pendiente' and not is_block %}
+                                            <form method="POST"
+                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}">
+                                                <input type="hidden" name="status" value="confirmada">
+                                                <button type="submit" class="btn btn-outline-success">
+                                                    <i class="fa-solid fa-circle-check"></i> Confirmar
+                                                </button>
+                                            </form>
+                                            {% endif %}
+
+                                            {% if appointment.status in ['pendiente', 'confirmada'] and not is_block %}
+                                            <a href="{{ url_for('nails.ventas', appointment_id=appointment.id) }}"
+                                                class="btn btn-primary {% if appointment.status == 'pendiente' %}d-none d-md-inline-flex{% endif %}">
+                                                <i class="fa-regular fa-credit-card"></i> Cobrar
+                                            </a>
+                                            <button type="button"
+                                                class="btn btn-outline-primary d-none d-md-inline-flex"
+                                                onclick="abrirEditarCita('{{ appointment.id }}')">
+                                                <i class="fa-regular fa-calendar-days"></i> Reagendar
+                                            </button>
+                                            {% endif %}
+
+                                            {% if appointment.status not in ['atendida', 'cancelada', 'no_asistio'] and not is_block %}
+                                            <form method="POST"
+                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                class="require-confirm d-none d-md-block"
+                                                data-title="¿Marcar como atendida?"
+                                                data-text="Se marcará como atendida sin generar una venta."
+                                                data-icon="info" data-btn-text="Sí, marcar atendida">
+                                                <input type="hidden" name="status" value="atendida">
+                                                <button type="submit" class="btn btn-outline-success">
+                                                    <i class="fa-solid fa-check"></i> Atendida
+                                                </button>
+                                            </form>
+                                            {% endif %}
+
+                                            {% if appointment.status in ['pendiente', 'confirmada'] and not is_block %}
+                                            <form method="POST"
+                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                class="require-confirm d-none d-md-block"
+                                                data-title="¿Marcar como no asistió?"
+                                                data-text="La cita quedará registrada como no asistida."
+                                                data-icon="warning" data-btn-text="Sí, marcar">
+                                                <input type="hidden" name="status" value="no_asistio">
+                                                <button type="submit" class="btn btn-outline-secondary">
+                                                    <i class="fa-regular fa-circle-xmark"></i> No asistió
+                                                </button>
+                                            </form>
+
+                                            <form method="POST"
+                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                class="require-confirm d-none d-md-block"
+                                                data-title="¿Cancelar esta cita?"
+                                                data-text="La cita quedará marcada como cancelada." data-icon="warning"
+                                                data-btn-text="Sí, cancelar" data-btn-color="#dc3545">
+                                                <input type="hidden" name="status" value="cancelada">
+                                                <button type="submit" class="btn btn-outline-danger">
+                                                    <i class="fa-regular fa-trash-can"></i> Cancelar
+                                                </button>
+                                            </form>
+                                            {% endif %}
+
+                                            {% if appointment.status in ['cancelada', 'no_asistio', 'atendida'] and not is_block %}
+                                            <form method="POST"
+                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}">
+                                                <input type="hidden" name="status" value="pendiente">
+                                                <button type="submit" class="btn btn-outline-dark">
+                                                    <i class="fa-solid fa-rotate-left"></i> Reabrir
+                                                </button>
+                                            </form>
+                                            {% endif %}
+
+                                            <div class="dropdown manager-mobile-more">
+                                                <button type="button" class="btn btn-outline-secondary"
+                                                    data-bs-toggle="dropdown" aria-label="Más acciones">
+                                                    <i class="fa-solid fa-ellipsis-vertical"></i>
+                                                </button>
+                                                <ul class="dropdown-menu dropdown-menu-end">
+                                                    <li>
+                                                        <button type="button" class="dropdown-item"
+                                                            onclick="abrirEditarCita('{{ appointment.id }}')">
+                                                            <i class="fa-regular fa-pen-to-square me-2"></i>{{ 'Editar bloqueo' if is_block else 'Editar' }}
+                                                        </button>
+                                                    </li>
+                                                    {% if not is_block %}
+                                                    <li>
+                                                        <button type="button" class="dropdown-item"
+                                                            onclick="abrirEditarCita('{{ appointment.id }}')">
+                                                            <i class="fa-regular fa-calendar-days me-2"></i>Reagendar
+                                                        </button>
+                                                    </li>
                                                     {% endif %}
-                                                </div>
-
-                                                {% if display_services %}
-                                                <div class="manager-extra-line">
-                                                    <i class="fa-solid fa-tag me-1"></i>
-                                                    Servicios:
-                                                    {% for service in display_services %}
-                                                        {{ service.name }}{% if not loop.last %}, {% endif %}
-                                                    {% endfor %}
-                                                </div>
-                                                {% endif %}
-
-                                                {% if appointment_extras.get(appointment.id) %}
-                                                <div class="manager-extra-line">
-                                                    <i class="fa-solid fa-tags me-1"></i>
-                                                    Extras:
-                                                    {% for extra in appointment_extras.get(appointment.id) %}
-                                                        {{ extra.name }} ${{ "%.2f"|format(extra.price or 0) }}{% if not loop.last %}, {% endif %}
-                                                    {% endfor %}
-                                                </div>
-                                                {% endif %}
-
-                                                <div class="manager-note-line">
-                                                    <i class="fa-regular fa-message me-1"></i>
-                                                    {% if appointment.notes %}Notas: {{ appointment.notes }}{% else %}Sin notas{% endif %}
-                                                </div>
-                                            </div>
-
-                                            <div class="manager-actions">
-                                                <button type="button" class="btn btn-outline-secondary" onclick="abrirDetalleCita('{{ appointment.id }}')">
-                                                    <i class="fa-regular fa-eye"></i> Ver detalle
-                                                </button>
-                                                
-                                                <button type="button" class="btn btn-outline-primary d-none d-md-inline-flex" onclick="abrirEditarCita('{{ appointment.id }}')">
-                                                    <i class="fa-regular fa-pen-to-square"></i> Editar
-                                                </button>
-
-                                                {% if appointment.status == 'pendiente' %}
-                                                <form method="POST" action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}">
-                                                    <input type="hidden" name="status" value="confirmada">
-                                                    <button type="submit" class="btn btn-outline-success">
-                                                        <i class="fa-solid fa-circle-check"></i> Confirmar
-                                                    </button>
-                                                </form>
-                                                {% endif %}
-
-                                                {% if appointment.status in ['pendiente', 'confirmada'] %}
-                                                <a href="{{ url_for('nails.ventas', appointment_id=appointment.id) }}" class="btn btn-primary {% if appointment.status == 'pendiente' %}d-none d-md-inline-flex{% endif %}">
-                                                    <i class="fa-regular fa-credit-card"></i> Cobrar
-                                                </a>
-                                                <button type="button" class="btn btn-outline-primary d-none d-md-inline-flex" onclick="abrirEditarCita('{{ appointment.id }}')">
-                                                    <i class="fa-regular fa-calendar-days"></i> Reagendar
-                                                </button>
-                                                {% endif %}
-
-                                                {% if appointment.status not in ['atendida', 'cancelada', 'no_asistio'] %}
-                                                <form
-                                                    method="POST"
-                                                    action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
-                                                    class="require-confirm d-none d-md-block"
-                                                    data-title="¿Marcar como atendida?"
-                                                    data-text="Se marcará como atendida sin generar una venta."
-                                                    data-icon="info"
-                                                    data-btn-text="Sí, marcar atendida"
-                                                >
-                                                    <input type="hidden" name="status" value="atendida">
-                                                    <button type="submit" class="btn btn-outline-success">
-                                                        <i class="fa-solid fa-check"></i> Atendida
-                                                    </button>
-                                                </form>
-                                                {% endif %}
-
-                                                {% if appointment.status in ['pendiente', 'confirmada'] %}
-                                                <form
-                                                    method="POST"
-                                                    action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
-                                                    class="require-confirm d-none d-md-block"
-                                                    data-title="¿Marcar como no asistió?"
-                                                    data-text="La cita quedará registrada como no asistida."
-                                                    data-icon="warning"
-                                                    data-btn-text="Sí, marcar"
-                                                >
-                                                    <input type="hidden" name="status" value="no_asistio">
-                                                    <button type="submit" class="btn btn-outline-secondary">
-                                                        <i class="fa-regular fa-circle-xmark"></i> No asistió
-                                                    </button>
-                                                </form>
-
-                                                <form
-                                                    method="POST"
-                                                    action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
-                                                    class="require-confirm d-none d-md-block"
-                                                    data-title="¿Cancelar esta cita?"
-                                                    data-text="La cita quedará marcada como cancelada."
-                                                    data-icon="warning"
-                                                    data-btn-text="Sí, cancelar"
-                                                    data-btn-color="#dc3545"
-                                                >
-                                                    <input type="hidden" name="status" value="cancelada">
-                                                    <button type="submit" class="btn btn-outline-danger">
-                                                        <i class="fa-regular fa-trash-can"></i> Cancelar
-                                                    </button>
-                                                </form>
-                                                {% endif %}
-
-                                                {% if appointment.status in ['cancelada', 'no_asistio', 'atendida'] %}
-                                                <form method="POST" action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}">
-                                                    <input type="hidden" name="status" value="pendiente">
-                                                    <button type="submit" class="btn btn-outline-dark">
-                                                        <i class="fa-solid fa-rotate-left"></i> Reabrir
-                                                    </button>
-                                                </form>
-                                                {% endif %}
-                                                
-                                                <div class="dropdown manager-mobile-more">
-                                                    <button type="button" class="btn btn-outline-secondary" data-bs-toggle="dropdown" aria-label="Más acciones">
-                                                        <i class="fa-solid fa-ellipsis-vertical"></i>
-                                                    </button>
-                                                    <ul class="dropdown-menu dropdown-menu-end">
-                                                        <li>
-                                                            <button type="button" class="dropdown-item" onclick="abrirEditarCita('{{ appointment.id }}')">
-                                                                <i class="fa-regular fa-pen-to-square me-2"></i>Editar
+                                                    {% if is_block and can_delete_appointments %}
+                                                    <li>
+                                                        <form method="POST"
+                                                            action="{{ url_for('nails.eliminar_cita', appointment_id=appointment.id) }}"
+                                                            class="m-0 require-confirm"
+                                                            data-title="¿Eliminar este bloqueo?"
+                                                            data-text="Se liberará ese horario para la persona seleccionada."
+                                                            data-icon="warning" data-btn-text="Sí, eliminar"
+                                                            data-btn-color="#dc3545">
+                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                <i class="fa-regular fa-trash-can me-2"></i>Eliminar
+                                                                bloqueo
                                                             </button>
-                                                        </li>
-                                                        <li>
-                                                            <button type="button" class="dropdown-item" onclick="abrirEditarCita('{{ appointment.id }}')">
-                                                                <i class="fa-regular fa-calendar-days me-2"></i>Reagendar
+                                                        </form>
+                                                    </li>
+                                                    {% endif %}
+                                                    {% if appointment.status == 'pendiente' and not is_block %}
+                                                    <li>
+                                                        <a href="{{ url_for('nails.ventas', appointment_id=appointment.id) }}"
+                                                            class="dropdown-item">
+                                                            <i class="fa-regular fa-credit-card me-2"></i>Cobrar
+                                                        </a>
+                                                    </li>
+                                                    {% endif %}
+                                                    {% if appointment.status not in ['atendida', 'cancelada',
+                                                    'no_asistio'] and not is_block %}
+                                                    <li>
+                                                        <form method="POST"
+                                                            action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                            class="m-0 require-confirm"
+                                                            data-title="¿Marcar como atendida?"
+                                                            data-text="Se marcará como atendida sin generar una venta."
+                                                            data-icon="info" data-btn-text="Sí, marcar atendida">
+                                                            <input type="hidden" name="status" value="atendida">
+                                                            <button type="submit" class="dropdown-item">
+                                                                <i class="fa-solid fa-check me-2"></i>Atendida
                                                             </button>
-                                                        </li>
-                                                        {% if appointment.status == 'pendiente' %}
-                                                        <li>
-                                                            <a href="{{ url_for('nails.ventas', appointment_id=appointment.id) }}" class="dropdown-item">
-                                                                <i class="fa-regular fa-credit-card me-2"></i>Cobrar
-                                                            </a>
-                                                        </li>
-                                                        {% endif %}
-                                                        {% if appointment.status not in ['atendida', 'cancelada', 'no_asistio'] %}
-                                                        <li>
-                                                            <form
-                                                                method="POST"
-                                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
-                                                                class="m-0 require-confirm"
-                                                                data-title="¿Marcar como atendida?"
-                                                                data-text="Se marcará como atendida sin generar una venta."
-                                                                data-icon="info"
-                                                                data-btn-text="Sí, marcar atendida"
-                                                            >
-                                                                <input type="hidden" name="status" value="atendida">
-                                                                <button type="submit" class="dropdown-item">
-                                                                    <i class="fa-solid fa-check me-2"></i>Atendida
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        {% endif %}
-                                                        {% if appointment.status in ['pendiente', 'confirmada'] %}
-                                                        <li>
-                                                            <form
-                                                                method="POST"
-                                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
-                                                                class="m-0 require-confirm"
-                                                                data-title="¿Marcar como no asistió?"
-                                                                data-text="La cita quedará registrada como no asistida."
-                                                                data-icon="warning"
-                                                                data-btn-text="Sí, marcar"
-                                                            >
-                                                                <input type="hidden" name="status" value="no_asistio">
-                                                                <button type="submit" class="dropdown-item">
-                                                                    <i class="fa-regular fa-circle-xmark me-2"></i>No asistió
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        <li>
-                                                            <form
-                                                                method="POST"
-                                                                action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
-                                                                class="m-0 require-confirm"
-                                                                data-title="¿Cancelar esta cita?"
-                                                                data-text="La cita quedará marcada como cancelada."
-                                                                data-icon="warning"
-                                                                data-btn-text="Sí, cancelar"
-                                                                data-btn-color="#dc3545"
-                                                            >
-                                                                <input type="hidden" name="status" value="cancelada">
-                                                                <button type="submit" class="dropdown-item text-danger">
-                                                                    <i class="fa-regular fa-trash-can me-2"></i>Cancelar
-                                                                </button>
-                                                            </form>
-                                                        </li>
-                                                        {% endif %}
-                                                    </ul>
-                                                </div>
+                                                        </form>
+                                                    </li>
+                                                    {% endif %}
+                                                    {% if appointment.status in ['pendiente', 'confirmada'] and not is_block %}
+                                                    <li>
+                                                        <form method="POST"
+                                                            action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                            class="m-0 require-confirm"
+                                                            data-title="¿Marcar como no asistió?"
+                                                            data-text="La cita quedará registrada como no asistida."
+                                                            data-icon="warning" data-btn-text="Sí, marcar">
+                                                            <input type="hidden" name="status" value="no_asistio">
+                                                            <button type="submit" class="dropdown-item">
+                                                                <i class="fa-regular fa-circle-xmark me-2"></i>No
+                                                                asistió
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    <li>
+                                                        <form method="POST"
+                                                            action="{{ url_for('nails.cambiar_estado_cita', appointment_id=appointment.id) }}"
+                                                            class="m-0 require-confirm"
+                                                            data-title="¿Cancelar esta cita?"
+                                                            data-text="La cita quedará marcada como cancelada."
+                                                            data-icon="warning" data-btn-text="Sí, cancelar"
+                                                            data-btn-color="#dc3545">
+                                                            <input type="hidden" name="status" value="cancelada">
+                                                            <button type="submit" class="dropdown-item text-danger">
+                                                                <i class="fa-regular fa-trash-can me-2"></i>Cancelar
+                                                            </button>
+                                                        </form>
+                                                    </li>
+                                                    {% endif %}
+                                                </ul>
                                             </div>
-                                        </article>
-                                        {% endfor %}
+                                        </div>
+                                    </article>
+                                    {% endfor %}
+                                </div>
+                                {% else %}
+                                <p class="text-muted mb-0 fw-bold">Todavía no tienes citas registradas.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <aside class="manager-side" id="appointment_manager_summary">
+                            <button type="button" class="manager-summary-head" id="appointment_manager_summary_toggle"
+                                aria-expanded="false">
+                                <span>
+                                    <span class="manager-side-title d-block mb-0">Resumen del día</span>
+                                    <span class="manager-summary-compact">
+                                        <span id="appointment_manager_compact_count">{{ appointments|length if
+                                            appointments else 0 }}</span> citas ·
+                                        ${{ "%.2f"|format(agenda_stats.today_sales_total or 0) }} ventas ·
+                                        ${{ "%.2f"|format(agenda_stats.deposits_total or 0) }} anticipos
+                                    </span>
+                                </span>
+                                <i class="fa-solid fa-chevron-down manager-summary-chevron"></i>
+                            </button>
+
+                            <div class="manager-summary-body">
+                                <div class="manager-summary-row">
+                                    <span class="manager-summary-icon"
+                                        style="--summary-bg:#f5edff;--summary-color:#8e44ad;"><i
+                                            class="fa-solid fa-chart-column"></i></span>
+                                    <div>
+                                        <span>Ventas totales</span>
+                                        <strong>${{ "%.2f"|format(agenda_stats.today_sales_total or 0) }}</strong>
                                     </div>
-                                    {% else %}
-                                    <p class="text-muted mb-0 fw-bold">Todavía no tienes citas registradas.</p>
-                                    {% endif %}
+                                </div>
+
+                                <div class="manager-summary-row">
+                                    <span class="manager-summary-icon"
+                                        style="--summary-bg:#ecfdf3;--summary-color:#16a34a;"><i
+                                            class="fa-solid fa-hand-holding-dollar"></i></span>
+                                    <div>
+                                        <span>Anticipos</span>
+                                        <strong>${{ "%.2f"|format(agenda_stats.deposits_total or 0) }}</strong>
+                                    </div>
+                                </div>
+
+                                <div class="manager-summary-row">
+                                    <span class="manager-summary-icon"
+                                        style="--summary-bg:#eff6ff;--summary-color:#2563eb;"><i
+                                            class="fa-regular fa-calendar-check"></i></span>
+                                    <div>
+                                        <span>Citas visibles</span>
+                                        <strong id="appointment_manager_visible_count">{{ appointments|length if
+                                            appointments else 0 }}</strong>
+                                    </div>
+                                </div>
+
+                                <div class="manager-summary-row">
+                                    <span class="manager-summary-icon"
+                                        style="--summary-bg:#fdf2f8;--summary-color:#db2777;"><i
+                                            class="fa-solid fa-heart-pulse"></i></span>
+                                    <div>
+                                        <span>Tasa de asistencia</span>
+                                        <strong id="appointment_manager_attendance_rate">--</strong>
+                                    </div>
+                                </div>
+
+                                <div class="manager-tip">
+                                    <i class="fa-solid fa-wand-magic-sparkles me-1"></i>
+                                    Convierte más citas en ventas agregando anticipos y confirmaciones por WhatsApp.
                                 </div>
                             </div>
-
-                            <aside class="manager-side" id="appointment_manager_summary">
-                                <button type="button" class="manager-summary-head" id="appointment_manager_summary_toggle" aria-expanded="false">
-                                    <span>
-                                        <span class="manager-side-title d-block mb-0">Resumen del día</span>
-                                        <span class="manager-summary-compact">
-                                            <span id="appointment_manager_compact_count">{{ appointments|length if appointments else 0 }}</span> citas ·
-                                            ${{ "%.2f"|format(agenda_stats.today_sales_total or 0) }} ventas ·
-                                            ${{ "%.2f"|format(agenda_stats.deposits_total or 0) }} anticipos
-                                        </span>
-                                    </span>
-                                    <i class="fa-solid fa-chevron-down manager-summary-chevron"></i>
-                                </button>
-
-                                <div class="manager-summary-body">
-                                    <div class="manager-summary-row">
-                                        <span class="manager-summary-icon" style="--summary-bg:#f5edff;--summary-color:#8e44ad;"><i class="fa-solid fa-chart-column"></i></span>
-                                        <div>
-                                            <span>Ventas totales</span>
-                                            <strong>${{ "%.2f"|format(agenda_stats.today_sales_total or 0) }}</strong>
-                                        </div>
-                                    </div>
-
-                                    <div class="manager-summary-row">
-                                        <span class="manager-summary-icon" style="--summary-bg:#ecfdf3;--summary-color:#16a34a;"><i class="fa-solid fa-hand-holding-dollar"></i></span>
-                                        <div>
-                                            <span>Anticipos</span>
-                                            <strong>${{ "%.2f"|format(agenda_stats.deposits_total or 0) }}</strong>
-                                        </div>
-                                    </div>
-
-                                    <div class="manager-summary-row">
-                                        <span class="manager-summary-icon" style="--summary-bg:#eff6ff;--summary-color:#2563eb;"><i class="fa-regular fa-calendar-check"></i></span>
-                                        <div>
-                                            <span>Citas visibles</span>
-                                            <strong id="appointment_manager_visible_count">{{ appointments|length if appointments else 0 }}</strong>
-                                        </div>
-                                    </div>
-
-                                    <div class="manager-summary-row">
-                                        <span class="manager-summary-icon" style="--summary-bg:#fdf2f8;--summary-color:#db2777;"><i class="fa-solid fa-heart-pulse"></i></span>
-                                        <div>
-                                            <span>Tasa de asistencia</span>
-                                            <strong id="appointment_manager_attendance_rate">--</strong>
-                                        </div>
-                                    </div>
-
-                                    <div class="manager-tip">
-                                        <i class="fa-solid fa-wand-magic-sparkles me-1"></i>
-                                        Convierte más citas en ventas agregando anticipos y confirmaciones por WhatsApp.
-                                    </div>
-                                </div>
-                            </aside>
-                        </div>
+                        </aside>
                     </div>
                 </div>
             </div>
         </div>
+    </div>
 </div>
 
 {% endblock %}
@@ -1770,15 +1951,48 @@
         inicializarServiciosCita();
         inicializarGestorCitas();
         inicializarPanelDetalleAgenda();
+        inicializarCantidadesExtras();
+        inicializarSelectorTipoAgenda({
+            formId: 'formNuevaCita',
+            typeInputId: 'appointment_type',
+            notesId: 'appointment_notes',
+            endTimeId: 'end_time',
+            allDayId: 'all_day_block',
+            submitId: 'btnSubmitCita',
+            appointmentText: 'Guardar cita',
+            blockText: 'Guardar bloqueo'
+        });
+
+        inicializarSelectorTipoAgenda({
+            formId: 'editar_cita_form',
+            typeInputId: 'edit_appointment_type',
+            notesId: 'edit_notes',
+            endTimeId: 'edit_end_time',
+            allDayId: 'edit_all_day_block'
+        });
+
+        const formEditarCita = document.getElementById('editar_cita_form');
+        if (formEditarCita) {
+            formEditarCita.addEventListener('submit', function (event) {
+                const validationMessage = validarNuevaCitaAntesDeEnviar(formEditarCita);
+                if (validationMessage) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    event.stopImmediatePropagation();
+                    mostrarAlertaAgenda(validationMessage);
+                    return false;
+                }
+            }, true);
+        }
 
         // Pre-llenar fecha y hora al abrir el modal manualmente
         const btnNuevaCita = document.querySelector('[data-bs-target="#nuevaCitaModal"]');
         if (btnNuevaCita) {
-            btnNuevaCita.addEventListener('click', function() {
+            btnNuevaCita.addEventListener('click', function () {
                 const now = new Date();
                 const appDateInput = document.getElementById('appointment_date');
                 const startTimeInput = document.getElementById('start_time');
-                
+
                 if (appDateInput && !appDateInput.value) {
                     appDateInput.value = now.toISOString().slice(0, 10);
                 }
@@ -1803,7 +2017,7 @@
         const calendarModeButtons = Array.from(document.querySelectorAll('[data-calendar-mode]'));
         const calendarShell = document.querySelector('.nails-calendar');
         const agendaListView = document.getElementById('agenda_list_view');
-        
+
         const appointmentDataRows = Array.from(document.querySelectorAll('.nails-calendar-appointment-data'));
         calendarAppointmentData = appointmentDataRows.map(function (row) {
             const services = Array.from(row.querySelectorAll('.nails-calendar-services-data span')).map(function (item) {
@@ -1819,12 +2033,14 @@
                     id: item.dataset.id || '',
                     name: item.dataset.name || '',
                     price: Number(item.dataset.price || 0),
-                    duration: Number(item.dataset.duration || 0)
+                    duration: Number(item.dataset.duration || 0),
+                    quantity: Number(item.dataset.quantity || 1)
                 };
             });
 
             return {
                 id: row.dataset.id,
+                type: row.dataset.type || 'appointment',
                 title: row.dataset.title,
                 clientId: row.dataset.clientId,
                 client: row.dataset.client,
@@ -1968,10 +2184,14 @@
                 const items = dayAppointments.map(function (appointment) {
                     const status = escapeHTML((appointment.status || 'pendiente').replace('_', ' '));
                     const time = appointment.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' - ' + appointment.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                    const isBlock = appointment.type === 'block';
+                    const title = isBlock
+                        ? `Bloqueo de ${appointment.staff || 'Sin asignar'}`
+                        : `${appointment.client || 'Cliente General'} · ${appointment.title || 'Servicio'}`;
                     return `
-                        <button type="button" class="agenda-list-item" data-list-appointment-id="${escapeHTML(appointment.id)}">
+                        <button type="button" class="agenda-list-item${isBlock ? ' is-block-event' : ''}" data-list-appointment-id="${escapeHTML(appointment.id)}">
                             <div>
-                                <strong>${escapeHTML(appointment.client || 'Cliente General')} · ${escapeHTML(appointment.title || 'Servicio')}</strong>
+                                <strong>${escapeHTML(title)}</strong>
                                 <span>${escapeHTML(time)} · ${escapeHTML(appointment.staff || 'Sin asignar')}</span>
                             </div>
                             <span class="badge nails-status nails-status-${escapeHTML(appointment.status || 'pendiente')}">${status}</span>
@@ -2030,14 +2250,14 @@
                 const header = column.querySelector('.nails-calendar-day-header');
                 const body = column.querySelector('.nails-calendar-day-body');
                 const currentDateCol = weekDates[index];
-                
+
                 if (!header || !body) return;
 
                 // Lógica de visualización por modo
                 if (dayMode) {
                     const isFocusDay = currentDateCol.getFullYear() === focusDate.getFullYear() &&
-                                       currentDateCol.getMonth() === focusDate.getMonth() &&
-                                       currentDateCol.getDate() === focusDate.getDate();
+                        currentDateCol.getMonth() === focusDate.getMonth() &&
+                        currentDateCol.getDate() === focusDate.getDate();
                     column.style.display = isFocusDay ? 'block' : 'none';
                 } else {
                     column.style.display = 'block';
@@ -2054,11 +2274,11 @@
                     slotBox.className = 'nails-calendar-slot';
                     slotBox.dataset.time = buildSlotTime(slot);
                     slotBox.dataset.date = formatLocalDateInput(currentDateCol);
-                    
+
                     slotBox.addEventListener('click', function () {
                         if (appointmentDateInput) appointmentDateInput.value = slotBox.dataset.date;
                         if (startTimeInput) startTimeInput.value = slotBox.dataset.time;
-                        
+
                         document.querySelectorAll('.nails-calendar-slot.active').forEach(function (activeSlot) {
                             activeSlot.classList.remove('active');
                         });
@@ -2101,7 +2321,7 @@
 
                 const column = dayColumns[matchIndex].querySelector('.nails-calendar-day-body');
                 if (!column) return;
-                
+
                 const startMinutesOfDay = appointment.start.getHours() * 60 + appointment.start.getMinutes();
                 const endMinutesOfDay = appointment.end.getHours() * 60 + appointment.end.getMinutes();
                 const calendarStartMinutes = businessStartHour * 60;
@@ -2113,19 +2333,22 @@
                 const top = Math.max(0, (startSlotMinutes / 30) * slotHeight);
                 const visibleDurationMinutes = Math.max(30, visibleEndMinutes - visibleStartMinutes);
                 const height = Math.max(slotHeight, Math.min((durationMinutes / 30) * slotHeight - 4, (visibleDurationMinutes / 30) * slotHeight - 4));
-                
+
                 const eventEl = document.createElement('button');
+                const isBlock = appointment.type === 'block';
                 eventEl.type = 'button';
-                eventEl.className = 'nails-calendar-event nails-calendar-event-status-' + appointment.status;
-                eventEl.setAttribute('aria-label', 'Ver detalle de cita de ' + appointment.client);
+                eventEl.className = 'nails-calendar-event nails-calendar-event-status-' + appointment.status + (isBlock ? ' is-block-event' : '');
+                eventEl.setAttribute('aria-label', isBlock ? 'Ver bloqueo de ' + appointment.staff : 'Ver detalle de cita de ' + appointment.client);
                 eventEl.dataset.appointmentId = appointment.id;
                 eventEl.style.top = top + 'px';
                 eventEl.style.height = height + 'px';
-                eventEl.innerHTML = '<strong>' + escapeHTML(appointment.title) + '</strong><small>' + escapeHTML(appointment.client) + ' · ' + appointment.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' - ' + appointment.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + '</small>';
+                eventEl.innerHTML = isBlock
+                    ? '<strong>' + escapeHTML(appointment.staff || 'Sin asignar') + '</strong><small>' + escapeHTML(appointment.notes || 'Horario no disponible') + ' · ' + appointment.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' - ' + appointment.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + '</small>'
+                    : '<strong>' + escapeHTML(appointment.title) + '</strong><small>' + escapeHTML(appointment.client) + ' · ' + appointment.start.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' - ' + appointment.end.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + '</small>';
                 eventEl.addEventListener('click', function () {
                     abrirDetalleCita(appointment.id);
                 });
-                
+
                 column.appendChild(eventEl);
             });
         };
@@ -2192,7 +2415,7 @@
         });
 
         // Re-renderizar si el usuario gira el teléfono o cambia el tamaño de la ventana
-        window.addEventListener('resize', function() {
+        window.addEventListener('resize', function () {
             renderCalendar(currentDateView);
         });
 
@@ -2440,6 +2663,91 @@
         return `${minutes} min`;
     }
 
+    function actualizarCantidadExtra(input) {
+        const qtyId = input?.dataset.extraQtyTarget || "";
+        const qtyInput = qtyId ? document.getElementById(qtyId) : null;
+        if (!qtyInput) return;
+
+        const show = input.checked && input.dataset.extraAllowsQuantity === "1";
+        qtyInput.style.display = show ? "block" : "none";
+        qtyInput.disabled = !show;
+        if (!show) qtyInput.value = "1";
+    }
+
+    function inicializarCantidadesExtras() {
+        document.querySelectorAll('input[name="extras"][data-extra-qty-target]').forEach(function (input) {
+            input.addEventListener("change", function () {
+                actualizarCantidadExtra(input);
+            });
+            actualizarCantidadExtra(input);
+        });
+    }
+
+    function inicializarSelectorTipoAgenda(config) {
+        const form = document.getElementById(config.formId);
+        if (!form) return;
+
+        const buttons = Array.from(form.querySelectorAll('.type-toggle-btn'));
+        const typeInput = document.getElementById(config.typeInputId);
+        const notesInput = document.getElementById(config.notesId);
+        const endTimeInput = document.getElementById(config.endTimeId);
+        const allDayInput = document.getElementById(config.allDayId);
+        const submitButton = config.submitId ? document.getElementById(config.submitId) : null;
+
+        const applyType = function (type) {
+            const isBlock = type === 'block';
+            if (typeInput) typeInput.value = isBlock ? 'block' : 'appointment';
+            form.classList.toggle('state-block', isBlock);
+            form.classList.toggle('state-appointment', !isBlock);
+
+            buttons.forEach(function (button) {
+                button.classList.toggle('active', button.dataset.type === (isBlock ? 'block' : 'appointment'));
+            });
+
+            if (notesInput) {
+                notesInput.placeholder = isBlock
+                    ? 'Detalle del bloqueo (ej. mandado, comida, vacaciones).'
+                    : 'Ej. Quiere diseño rosa con pedrería.';
+            }
+            if (submitButton) submitButton.textContent = isBlock ? config.blockText : config.appointmentText;
+            if (endTimeInput) endTimeInput.required = isBlock && !(allDayInput && allDayInput.checked);
+            if (!isBlock && allDayInput) {
+                const startInput = form.querySelector('[name="start_time"]');
+                allDayInput.checked = false;
+                if (startInput) startInput.readOnly = false;
+                if (endTimeInput) {
+                    endTimeInput.readOnly = false;
+                    endTimeInput.required = false;
+                }
+            }
+        };
+
+        buttons.forEach(function (button) {
+            button.addEventListener('click', function () {
+                applyType(button.dataset.type || 'appointment');
+            });
+        });
+
+        if (allDayInput) {
+            allDayInput.addEventListener('change', function () {
+                const isAllDay = allDayInput.checked;
+                const startInput = form.querySelector('[name="start_time"]');
+                if (startInput) {
+                    startInput.value = isAllDay ? '00:00' : startInput.value;
+                    startInput.readOnly = isAllDay;
+                }
+                if (endTimeInput) {
+                    endTimeInput.value = isAllDay ? '23:59' : endTimeInput.value;
+                    endTimeInput.readOnly = isAllDay;
+                    endTimeInput.required = !isAllDay && typeInput && typeInput.value === 'block';
+                }
+            });
+        }
+
+        form.aplicarTipoAgenda = applyType;
+        applyType(typeInput ? typeInput.value : 'appointment');
+    }
+
     function abrirDetalleCita(appointmentId) {
         const appointment = calendarAppointmentData.find(function (item) {
             return String(item.id) === String(appointmentId);
@@ -2466,11 +2774,14 @@
         const editButton = document.getElementById("panel_cita_edit_button");
         const confirmForm = document.getElementById("panel_confirm_form");
         const deleteForm = document.getElementById("panel_cita_delete_form");
+        const detailTitle = panel.querySelector(".agenda-detail-title");
 
         if (!workspace || !panel) return;
+        const isBlock = appointment.type === "block";
 
         workspace.classList.add("has-detail");
         panel.classList.add("is-open");
+        panel.classList.toggle("is-block-panel", isBlock);
 
         document.querySelectorAll(".nails-calendar-event.is-selected").forEach(function (eventEl) {
             eventEl.classList.remove("is-selected");
@@ -2481,44 +2792,62 @@
 
         if (status) {
             status.className = "badge nails-status nails-status-" + appointment.status;
-            status.textContent = appointment.status || "pendiente";
+            status.textContent = isBlock ? "Bloqueo" : (appointment.status || "pendiente");
         }
-        if (avatar) avatar.textContent = initialsFromName(appointment.client).toUpperCase();
-        if (cliente) cliente.textContent = appointment.client || "Cliente General";
-        if (phone) phone.textContent = appointment.phone || "Sin WhatsApp";
+        if (detailTitle) detailTitle.textContent = isBlock ? "Horario bloqueado" : "Cita seleccionada";
+        if (avatar) avatar.textContent = initialsFromName(isBlock ? appointment.staff : appointment.client).toUpperCase();
+        if (cliente) cliente.textContent = isBlock ? "Horario no disponible" : (appointment.client || "Cliente General");
+        if (phone) phone.textContent = isBlock ? (appointment.notes || "Sin notas") : (appointment.phone || "Sin WhatsApp");
         if (servicios) {
-            servicios.textContent = appointment.services.map(function (service) {
-                return service.name || "Servicio";
-            }).join(" + ") || appointment.title || "Servicio";
+            servicios.textContent = isBlock
+                ? "Bloqueo de horario"
+                : (appointment.services.map(function (service) {
+                    return service.name || "Servicio";
+                }).join(" + ") || appointment.title || "Servicio");
         }
         if (horario) horario.textContent = (appointment.startLabel || "") + " - " + (appointment.endLabel || "");
         if (duracion) duracion.textContent = formatDurationLabel(appointment.start, appointment.end);
         if (staff) staff.textContent = appointment.staff || "Sin asignar";
-        if (anticipo) anticipo.textContent = money(appointment.deposit);
-        if (total) total.textContent = money(Math.max((appointment.total || 0) - (appointment.deposit || 0), 0));
+        if (anticipo) anticipo.textContent = isBlock ? "No aplica" : money(appointment.deposit);
+        if (total) total.textContent = isBlock ? "No aplica" : money(Math.max((appointment.total || 0) - (appointment.deposit || 0), 0));
 
         if (notas && notasWrap) {
             notas.textContent = appointment.notes || "Sin notas";
-            notasWrap.classList.toggle("d-none", !appointment.notes);
+            notasWrap.classList.toggle("d-none", !appointment.notes && !isBlock);
         }
 
-        if (ventaUrl) ventaUrl.href = appointment.url || "#";
+        if (ventaUrl) {
+            ventaUrl.href = isBlock ? "#" : (appointment.url || "#");
+            ventaUrl.classList.toggle("d-none", isBlock);
+        }
         if (whatsapp) {
             whatsapp.href = appointment.phone
                 ? `https://wa.me/${String(appointment.phone).replace(/\D/g, "")}`
                 : "#";
-            whatsapp.classList.toggle("disabled", !appointment.phone);
+            whatsapp.classList.toggle("disabled", !appointment.phone || isBlock);
+            whatsapp.classList.toggle("d-none", isBlock);
         }
         if (editButton) {
+            editButton.textContent = isBlock ? "Editar bloqueo" : "Reagendar";
             editButton.onclick = function () {
                 abrirEditarCita(appointment.id);
             };
         }
         if (confirmForm) {
             confirmForm.action = `/nails/agenda/${appointment.id}/estado`;
-            confirmForm.classList.toggle("d-none", appointment.status !== "pendiente");
+            confirmForm.classList.toggle("d-none", isBlock || appointment.status !== "pendiente");
         }
-        if (deleteForm) deleteForm.action = `/nails/agenda/${appointment.id}/eliminar`;
+        if (deleteForm) {
+            deleteForm.action = `/nails/agenda/${appointment.id}/eliminar`;
+            deleteForm.dataset.title = isBlock ? "¿Eliminar este bloqueo?" : "¿Eliminar esta cita?";
+            deleteForm.dataset.text = isBlock ? "Se liberará ese horario para la persona seleccionada." : "Esta acción no se puede deshacer.";
+            const deleteButton = deleteForm.querySelector("button");
+            if (deleteButton) {
+                deleteButton.innerHTML = isBlock
+                    ? '<i class="fa-regular fa-trash-can me-1"></i> Eliminar bloqueo'
+                    : '<i class="fa-regular fa-trash-can me-1"></i> Cancelar cita';
+            }
+        }
 
         const managerEl = document.getElementById("gestionarCitasModal");
         const managerInstance = managerEl ? bootstrap.Modal.getInstance(managerEl) : null;
@@ -2530,10 +2859,7 @@
     }
 
     function abrirEditarCita(appointmentId) {
-        const appointment = calendarAppointmentData.find(function (item) {
-            return String(item.id) === String(appointmentId);
-        });
-
+        const appointment = calendarAppointmentData.find(item => String(item.id) === String(appointmentId));
         if (!appointment) return;
 
         const modalEl = document.getElementById("editarCitaModal");
@@ -2554,6 +2880,17 @@
         const statusInput = document.getElementById("edit_status");
         const depositInput = document.getElementById("edit_deposit_amount");
         const notesInput = document.getElementById("edit_notes");
+        const endTimeInput = document.getElementById("edit_end_time");
+        const allDayInput = document.getElementById("edit_all_day_block");
+        const title = document.getElementById("editarCitaModalLabel");
+        const deleteButton = document.getElementById("edit_delete_button");
+
+        const isBlock = appointment.type === "block";
+        const type = isBlock ? 'block' : 'appointment';
+
+        if (form.aplicarTipoAgenda) form.aplicarTipoAgenda(type);
+        if (title) title.textContent = isBlock ? "Editar bloqueo" : "Editar cita";
+        if (deleteButton) deleteButton.textContent = isBlock ? "Eliminar bloqueo" : "Eliminar cita";
 
         if (dateInput) dateInput.value = formatLocalDateInput(appointment.start);
         if (timeInput) {
@@ -2562,6 +2899,22 @@
                 minute: "2-digit",
                 hour12: false
             });
+        }
+        if (endTimeInput) {
+            endTimeInput.value = appointment.end.toLocaleTimeString("en-GB", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: false
+            });
+        }
+        if (allDayInput) {
+            const allDay = isBlock
+                && appointment.start.getHours() === 0
+                && appointment.start.getMinutes() === 0
+                && appointment.end.getHours() === 23
+                && appointment.end.getMinutes() === 59;
+            allDayInput.checked = allDay;
+            allDayInput.dispatchEvent(new Event("change"));
         }
         if (clientInput) clientInput.value = appointment.clientId || "";
         if (staffInput) staffInput.value = appointment.staffId || "";
@@ -2581,6 +2934,12 @@
         }).filter(Boolean);
         document.querySelectorAll("[data-edit-extra]").forEach(function (input) {
             input.checked = extraIds.includes(String(input.value));
+            const selectedExtra = appointment.extras.find(function (extra) {
+                return String(extra.id || "") === String(input.value);
+            });
+            const qtyInput = document.getElementById(input.dataset.extraQtyTarget || "");
+            if (qtyInput) qtyInput.value = selectedExtra ? Math.max(1, Number(selectedExtra.quantity || 1)) : 1;
+            actualizarCantidadExtra(input);
         });
 
         const managerEl = document.getElementById("gestionarCitasModal");
@@ -2629,7 +2988,19 @@
         if (modal) {
             modal.addEventListener("hidden.bs.modal", function () {
                 const form = modal.querySelector("form");
-                if (form) form.reset();
+                if (form) {
+                    form.reset();
+                    if (form.aplicarTipoAgenda) form.aplicarTipoAgenda('appointment');
+                    const allDayInput = document.getElementById('all_day_block');
+                    const startInput = document.getElementById('start_time');
+                    const endInput = document.getElementById('end_time');
+                    if (allDayInput) allDayInput.checked = false;
+                    if (startInput) startInput.readOnly = false;
+                    if (endInput) endInput.readOnly = false;
+                    form.querySelectorAll('input[name="extras"][data-extra-qty-target]').forEach(function (input) {
+                        actualizarCantidadExtra(input);
+                    });
+                }
 
                 appointmentServicesSelected = [];
                 renderServiciosCitaSeleccionados();
@@ -2738,12 +3109,27 @@
     }
 
     function validarNuevaCitaAntesDeEnviar(form) {
+        const typeInput = form.querySelector('[name="appointment_type"]');
+        const isBlock = typeInput && typeInput.value === 'block';
+
         const dateInput = form.querySelector('[name="appointment_date"]');
         const timeInput = form.querySelector('[name="start_time"]');
+        const endTimeInput = form.querySelector('[name="end_time"]');
+        const allDayInput = form.querySelector('[name="all_day"]');
         const staffInput = form.querySelector('[name="staff_id"]');
+        const selectedServiceCount = form.id === 'editar_cita_form'
+            ? form.querySelectorAll('input[name="service_ids"]:checked').length
+            : appointmentServicesSelected.length;
 
-        if (!appointmentServicesSelected.length || !dateInput?.value || !timeInput?.value) {
+        // Validación según el tipo
+        if (!isBlock && (!selectedServiceCount || !dateInput?.value || !timeInput?.value)) {
             return 'Selecciona servicio, fecha y hora antes de guardar la cita.';
+        }
+        if (isBlock && (!dateInput?.value || !timeInput?.value || !endTimeInput?.value)) {
+            return 'Selecciona la fecha, hora de inicio y hora de fin para el bloqueo.';
+        }
+        if (isBlock && !staffInput?.value) {
+            return 'Elige quién bloquea su horario.';
         }
 
         const start = new Date(`${dateInput.value}T${timeInput.value}:00`);
@@ -2751,33 +3137,54 @@
             return 'La fecha u hora no tienen un formato válido.';
         }
 
-        const serviceMinutes = appointmentServicesSelected.reduce(function (sum, service) {
-            return sum + (Number(service.duration || 0) || 60);
-        }, 0);
+        // Calcular duración
+        let durationMinutes = 0;
+        if (isBlock) {
+            const endValue = allDayInput?.checked ? '23:59' : endTimeInput.value;
+            const endBlock = new Date(`${dateInput.value}T${endValue}:00`);
+            durationMinutes = (endBlock - start) / 60000;
+            if (durationMinutes <= 0) return 'La hora de fin debe ser posterior a la hora de inicio.';
+        } else {
+            const serviceMinutes = form.id === 'editar_cita_form'
+                ? Array.from(form.querySelectorAll('input[name="service_ids"]:checked')).reduce(function (sum, input) {
+                    const option = input.closest('.nails-extra-option');
+                    const minutesText = option ? option.textContent.match(/·\s*(\d+)\s*min/i) : null;
+                    return sum + (minutesText ? Number(minutesText[1] || 0) : 60);
+                }, 0)
+                : appointmentServicesSelected.reduce(function (sum, service) {
+                    return sum + (Number(service.duration || 0) || 60);
+                }, 0);
 
-        const extraMinutes = Array.from(form.querySelectorAll('input[name="extras"]:checked')).reduce(function (sum, input) {
-            const option = input.closest('.nails-extra-option');
-            const minutesText = option ? option.textContent.match(/\+(\d+)\s*min/i) : null;
-            return sum + (minutesText ? Number(minutesText[1] || 0) : 0);
-        }, 0);
+            const extraMinutes = Array.from(form.querySelectorAll('input[name="extras"]:checked')).reduce(function (sum, input) {
+                const option = input.closest('.nails-extra-option');
+                const minutesText = option ? option.textContent.match(/\+(\d+)\s*min/i) : null;
+                const qtyInput = document.getElementById(input.dataset.extraQtyTarget || "");
+                const quantity = input.dataset.extraAllowsQuantity === "1" && qtyInput
+                    ? Math.max(1, Number(qtyInput.value || 1))
+                    : 1;
+                return sum + (minutesText ? Number(minutesText[1] || 0) * quantity : 0);
+            }, 0);
 
-        const durationMinutes = Math.max(15, serviceMinutes + extraMinutes);
+            durationMinutes = Math.max(15, serviceMinutes + extraMinutes);
+        }
+
         const end = new Date(start.getTime() + durationMinutes * 60000);
         const staffId = staffInput ? staffInput.value : '';
-        const staffName = staffInput && staffInput.selectedOptions[0]
-            ? staffInput.selectedOptions[0].textContent.trim()
-            : 'Sin asignar';
+        const staffName = staffInput && staffInput.selectedOptions[0] ? staffInput.selectedOptions[0].textContent.trim() : 'Sin asignar';
+        const editingAppointmentId = form.id === 'editar_cita_form'
+            ? (String(form.action || '').match(/\/agenda\/(\d+)\/editar/) || [])[1]
+            : '';
 
+        // Validación de empalmes
         const overlap = calendarAppointmentData.find(function (appointment) {
+            if (editingAppointmentId && String(appointment.id) === String(editingAppointmentId)) return false;
             if (['cancelada', 'no_asistio'].includes(appointment.status)) return false;
             if (!(start < appointment.end && end > appointment.start)) return false;
             if (!staffId) return true;
             return appointment.staffId === staffId || !appointment.staffId;
         });
 
-        if (!overlap) {
-            return '';
-        }
+        if (!overlap) return '';
 
         const overlapStart = overlap.startLabel || overlap.start.toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' });
         const overlapEnd = overlap.endLabel || overlap.end.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
@@ -2785,14 +3192,13 @@
         const overlapStaff = overlap.staff || 'sin técnica asignada';
 
         if (staffId && overlap.staffId) {
-            return `Ojo: ${staffName} ya tiene una cita programada de ${overlapStart} a ${overlapEnd} con ${clientName}. Se empalman los horarios.`;
+            return `Ojo: ${staffName} ya tiene actividad programada de ${overlapStart} a ${overlapEnd}. Se empalman los horarios.`;
         }
-
         if (staffId) {
-            return `Ojo: en ese horario ya existe una cita sin técnica asignada, de ${overlapStart} a ${overlapEnd} con ${clientName}. Revisa la agenda antes de asignar otra cita.`;
+            return `Ojo: en ese horario ya existe actividad sin técnica asignada, de ${overlapStart} a ${overlapEnd}. Revisa la agenda antes de continuar.`;
         }
 
-        return `Ojo: a esta hora ya tienes una cita programada de ${overlapStart} a ${overlapEnd} con ${clientName} (${overlapStaff}). Asigna una técnica libre o cambia el horario.`;
+        return `Ojo: a esta hora ya hay actividad programada de ${overlapStart} a ${overlapEnd}. Asigna una técnica libre o cambia el horario.`;
     }
 </script>
 {% endblock %}

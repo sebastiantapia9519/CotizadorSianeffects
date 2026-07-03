@@ -1833,6 +1833,7 @@ CREATE TABLE IF NOT EXISTS nails_extras (
 
     price NUMERIC(10,2) DEFAULT 0,
     duration_minutes INTEGER DEFAULT 0,
+    allow_quantity BOOLEAN DEFAULT FALSE,
 
     is_active BOOLEAN DEFAULT TRUE,
     sort_order INTEGER DEFAULT 0,
@@ -1932,6 +1933,7 @@ CREATE TABLE IF NOT EXISTS nails_appointment_extras (
     name TEXT NOT NULL,
     price NUMERIC(10,2) DEFAULT 0,
     duration_minutes INTEGER DEFAULT 0,
+    quantity INTEGER DEFAULT 1,
 
     created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP
 );
