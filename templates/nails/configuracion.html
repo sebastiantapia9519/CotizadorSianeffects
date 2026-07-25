@@ -336,6 +336,37 @@
 
 <form method="POST" class="settings-form" enctype="multipart/form-data">
     <section class="settings-column">
+        
+        <!-- TARJETA DE SUSCRIPCIÓN (Solo visible para la Jefa) -->
+        {% if is_owner %}
+        <article class="settings-card mb-3" style="background: linear-gradient(135deg, var(--nails-primary-soft) 0%, #fff 100%); border-left: 4px solid var(--nails-primary);">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <h2 class="settings-title"><i class="fa-solid fa-crown text-warning" style="color: #eab308 !important;"></i>Suscripción Sianeffects</h2>
+                    <div class="settings-subtitle mt-1 mb-3">Licencia de uso del sistema</div>
+                    <a href="https://wa.me/{{ cotizador_telefono_whatsapp }}?text=Hola%20Sianeffects,%20quiero%20renovar%20la%20suscripción%20del%20salón%20{{ business.name|urlencode }}." target="_blank" class="btn btn-sm btn-dark fw-bold" style="border-radius: 999px;">
+                        <i class="fa-brands fa-whatsapp text-success me-1"></i> Renovar ahora
+                    </a>
+                </div>
+                <div class="text-end">
+                    {% if business.is_expired %}
+                        <span class="badge mb-1 bg-danger text-white">Vencida</span>
+                    {% else %}
+                        <span class="badge mb-1" style="background: var(--nails-primary); color: #fff;">Activa</span>
+                    {% endif %}
+                    <div class="settings-subtitle">Vence: <br><strong style="color: var(--nails-ink);">{{ business.subscription_expires_at.strftime('%d/%m/%Y') if business.subscription_expires_at else 'Próximamente' }}</strong></div>
+                </div>
+            </div>
+            
+            <div class="text-center border-top pt-3 mt-3">
+                <a a href="https://wa.me/{{ cotizador_telefono_whatsapp }}?text=Hola%20Sianeffects,%20quiero%20renovar%20la%20suscripción%20del%20salón%20{{ business.name|urlencode }}." target="_blank" class="text-muted text-decoration-none small fw-bold">
+                    <i class="fab fa-whatsapp text-success me-1"></i> ¿Dudas o pago por transferencia?
+                </a>
+            </div>
+        </article>
+        {% endif %}
+        <!-- FIN DE TARJETA DE SUSCRIPCIÓN -->
+
         <article class="settings-card">
             <div class="settings-card-head">
                 <h2 class="settings-title"><i class="fa-regular fa-clipboard"></i>Datos del salón</h2>

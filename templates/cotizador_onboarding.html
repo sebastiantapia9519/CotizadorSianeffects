@@ -1,0 +1,842 @@
+{% extends 'layout.html' %}
+
+{% block title %}Configura tu cotizador | Sianeffects{% endblock %}
+
+{% block extra_css %}
+<style>
+    body {
+        background: #fafafa;
+    }
+
+    .quote-onboarding {
+        max-width: 1120px;
+        margin: 0 auto 48px;
+        padding: 0 20px;
+    }
+
+    .wizard-card {
+        background: rgba(255, 255, 255, 0.98);
+        border: 1px solid #e5e7eb;
+        border-radius: 12px;
+        box-shadow: 0 18px 45px rgba(17, 24, 39, 0.08);
+        overflow: hidden;
+    }
+
+    .wizard-steps {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        border-bottom: 1px solid #e5e7eb;
+        background: #fff7f9;
+    }
+
+    .wizard-step-tab {
+        border: 0;
+        background: transparent;
+        padding: 18px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 800;
+        color: #6b7280;
+        text-align: left;
+    }
+
+    .wizard-step-tab span {
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: #ffe5ea;
+        color: var(--sian-pink);
+        flex: 0 0 auto;
+    }
+
+    .wizard-step-tab.is-active {
+        background: #ffffff;
+        color: #111827;
+    }
+
+    .wizard-step-tab.is-active span {
+        background: var(--sian-pink);
+        color: #ffffff;
+        box-shadow: 0 8px 18px rgba(255, 107, 129, 0.24);
+    }
+
+    .wizard-body {
+        padding: 28px;
+    }
+
+    .wizard-pane {
+        display: none;
+    }
+
+    .wizard-pane.is-active {
+        display: block;
+    }
+
+    .wizard-heading {
+        font-size: 1.45rem;
+        font-weight: 900;
+        color: #111827;
+        margin: 0 0 6px;
+    }
+
+    .wizard-copy {
+        color: #6b7280;
+        font-weight: 700;
+        margin: 0 0 24px;
+    }
+
+    .form-label-modern {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #374151;
+        font-size: 0.88rem;
+        font-weight: 800;
+        margin-bottom: 8px;
+    }
+
+    .form-input-modern {
+        width: 100%;
+        min-height: 48px;
+        padding: 12px 14px;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+        color: #111827;
+        font-size: 0.96rem;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .form-input-modern:focus {
+        outline: none;
+        border-color: var(--sian-pink);
+        box-shadow: 0 0 0 3px rgba(255, 107, 129, 0.1);
+    }
+
+    .address-autocomplete-wrap {
+        position: relative;
+    }
+
+    .address-suggestions {
+        position: absolute;
+        z-index: 20;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        display: none;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 16px 32px rgba(17, 24, 39, 0.12);
+        overflow: hidden;
+    }
+
+    .address-suggestions.is-open {
+        display: block;
+    }
+
+    .address-suggestion {
+        width: 100%;
+        border: 0;
+        background: #ffffff;
+        padding: 10px 12px;
+        text-align: left;
+        color: #374151;
+        transition: background 0.15s ease;
+    }
+
+    .address-suggestion:hover,
+    .address-suggestion:focus {
+        background: #fff7f9;
+        outline: none;
+    }
+
+    .address-suggestion-main {
+        display: block;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .address-suggestion-meta {
+        display: block;
+        margin-top: 2px;
+        font-size: 0.82rem;
+        color: #6b7280;
+    }
+
+    .tabs-modern {
+        display: flex;
+        gap: 4px;
+        padding: 4px;
+        background: #f3f4f6;
+        border-radius: 10px;
+        margin-bottom: 18px;
+    }
+
+    .tab-modern {
+        flex: 1;
+        padding: 10px 14px;
+        border: 0;
+        border-radius: 8px;
+        background: transparent;
+        color: #6b7280;
+        font-weight: 800;
+    }
+
+    .tab-modern.active {
+        background: #ffffff;
+        color: #111827;
+        box-shadow: 0 1px 3px rgba(17, 24, 39, 0.1);
+    }
+
+    .emoji-grid-modern {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        gap: 10px;
+    }
+
+    .emoji-item-modern {
+        aspect-ratio: 1;
+        border: 1.5px solid #e5e7eb;
+        border-radius: 8px;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        font-size: 1.3rem;
+        cursor: pointer;
+        transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .emoji-item-modern:hover,
+    .emoji-item-modern.selected {
+        transform: translateY(-1px);
+        border-color: var(--sian-pink);
+        background: var(--sian-pink-light);
+    }
+
+    .logo-upload-area {
+        display: flex;
+        align-items: center;
+        gap: 20px;
+        padding: 18px;
+        border: 2px dashed #e5e7eb;
+        border-radius: 10px;
+        background: #fafafa;
+    }
+
+    .logo-preview-circle {
+        width: 88px;
+        height: 88px;
+        border: 3px solid #e5e7eb;
+        border-radius: 50%;
+        display: grid;
+        place-items: center;
+        background: #ffffff;
+        overflow: hidden;
+        flex: 0 0 auto;
+    }
+
+    .logo-preview-circle img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+    }
+
+    .logo-upload-btn,
+    .btn-primary-modern,
+    .btn-secondary-modern {
+        min-height: 44px;
+        border-radius: 8px;
+        border: 0;
+        padding: 10px 18px;
+        font-weight: 900;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        text-decoration: none;
+    }
+
+    .logo-upload-btn,
+    .btn-primary-modern {
+        background: var(--sian-pink);
+        color: #ffffff;
+        box-shadow: 0 8px 18px rgba(255, 107, 129, 0.22);
+        cursor: pointer;
+    }
+
+    .btn-primary-modern:hover,
+    .logo-upload-btn:hover {
+        background: #ff4a5f;
+        color: #ffffff;
+    }
+
+    .btn-secondary-modern {
+        background: #ffffff;
+        color: #374151;
+        border: 1px solid #d1d5db;
+    }
+
+    .wizard-preview {
+        background: linear-gradient(180deg, #fff7f9 0%, #ffffff 100%);
+        border: 1px solid #ffd7df;
+        border-radius: 10px;
+        padding: 22px;
+        height: 100%;
+    }
+
+    .preview-brand-icon {
+        width: 64px;
+        height: 64px;
+        border-radius: 18px;
+        display: grid;
+        place-items: center;
+        background: var(--sian-pink-light);
+        color: var(--sian-pink);
+        font-size: 1.7rem;
+        overflow: hidden;
+    }
+
+    .preview-brand-icon img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        background: #ffffff;
+    }
+
+    .preview-ticket {
+        margin-top: 22px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 18px;
+        color: #374151;
+    }
+
+    .preview-line {
+        display: flex;
+        justify-content: space-between;
+        gap: 14px;
+        padding: 10px 0;
+        border-bottom: 1px dashed #e5e7eb;
+        font-weight: 800;
+    }
+
+    .preview-note {
+        min-height: 44px;
+        color: #6b7280;
+        font-size: 0.85rem;
+        font-weight: 700;
+        overflow-wrap: anywhere;
+    }
+
+    .shipping-toggle {
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        background: #fafafa;
+        padding: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+    }
+
+    .shipping-fields.is-disabled {
+        opacity: 0.45;
+        pointer-events: none;
+    }
+
+    .wizard-actions {
+        display: flex;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 18px 28px;
+        border-top: 1px solid #e5e7eb;
+        background: #fff7f9;
+    }
+
+    .wizard-actions button {
+        min-width: 150px;
+    }
+
+    @media (max-width: 768px) {
+        .quote-onboarding {
+            padding: 0 12px;
+        }
+
+        .wizard-steps {
+            grid-template-columns: 1fr;
+        }
+
+        .wizard-body {
+            padding: 18px;
+        }
+
+        .emoji-grid-modern {
+            grid-template-columns: repeat(5, minmax(0, 1fr));
+        }
+
+        .logo-upload-area,
+        .shipping-toggle,
+        .wizard-actions {
+            align-items: stretch;
+            flex-direction: column;
+        }
+
+        .wizard-actions button {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="quote-onboarding">
+    <form method="POST" enctype="multipart/form-data" class="wizard-card" id="cotizadorOnboardingWizard">
+        <input type="hidden" name="current_logo" id="currentLogo" value="{{ config.get('logo_empresa', '') }}">
+        <input type="hidden" name="icono_empresa" id="inputIconoReal" value="{{ config.get('icono_empresa', '🎨') }}">
+        <input type="hidden" name="tipo_identidad" id="tipoIdentidad" value="{% if config.get('logo_empresa') %}logo{% else %}emoji{% endif %}">
+        <input type="hidden" name="configure_shipping" id="configureShippingInput" value="0">
+
+        <div class="wizard-steps" role="tablist" aria-label="Pasos de configuracion del cotizador">
+            <button type="button" class="wizard-step-tab is-active" data-step-tab="1"><span>1</span> Identidad</button>
+            <button type="button" class="wizard-step-tab" data-step-tab="2"><span>2</span> Ticket</button>
+            <button type="button" class="wizard-step-tab" data-step-tab="3"><span>3</span> Envíos</button>
+        </div>
+
+        <div class="wizard-body">
+            <div class="row g-4">
+                <div class="col-lg-8">
+                    <section class="wizard-pane is-active" data-step-pane="1">
+                        <h1 class="wizard-heading">Identidad del negocio</h1>
+                        <p class="wizard-copy">Esto aparecerá en tu navegación y en los tickets que entregas a clientes.</p>
+
+                        <div class="mb-4">
+                            <label class="form-label-modern">Marca visual</label>
+                            <div class="tabs-modern" role="tablist">
+                                <button class="tab-modern {% if not config.get('logo_empresa') %}active{% endif %}" type="button"
+                                    data-identity-tab="emoji">🎨 Elegir ícono</button>
+                                <button class="tab-modern {% if config.get('logo_empresa') %}active{% endif %}" type="button"
+                                    data-identity-tab="logo">📸 Subir logo</button>
+                            </div>
+
+                            <div data-identity-pane="emoji" {% if config.get('logo_empresa') %}class="d-none"{% endif %}>
+                                <div class="emoji-grid-modern">
+                                    {% set emojis = ['🎨','🍔','🧵','👗','💻','📸','🪴','☕','💅','🔨','🚗','📱','🎮','📚','🛒','🎂'] %}
+                                    {% for e in emojis %}
+                                    <button type="button" class="emoji-item-modern {% if config.get('icono_empresa', '🎨') == e %}selected{% endif %}"
+                                        data-emoji="{{ e }}" aria-label="Icono {{ e }}">{{ e }}</button>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div data-identity-pane="logo" {% if not config.get('logo_empresa') %}class="d-none"{% endif %}>
+                                <div class="logo-upload-area">
+                                    <div class="logo-preview-circle">
+                                        {% if config.get('logo_empresa') %}
+                                        <img id="logoPreviewImg" src="{{ config.get('logo_empresa') }}" alt="Logo actual">
+                                        <i class="fas fa-cloud-upload-alt text-muted fs-2 d-none" id="logoPlaceholderIcon"></i>
+                                        {% else %}
+                                        <i class="fas fa-cloud-upload-alt text-muted fs-2" id="logoPlaceholderIcon"></i>
+                                        <img id="logoPreviewImg" src="" alt="Vista previa del logo" class="d-none">
+                                        {% endif %}
+                                    </div>
+                                    <div>
+                                        <label for="logoInput" class="logo-upload-btn">Seleccionar archivo</label>
+                                        <input type="file" name="logo_file" id="logoInput" class="d-none"
+                                            accept="image/png, image/jpeg, image/svg+xml, image/webp">
+                                        <p class="text-muted fw-bold small mt-2 mb-0">Recomendado: 200x200px (PNG, JPG, SVG o WEBP).</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label-modern" for="inputEmpresa">Nombre de la empresa</label>
+                                <input type="text" name="nombre_empresa" id="inputEmpresa" class="form-input-modern"
+                                    value="{{ config.get('nombre_empresa') or config.get('company_name', '') }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label-modern" for="inputSlogan">Slogan o giro</label>
+                                <input type="text" name="slogan" id="inputSlogan" class="form-input-modern"
+                                    value="{{ config.get('slogan', '') }}" placeholder="Repostería personalizada">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label-modern" for="inputWeb">Sitio web o enlace</label>
+                                <input type="text" name="website" id="inputWeb" class="form-input-modern"
+                                    value="{{ config.get('website', '') }}" placeholder="@tu_marca o www.tumarca.com">
+                            </div>
+                        </div>
+                    </section>
+
+                    <section class="wizard-pane" data-step-pane="2">
+                        <h2 class="wizard-heading">Notas del ticket</h2>
+                        <p class="wizard-copy">Agrega una política breve para que cada venta salga más clara desde el primer ticket.</p>
+
+                        <label class="form-label-modern" for="inputNotasTicket">Notas del ticket / políticas</label>
+                        <textarea name="notas_ticket" id="inputNotasTicket" class="form-input-modern" rows="5"
+                            maxlength="150" placeholder="Ej. No hay cambios ni devoluciones. Gracias por tu compra.">{{ config.get('notas_ticket', '') }}</textarea>
+                        <div class="d-flex justify-content-between mt-2">
+                            <span class="text-muted fw-bold small">Footer en todos tus tickets</span>
+                            <span class="text-muted fw-bold small"><span id="charCount">0</span>/150</span>
+                        </div>
+                    </section>
+
+                    <section class="wizard-pane" data-step-pane="3">
+                        <h2 class="wizard-heading">Configurar envíos</h2>
+                        <p class="wizard-copy">Puedes dejarlo listo ahora o saltarlo y regresar a Configuración cuando tengas tus tarifas.</p>
+
+                        <div class="shipping-toggle mb-4">
+                            <div>
+                                <strong class="d-block text-dark">Calcular envíos automáticamente</strong>
+                                <span class="text-muted fw-bold small">El cotizador calculará el costo del envío según la distancia entre tu negocio y tu cliente.</span>
+                            </div>
+                            <div class="form-check form-switch m-0">
+                                <input class="form-check-input" type="checkbox" id="configureShippingSwitch" style="width: 3rem; height: 1.5rem;">
+                            </div>
+                        </div>
+
+                        <div class="shipping-fields is-disabled" id="shippingFields">
+                            <div class="mb-4">
+                                <label class="form-label-modern" for="inputMapsConfig">
+                                    📍 ¿Desde dónde envías tus pedidos?
+                                </label>
+                                <p class="text-muted small mb-2">
+                                    Puedes escribir una dirección, pegar un enlace de Google Maps o incluso coordenadas. Nosotros detectaremos el formato automáticamente.
+                                </p>
+                                <div class="address-autocomplete-wrap">
+                                    <input type="text" name="origin_address" id="inputMapsConfig" class="form-input-modern"
+                                        value="{{ shipping_config.get('origin_address', '') }}" placeholder="Ejemplo: Av. Universidad 1200, Monterrey"
+                                        autocomplete="off">
+                                    <div class="address-suggestions" id="originAddressSuggestions"></div>
+                                </div>
+                                <div class="text-muted small mt-2 d-flex flex-wrap gap-2">
+                                    <span>🗺 Link de Google Maps</span>
+                                    <span>📍 Dirección completa</span>
+                                    <span>🌎 Coordenadas (25.6844,-100.3161)</span>
+                                </div>
+                            </div>
+
+                            <input type="hidden" name="origin_lat" value="{{ shipping_config.get('origin_lat', '') }}">
+                            <input type="hidden" name="origin_lng" value="{{ shipping_config.get('origin_lng', '') }}">
+
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <label class="form-label-modern" for="localBaseRate">Banderazo fijo</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" step="0.50" name="local_base_rate" id="localBaseRate"
+                                            class="form-input-modern" value="{{ shipping_config.get('local_base_rate', '35.00') }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label-modern" for="localKmRate">Costo x KM</label>
+                                    <div class="input-group">
+                                        <span class="input-group-text">$</span>
+                                        <input type="number" step="0.50" name="local_km_rate" id="localKmRate"
+                                            class="form-input-modern" value="{{ shipping_config.get('local_km_rate', '8.00') }}">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label-modern" for="safetyMargin">Margen error</label>
+                                    <div class="input-group">
+                                        <input type="number" name="safety_margin" id="safetyMargin"
+                                            class="form-input-modern text-end" value="{{ shipping_config.get('safety_margin_percent', '10') }}">
+                                        <span class="input-group-text">%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="col-lg-4">
+                    <aside class="wizard-preview">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="preview-brand-icon" id="previewBrandIcon">
+                                {% if config.get('logo_empresa') %}
+                                <img src="{{ config.get('logo_empresa') }}" alt="Logo">
+                                {% else %}
+                                <span>{{ config.get('icono_empresa', '🎨') }}</span>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h3 class="mb-0 fw-black" id="previewEmpresa">{{ config.get('nombre_empresa') or config.get('company_name', 'Mi Negocio') }}</h3>
+                                <p class="text-muted fw-bold mb-0" id="previewSlogan">{{ config.get('slogan') or 'Tu giro o slogan' }}</p>
+                            </div>
+                        </div>
+
+                        <div class="preview-ticket">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <strong class="text-dark">Ticket Preview</strong>
+                                <span class="badge rounded-pill" style="background: var(--sian-pink-light); color: var(--sian-pink);">Cotizador</span>
+                            </div>
+                            <div class="preview-line"><span>Subtotal</span><span>$350.00</span></div>
+                            <div class="preview-line"><span>Envío</span><span id="previewShipping">$0.00</span></div>
+                            <div class="preview-line border-0"><span>Total</span><span id="previewTotal">$350.00</span></div>
+                            <hr>
+                            <p class="preview-note mb-0" id="previewNotas">{{ config.get('notas_ticket') or 'Tus políticas aparecerán aquí.' }}</p>
+                        </div>
+                    </aside>
+                </div>
+            </div>
+        </div>
+
+        <div class="wizard-actions">
+            <button type="button" class="btn-secondary-modern" id="wizardBack" disabled>
+                <i class="fas fa-arrow-left"></i> Atrás
+            </button>
+            <button type="button" class="btn-primary-modern" id="wizardNext">
+                Siguiente <i class="fas fa-arrow-right"></i>
+            </button>
+            <button type="submit" class="btn-primary-modern d-none" id="wizardSubmit">
+                <i class="fas fa-circle-check"></i> Entrar al cotizador
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const wizard = document.getElementById("cotizadorOnboardingWizard");
+    if (!wizard) return;
+
+    const tabs = Array.from(wizard.querySelectorAll("[data-step-tab]"));
+    const panes = Array.from(wizard.querySelectorAll("[data-step-pane]"));
+    const backBtn = document.getElementById("wizardBack");
+    const nextBtn = document.getElementById("wizardNext");
+    const submitBtn = document.getElementById("wizardSubmit");
+    let currentStep = 1;
+
+    function setStep(step) {
+        currentStep = Math.max(1, Math.min(3, step));
+        tabs.forEach(tab => tab.classList.toggle("is-active", Number(tab.dataset.stepTab) === currentStep));
+        panes.forEach(pane => pane.classList.toggle("is-active", Number(pane.dataset.stepPane) === currentStep));
+        backBtn.disabled = currentStep === 1;
+        nextBtn.classList.toggle("d-none", currentStep === 3);
+        submitBtn.classList.toggle("d-none", currentStep !== 3);
+    }
+
+    function currentPaneIsValid() {
+        const pane = wizard.querySelector(`[data-step-pane="${currentStep}"]`);
+        const fields = Array.from(pane.querySelectorAll("input, textarea, select"));
+        for (const field of fields) {
+            if (!field.checkValidity()) {
+                field.reportValidity();
+                return false;
+            }
+        }
+        return true;
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener("click", function () {
+            const targetStep = Number(tab.dataset.stepTab);
+            if (targetStep > currentStep && !currentPaneIsValid()) return;
+            setStep(targetStep);
+        });
+    });
+
+    nextBtn.addEventListener("click", function () {
+        if (!currentPaneIsValid()) return;
+        setStep(currentStep + 1);
+    });
+
+    backBtn.addEventListener("click", function () {
+        setStep(currentStep - 1);
+    });
+
+    const empresaInput = document.getElementById("inputEmpresa");
+    const sloganInput = document.getElementById("inputSlogan");
+    const notasInput = document.getElementById("inputNotasTicket");
+    const previewEmpresa = document.getElementById("previewEmpresa");
+    const previewSlogan = document.getElementById("previewSlogan");
+    const previewNotas = document.getElementById("previewNotas");
+    const charCount = document.getElementById("charCount");
+
+    function syncPreview() {
+        previewEmpresa.textContent = empresaInput.value.trim() || "Mi Negocio";
+        previewSlogan.textContent = sloganInput.value.trim() || "Tu giro o slogan";
+        previewNotas.textContent = notasInput.value.trim() || "Tus políticas aparecerán aquí.";
+        charCount.textContent = notasInput.value.length;
+    }
+
+    [empresaInput, sloganInput, notasInput].forEach(input => input.addEventListener("input", syncPreview));
+    syncPreview();
+
+    const typeInput = document.getElementById("tipoIdentidad");
+    const iconInput = document.getElementById("inputIconoReal");
+    const previewBrandIcon = document.getElementById("previewBrandIcon");
+    const logoInput = document.getElementById("logoInput");
+    const logoPreviewImg = document.getElementById("logoPreviewImg");
+    const logoPlaceholderIcon = document.getElementById("logoPlaceholderIcon");
+
+    function showIdentityPane(type) {
+        typeInput.value = type;
+        wizard.querySelectorAll("[data-identity-tab]").forEach(tab => {
+            tab.classList.toggle("active", tab.dataset.identityTab === type);
+        });
+        wizard.querySelectorAll("[data-identity-pane]").forEach(pane => {
+            pane.classList.toggle("d-none", pane.dataset.identityPane !== type);
+        });
+        if (type === "emoji") {
+            previewBrandIcon.innerHTML = `<span>${iconInput.value || "🎨"}</span>`;
+        } else if (logoPreviewImg && logoPreviewImg.src) {
+            previewBrandIcon.innerHTML = `<img src="${logoPreviewImg.src}" alt="Logo">`;
+        }
+    }
+
+    wizard.querySelectorAll("[data-identity-tab]").forEach(tab => {
+        tab.addEventListener("click", () => showIdentityPane(tab.dataset.identityTab));
+    });
+
+    wizard.querySelectorAll("[data-emoji]").forEach(button => {
+        button.addEventListener("click", function () {
+            wizard.querySelectorAll("[data-emoji]").forEach(item => item.classList.remove("selected"));
+            button.classList.add("selected");
+            iconInput.value = button.dataset.emoji;
+            previewBrandIcon.innerHTML = `<span>${button.dataset.emoji}</span>`;
+        });
+    });
+
+    if (logoInput) {
+        logoInput.addEventListener("change", function (event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                logoPreviewImg.src = e.target.result;
+                logoPreviewImg.classList.remove("d-none");
+                logoPlaceholderIcon.classList.add("d-none");
+                previewBrandIcon.innerHTML = `<img src="${e.target.result}" alt="Logo">`;
+                showIdentityPane("logo");
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+
+    const shippingSwitch = document.getElementById("configureShippingSwitch");
+    const shippingInput = document.getElementById("configureShippingInput");
+    const shippingFields = document.getElementById("shippingFields");
+    const baseRate = document.getElementById("localBaseRate");
+    const previewShipping = document.getElementById("previewShipping");
+    const previewTotal = document.getElementById("previewTotal");
+
+    function syncShipping() {
+        const enabled = shippingSwitch.checked;
+        shippingInput.value = enabled ? "1" : "0";
+        shippingFields.classList.toggle("is-disabled", !enabled);
+        const shipping = enabled ? Number(baseRate.value || 0) : 0;
+        previewShipping.textContent = `$${shipping.toFixed(2)}`;
+        previewTotal.textContent = `$${(350 + shipping).toFixed(2)}`;
+    }
+
+    shippingSwitch.addEventListener("change", syncShipping);
+    baseRate.addEventListener("input", syncShipping);
+    syncShipping();
+
+    function initAddressAutocomplete(inputId, dropdownId) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
+        if (!input || !dropdown) return;
+
+        let debounceTimer = null;
+        let activeController = null;
+
+        function looksLikeUrlOrCoords(value) {
+            const text = value.trim();
+            return /^(https?:\/\/|www\.)/i.test(text)
+                || /(google|maps|goo\.gl|maps\.app)/i.test(text)
+                || /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(text);
+        }
+
+        function closeDropdown() {
+            dropdown.classList.remove("is-open");
+            dropdown.innerHTML = "";
+        }
+
+        function buildAddress(feature) {
+            const props = feature.properties || {};
+            const mainParts = [];
+            const metaParts = [];
+
+            if (props.street) mainParts.push(props.street);
+            if (props.housenumber) mainParts.push(props.housenumber);
+            if (!mainParts.length && props.name) mainParts.push(props.name);
+
+            if (props.city) metaParts.push(props.city);
+            else if (props.county) metaParts.push(props.county);
+            if (props.state) metaParts.push(props.state);
+
+            return {
+                main: mainParts.join(" ") || props.name || "Dirección sugerida",
+                meta: metaParts.join(", ") || props.country || "",
+                full: [mainParts.join(" ") || props.name, props.city || props.county, props.state, props.country]
+                    .filter(Boolean)
+                    .join(", ")
+            };
+        }
+
+        function renderSuggestions(features) {
+            dropdown.innerHTML = "";
+            features.slice(0, 5).forEach(feature => {
+                const address = buildAddress(feature);
+                const button = document.createElement("button");
+                button.type = "button";
+                button.className = "address-suggestion";
+                const main = document.createElement("span");
+                main.className = "address-suggestion-main";
+                main.textContent = `📍 ${address.main}`;
+                const meta = document.createElement("span");
+                meta.className = "address-suggestion-meta";
+                meta.textContent = address.meta;
+                button.append(main, meta);
+                button.addEventListener("click", () => {
+                    input.value = address.full;
+                    input.dispatchEvent(new Event("change", { bubbles: true }));
+                    closeDropdown();
+                });
+                dropdown.appendChild(button);
+            });
+            dropdown.classList.toggle("is-open", dropdown.children.length > 0);
+        }
+
+        input.addEventListener("input", () => {
+            const query = input.value.trim();
+            window.clearTimeout(debounceTimer);
+
+            if (activeController) activeController.abort();
+            if (query.length < 3 || looksLikeUrlOrCoords(query)) {
+                closeDropdown();
+                return;
+            }
+
+            debounceTimer = window.setTimeout(() => {
+                activeController = new AbortController();
+                fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}`, {
+                    signal: activeController.signal
+                })
+                    .then(response => response.ok ? response.json() : { features: [] })
+                    .then(data => renderSuggestions(data.features || []))
+                    .catch(error => {
+                        if (error.name !== "AbortError") closeDropdown();
+                    });
+            }, 300);
+        });
+
+        document.addEventListener("click", event => {
+            if (!dropdown.contains(event.target) && event.target !== input) closeDropdown();
+        });
+    }
+
+    initAddressAutocomplete("inputMapsConfig", "originAddressSuggestions");
+});
+</script>
+{% endblock %}

@@ -30,6 +30,15 @@ from utils.email_validators import is_disposable_email
 from services.mail_service import enviar_correo_sian
 from utils.auth_utils import generate_verification_code
 from utils.datetime_utils import now_utc
+from utils.module_activation import (
+    create_activation_code,
+    ensure_user_module,
+    get_user_modules,
+    mark_auth_code_used,
+    redirect_for_module,
+    user_has_module,
+    validate_activation_code,
+)
 
 # Registramos el Blueprint de autenticación (sin prefijo de URL, rutas directas)
 auth_bp = Blueprint('auth', __name__)
@@ -51,6 +60,313 @@ def _auth_email_profile(active_module):
         "welcome_subject": "¡Bienvenido/a a Sianeffects!",
         "welcome_template": "bienvenida",
     }
+
+
+def _module_label(module_key):
+    return 'Nails' if module_key == 'nails' else 'Cotizador'
+
+
+def _active_modules_for_user(cursor, user_id):
+    modules = get_user_modules(user_id, cursor=cursor)
+    return [
+        module
+        for module in modules
+        if (module.get('status') or '').strip().lower() in {'trial', 'active'}
+    ]
+
+
+def _module_access_end(module):
+    status = (module.get('status') or '').strip().lower()
+    access_end = module.get('subscription_end') or module.get('trial_ends_at')
+    if not access_end and status == 'trial' and module.get('created_at'):
+        access_end = module['created_at'] + timedelta(days=7)
+    return access_end
+
+
+def _apply_module_access_to_session(user, module):
+    if user.get('role', 0) >= 1:
+        session['is_pro_active'] = True
+        session.pop('grace_period', None)
+        return
+
+    status = (module.get('status') or '').strip().lower()
+    if status not in {'trial', 'active'}:
+        session['is_pro_active'] = False
+        session.pop('grace_period', None)
+        return
+
+    access_end = _module_access_end(module)
+    if not access_end:
+        session['is_pro_active'] = status == 'active'
+        session.pop('grace_period', None)
+        return
+
+    ahora = now_utc().replace(tzinfo=None) if now_utc().tzinfo else now_utc()
+    access_end_clean = access_end.replace(tzinfo=None) if access_end.tzinfo else access_end
+    session['is_pro_active'] = access_end_clean > ahora
+    session.pop('grace_period', None)
+
+
+def _cotizador_needs_onboarding(cursor, user_id):
+    """Detecta cuentas de cotizador nuevas que aun no completan su configuracion inicial."""
+    cursor.execute("""
+        SELECT 1
+        FROM logs_actividad
+        WHERE user_id = %s
+          AND accion = 'Completó onboarding cotizador'
+        LIMIT 1
+    """, (user_id,))
+    if cursor.fetchone():
+        return False
+
+    cursor.execute("""
+        SELECT
+            (SELECT COUNT(*) FROM ventas WHERE user_id = %s) AS ventas_count,
+            (SELECT COUNT(*) FROM materiales WHERE user_id = %s) AS materiales_count,
+            (SELECT COUNT(*) FROM productos WHERE user_id = %s) AS productos_count,
+            (SELECT COUNT(*) FROM maquinaria WHERE user_id = %s) AS maquinaria_count
+    """, (user_id, user_id, user_id, user_id))
+    activity = cursor.fetchone() or {}
+    has_business_activity = any(int(activity.get(key) or 0) > 0 for key in (
+        'ventas_count', 'materiales_count', 'productos_count', 'maquinaria_count'
+    ))
+    if has_business_activity:
+        return False
+
+    cursor.execute(
+        """
+        SELECT status
+        FROM user_modules
+        WHERE user_id = %s AND module_key = 'cotizador'
+        LIMIT 1
+        """,
+        (user_id,)
+    )
+    module_row = cursor.fetchone()
+    if module_row and (module_row.get('status') or '').strip().lower() == 'trial':
+        return True
+
+    cursor.execute("""
+        SELECT c.slogan, c.website, c.notas_ticket, u.company_name
+        FROM usuarios u
+        LEFT JOIN configuracion c ON c.user_id = u.id
+        WHERE u.id = %s
+        LIMIT 1
+    """, (user_id,))
+    setup = cursor.fetchone() or {}
+    return not any((setup.get(field) or '').strip() for field in (
+        'slogan', 'website', 'notas_ticket'
+    ))
+
+
+def _module_purpose(module_key):
+    return f"activate_{module_key}"
+
+
+def _clear_pending_activation():
+    for key in (
+        'pending_activation_user_id',
+        'pending_activation_email',
+        'pending_activation_module',
+        'pending_activation_purpose',
+        'pending_activation_nails',
+    ):
+        session.pop(key, None)
+
+
+def _set_pending_activation(user_id, email, module_key, purpose, nails_data=None):
+    session['pending_activation_user_id'] = user_id
+    session['pending_activation_email'] = email
+    session['pending_activation_module'] = module_key
+    session['pending_activation_purpose'] = purpose
+    if nails_data:
+        session['pending_activation_nails'] = nails_data
+    else:
+        session.pop('pending_activation_nails', None)
+
+
+def _activation_email_profile(module_key):
+    if module_key == 'nails':
+        return {
+            "subject": "Activa Nails en tu cuenta Sianeffects",
+            "template": "auth_code_nails",
+        }
+    return {
+        "subject": "Activa Cotizador en tu cuenta Sianeffects",
+        "template": "auth_code",
+    }
+
+
+def _send_activation_code_email(email, code, module_key, nombre=None, salon=None):
+    profile = _activation_email_profile(module_key)
+    enviar_correo_sian(
+        subject=profile["subject"],
+        recipient=email,
+        template=profile["template"],
+        sender_alias="accounts",
+        code=code,
+        nombre=nombre,
+        salon=salon,
+        activation_module='Nails' if module_key == 'nails' else 'Cotizador',
+    )
+
+
+def _start_module_activation(cursor, user, module_key, nails_data=None):
+    purpose = _module_purpose(module_key)
+    activation_code = create_activation_code(user['id'], user['email'], purpose, cursor=cursor)
+    _set_pending_activation(user['id'], user['email'], module_key, purpose, nails_data)
+    return activation_code
+
+
+def _module_status_for_user(user):
+    estado = (user.get('estado_suscripcion') or '').strip().lower()
+    if estado in ('activo', 'active'):
+        return 'active'
+    if estado in ('trial',):
+        return 'trial'
+    if estado in ('cancelado', 'cancelada', 'cancelled'):
+        return 'cancelled'
+    if estado in ('pago fallido', 'inactivo', 'inactive'):
+        return 'inactive'
+    return 'trial'
+
+
+def _activate_session_for_user(user, active_module, module_record=None):
+    session.clear()
+    session.permanent = True
+    session['user_id'] = user['id']
+    session['username'] = user['username']
+    session['role'] = user['role']
+    session['active_module'] = active_module
+
+    if user.get('role', 0) >= 1:
+        session['is_pro_active'] = True
+        session.pop('grace_period', None)
+        return
+
+    if module_record:
+        _apply_module_access_to_session(user, module_record)
+        return
+
+    estado = (user.get('estado_suscripcion') or '').strip().lower()
+    sub_end = user.get('subscription_end')
+    try:
+        ahora = now_utc().replace(tzinfo=None) if now_utc().tzinfo else now_utc()
+        if sub_end and estado in ['trial', 'activo']:
+            sub_end_clean = sub_end.replace(tzinfo=None) if sub_end.tzinfo else sub_end
+            session['is_pro_active'] = sub_end_clean > ahora
+        else:
+            session['is_pro_active'] = False
+    except Exception:
+        session['is_pro_active'] = False
+
+
+def _ensure_cotizador_defaults(cursor, user_id, company_name):
+    cursor.execute('SELECT id FROM configuracion WHERE user_id = %s', (user_id,))
+    if not cursor.fetchone():
+        cursor.execute(
+            """
+            INSERT INTO configuracion (
+                user_id, margen_ganancia, porcentaje_gastos_operativos,
+                inventario_activo, ticket_bw, nombre_empresa
+            )
+            VALUES (%s, %s, %s, %s, %s, %s)
+            """,
+            (user_id, 100, 0, False, False, company_name or 'Mi Negocio')
+        )
+
+    cursor.execute('SELECT id FROM shipping_configs WHERE user_id = %s', (user_id,))
+    if not cursor.fetchone():
+        cursor.execute(
+            """
+            INSERT INTO shipping_configs (user_id, local_base_rate, local_km_rate, safety_margin_percent)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (user_id, 35.00, 8.00, 10)
+        )
+
+
+def _finish_nails_activation(cursor, user, nails_data):
+    user_id = user['id']
+    staff_name = (nails_data or {}).get('staff_name') or user.get('username') or 'Staff'
+    phone = (nails_data or {}).get('phone') or user.get('telefono') or ''
+
+    if (nails_data or {}).get('join_code'):
+        business_id = nails_data.get('joined_business_id')
+        if not business_id:
+            cursor.execute(
+                """
+                SELECT id, name, primary_color
+                FROM nails_businesses
+                WHERE join_code = %s AND is_active = TRUE
+                LIMIT 1
+                """,
+                (nails_data.get('join_code'),)
+            )
+            business = cursor.fetchone()
+            if not business:
+                raise ValueError('No encontramos un salón activo con ese código.')
+            business_id = business['id']
+            staff_color = business['primary_color'] or '#d946ef'
+        else:
+            staff_color = nails_data.get('joined_business_primary_color') or '#d946ef'
+
+        cursor.execute(
+            """
+            INSERT INTO nails_staff (business_id, user_id, name, email, phone, role, color)
+            VALUES (%s, %s, %s, %s, %s, 'staff', %s)
+            """,
+            (business_id, user_id, staff_name, user['email'], phone, staff_color)
+        )
+        return
+
+    salon_name = (nails_data or {}).get('salon_name') or user.get('company_name') or 'Sianeffects Nails'
+    base_slug = re.sub(r'[^a-z0-9]+', '-', salon_name.lower()).strip('-') or f'nails-{user_id}'
+    slug = base_slug
+    counter = 1
+    while True:
+        cursor.execute('SELECT id FROM nails_businesses WHERE slug = %s LIMIT 1', (slug,))
+        if not cursor.fetchone():
+            break
+        slug = f"{base_slug}-{counter}"
+        counter += 1
+
+    join_code = secrets.token_hex(4).upper()
+    while True:
+        cursor.execute('SELECT id FROM nails_businesses WHERE join_code = %s LIMIT 1', (join_code,))
+        if not cursor.fetchone():
+            break
+        join_code = secrets.token_hex(4).upper()
+
+    cursor.execute(
+        """
+        INSERT INTO nails_businesses (
+            user_id, name, slug, whatsapp, instagram, address,
+            catalog_tagline, business_hours_json, join_code
+        )
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        RETURNING id
+        """,
+        (
+            user_id,
+            salon_name,
+            slug,
+            phone,
+            (nails_data or {}).get('instagram') or '',
+            (nails_data or {}).get('address') or '',
+            'Uñas que expresan tu estilo, hechas con amor y detalle.',
+            '{}',
+            join_code,
+        )
+    )
+    business_id = cursor.fetchone()['id']
+    cursor.execute(
+        """
+        INSERT INTO nails_staff (business_id, user_id, name, email, phone, role, color)
+        VALUES (%s, %s, %s, %s, %s, 'owner', %s)
+        """,
+        (business_id, user_id, staff_name, user['email'], phone, '#d946ef')
+    )
 
 
 # =============================================================================
@@ -143,29 +459,23 @@ def login():
                 session['username'] = user['username']
                 session['role'] = user['role']
 
-                active_module = (user.get('active_module') or 'cotizador').strip().lower()
+                active_modules = _active_modules_for_user(cursor, user['id'])
+                if active_modules:
+                    active_module = active_modules[0]['module_key']
+                else:
+                    active_module = (user.get('active_module') or 'cotizador').strip().lower()
                 session['active_module'] = active_module
+                session.pop('module_selection_options', None)
 
-                sub_end = user.get('subscription_end')
-                # Normalizamos el estado: lo pasamos a minúsculas y quitamos espacios
-                estado = (user.get('estado_suscripcion') or '').strip().lower()
-
-                try:
-                    ahora = now_utc().replace(tzinfo=None) if now_utc().tzinfo else now_utc()
-                    
-                    # Verificamos si tiene fecha de fin y si el estado es 'trial' o 'activo'
-                    if sub_end and estado in ['trial', 'activo']:
-                        sub_end_clean = sub_end.replace(tzinfo=None) if sub_end.tzinfo else sub_end
-                        if sub_end_clean > ahora:
-                            session['is_pro_active'] = True
-                            session.pop('grace_period', None)
-                        else:
-                            session['is_pro_active'] = False
-                    else:
-                        session['is_pro_active'] = False
-                except Exception as e:
-                    current_app.logger.error(f"Error comparando fechas en login: {e}")
+                module_record = next(
+                    (module for module in active_modules if module['module_key'] == active_module),
+                    None
+                )
+                if module_record:
+                    _apply_module_access_to_session(user, module_record)
+                else:
                     session['is_pro_active'] = False
+                    session.pop('grace_period', None)
 
                 # Registramos el login exitoso en la bitácora de actividad
                 cursor.execute("""
@@ -183,8 +493,16 @@ def login():
                 current_app.logger.info(
                     f"LOGIN_SUCCESS: Usuario '{user['username']}' autenticado desde {ip_cliente}."
                 )
+
+                if len(active_modules) > 1:
+                    session['module_selection_options'] = [module['module_key'] for module in active_modules]
+                    return redirect(url_for('auth.seleccionar_modulo'))
+
                 if active_module == 'nails':
                     return redirect(url_for('nails.dashboard'))
+
+                if _cotizador_needs_onboarding(cursor, user['id']):
+                    return redirect(url_for('configuracion.cotizador_onboarding'))
 
                 return redirect(url_for('main.cotizador'))
 
@@ -212,6 +530,74 @@ def login():
             conn.close()
 
     return render_template('login.html')
+
+
+@auth_bp.route('/seleccionar-modulo', methods=['GET', 'POST'])
+def seleccionar_modulo():
+    user_id = session.get('user_id')
+    if not user_id:
+        flash('Inicia sesión para continuar.', 'warning')
+        return redirect(url_for('auth.login'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        active_modules = _active_modules_for_user(cursor, user_id)
+        if len(active_modules) <= 1:
+            module = active_modules[0] if active_modules else None
+            module_key = module['module_key'] if module else session.get('active_module', 'cotizador')
+            session['active_module'] = module_key
+            if module:
+                _apply_module_access_to_session({'role': session.get('role', 0)}, module)
+            return redirect(redirect_for_module(module_key))
+
+        allowed_modules = {module['module_key'] for module in active_modules}
+
+        if request.method == 'POST':
+            selected_module = (request.form.get('module_key') or '').strip().lower()
+            if selected_module not in allowed_modules:
+                flash('Selecciona un módulo disponible para tu cuenta.', 'warning')
+                return render_template(
+                    'seleccionar_modulo.html',
+                    modules=active_modules,
+                    module_label=_module_label,
+                )
+
+            session['active_module'] = selected_module
+            session.pop('module_selection_options', None)
+            selected_record = next(
+                (module for module in active_modules if module['module_key'] == selected_module),
+                None
+            )
+            if selected_record:
+                _apply_module_access_to_session({'role': session.get('role', 0)}, selected_record)
+            cursor.execute(
+                'UPDATE usuarios SET active_module = %s WHERE id = %s',
+                (selected_module, user_id)
+            )
+            cursor.execute(
+                'INSERT INTO logs_actividad (user_id, accion, modulo, detalle) VALUES (%s, %s, %s, %s)',
+                (user_id, 'Seleccionó módulo de trabajo', 'Acceso', selected_module)
+            )
+            conn.commit()
+
+            if selected_module == 'cotizador' and _cotizador_needs_onboarding(cursor, user_id):
+                return redirect(url_for('configuracion.cotizador_onboarding'))
+            return redirect(redirect_for_module(selected_module))
+
+        return render_template(
+            'seleccionar_modulo.html',
+            modules=active_modules,
+            module_label=_module_label,
+        )
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"MODULE_SELECTION_ERROR: Usuario {user_id} - {e}")
+        flash('No pudimos cargar tus módulos. Intenta iniciar sesión de nuevo.', 'error')
+        return redirect(url_for('auth.logout'))
+    finally:
+        cursor.close()
+        conn.close()
 
 
 # =============================================================================
@@ -285,10 +671,25 @@ def registro():
 
     try:
         # Verificamos que el email no esté ya registrado
-        cursor.execute('SELECT id FROM usuarios WHERE email = %s', (email,))
-        if cursor.fetchone():
-            flash('Este correo ya está registrado. ¿Olvidaste tu contraseña?', 'error')
-            return render_template('registro.html')
+        cursor.execute('SELECT id, email, username, company_name, plan_type FROM usuarios WHERE email = %s', (email,))
+        existing_row = cursor.fetchone()
+        existing_user = dict(existing_row) if existing_row else None
+        if existing_user:
+            if user_has_module(existing_user['id'], 'cotizador', cursor=cursor):
+                flash('Este correo ya tiene Cotizador activo. Inicia sesión para continuar.', 'info')
+                return redirect(url_for('auth.login'))
+
+            activation_code = _start_module_activation(cursor, existing_user, 'cotizador')
+            conn.commit()
+            _send_activation_code_email(
+                existing_user['email'],
+                activation_code['code'],
+                'cotizador',
+                nombre=existing_user.get('username'),
+                salon=existing_user.get('company_name'),
+            )
+            flash('Te enviamos un código para activar Cotizador en tu cuenta Sianeffects.', 'info')
+            return redirect(url_for('auth.activar_modulo'))
 
         # ----------------------------------------------------------------
         # INSERCIÓN DEL USUARIO
@@ -312,6 +713,7 @@ def registro():
         ))
 
         user_id = cursor.fetchone()['id']  # ID del usuario recién creado
+        ensure_user_module(user_id, 'cotizador', status='trial', plan_type='Free', cursor=cursor)
 
         # ----------------------------------------------------------------
         # INICIALIZACIÓN DE SERVICIOS POR DEFECTO
@@ -347,9 +749,9 @@ def registro():
         expires_at = now_utc() + timedelta(minutes=10)  # Código válido por 10 minutos
 
         cursor.execute('''
-            INSERT INTO auth_codes (user_id, email, code, expires_at)
-            VALUES (%s, %s, %s, %s)
-        ''', (user_id, email, v_code, expires_at))
+            INSERT INTO auth_codes (user_id, email, code, expires_at, purpose)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (user_id, email, v_code, expires_at, 'verify_email'))
 
         # ----------------------------------------------------------------
         # COMMIT PRIMERO, CORREO DESPUÉS
@@ -441,11 +843,6 @@ def registro_nails():
     cursor = conn.cursor()
 
     try:
-        cursor.execute('SELECT id FROM usuarios WHERE email = %s', (email,))
-        if cursor.fetchone():
-            flash('Este correo ya está registrado. Inicia sesión o recupera tu contraseña.', 'error')
-            return render_template('nails/registro_nails.html', join_code=join_code)
-
         joined_business = None
         if join_code:
             cursor.execute(
@@ -463,6 +860,42 @@ def registro_nails():
                 return render_template('nails/registro_nails.html', join_code=join_code)
             company_name = joined_business['name']
 
+        cursor.execute(
+            "SELECT id, email, username, company_name, plan_type FROM usuarios WHERE email = %s",
+            (email,)
+        )
+        existing_row = cursor.fetchone()
+        existing_user = dict(existing_row) if existing_row else None
+        if existing_user:
+            if user_has_module(existing_user['id'], 'nails', cursor=cursor):
+                flash('Este correo ya tiene Nails activo. Inicia sesión para continuar.', 'info')
+                return redirect(url_for('auth.login'))
+
+            nails_data = {
+                'join_code': join_code,
+                'salon_name': salon_name,
+                'instagram': instagram,
+                'address': address,
+                'phone': telefono,
+                'staff_name': username,
+            }
+            if joined_business:
+                nails_data['joined_business_id'] = joined_business['id']
+                nails_data['joined_business_name'] = joined_business['name']
+                nails_data['joined_business_primary_color'] = joined_business['primary_color'] or '#d946ef'
+
+            activation_code = _start_module_activation(cursor, existing_user, 'nails', nails_data)
+            conn.commit()
+            _send_activation_code_email(
+                existing_user['email'],
+                activation_code['code'],
+                'nails',
+                nombre=existing_user.get('username'),
+                salon=nails_data.get('joined_business_name') or nails_data.get('salon_name') or existing_user.get('company_name'),
+            )
+            flash('Te enviamos un código para activar Nails en tu cuenta Sianeffects.', 'info')
+            return redirect(url_for('auth.activar_modulo'))
+
         cursor.execute('''
             INSERT INTO usuarios (
                 username, email, password, telefono, company_name,
@@ -479,6 +912,7 @@ def registro_nails():
             'Trial', 'Free', 'nails'
         ))
         user_id = cursor.fetchone()['id']
+        ensure_user_module(user_id, 'nails', status='trial', plan_type='Free', cursor=cursor)
 
         cursor.execute('''
             INSERT INTO configuracion (
@@ -526,9 +960,9 @@ def registro_nails():
         v_code = generate_verification_code()
         expires_at = now_utc() + timedelta(minutes=10)
         cursor.execute('''
-            INSERT INTO auth_codes (user_id, email, code, expires_at)
-            VALUES (%s, %s, %s, %s)
-        ''', (user_id, email, v_code, expires_at))
+            INSERT INTO auth_codes (user_id, email, code, expires_at, purpose)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (user_id, email, v_code, expires_at, 'verify_email'))
 
         conn.commit()
         email_profile = _auth_email_profile('nails')
@@ -558,6 +992,148 @@ def registro_nails():
         conn.close()
 
     return render_template('nails/registro_nails.html', join_code=join_code)
+
+
+@auth_bp.route('/activar-modulo', methods=['GET', 'POST'])
+def activar_modulo():
+    user_id = session.get('pending_activation_user_id')
+    email = session.get('pending_activation_email')
+    module_key = session.get('pending_activation_module')
+    purpose = session.get('pending_activation_purpose')
+
+    if not user_id or not email or module_key not in {'cotizador', 'nails'} or not purpose:
+        flash('No hay una activación pendiente. Inicia sesión o vuelve a solicitar el acceso.', 'warning')
+        return redirect(url_for('auth.login'))
+
+    module_label = 'Nails' if module_key == 'nails' else 'Cotizador'
+
+    if request.method == 'POST':
+        codigo = (request.form.get('codigo') or '').strip()
+        conn = get_db()
+        cursor = conn.cursor()
+
+        try:
+            record = validate_activation_code(user_id, email, codigo, purpose, cursor=cursor)
+            if not record:
+                flash('El código es incorrecto o ya venció. Intenta de nuevo.', 'error')
+                return render_template('activar_modulo.html', email=email, module_key=module_key, module_label=module_label)
+
+            cursor.execute(
+                """
+                SELECT id, username, email, telefono, company_name, role, subscription_end,
+                       estado_suscripcion, plan_type
+                FROM usuarios
+                WHERE id = %s AND email = %s
+                LIMIT 1
+                """,
+                (user_id, email)
+            )
+            user_row = cursor.fetchone()
+            if not user_row:
+                flash('No pudimos encontrar tu cuenta. Intenta iniciar sesión.', 'error')
+                return redirect(url_for('auth.login'))
+            user = dict(user_row)
+
+            if user_has_module(user_id, module_key, cursor=cursor):
+                flash(f'Este correo ya tiene {module_label} activo. Inicia sesión para continuar.', 'info')
+                _clear_pending_activation()
+                return redirect(url_for('auth.login'))
+
+            module_record = ensure_user_module(
+                user_id,
+                module_key,
+                status='trial',
+                plan_type=user.get('plan_type') or 'Free',
+                cursor=cursor
+            )
+            cursor.execute(
+                'UPDATE usuarios SET active_module = %s, verificado = TRUE WHERE id = %s',
+                (module_key, user_id)
+            )
+
+            if module_key == 'cotizador':
+                _ensure_cotizador_defaults(cursor, user_id, user.get('company_name'))
+            elif module_key == 'nails':
+                _finish_nails_activation(cursor, user, session.get('pending_activation_nails') or {})
+
+            mark_auth_code_used(record['id'], cursor=cursor)
+            cursor.execute(
+                "INSERT INTO logs_actividad (user_id, accion, modulo, detalle) VALUES (%s, %s, %s, %s)",
+                (user_id, f"Activó módulo {module_label}", "Cuenta", purpose)
+            )
+            conn.commit()
+
+            _activate_session_for_user(user, module_key, module_record)
+            _clear_pending_activation()
+            flash(f'{module_label} quedó activo en tu cuenta.', 'success')
+            if module_key == 'cotizador' and _cotizador_needs_onboarding(cursor, user_id):
+                return redirect(url_for('configuracion.cotizador_onboarding'))
+            return redirect(redirect_for_module(module_key))
+
+        except Exception as e:
+            conn.rollback()
+            current_app.logger.error(f"MODULE_ACTIVATION_ERROR: Usuario {user_id}, modulo {module_key} - {e}")
+            flash('No se pudo activar el módulo. Intenta de nuevo.', 'error')
+        finally:
+            cursor.close()
+            conn.close()
+
+    return render_template('activar_modulo.html', email=email, module_key=module_key, module_label=module_label)
+
+
+@auth_bp.route('/reenviar-codigo-activacion', methods=['POST'])
+def reenviar_codigo_activacion():
+    user_id = session.get('pending_activation_user_id')
+    email = session.get('pending_activation_email')
+    module_key = session.get('pending_activation_module')
+    purpose = session.get('pending_activation_purpose')
+
+    if not user_id or not email or module_key not in {'cotizador', 'nails'} or not purpose:
+        flash('No hay una activación pendiente.', 'warning')
+        return redirect(url_for('auth.login'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(
+            """
+            SELECT id, username, email, company_name
+            FROM usuarios
+            WHERE id = %s AND email = %s
+            LIMIT 1
+            """,
+            (user_id, email)
+        )
+        user_row = cursor.fetchone()
+        if not user_row:
+            flash('No pudimos encontrar tu cuenta. Intenta de nuevo.', 'error')
+            return redirect(url_for('auth.login'))
+        user = dict(user_row)
+
+        cursor.execute(
+            "UPDATE auth_codes SET used = TRUE WHERE user_id = %s AND email = %s AND purpose = %s AND used = FALSE",
+            (user_id, email, purpose)
+        )
+        activation_code = create_activation_code(user_id, email, purpose, cursor=cursor)
+        conn.commit()
+        nails_data = session.get('pending_activation_nails') or {}
+        _send_activation_code_email(
+            email,
+            activation_code['code'],
+            module_key,
+            nombre=user.get('username'),
+            salon=nails_data.get('joined_business_name') or nails_data.get('salon_name') or user.get('company_name'),
+        )
+        flash('Te enviamos un nuevo código.', 'info')
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"MODULE_ACTIVATION_RESEND_ERROR: Usuario {user_id}, modulo {module_key} - {e}")
+        flash('No se pudo reenviar el código. Intenta de nuevo.', 'error')
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('auth.activar_modulo'))
 
 
 # =============================================================================
@@ -600,6 +1176,7 @@ def verificar_email():
                 SELECT * FROM auth_codes
                 WHERE email = %s
                   AND code = %s
+                  AND COALESCE(purpose, 'verify_email') = 'verify_email'
                   AND used = FALSE
                   AND expires_at > %s
                 ORDER BY created_at DESC
@@ -619,7 +1196,10 @@ def verificar_email():
 
                 # 3. Limpieza de códigos viejos de este email (housekeeping)
                 # Eliminamos los que ya están marcados como usados para no acumular basura
-                cursor.execute('DELETE FROM auth_codes WHERE email = %s AND used = TRUE', (email,))
+                cursor.execute(
+                    "DELETE FROM auth_codes WHERE email = %s AND used = TRUE AND COALESCE(purpose, 'verify_email') = 'verify_email'",
+                    (email,)
+                )
 
                 # 4. Log de actividad
                 cursor.execute(
@@ -699,7 +1279,13 @@ def reenviar_codigo():
         # Rate limiting: no permitir más de 1 reenvío por minuto
         un_minuto_atras = now_utc() - timedelta(minutes=1)
         cursor.execute(
-            'SELECT id FROM auth_codes WHERE email = %s AND created_at > %s',
+            """
+            SELECT id
+            FROM auth_codes
+            WHERE email = %s
+              AND created_at > %s
+              AND COALESCE(purpose, 'verify_email') = 'verify_email'
+            """,
             (email, un_minuto_atras)
         )
 
@@ -710,7 +1296,10 @@ def reenviar_codigo():
             }), 429  # HTTP 429 = Too Many Requests
 
         # Invalidamos todos los códigos anteriores de este email
-        cursor.execute('UPDATE auth_codes SET used = TRUE WHERE email = %s', (email,))
+        cursor.execute(
+            "UPDATE auth_codes SET used = TRUE WHERE email = %s AND COALESCE(purpose, 'verify_email') = 'verify_email'",
+            (email,)
+        )
 
         # Obtenemos el user_id para poder insertarlo en el nuevo código
         cursor.execute(
@@ -727,9 +1316,9 @@ def reenviar_codigo():
         expires_at = now_utc() + timedelta(minutes=10)
 
         cursor.execute('''
-            INSERT INTO auth_codes (user_id, email, code, expires_at)
-            VALUES (%s, %s, %s, %s)
-        ''', (user['id'], email, new_code, expires_at))
+            INSERT INTO auth_codes (user_id, email, code, expires_at, purpose)
+            VALUES (%s, %s, %s, %s, %s)
+        ''', (user['id'], email, new_code, expires_at, 'verify_email'))
 
         # Commit primero, correo después
         conn.commit()

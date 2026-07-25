@@ -56,3 +56,103 @@ Para facilitar el rastreo de errores o auditorías desde el Monitor UI, los logs
   * Evalúa usuarios próximos a vencer y heavy users de los últimos 6 meses.
 - Extracción de Datos: Los administradores pueden descargar la base completa de usuarios en formato CSV para análisis en herramientas externas, y el archivo físico `.log` para investigación forense de fallos.
 - Borrado en Cascada Seguro: Cuando se elimina a un usuario permanentemente desde el panel, el sistema ejecuta una transacción SQL secuencial que destruye su configuración, ventas, detalles de ventas, inventario, maquinaria y envíos ANTES de borrar su fila en la tabla `usuarios`, evitando la corrupción de datos relacionales.
+
+--------------------------------------------------------------------------------
+6. ELIMINACION DE USUARIOS EN ARQUITECTURA MULTI-MODULO
+--------------------------------------------------------------------------------
+El sistema ahora soporta cuentas con mas de un modulo activo usando la tabla
+`user_modules`. Por esta razon, eliminar desde un dashboard administrativo no
+siempre significa borrar la fila completa de `usuarios`.
+
+Regla principal:
+- Si el usuario tiene otro modulo activo, se elimina solo el modulo desde donde
+  se ejecuto la accion.
+- Si el usuario no tiene otro modulo activo, se elimina la cuenta completa como
+  en el flujo historico.
+
+Estados que cuentan como modulo activo:
+- `trial`
+- `active`
+
+Estados que NO cuentan como modulo activo:
+- `inactive`
+- `cancelled`
+
+Dashboard Cotizador:
+- El formulario de `templates/admin.html` manda:
+  - `delete_scope = cotizador`
+- La ruta usada sigue siendo:
+  - POST `/delete_user`
+  - Funcion: `routes/admin.py -> delete_user`
+
+Si el usuario tambien tiene Nails activo:
+- Se eliminan solo datos del Cotizador:
+  - ventas
+  - venta_detalles
+  - movimientos_inventario
+  - producto_detalles
+  - producto_maquinaria
+  - productos
+  - materiales
+  - maquinaria
+  - shipping_rates
+  - shipping_zones
+  - shipping_configs
+  - tutoriales_estado de modulos de Cotizador
+  - configuracion
+- Se elimina solo:
+  - `user_modules` con `module_key = 'cotizador'`
+- Se conserva:
+  - `usuarios`
+  - datos Nails
+- Se actualiza:
+  - `usuarios.active_module = 'nails'`
+
+Admin Nails:
+- El formulario de `templates/admin_nails.html` manda:
+  - `delete_scope = nails`
+- La ruta usada sigue siendo:
+  - POST `/delete_user`
+  - Funcion: `routes/admin.py -> delete_user`
+
+Si el usuario tambien tiene Cotizador activo:
+- Se eliminan solo datos de Nails:
+  - `nails_businesses` donde `user_id` sea el usuario.
+  - `nails_staff` donde `user_id` sea el usuario.
+- Por cascada de `nails_businesses`, se eliminan datos dependientes del salon:
+  clientas, servicios, citas, ventas, pagos, galeria, gastos y logs Nails.
+- Se elimina solo:
+  - `user_modules` con `module_key = 'nails'`
+- Se conserva:
+  - `usuarios`
+  - datos Cotizador
+- Se actualiza:
+  - `usuarios.active_module = 'cotizador'`
+
+Borrado completo:
+- Si no queda ningun otro modulo activo, `delete_user` ejecuta el borrado total
+  historico.
+- Antes de borrar `usuarios`, limpia tablas relacionadas y elimina tambien
+  `user_modules` del usuario.
+
+Auditoria:
+- Cuando se elimina solo un modulo, se registra log con accion:
+  - `Eliminó acceso de módulo`
+- El detalle indica que modulo se elimino y cual conserva el usuario.
+- Los eventos se registran desde el usuario admin que ejecuto la accion.
+
+Reglas de seguridad:
+- Un admin no puede borrarse a si mismo.
+- Solo superadmin (`role = 2`) puede ejecutar eliminaciones.
+- No eliminar `usuarios` si aun existe otro modulo activo para esa cuenta.
+- No borrar datos del otro modulo al limpiar el modulo solicitado.
+
+QA recomendado:
+1. Crear o preparar usuario con `user_modules` para `cotizador` y `nails`.
+2. Desde Admin Cotizador, eliminar usuario.
+3. Confirmar que `usuarios` sigue existiendo.
+4. Confirmar que se borro solo `user_modules.cotizador`.
+5. Confirmar que datos Nails siguen accesibles.
+6. Repetir desde Admin Nails y confirmar lo inverso.
+7. Probar usuario con un solo modulo y confirmar que el borrado completo sigue
+   funcionando.

@@ -64,62 +64,67 @@
 
         {% set perms = nails_permissions or ['dashboard', 'agenda', 'clientes', 'servicios', 'ventas', 'gastos', 'reportes', 'galeria', 'personal', 'configuracion'] %}
         <nav class="nails-nav">
-            {% if 'dashboard' in perms %}
-            <a href="{{ url_for('nails.dashboard') }}" class="{% if request.endpoint == 'nails.dashboard' %}active{% endif %}">
-                <i class="fa-solid fa-house"></i>
-                <span>Inicio</span>
-            </a>
+            {% if is_active != False and not (business and business.is_expired) %}
+                {% if 'dashboard' in perms %}
+                <a href="{{ url_for('nails.dashboard') }}" class="{% if request.endpoint == 'nails.dashboard' %}active{% endif %}">
+                    <i class="fa-solid fa-house"></i>
+                    <span>Inicio</span>
+                </a>
+                {% endif %}
+                {% if 'agenda' in perms %}
+                <a href="{{ url_for('nails.agenda') }}" class="{% if request.endpoint == 'nails.agenda' %}active{% endif %}">
+                    <i class="fa-regular fa-calendar-check"></i>
+                    <span>Agenda</span>
+                </a>
+                {% endif %}
+                {% if 'clientes' in perms %}
+                <a href="{{ url_for('nails.clientes') }}" class="{% if request.endpoint == 'nails.clientes' %}active{% endif %}">
+                    <i class="fa-regular fa-address-book"></i>
+                    <span>Clientas</span>
+                </a>
+                {% endif %}
+                {% if 'servicios' in perms %}
+                <a href="{{ url_for('nails.servicios') }}" class="{% if request.endpoint == 'nails.servicios' %}active{% endif %}">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span>Servicios</span>
+                </a>
+                {% endif %}
+                {% if 'ventas' in perms %}
+                <a href="{{ url_for('nails.ventas') }}" class="{% if request.endpoint == 'nails.ventas' or request.endpoint == 'nails.ticket' %}active{% endif %}">
+                    <i class="fa-solid fa-receipt"></i>
+                    <span>Ventas</span>
+                </a>
+                {% endif %}
+                {% if 'gastos' in perms %}
+                <a href="{{ url_for('nails.gastos') }}" class="{% if request.endpoint == 'nails.gastos' %}active{% endif %}">
+                    <i class="fa-solid fa-wallet"></i>
+                    <span>Gastos</span>
+                </a>
+                {% endif %}
+                {% if 'reportes' in perms %}
+                <a href="{{ url_for('nails.reportes') }}" class="{% if request.endpoint == 'nails.reportes' %}active{% endif %}">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>Reportes</span>
+                </a>
+                {% endif %}
+                {% if 'galeria' in perms %}
+                <a href="{{ url_for('nails.galeria') }}" class="{% if request.endpoint == 'nails.galeria' %}active{% endif %}">
+                    <i class="fa-regular fa-images"></i>
+                    <span>Galería</span>
+                </a>
+                {% endif %}
+                {% if 'personal' in perms %}
+                <a href="{{ url_for('nails.personal') }}" class="{% if request.endpoint == 'nails.personal' %}active{% endif %}">
+                    <i class="fa-solid fa-users-gear"></i>
+                    <span>Personal</span>
+                </a>
+                {% endif %}
             {% endif %}
-            {% if 'agenda' in perms %}
-            <a href="{{ url_for('nails.agenda') }}" class="{% if request.endpoint == 'nails.agenda' %}active{% endif %}">
-                <i class="fa-regular fa-calendar-check"></i>
-                <span>Agenda</span>
-            </a>
-            {% endif %}
-            {% if 'clientes' in perms %}
-            <a href="{{ url_for('nails.clientes') }}" class="{% if request.endpoint == 'nails.clientes' %}active{% endif %}">
-                <i class="fa-regular fa-address-book"></i>
-                <span>Clientas</span>
-            </a>
-            {% endif %}
-            {% if 'servicios' in perms %}
-            <a href="{{ url_for('nails.servicios') }}" class="{% if request.endpoint == 'nails.servicios' %}active{% endif %}">
-                <i class="fa-solid fa-wand-magic-sparkles"></i>
-                <span>Servicios</span>
-            </a>
-            {% endif %}
-            {% if 'ventas' in perms %}
-            <a href="{{ url_for('nails.ventas') }}" class="{% if request.endpoint == 'nails.ventas' or request.endpoint == 'nails.ticket' %}active{% endif %}">
-                <i class="fa-solid fa-receipt"></i>
-                <span>Ventas</span>
-            </a>
-            {% endif %}
-            {% if 'gastos' in perms %}
-            <a href="{{ url_for('nails.gastos') }}" class="{% if request.endpoint == 'nails.gastos' %}active{% endif %}">
-                <i class="fa-solid fa-wallet"></i>
-                <span>Gastos</span>
-            </a>
-            {% endif %}
-            {% if 'reportes' in perms %}
-            <a href="{{ url_for('nails.reportes') }}" class="{% if request.endpoint == 'nails.reportes' %}active{% endif %}">
-                <i class="fa-solid fa-chart-pie"></i>
-                <span>Reportes</span>
-            </a>
-            {% endif %}
-            {% if 'galeria' in perms %}
-            <a href="{{ url_for('nails.galeria') }}" class="{% if request.endpoint == 'nails.galeria' %}active{% endif %}">
-                <i class="fa-regular fa-images"></i>
-                <span>Galería</span>
-            </a>
-            {% endif %}
-            {% if 'personal' in perms %}
-            <a href="{{ url_for('nails.personal') }}" class="{% if request.endpoint == 'nails.personal' %}active{% endif %}">
-                <i class="fa-solid fa-users-gear"></i>
-                <span>Personal</span>
-            </a>
-            {% endif %}
-            {% if 'configuracion' in perms %}
-            <a href="{{ url_for('nails.configuracion') }}" class="{% if request.endpoint == 'nails.configuracion' %}active{% endif %}">
+
+            {% if is_active != False and 'configuracion' in perms %}
+            <a href="{{ url_for('nails.configuracion') }}"
+               class="{% if request.endpoint == 'nails.configuracion' %}active{% endif %}"
+               {% if business and business.is_expired %}style="margin-top: 15px;"{% endif %}>
                 <i class="fa-solid fa-gear"></i>
                 <span>Configuración</span>
             </a>
@@ -127,11 +132,19 @@
         </nav>
 
         <div class="nails-sidebar-footer">
-            {% if business and business.slug %}
-                <a href="/b/{{ business.slug }}" target="_blank">
-                    <i class="fa-solid fa-arrow-up-right-from-square"></i>
-                    Catálogo público
+            {% if is_active != False and not (business and business.is_expired) %}
+                {% if business and business.slug %}
+                    <a href="/b/{{ business.slug }}" target="_blank">
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                        Catálogo público
+                    </a>
+                {% endif %}
+                {% if has_multiple_active_modules %}
+                <a href="{{ url_for('auth.seleccionar_modulo') }}">
+                    <i class="fa-solid fa-right-left"></i>
+                    Cambiar de módulo
                 </a>
+                {% endif %}
             {% endif %}
             <a href="{{ url_for('auth.logout') }}" class="nails-sidebar-logout">
                 <i class="fa-solid fa-right-from-bracket"></i>
@@ -165,7 +178,7 @@
                 </strong>
             </div>
 
-            {% if business and business.slug %}
+            {% if business and business.slug and is_active != False and not business.is_expired %}
                 <a href="/b/{{ business.slug }}" class="nails-mobile-catalog" target="_blank" aria-label="Ver catálogo">
                     <i class="fa-solid fa-arrow-up-right-from-square"></i>
                 </a>
@@ -181,7 +194,7 @@
             </div>
             <div class="nails-topbar-actions">
                 
-                {% if business and business.slug %}
+                {% if business and business.slug and is_active != False and not business.is_expired %}
                     <a href="/b/{{ business.slug }}" class="btn btn-sm btn-outline-primary" target="_blank">
                         Ver catálogo
                     </a>

@@ -1,7 +1,5 @@
-import requests
-import re
 from flask import Blueprint, request, jsonify, session, current_app
-from services.shipping_service import ShippingService, obtener_coordenadas_universales
+from services.shipping_service import ShippingService, resolver_ubicacion
 
 shipping_bp = Blueprint('shipping', __name__)
 
@@ -27,19 +25,19 @@ def cotizar():
             direccion = data.get('direccion') # Recibimos el link
 
             # --- LÓGICA DE AUTO-RESOLUCIÓN ---
-            # Si no hay coordenadas pero tenemos un link, intentamos resolverlo aquí mismo
+            # Si no hay coordenadas pero tenemos ubicación, intentamos resolverla aquí mismo
             if (not lat or not lng) and direccion:
                 try:
-                    lat_res, lng_res = obtener_coordenadas_universales(direccion)
-                    if lat_res and lng_res:
-                        lat, lng = lat_res, lng_res
-                        current_app.logger.info(f"COTIZADOR_AUTO_RESOLVE: Usuario '{u_name}' (ID: {u_id}) resolvio link a {lat}, {lng}")
+                    ubicacion = resolver_ubicacion(direccion)
+                    if ubicacion.get("success"):
+                        lat, lng = ubicacion["lat"], ubicacion["lng"]
+                        current_app.logger.info(f"COTIZADOR_AUTO_RESOLVE: Usuario '{u_name}' (ID: {u_id}) resolvio ubicacion a {lat}, {lng}")
                 except Exception as e:
-                    current_app.logger.warning(f"COTIZADOR_AUTO_RESOLVE_FAIL: Usuario '{u_name}' (ID: {u_id}) fallo al resolver link - {e}")
+                    current_app.logger.warning(f"COTIZADOR_AUTO_RESOLVE_FAIL: Usuario '{u_name}' (ID: {u_id}) fallo al resolver ubicacion - {e}")
 
             # Ahora sí, validamos si después de intentar resolver tenemos los datos
             if not lat or not lng:
-                 return jsonify({"error": "Faltan coordenadas para envio local. Por favor ingresa un link valido."}), 400
+                 return jsonify({"error": "Faltan coordenadas para envio local. Por favor ingresa una ubicacion valida."}), 400
                  
             resultado = servicio.cotizar_local(lat, lng)
         else:
@@ -64,34 +62,34 @@ def cotizar():
 @shipping_bp.route('/api/resolver-mapa', methods=['POST'])
 def resolver_mapa():
     """
-    Ruta API para que el frontend envíe un link y reciba las coordenadas.
+    Ruta API para que el frontend envíe una ubicación y reciba las coordenadas.
     """
     u_name = session.get('username', 'Anonimo')
     u_id = session.get('user_id', 'N/A')
     
-    data = request.json
+    data = request.get_json(silent=True) or {}
     url = data.get('url')
     
     if not url:
-        return jsonify({"error": "No se envio ningun link"}), 400
+        return jsonify({"error": "No se envio ninguna ubicacion"}), 400
 
     try:
-        # Usamos nuestra nueva función "Universal" desde el servicio
-        lat, lng = obtener_coordenadas_universales(url)
+        ubicacion = resolver_ubicacion(url)
 
-        if lat and lng:
+        if ubicacion.get("success"):
             current_app.logger.info(f"MAPS_RESOLVED: Usuario '{u_name}' (ID: {u_id}) resolvio coordenadas externas exitosamente")
             return jsonify({
                 "success": True, 
-                "lat": lat, 
-                "lng": lng
+                "lat": ubicacion["lat"],
+                "lng": ubicacion["lng"],
+                "address": ubicacion["address"]
             })
         else:
              return jsonify({
-                "error": "No pude encontrar coordenadas validas en ese link. Por favor revisa que sea un link valido de Google Maps."
+                "error": ubicacion.get("error", "No fue posible encontrar la ubicación.")
             }), 400
 
     except Exception as e:
         # Devolvemos el error real (str(e)) para verlo en la alerta
-        current_app.logger.error(f"MAPS_CONNECTION_ERROR: Usuario '{u_name}' (ID: {u_id}) fallo al intentar resolver URL '{url}' - {e}")
+        current_app.logger.error(f"MAPS_CONNECTION_ERROR: Usuario '{u_name}' (ID: {u_id}) fallo al intentar resolver ubicacion '{url}' - {e}")
         return jsonify({"error": f"Fallo Tecnico: {str(e)}"}), 500

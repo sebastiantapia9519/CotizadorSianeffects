@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Activar {{ module_label }} | Sianeffects</title>
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+    <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root {
+            --sian-pink: #ff6b81;
+            --bg-cream: #fffdf9;
+        }
+
+        body {
+            font-family: 'Nunito', sans-serif;
+            background-color: var(--bg-cream);
+            color: #555;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .code-input {
+            letter-spacing: 12px;
+            font-size: 2rem;
+            font-weight: 800;
+            text-indent: 12px;
+            color: #333;
+        }
+
+        .form-floating > .code-input {
+            height: 95px;
+            padding-top: 40px !important;
+            padding-bottom: 10px !important;
+        }
+
+        .form-floating > label {
+            padding-top: 15px;
+        }
+
+        .form-control:focus {
+            border-color: var(--sian-pink);
+            box-shadow: 0 0 0 0.25rem rgba(255, 107, 129, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container" style="max-width: 500px;">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }} shadow-sm rounded-4 border-0 mb-3 d-flex align-items-center alert-dismissible fade show">
+            <i class="fas fa-info-circle me-2"></i> {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+    </div>
+
+    <div class="container d-flex justify-content-center align-items-center">
+        <div class="card border-0 shadow-lg rounded-4 overflow-hidden" style="max-width: 500px; width: 100%;">
+            <div class="card-body p-5">
+                <div class="text-center mb-4">
+                    <h2 class="fw-bold text-dark mb-1">Activar {{ module_label }}</h2>
+                    <p class="text-muted small mb-0">
+                        {% if module_key == 'nails' %}
+                        Ingresa el código que enviamos a tu correo para activar Nails en tu cuenta Sianeffects.
+                        {% else %}
+                        Ingresa el código que enviamos a tu correo para activar Cotizador en tu cuenta Sianeffects.
+                        {% endif %}
+                    </p>
+                    <p class="text-muted small mt-2 mb-0">
+                        Correo: <span class="fw-bold text-dark">{{ email }}</span>
+                    </p>
+                </div>
+
+                <form action="{{ url_for('auth.activar_modulo') }}" method="POST">
+                    <div class="form-floating mb-4">
+                        <input type="text" name="codigo" class="form-control rounded-3 text-center code-input"
+                               id="codeInput" placeholder="000000" maxlength="6" required autocomplete="off">
+                        <label for="codeInput">Código de 6 dígitos</label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-pill fw-bold shadow-sm mb-3"
+                            style="background-color: var(--sian-pink); border: none;">
+                        Activar módulo
+                    </button>
+                </form>
+
+                <form action="{{ url_for('auth.reenviar_codigo_activacion') }}" method="POST" class="text-center">
+                    <button type="submit" class="btn btn-link text-primary text-decoration-none small fw-bold p-0">
+                        Reenviar código
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>

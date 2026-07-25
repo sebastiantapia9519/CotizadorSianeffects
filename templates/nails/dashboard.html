@@ -54,10 +54,24 @@
         background: rgba(255, 255, 255, .76);
         border: 1px solid var(--nails-border);
         border-radius: 999px;
+        color: inherit;
+        cursor: pointer;
         display: flex;
+        font: inherit;
         gap: 10px;
         padding: 8px 12px;
+        text-align: left;
+        transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
         white-space: nowrap;
+    }
+
+    .home-user:hover,
+    .home-user:focus-visible {
+        border-color: color-mix(in srgb, var(--nails-primary), transparent 52%);
+        box-shadow: 0 12px 28px rgba(26, 31, 44, .08);
+        color: inherit;
+        outline: 0;
+        transform: translateY(-1px);
     }
 
     .home-user-avatar {
@@ -71,6 +85,67 @@
         height: 38px;
         justify-content: center;
         width: 38px;
+    }
+
+    .home-user-caret {
+        color: var(--nails-muted);
+        font-size: 12px;
+        margin-left: 4px;
+    }
+
+    .home-user-text {
+        display: grid;
+        min-width: 0;
+    }
+
+    .profile-modal-head {
+        align-items: center;
+        display: flex;
+        gap: 12px;
+    }
+
+    .profile-modal-avatar {
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border: 1px solid color-mix(in srgb, var(--nails-primary), transparent 70%);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: flex;
+        flex: 0 0 auto;
+        font-size: 18px;
+        font-weight: 900;
+        height: 48px;
+        justify-content: center;
+        width: 48px;
+    }
+
+    .profile-info-grid {
+        display: grid;
+        gap: 10px;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .profile-info-item {
+        background: var(--nails-subtle);
+        border: 1px solid var(--nails-border);
+        border-radius: 8px;
+        min-width: 0;
+        padding: 10px;
+    }
+
+    .profile-info-label {
+        color: var(--nails-muted);
+        font-size: 11px;
+        font-weight: 900;
+        margin-bottom: 3px;
+        text-transform: uppercase;
+    }
+
+    .profile-info-value {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 900;
+        overflow-wrap: anywhere;
     }
 
     .home-summary {
@@ -93,7 +168,7 @@
         position: relative;
     }
 
-    .home-stat + .home-stat {
+    .home-stat+.home-stat {
         border-left: 1px solid var(--nails-border);
     }
 
@@ -460,7 +535,7 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
         }
 
-        .home-stat + .home-stat {
+        .home-stat+.home-stat {
             border-left: 0;
         }
 
@@ -479,6 +554,10 @@
             width: 100%;
         }
 
+        .profile-info-grid {
+            grid-template-columns: 1fr;
+        }
+
         .home-summary {
             grid-template-columns: 1fr;
         }
@@ -492,7 +571,7 @@
             grid-template-columns: 56px minmax(0, 1fr);
         }
 
-        .home-agenda-row > :nth-child(n+3) {
+        .home-agenda-row> :nth-child(n+3) {
             grid-column: 2;
         }
 
@@ -509,9 +588,48 @@
 {% endblock %}
 
 {% block content %}
+{% if business.is_expired %}
+    <div class="locked-shell" style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center;">
+        <div style="background: #fef2f2; border-radius: 50%; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+            <i class="fa-solid fa-credit-card" style="font-size: 32px; color: #ef4444;"></i>
+        </div>
+        <h2 style="color: var(--nails-ink); font-weight: 900; margin-bottom: 8px;">Suscripción vencida</h2>
+        <p style="color: var(--nails-muted); font-weight: 800; max-width: 480px; line-height: 1.5;">
+            {% if business.subscription_expires_at %}
+                El acceso operativo al sistema está suspendido porque la licencia del salón finalizó el <strong>{{ business.subscription_expires_at.strftime('%d/%m/%Y') }} a las 11:59 PM</strong>.
+            {% else %}
+                El acceso operativo al sistema está suspendido porque <strong>aún no cuentas con una licencia activa</strong>.
+            {% endif %}
+        </p>
+        
+        {% if current_nails_role == 'Jefa' %}
+        <a href="https://wa.me/{{ cotizador_telefono_whatsapp }}?text=Hola%20Sianeffects,%20quiero%20renovar%20la%20suscripción%20del%20salón%20{{ business.name|urlencode }}." target="_blank" class="btn btn-primary mt-3 px-4 py-2 fw-bold shadow-sm" style="border-radius: 999px;">
+            <i class="fa-brands fa-whatsapp me-2"></i>Renovar suscripción
+        </a>
+        
+        <div class="text-center pt-4 mt-2">
+            <a href="https://wa.me/{{ cotizador_telefono_whatsapp }}?text=Hola%20Sianeffects,%20tengo%20problemas%20con%20mi%20renovación." target="_blank" class="text-muted text-decoration-none small fw-bold">
+                <i class="fab fa-whatsapp text-success me-1"></i> ¿Dudas o pago por transferencia?
+            </a>
+        </div>
+        {% else %}
+        <div class="alert alert-warning mt-3 border-0 fw-bold rounded-4" style="background: #fff7ed; color: #ea580c;">
+            Por favor, contacta a la dueña del salón para reactivar el servicio.
+        </div>
+        {% endif %}
+    </div>
+
+{% elif is_active %}
+
 {% set greeting_name = (session.get('username') or business.name or 'Equipo').split(' ')[0]|upper %}
+{% set profile_name = user_profile.username if user_profile and user_profile.username else session.get('username') %}
+{% set profile_email = user_profile.email if user_profile and user_profile.email else '' %}
+{% set profile_phone = user_profile.telefono if user_profile and user_profile.telefono else (user_profile.staff_phone if user_profile and user_profile.staff_phone else '') %}
+{% set profile_staff_name = user_profile.staff_name if user_profile and user_profile.staff_name else profile_name %}
+{% set profile_staff_role = user_profile.staff_role if user_profile and user_profile.staff_role else '' %}
 {% set weekdays = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'] %}
-{% set months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'] %}
+{% set months = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre',
+'noviembre', 'diciembre'] %}
 {% set confirmed_pct = ((stats.confirmed_today or 0) * 100 / (stats.appointments_today or 1))|round(0, 'floor') %}
 
 <div class="home-shell">
@@ -524,22 +642,26 @@
             </p>
         </div>
 
-        <div class="home-user">
-            <div class="home-user-avatar">{{ greeting_name[0]|upper }}</div>
-            <div>
-                <div class="home-name">{{ (session.get('username') or business.name)|upper }}</div>
-                <div class="home-sub">{{ current_nails_role or 'Usuario Nails' }}</div>
-            </div>
-        </div>
+        <button type="button" class="home-user" data-bs-toggle="modal" data-bs-target="#profileModal"
+            aria-label="Abrir mi perfil">
+            <span class="home-user-avatar">{{ greeting_name[0]|upper }}</span>
+            <span class="home-user-text">
+                <span class="home-name">{{ (session.get('username') or business.name)|upper }}</span>
+                <span class="home-sub">{{ current_nails_role or 'Usuario Nails' }}</span>
+            </span>
+            <i class="fa-solid fa-chevron-down home-user-caret" aria-hidden="true"></i>
+        </button>
     </section>
 
     <section class="home-summary">
-        <article class="home-stat" style="--stat-bg: var(--nails-primary-soft); --stat-color: var(--nails-primary-strong);">
+        <article class="home-stat"
+            style="--stat-bg: var(--nails-primary-soft); --stat-color: var(--nails-primary-strong);">
             <div class="home-stat-icon"><i class="fa-regular fa-calendar-check"></i></div>
             <div>
                 <div class="home-stat-label">Citas hoy</div>
                 <div class="home-stat-value">{{ stats.appointments_today or 0 }}</div>
-                <div class="home-stat-note"><a href="{{ url_for('nails.agenda') }}" class="text-decoration-none">Ver agenda</a></div>
+                <div class="home-stat-note"><a href="{{ url_for('nails.agenda') }}" class="text-decoration-none">Ver
+                        agenda</a></div>
             </div>
         </article>
 
@@ -575,7 +697,8 @@
             <div>
                 <div class="home-stat-label">Ventas del día</div>
                 <div class="home-stat-value">${{ "%.2f"|format(stats.total_today or 0) }}</div>
-                <div class="home-stat-note"><a href="{{ url_for('nails.ventas') }}" class="text-decoration-none">Ver ventas</a></div>
+                <div class="home-stat-note"><a href="{{ url_for('nails.ventas') }}" class="text-decoration-none">Ver
+                        ventas</a></div>
             </div>
         </article>
     </section>
@@ -591,21 +714,24 @@
             <div class="home-agenda-list">
                 {% for appointment in today_appointments %}
                 {% set status_style = {
-                    'confirmada': '--status-bg:#ecfdf3;--status-color:#027a48;--status-border:#bbf7d0;',
-                    'pendiente': '--status-bg:#fff7ed;--status-color:#ea580c;--status-border:#fed7aa;',
-                    'atendida': '--status-bg:#eff6ff;--status-color:#2563eb;--status-border:#bfdbfe;'
+                'confirmada': '--status-bg:#ecfdf3;--status-color:#027a48;--status-border:#bbf7d0;',
+                'pendiente': '--status-bg:#fff7ed;--status-color:#ea580c;--status-border:#fed7aa;',
+                'atendida': '--status-bg:#eff6ff;--status-color:#2563eb;--status-border:#bfdbfe;'
                 }.get(appointment.status, '') %}
                 <div class="home-agenda-row">
                     <div class="home-time">{{ appointment.start_time_label }}</div>
                     <div class="home-agenda-client">
-                        <span class="home-dot" style="--dot: {{ ['var(--nails-primary)', 'var(--nails-teal)', '#8b5cf6', '#f97316', '#0ea5e9'][loop.index0 % 5] }};"></span>
+                        <span class="home-dot"
+                            style="--dot: {{ ['var(--nails-primary)', 'var(--nails-teal)', '#8b5cf6', '#f97316', '#0ea5e9'][loop.index0 % 5] }};"></span>
                         <div class="min-w-0">
                             <div class="home-name">{{ appointment.client_name or 'Cliente General' }}</div>
-                            <div class="home-sub">{{ appointment.service_name or appointment.title or 'Servicio Nails' }}</div>
+                            <div class="home-sub">{{ appointment.service_name or appointment.title or 'Servicio Nails'
+                                }}</div>
                         </div>
                     </div>
                     <div class="home-sub text-end">{{ appointment.duration_minutes }} min</div>
-                    <div><span class="home-status" style="{{ status_style }}">{{ appointment.status|replace('_', ' ')|title }}</span></div>
+                    <div><span class="home-status" style="{{ status_style }}">{{ appointment.status|replace('_', '
+                            ')|title }}</span></div>
                     <div class="home-sub text-end">{{ (appointment.staff_name or 'Sin técnica')|upper }}</div>
                 </div>
                 {% endfor %}
@@ -634,17 +760,21 @@
                     <div class="home-mini-avatar">{{ (next_appointment.client_name or 'C')[0]|upper }}</div>
                     <div class="min-w-0">
                         <div class="home-name">{{ next_appointment.client_name or 'Cliente General' }}</div>
-                        <div class="home-sub">{{ next_appointment.service_name or next_appointment.title or 'Servicio Nails' }}</div>
+                        <div class="home-sub">{{ next_appointment.service_name or next_appointment.title or 'Servicio
+                            Nails' }}</div>
                     </div>
                 </div>
                 <div class="home-next-meta">
-                    {% if next_appointment.client_phone %}<span><i class="fa-brands fa-whatsapp"></i> {{ next_appointment.client_phone }}</span>{% endif %}
-                    {% if next_appointment.staff_name %}<span><i class="fa-regular fa-user"></i> {{ next_appointment.staff_name|upper }}</span>{% endif %}
+                    {% if next_appointment.client_phone %}<span><i class="fa-brands fa-whatsapp"></i> {{
+                        next_appointment.client_phone }}</span>{% endif %}
+                    {% if next_appointment.staff_name %}<span><i class="fa-regular fa-user"></i> {{
+                        next_appointment.staff_name|upper }}</span>{% endif %}
                     <span><i class="fa-regular fa-clock"></i> {{ next_appointment.start_time_formatted }}</span>
                 </div>
                 <div class="d-grid gap-2">
                     <a href="{{ url_for('nails.agenda') }}" class="btn btn-primary btn-sm">Ver detalle</a>
-                    <a href="{{ url_for('nails.ventas', appointment_id=next_appointment.id) }}" class="btn btn-outline-primary btn-sm">Generar venta</a>
+                    <a href="{{ url_for('nails.ventas', appointment_id=next_appointment.id) }}"
+                        class="btn btn-outline-primary btn-sm">Generar venta</a>
                 </div>
                 {% else %}
                 <div class="home-empty">No hay próximas citas pendientes o confirmadas.</div>
@@ -654,23 +784,28 @@
 
             <article class="home-panel">
                 <div class="home-panel-head">
-                    <h2 class="home-panel-title"><i class="fa-solid fa-wand-magic-sparkles text-primary"></i>Acciones rápidas</h2>
+                    <h2 class="home-panel-title"><i class="fa-solid fa-wand-magic-sparkles text-primary"></i>Acciones
+                        rápidas</h2>
                 </div>
 
                 <div class="home-actions-grid">
-                    <a href="{{ url_for('nails.agenda') }}" class="home-action" style="--action-bg:#faf5ff;--action-color:#9333ea;">
+                    <a href="{{ url_for('nails.agenda') }}" class="home-action"
+                        style="--action-bg:#faf5ff;--action-color:#9333ea;">
                         <i class="fa-regular fa-calendar-plus"></i>
                         <div><strong>Nueva cita</strong><span>Agendar cliente</span></div>
                     </a>
-                    <a href="{{ url_for('nails.ventas') }}" class="home-action" style="--action-bg:#fdf2f8;--action-color:#db2777;">
+                    <a href="{{ url_for('nails.ventas') }}" class="home-action"
+                        style="--action-bg:#fdf2f8;--action-color:#db2777;">
                         <i class="fa-solid fa-bag-shopping"></i>
                         <div><strong>Registrar venta</strong><span>Añadir venta</span></div>
                     </a>
-                    <a href="{{ url_for('nails.clientes') }}" class="home-action" style="--action-bg:#ecfdf3;--action-color:#059669;">
+                    <a href="{{ url_for('nails.clientes') }}" class="home-action"
+                        style="--action-bg:#ecfdf3;--action-color:#059669;">
                         <i class="fa-regular fa-user-plus"></i>
                         <div><strong>Agregar cliente</strong><span>Nuevo registro</span></div>
                     </a>
-                    <a href="{{ url_for('nails.galeria') }}" class="home-action" style="--action-bg:#fff7ed;--action-color:#ea580c;">
+                    <a href="{{ url_for('nails.galeria') }}" class="home-action"
+                        style="--action-bg:#fff7ed;--action-color:#ea580c;">
                         <i class="fa-regular fa-image"></i>
                         <div><strong>Subir foto</strong><span>Añadir a galería</span></div>
                     </a>
@@ -693,15 +828,17 @@
                     <div class="home-mini-avatar">{{ (client.name or 'C')[0]|upper }}</div>
                     <div class="min-w-0">
                         <div class="home-name">{{ client.name }}</div>
-                        <div class="home-sub">{{ client.appointment_time }} · {{ client.service_name or 'Servicio Nails' }}</div>
+                        <div class="home-sub">{{ client.appointment_time }} · {{ client.service_name or 'Servicio Nails'
+                            }}</div>
                     </div>
                     <span class="home-client-tag">
-                        {% if client.birthday and client.birthday.month == now_local.month and client.birthday.day == now_local.day %}
-                            Cumpleaños
+                        {% if client.birthday and client.birthday.month == now_local.month and client.birthday.day ==
+                        now_local.day %}
+                        Cumpleaños
                         {% elif client.total_visits and client.total_visits > 1 %}
-                            Frecuente
+                        Frecuente
                         {% else %}
-                            Primera visita
+                        Primera visita
                         {% endif %}
                     </span>
                 </div>
@@ -727,12 +864,14 @@
                         <div class="home-sub">{{ sale.service_name or sale.sale_number or ('Venta #' ~ sale.id) }}</div>
                     </div>
                     <strong>${{ "%.2f"|format(sale.balance_due or 0) }}</strong>
-                    <span class="home-status" style="--status-bg:#fff7ed;--status-color:#ea580c;--status-border:#fed7aa;">Pendiente</span>
+                    <span class="home-status"
+                        style="--status-bg:#fff7ed;--status-color:#ea580c;--status-border:#fed7aa;">Pendiente</span>
                 </div>
                 {% endfor %}
                 <div class="d-flex justify-content-between pt-2">
                     <span class="home-sub">Total pendiente</span>
-                    <strong style="color: var(--nails-primary-strong);">${{ "%.2f"|format(stats.pending_balance or 0) }} MXN</strong>
+                    <strong style="color: var(--nails-primary-strong);">${{ "%.2f"|format(stats.pending_balance or 0) }}
+                        MXN</strong>
                 </div>
             </div>
             {% else %}
@@ -744,7 +883,8 @@
             <article class="home-panel">
                 <div class="home-panel-head">
                     <div>
-                        <h2 class="home-panel-title"><i class="fa-regular fa-clock text-primary"></i>Huecos disponibles hoy</h2>
+                        <h2 class="home-panel-title"><i class="fa-regular fa-clock text-primary"></i>Huecos disponibles
+                            hoy</h2>
                         <div class="home-sub mt-1">
                             Horario: {{ today_business_hours.label if today_business_hours else '08:00 - 21:00' }}
                         </div>
@@ -755,19 +895,16 @@
                 {% if available_slots %}
                 <div class="home-slot-list">
                     {% for slot in available_slots %}
-                    <a
-                        href="{{ url_for('nails.agenda', new=1, date=slot.date_value, time=slot.time_value) }}"
-                        class="home-slot"
-                        title="Agendar a las {{ slot.time_label }}"
-                    >{{ slot.time_label }}</a>
+                    <a href="{{ url_for('nails.agenda', new=1, date=slot.date_value, time=slot.time_value) }}"
+                        class="home-slot" title="Agendar a las {{ slot.time_label }}">{{ slot.time_label }}</a>
                     {% endfor %}
                 </div>
                 {% else %}
                 <div class="home-empty">
                     {% if today_business_hours and not today_business_hours.is_open %}
-                        El salón está marcado como cerrado hoy.
+                    El salón está marcado como cerrado hoy.
                     {% else %}
-                        No hay huecos disponibles por ahora dentro del horario de servicio.
+                    No hay huecos disponibles por ahora dentro del horario de servicio.
                     {% endif %}
                 </div>
                 {% endif %}
@@ -775,7 +912,8 @@
 
             <article class="home-panel">
                 <div class="home-panel-head">
-                    <h2 class="home-panel-title"><i class="fa-regular fa-star text-primary"></i>Servicios más reservados hoy</h2>
+                    <h2 class="home-panel-title"><i class="fa-regular fa-star text-primary"></i>Servicios más reservados
+                        hoy</h2>
                 </div>
 
                 {% if top_services_today %}
@@ -784,7 +922,8 @@
                     <div class="home-service-row">
                         <span class="home-rank">{{ loop.index }}</span>
                         <div class="home-name">{{ service.name }}</div>
-                        <div class="home-sub text-end">{{ service.bookings_count }} cita{{ '' if service.bookings_count == 1 else 's' }}</div>
+                        <div class="home-sub text-end">{{ service.bookings_count }} cita{{ '' if service.bookings_count
+                            == 1 else 's' }}</div>
                     </div>
                     {% endfor %}
                 </div>
@@ -797,7 +936,8 @@
 
     <section class="home-reminder">
         <div>
-            <strong style="color: var(--nails-ink);"><i class="fa-regular fa-bell me-2"></i>Recordatorios enviados hoy:</strong>
+            <strong style="color: var(--nails-ink);"><i class="fa-regular fa-bell me-2"></i>Recordatorios enviados
+                hoy:</strong>
             <span>{{ today_appointments|selectattr('reminder_sent')|list|length }}</span>
             <span class="mx-2 text-muted">|</span>
             <span>Próximo recordatorio automático: 30 min antes de cada cita</span>
@@ -805,4 +945,146 @@
         <a href="{{ url_for('nails.agenda') }}" class="home-mini-link">Enviar recordatorio ahora</a>
     </section>
 </div>
+
+<div class="modal fade" id="profileModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header border-0 pb-0">
+                <div class="profile-modal-head">
+                    <div class="profile-modal-avatar">{{ (profile_name or 'U')[:1]|upper }}</div>
+                    <div>
+                        <h2 class="modal-title h5 fw-black mb-1">Mi perfil</h2>
+                        <div class="home-sub">{{ current_nails_role or 'Usuario Nails' }}</div>
+                    </div>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+
+            <div class="modal-body">
+                <div class="profile-info-grid mb-4">
+                    <div class="profile-info-item">
+                        <div class="profile-info-label">Correo de acceso</div>
+                        <div class="profile-info-value">{{ profile_email or 'Sin correo registrado' }}</div>
+                    </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-label">Contraseña</div>
+                        <div class="profile-info-value">••••••••</div>
+                    </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-label">Perfil en el salón</div>
+                        <div class="profile-info-value">{{ profile_staff_name or 'Sin perfil operativo' }}</div>
+                    </div>
+                    <div class="profile-info-item">
+                        <div class="profile-info-label">Rol</div>
+                        <div class="profile-info-value">{{ current_nails_role or profile_staff_role or 'Usuario Nails' }}</div>
+                    </div>
+                </div>
+
+                <ul class="nav nav-pills gap-2 mb-3" id="profileTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active fw-bold" id="profile-data-tab" data-bs-toggle="pill"
+                            data-bs-target="#profile-data" type="button" role="tab" aria-controls="profile-data"
+                            aria-selected="true">
+                            <i class="fa-regular fa-user me-1"></i> Datos
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link fw-bold" id="profile-security-tab" data-bs-toggle="pill"
+                            data-bs-target="#profile-security" type="button" role="tab"
+                            aria-controls="profile-security" aria-selected="false">
+                            <i class="fa-solid fa-lock me-1"></i> Seguridad
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <div class="tab-pane fade show active" id="profile-data" role="tabpanel"
+                        aria-labelledby="profile-data-tab" tabindex="0">
+                        <form method="POST" action="{{ url_for('nails.perfil_datos') }}">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="profile_username">Nombre</label>
+                                    <input type="text" name="username" id="profile_username" class="form-control"
+                                        value="{{ profile_name or '' }}" maxlength="120" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="profile_phone">Teléfono</label>
+                                    <input type="text" name="telefono" id="profile_phone" class="form-control"
+                                        value="{{ profile_phone or '' }}" maxlength="40">
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label" for="profile_email">Correo</label>
+                                    <input type="email" id="profile_email" class="form-control"
+                                        value="{{ profile_email or '' }}" disabled>
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa-solid fa-floppy-disk me-1"></i> Guardar datos
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="tab-pane fade" id="profile-security" role="tabpanel"
+                        aria-labelledby="profile-security-tab" tabindex="0">
+                        <form method="POST" action="{{ url_for('nails.perfil_seguridad') }}">
+                            <input type="hidden" name="next" value="dashboard">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <label class="form-label" for="dashboard_current_password">Contraseña actual</label>
+                                    <input type="password" name="current_password" id="dashboard_current_password"
+                                        class="form-control" required autocomplete="current-password">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="dashboard_new_password">Nueva contraseña</label>
+                                    <input type="password" name="new_password" id="dashboard_new_password"
+                                        class="form-control" minlength="6" required autocomplete="new-password">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label" for="dashboard_confirm_password">Confirmar contraseña</label>
+                                    <input type="password" name="confirm_password" id="dashboard_confirm_password"
+                                        class="form-control" minlength="6" required autocomplete="new-password">
+                                </div>
+                            </div>
+                            <div class="d-flex justify-content-end mt-4">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fa-solid fa-key me-1"></i> Cambiar contraseña
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if request.args.get('profile') %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const profileModal = document.getElementById('profileModal');
+        if (profileModal && window.bootstrap) {
+            window.bootstrap.Modal.getOrCreateInstance(profileModal).show();
+        }
+    });
+</script>
+{% endif %}
+
+{% else %}
+
+<div class="locked-shell"
+    style="display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 60vh; text-align: center;">
+    <div
+        style="background: #f1f3f8; border-radius: 50%; width: 80px; height: 80px; display: flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+        <i class="fa-solid fa-lock" style="font-size: 32px; color: var(--nails-muted);"></i>
+    </div>
+    <h2 style="color: var(--nails-ink); font-weight: 900; margin-bottom: 8px;">Cuenta suspendida</h2>
+    <p style="color: var(--nails-muted); font-weight: 800; max-width: 400px; line-height: 1.5;">
+        Tu acceso a la operación del salón ha sido desactivado temporalmente. Si crees que se trata de un error, por
+        favor contacta a la jefa o administradora del negocio.
+    </p>
+</div>
+
+{% endif %}
 {% endblock %}

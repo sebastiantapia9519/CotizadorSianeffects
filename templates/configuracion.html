@@ -315,6 +315,57 @@
         box-shadow: 0 0 0 3px rgba(255, 107, 129, 0.1);
     }
 
+    .address-autocomplete-wrap {
+        position: relative;
+    }
+
+    .address-suggestions {
+        position: absolute;
+        z-index: 30;
+        top: calc(100% + 6px);
+        left: 0;
+        right: 0;
+        display: none;
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 16px 32px rgba(17, 24, 39, 0.12);
+        overflow: hidden;
+    }
+
+    .address-suggestions.is-open {
+        display: block;
+    }
+
+    .address-suggestion {
+        width: 100%;
+        border: 0;
+        background: #ffffff;
+        padding: 10px 12px;
+        text-align: left;
+        color: #374151;
+        transition: background 0.15s ease;
+    }
+
+    .address-suggestion:hover,
+    .address-suggestion:focus {
+        background: #fff7f9;
+        outline: none;
+    }
+
+    .address-suggestion-main {
+        display: block;
+        font-weight: 800;
+        color: #111827;
+    }
+
+    .address-suggestion-meta {
+        display: block;
+        margin-top: 2px;
+        font-size: 0.82rem;
+        color: #6b7280;
+    }
+
     .form-help-text {
         font-size: 0.8rem;
         color: #6b7280;
@@ -734,6 +785,26 @@
 
     [data-bs-theme="dark"] .form-input-modern:focus {
         border-color: var(--sian-pink);
+    }
+
+    [data-bs-theme="dark"] .address-suggestions,
+    [data-bs-theme="dark"] .address-suggestion {
+        background: #1f2937;
+        border-color: #374151;
+        color: #e5e7eb;
+    }
+
+    [data-bs-theme="dark"] .address-suggestion:hover,
+    [data-bs-theme="dark"] .address-suggestion:focus {
+        background: #374151;
+    }
+
+    [data-bs-theme="dark"] .address-suggestion-main {
+        color: #f9fafb;
+    }
+
+    [data-bs-theme="dark"] .address-suggestion-meta {
+        color: #9ca3af;
     }
 
     [data-bs-theme="dark"] .toggle-row {
@@ -1976,12 +2047,15 @@
                                         <i class="fas fa-map-marker-alt me-2 text-danger"></i>
                                         Punto de Despacho
                                         <i class="fas fa-info-circle label-tooltip"
-                                            title="Pega un link de Google Maps de tu negocio"></i>
+                                            title="Ingresa un link de Maps, una dirección o coordenadas"></i>
                                     </label>
-                                    <input type="text" name="origin_address" id="inputMapsConfig"
-                                        class="form-input-modern" placeholder="Pega el link de Google Maps aquí..."
-                                        value="{{ shipping_config['origin_address'] if shipping_config else '' }}"
-                                        onchange="extraerCoordenadasConfig(this)">
+                                    <div class="address-autocomplete-wrap">
+                                        <input type="text" name="origin_address" id="inputMapsConfig"
+                                            class="form-input-modern" placeholder="Link de Maps, dirección o coordenadas"
+                                            value="{{ shipping_config['origin_address'] if shipping_config else '' }}"
+                                            onchange="extraerCoordenadasConfig(this)" autocomplete="off">
+                                        <div class="address-suggestions" id="originAddressSuggestions"></div>
+                                    </div>
                                     <div id="geo-status" class="mt-2 small fw-bold text-success" style="display: none;">
                                         <i class="fas fa-check-circle me-1"></i>Ubicación detectada
                                     </div>
@@ -2632,6 +2706,7 @@
         if (inputMaps && inputMaps.value.trim() !== "") {
             extraerCoordenadasConfig(inputMaps, true);
         }
+        initAddressAutocomplete('inputMapsConfig', 'originAddressSuggestions');
 
         calcularCostoTiempo();
     });
@@ -2705,14 +2780,109 @@
     // ============================================
     // EXTRACCIÓN DE COORDENADAS
     // ============================================
+    function initAddressAutocomplete(inputId, dropdownId) {
+        const input = document.getElementById(inputId);
+        const dropdown = document.getElementById(dropdownId);
+        if (!input || !dropdown) return;
+
+        let debounceTimer = null;
+        let activeController = null;
+
+        function looksLikeUrlOrCoords(value) {
+            const text = value.trim();
+            return /^(https?:\/\/|www\.)/i.test(text)
+                || /(google|maps|goo\.gl|maps\.app)/i.test(text)
+                || /^-?\d+(?:\.\d+)?\s*,\s*-?\d+(?:\.\d+)?$/.test(text);
+        }
+
+        function closeDropdown() {
+            dropdown.classList.remove('is-open');
+            dropdown.innerHTML = '';
+        }
+
+        function buildAddress(feature) {
+            const props = feature.properties || {};
+            const mainParts = [];
+            const metaParts = [];
+
+            if (props.street) mainParts.push(props.street);
+            if (props.housenumber) mainParts.push(props.housenumber);
+            if (!mainParts.length && props.name) mainParts.push(props.name);
+
+            if (props.city) metaParts.push(props.city);
+            else if (props.county) metaParts.push(props.county);
+            if (props.state) metaParts.push(props.state);
+
+            return {
+                main: mainParts.join(' ') || props.name || 'Dirección sugerida',
+                meta: metaParts.join(', ') || props.country || '',
+                full: [mainParts.join(' ') || props.name, props.city || props.county, props.state, props.country]
+                    .filter(Boolean)
+                    .join(', ')
+            };
+        }
+
+        function renderSuggestions(features) {
+            dropdown.innerHTML = '';
+            features.slice(0, 5).forEach(feature => {
+                const address = buildAddress(feature);
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'address-suggestion';
+                const main = document.createElement('span');
+                main.className = 'address-suggestion-main';
+                main.textContent = `📍 ${address.main}`;
+                const meta = document.createElement('span');
+                meta.className = 'address-suggestion-meta';
+                meta.textContent = address.meta;
+                button.append(main, meta);
+                button.addEventListener('click', () => {
+                    input.value = address.full;
+                    input.dispatchEvent(new Event('change', { bubbles: true }));
+                    closeDropdown();
+                });
+                dropdown.appendChild(button);
+            });
+            dropdown.classList.toggle('is-open', dropdown.children.length > 0);
+        }
+
+        input.addEventListener('input', () => {
+            const query = input.value.trim();
+            window.clearTimeout(debounceTimer);
+
+            if (activeController) activeController.abort();
+            if (query.length < 3 || looksLikeUrlOrCoords(query)) {
+                closeDropdown();
+                return;
+            }
+
+            debounceTimer = window.setTimeout(() => {
+                activeController = new AbortController();
+                fetch(`https://photon.komoot.io/api/?q=${encodeURIComponent(query)}`, {
+                    signal: activeController.signal
+                })
+                    .then(response => response.ok ? response.json() : { features: [] })
+                    .then(data => renderSuggestions(data.features || []))
+                    .catch(error => {
+                        if (error.name !== 'AbortError') closeDropdown();
+                    });
+            }, 300);
+        });
+
+        document.addEventListener('click', event => {
+            if (!dropdown.contains(event.target) && event.target !== input) closeDropdown();
+        });
+    }
+
     function extraerCoordenadasConfig(input, silencioso = false) {
-        const url = input.value.trim();
-        if (!url) return;
+        const ubicacion = input.value.trim();
+        if (!ubicacion) return;
 
         const regex = /@(-?\d+\.\d+),(-?\d+\.\d+)/;
-        const match = url.match(regex);
-        const matchBusqueda = url.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
-        const matchFinal = match || matchBusqueda;
+        const match = ubicacion.match(regex);
+        const matchBusqueda = ubicacion.match(/q=(-?\d+\.\d+),(-?\d+\.\d+)/);
+        const matchCoords = ubicacion.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+        const matchFinal = match || matchBusqueda || matchCoords;
 
         if (matchFinal) {
             document.getElementById('latConfig').value = matchFinal[1];
@@ -2721,17 +2891,38 @@
             input.classList.add('is-valid');
             document.getElementById('geo-status').style.display = 'block';
         } else {
-            const esGoogle = /google|maps|goo\.gl|googleusercontent/.test(url.toLowerCase());
-            if (esGoogle) {
-                input.classList.remove('is-invalid');
-            } else if (!silencioso) {
-                Swal.fire({
-                    icon: 'warning',
-                    title: 'Link no reconocido',
-                    text: 'Asegúrate de que sea un enlace de Google Maps.'
+            fetch('/api/resolver-mapa', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ url: ubicacion })
+            })
+                .then(response => response.json().then(data => ({ ok: response.ok, data })))
+                .then(({ ok, data }) => {
+                    if (ok && data.success) {
+                        document.getElementById('latConfig').value = data.lat;
+                        document.getElementById('lngConfig').value = data.lng;
+                        input.classList.remove('is-invalid');
+                        input.classList.add('is-valid');
+                        document.getElementById('geo-status').style.display = 'block';
+                    } else if (!silencioso) {
+                        input.classList.add('is-invalid');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Ubicación no encontrada',
+                            text: data.error || 'No fue posible encontrar la ubicación.'
+                        });
+                    }
+                })
+                .catch(() => {
+                    if (!silencioso) {
+                        input.classList.add('is-invalid');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Ubicación no encontrada',
+                            text: 'No fue posible encontrar la ubicación.'
+                        });
+                    }
                 });
-                input.classList.add('is-invalid');
-            }
         }
     }
 

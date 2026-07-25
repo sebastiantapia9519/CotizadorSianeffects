@@ -15,6 +15,7 @@ from db import get_db_connection as get_db
 from helpers import login_required, subscription_required
 from utils.datetime_utils import utc_to_local
 from utils.tutorial_utils import debe_mostrar_tutorial, obtener_version_tutorial 
+from services.shipping_service import resolver_ubicacion
 
 # Carga de variables de entorno
 load_dotenv()
@@ -73,6 +74,198 @@ def procesar_fila_fechas(fila_db):
                 current_app.logger.warning(f"DATE_FORMAT_WARNING: Fallo procesando {campo} - {e}")
                 pass 
     return item
+
+
+def _clean_onboarding_money(value, default):
+    try:
+        return float(value or default)
+    except (TypeError, ValueError):
+        return float(default)
+
+
+def _clean_onboarding_int(value, default):
+    try:
+        return int(value or default)
+    except (TypeError, ValueError):
+        return int(default)
+
+
+def _user_completed_cotizador_onboarding(cursor, user_id):
+    cursor.execute("""
+        SELECT 1
+        FROM logs_actividad
+        WHERE user_id = %s
+          AND accion = 'Completó onboarding cotizador'
+        LIMIT 1
+    """, (user_id,))
+    return cursor.fetchone() is not None
+
+
+@config_bp.route('/cotizador/onboarding', methods=['GET', 'POST'])
+@login_required
+def cotizador_onboarding():
+    uid = session['user_id']
+    u_name = session.get('username', 'Anonimo')
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        empresa = (request.form.get('nombre_empresa') or '').strip()
+        slogan = (request.form.get('slogan') or '').strip()
+        website = (request.form.get('website') or '').strip()
+        notas_ticket = (request.form.get('notas_ticket') or '').strip()[:150]
+        icono_empresa = request.form.get('icono_empresa') or '🎨'
+        tipo_identidad = request.form.get('tipo_identidad', 'emoji')
+        logo_url_final = request.form.get('current_logo', '')
+
+        if not empresa:
+            flash('Escribe el nombre de tu negocio para continuar.', 'warning')
+            cursor.close()
+            conn.close()
+            return redirect(url_for('configuracion.cotizador_onboarding'))
+
+        try:
+            if tipo_identidad == 'logo' and 'logo_file' in request.files:
+                file = request.files['logo_file']
+                if file and file.filename and allowed_file(file.filename):
+                    base_filename = secure_filename(file.filename)
+                    unique_filename = f"logos/{uid}/{uuid.uuid4().hex}_{base_filename}"
+                    s3_client.upload_fileobj(
+                        file,
+                        BUCKET_NAME,
+                        unique_filename,
+                        ExtraArgs={'ContentType': file.content_type}
+                    )
+                    logo_url_final = f"{PUBLIC_URL}/{unique_filename}"
+            elif tipo_identidad == 'emoji':
+                logo_url_final = ''
+
+            cursor.execute('UPDATE usuarios SET company_name=%s WHERE id=%s', (empresa, uid))
+
+            cursor.execute('SELECT id FROM configuracion WHERE user_id=%s', (uid,))
+            config_existente = cursor.fetchone()
+            if config_existente:
+                cursor.execute("""
+                    UPDATE configuracion
+                    SET nombre_empresa=%s,
+                        slogan=%s,
+                        website=%s,
+                        notas_ticket=%s,
+                        icono_empresa=%s,
+                        logo_empresa=%s
+                    WHERE user_id=%s
+                """, (empresa, slogan, website, notas_ticket, icono_empresa, logo_url_final, uid))
+            else:
+                cursor.execute("""
+                    INSERT INTO configuracion (
+                        user_id, margen_ganancia, porcentaje_gastos_operativos,
+                        inventario_activo, ticket_bw, nombre_empresa, slogan,
+                        website, notas_ticket, icono_empresa, logo_empresa
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (uid, 100, 0, False, False, empresa, slogan, website,
+                      notas_ticket, icono_empresa, logo_url_final))
+
+            if request.form.get('configure_shipping') == '1':
+                origin_address = (request.form.get('origin_address') or '').strip()
+                origin_lat = request.form.get('origin_lat') or None
+                origin_lng = request.form.get('origin_lng') or None
+                local_base = _clean_onboarding_money(request.form.get('local_base_rate'), 35)
+                local_km = _clean_onboarding_money(request.form.get('local_km_rate'), 8)
+                safety_margin = _clean_onboarding_int(request.form.get('safety_margin'), 10)
+
+                if origin_address:
+                    ubicacion = resolver_ubicacion(origin_address)
+                    if ubicacion.get("success"):
+                        origin_address = ubicacion["address"]
+                        origin_lat = ubicacion["lat"]
+                        origin_lng = ubicacion["lng"]
+                        current_app.logger.info(f"COTIZADOR_ONBOARDING_GEO_RESOLVE: Usuario '{u_name}' (ID: {uid}) resolvio punto de despacho en {origin_lat}, {origin_lng}")
+                    elif not origin_lat or not origin_lng:
+                        flash(ubicacion.get("error", "No fue posible encontrar la ubicación."), 'danger')
+                        conn.rollback()
+                        return redirect(url_for('configuracion.cotizador_onboarding'))
+
+                cursor.execute("SELECT id FROM shipping_configs WHERE user_id=%s", (uid,))
+                shipping_existente = cursor.fetchone()
+                if shipping_existente:
+                    cursor.execute("""
+                        UPDATE shipping_configs
+                        SET origin_address=%s,
+                            origin_lat=%s,
+                            origin_lng=%s,
+                            local_base_rate=%s,
+                            local_km_rate=%s,
+                            safety_margin_percent=%s
+                        WHERE user_id=%s
+                    """, (origin_address, origin_lat, origin_lng, local_base, local_km, safety_margin, uid))
+                else:
+                    cursor.execute("""
+                        INSERT INTO shipping_configs (
+                            user_id, origin_address, origin_lat, origin_lng,
+                            local_base_rate, local_km_rate, safety_margin_percent
+                        )
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (uid, origin_address, origin_lat, origin_lng, local_base, local_km, safety_margin))
+
+            if not _user_completed_cotizador_onboarding(cursor, uid):
+                cursor.execute("""
+                    INSERT INTO logs_actividad (user_id, accion, modulo)
+                    VALUES (%s, %s, %s)
+                """, (uid, 'Completó onboarding cotizador', 'Configuración'))
+
+            conn.commit()
+            flash('Tu cotizador quedó configurado. Ya puedes empezar a cotizar.', 'success')
+            return redirect(url_for('main.cotizador'))
+
+        except Exception as e:
+            conn.rollback()
+            current_app.logger.error(f"COTIZADOR_ONBOARDING_ERROR: Usuario '{u_name}' (ID: {uid}) - {e}")
+            flash('No se pudo guardar la configuración inicial. Intenta de nuevo.', 'danger')
+
+        finally:
+            cursor.close()
+            conn.close()
+
+        return redirect(url_for('configuracion.cotizador_onboarding'))
+
+    try:
+        cursor.execute("""
+            SELECT u.company_name, u.telefono, c.*
+            FROM usuarios u
+            LEFT JOIN configuracion c ON c.user_id = u.id
+            WHERE u.id = %s
+            LIMIT 1
+        """, (uid,))
+        config_row = cursor.fetchone() or {}
+        config = dict(config_row)
+        config['nombre_empresa'] = config.get('nombre_empresa') or config.get('company_name') or ''
+        config['slogan'] = config.get('slogan') or ''
+        config['website'] = config.get('website') or ''
+        config['notas_ticket'] = config.get('notas_ticket') or ''
+        config['icono_empresa'] = config.get('icono_empresa') or '🎨'
+        config['logo_empresa'] = config.get('logo_empresa') or ''
+        config['modo_oscuro'] = config.get('modo_oscuro') or False
+
+        cursor.execute("SELECT * FROM shipping_configs WHERE user_id = %s", (uid,))
+        shipping_row = cursor.fetchone()
+        shipping_config = dict(shipping_row) if shipping_row else {
+            'origin_address': '',
+            'origin_lat': '',
+            'origin_lng': '',
+            'local_base_rate': '35.00',
+            'local_km_rate': '8.00',
+            'safety_margin_percent': '10',
+        }
+    finally:
+        cursor.close()
+        conn.close()
+
+    return render_template(
+        'cotizador_onboarding.html',
+        config=config,
+        shipping_config=shipping_config,
+    )
 
 # ==============================================================================
 # 1. SERVICIO DE LECTURA (GET) - CARGA TODA LA VISTA DE CONFIGURACIÓN
@@ -431,23 +624,24 @@ def actualizar_logistica_base():
         flash('Los costos y márgenes de envío deben ser numéricos.', 'danger')
         return redirect(url_for('configuracion.configuracion') + '#list-envios')
 
-    # 2. RESOLUCIÓN DE LINKS CORTOS
-    if origin_address and ("goo.gl" in origin_address or "googleusercontent" in origin_address):
-        try:
-            import requests
-            import re
-            # Seguimos la redirección para obtener el link largo
-            response = requests.get(origin_address, allow_redirects=True, timeout=5)
-            final_url = response.url 
-            
-            # Buscamos coordenadas (@lat,lng) en la URL final
-            match = re.search(r'@(-?\d+\.\d+),(-?\d+\.\d+)', final_url)
-            if match:
-                origin_lat = match.group(1)
-                origin_lng = match.group(2)
-                current_app.logger.info(f"GEO_RESOLVE: Usuario '{u_name}' (ID: {uid}) resolvio ubicacion en {origin_lat}, {origin_lng}")
-        except Exception as e:
-            current_app.logger.error(f"GEO_RESOLVE_ERROR: Usuario '{u_name}' (ID: {uid}) - {e}")
+    # 2. RESOLUCIÓN UNIVERSAL DEL PUNTO DE DESPACHO
+    if origin_address:
+        ubicacion = resolver_ubicacion(origin_address)
+        if ubicacion.get("success"):
+            origin_address = ubicacion["address"]
+            origin_lat = ubicacion["lat"]
+            origin_lng = ubicacion["lng"]
+            current_app.logger.info(f"GEO_RESOLVE: Usuario '{u_name}' (ID: {uid}) resolvio ubicacion en {origin_lat}, {origin_lng}")
+        elif not origin_lat or not origin_lng:
+            mensaje = ubicacion.get("error", "No fue posible encontrar la ubicación.")
+            if es_ajax:
+                cursor.close()
+                conn.close()
+                return jsonify({"error": mensaje}), 400
+            flash(mensaje, 'danger')
+            cursor.close()
+            conn.close()
+            return redirect(url_for('configuracion.configuracion') + '#list-envios')
 
     # 3. GUARDADO EN BASE DE DATOS
     try:

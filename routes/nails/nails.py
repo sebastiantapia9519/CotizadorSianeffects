@@ -17,6 +17,7 @@ import boto3
 from botocore.config import Config
 from datetime import date, datetime, timedelta
 from werkzeug.utils import secure_filename
+from werkzeug.security import check_password_hash, generate_password_hash
 from flask import (
     Blueprint, render_template, redirect, url_for,
     session, request, flash, current_app, jsonify,
@@ -79,6 +80,39 @@ NAILS_SERVICE_ICON_OPTIONS = [
 ]
 NAILS_SERVICE_ICONS = {icon for icon, _label in NAILS_SERVICE_ICON_OPTIONS}
 PUBLIC_BOOKING_STAFF_ROLES = ("staff", "owner", "admin")
+
+# Ejemplos SQL para mantener historial intocable con soft delete en nails_staff.
+# 1) Historial contable: no filtrar st.is_active, porque una cita vieja debe seguir
+#    mostrando la técnica aunque hoy esté inactiva.
+NAILS_STAFF_HISTORY_JOIN_SQL_EXAMPLE = """
+SELECT
+    a.id,
+    a.start_time,
+    a.status,
+    a.estimated_total,
+    a.deposit_amount,
+    st.name AS staff_name,
+    st.role AS staff_role,
+    st.is_active AS staff_is_active
+FROM nails_appointments a
+LEFT JOIN nails_staff st
+       ON st.id = a.staff_id
+      AND st.business_id = a.business_id
+WHERE a.business_id = %s
+ORDER BY a.start_time DESC, a.id DESC;
+"""
+
+# 2) Select para nuevas citas: aquí sí se excluye personal inactivo.
+NAILS_AVAILABLE_STAFF_SELECT_SQL_EXAMPLE = """
+SELECT id, name, role, color
+FROM nails_staff
+WHERE business_id = %s
+  AND is_active = TRUE
+  AND role IN ('owner', 'admin', 'staff')
+ORDER BY
+    CASE role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 ELSE 3 END,
+    LOWER(name) ASC;
+"""
 
 
 # =========================================================
@@ -959,6 +993,34 @@ def user_is_nails_owner(cur, user_id, business) -> bool:
     return cur.fetchone() is not None
 
 
+def count_active_owners(cur, business_id, exclude_staff_id=None) -> int:
+    """Cuenta perfiles owner activos, opcionalmente excluyendo un registro staff."""
+    params = [business_id]
+    exclude_clause = ""
+
+    if exclude_staff_id is not None:
+        exclude_clause = "AND id != %s"
+        params.append(exclude_staff_id)
+
+    cur.execute(
+        f"""
+        SELECT COUNT(*) AS owners_count
+        FROM nails_staff
+        WHERE business_id = %s
+          AND role = 'owner'
+          AND is_active = TRUE
+          {exclude_clause}
+        """,
+        tuple(params),
+    )
+    return cur.fetchone()["owners_count"] or 0
+
+
+def would_leave_business_without_active_owner(cur, business_id, staff_id) -> bool:
+    """True si al modificar/desactivar ese staff el salón quedaría sin owner activo."""
+    return count_active_owners(cur, business_id, exclude_staff_id=staff_id) == 0
+
+
 def get_current_nails_role(cur, user_id, business):
     """Devuelve el rol Nails del usuario actual para mostrarlo en la interfaz."""
     if not business or not user_id:
@@ -1028,6 +1090,9 @@ NAILS_ENDPOINT_SECTIONS = {
     "personal": "personal",
     "editar_personal": "personal",
     "desactivar_personal": "personal",
+    "reactivar_personal": "personal",
+    "perfil_seguridad": "dashboard",
+    "perfil_datos": "dashboard",
     "configuracion": "configuracion",
     "upload_r2_nails": "galeria",
 }
@@ -1134,7 +1199,36 @@ def enforce_nails_role_permissions():
 
     business = get_user_nails_business(user_id)
     if not business:
-        return None
+        # --- NUEVO: Atrapar a las técnicas desactivadas ---
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                """
+                SELECT b.id FROM nails_businesses b
+                INNER JOIN nails_staff st ON st.business_id = b.id
+                WHERE st.user_id = %s AND st.is_active = FALSE
+                LIMIT 1
+                """,
+                (user_id,)
+            )
+            inactive_staff = cur.fetchone()
+        finally:
+            cur.close()
+            conn.close()
+
+        return None # Usuario nuevo real, pasará al onboarding
+
+    # --- Bloqueo por suscripción vencida ---
+    if business.get("is_expired"):
+        # Permitimos entrar al dashboard (para ver el bloqueo) y a configuración (para pagar/ver datos)
+        rutas_permitidas_vencido = ["dashboard", "configuracion", "logout", "static"]
+        if endpoint_name not in rutas_permitidas_vencido:
+            flash("La suscripción del salón ha vencido.", "danger")
+            return redirect(url_for("nails.dashboard"))
+    # ----------------------------------------------
+
+    conn = get_db_connection()
 
     conn = get_db_connection()
     cur = conn.cursor()
@@ -1370,21 +1464,25 @@ def require_login():
 def get_user_nails_business(user_id):
     """
     Obtiene el negocio Nails activo del usuario logueado.
-    Devuelve None si el usuario no tiene ningún salón registrado.
+    Calcula si la suscripción está vencida: NULL equivale a vencida.
     """
     conn = get_db_connection()
     cur  = conn.cursor()
 
     cur.execute(
         """
-        SELECT b.*
+        SELECT b.*,
+               (b.subscription_expires_at IS NULL OR
+                (NOW() AT TIME ZONE 'America/Monterrey') > (b.subscription_expires_at + TIME '23:59:59')) AS is_expired
         FROM nails_businesses b
         WHERE b.user_id = %s
           AND b.is_active = TRUE
 
         UNION ALL
 
-        SELECT b.*
+        SELECT b.*,
+               (b.subscription_expires_at IS NULL OR
+                (NOW() AT TIME ZONE 'America/Monterrey') > (b.subscription_expires_at + TIME '23:59:59')) AS is_expired
         FROM nails_businesses b
         INNER JOIN nails_staff st ON st.business_id = b.id
         WHERE st.user_id = %s
@@ -1403,6 +1501,186 @@ def get_user_nails_business(user_id):
     conn.close()
 
     return business
+
+
+# =========================================================
+# MI PERFIL / SEGURIDAD
+# GET:  Muestra formulario de cambio de contraseña.
+# POST: Valida contraseña actual, actualiza hash y registra auditoría.
+# =========================================================
+
+@nails_bp.route("/perfil/seguridad", methods=["GET", "POST"])
+def perfil_seguridad():
+    if not require_login():
+        return redirect(url_for("auth.login"))
+
+    user_id = session.get("user_id")
+    business = get_user_nails_business(user_id)
+
+    if not business:
+        return redirect(url_for("nails.onboarding"))
+
+    if request.method == "GET":
+        return render_template("nails/perfil_seguridad.html", business=business)
+
+    redirect_target = url_for("nails.perfil_seguridad")
+    if request.form.get("next") == "dashboard":
+        redirect_target = url_for("nails.dashboard", profile="1")
+
+    current_password = request.form.get("current_password", "")
+    new_password = request.form.get("new_password", "")
+    confirm_password = request.form.get("confirm_password", "")
+
+    if len(new_password) < 6:
+        flash("La contraseña nueva debe tener al menos 6 caracteres.", "warning")
+        return redirect(redirect_target)
+
+    if new_password != confirm_password:
+        flash("La contraseña nueva y la confirmación no coinciden.", "warning")
+        return redirect(redirect_target)
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            SELECT id, password
+            FROM usuarios
+            WHERE id = %s
+            LIMIT 1
+            """,
+            (user_id,),
+        )
+        user = cur.fetchone()
+
+        if not user or not check_password_hash(user["password"] or "", current_password):
+            flash("La contraseña actual no es correcta.", "danger")
+            return redirect(redirect_target)
+
+        hashed_password = generate_password_hash(new_password, method="pbkdf2:sha256")
+
+        cur.execute(
+            """
+            UPDATE usuarios
+            SET password = %s
+            WHERE id = %s
+            """,
+            (hashed_password, user_id),
+        )
+
+        cur.execute(
+            """
+            INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                business["id"],
+                user_id,
+                "password_change",
+                "Seguridad",
+                "Cambió su contraseña de acceso",
+            ),
+        )
+
+        conn.commit()
+        flash("Contraseña actualizada correctamente.", "success")
+        return redirect(redirect_target)
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(
+            f"NAILS_PASSWORD_CHANGE_ERROR: Usuario ID {user_id} no pudo cambiar contraseña - {e}"
+        )
+        flash("No se pudo actualizar la contraseña. Intenta de nuevo.", "danger")
+        return redirect(redirect_target)
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+@nails_bp.route("/perfil/datos", methods=["POST"])
+def perfil_datos():
+    if not require_login():
+        return redirect(url_for("auth.login"))
+
+    user_id = session.get("user_id")
+    business = get_user_nails_business(user_id)
+
+    if not business:
+        return redirect(url_for("nails.onboarding"))
+
+    username = clean_text(request.form.get("username"), 120)
+    telefono = clean_text(request.form.get("telefono"), 40)
+
+    if not username:
+        flash("Tu nombre es obligatorio.", "warning")
+        return redirect(url_for("nails.dashboard"))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        cur.execute(
+            """
+            UPDATE usuarios
+            SET username = %s,
+                telefono = %s
+            WHERE id = %s
+            RETURNING id
+            """,
+            (username, telefono, user_id),
+        )
+        updated_user = cur.fetchone()
+
+        if not updated_user:
+            conn.rollback()
+            flash("No se encontró tu usuario.", "warning")
+            return redirect(url_for("nails.dashboard"))
+
+        cur.execute(
+            """
+            UPDATE nails_staff
+            SET name = %s,
+                phone = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE business_id = %s
+              AND user_id = %s
+            """,
+            (username.upper(), telefono, business["id"], user_id),
+        )
+
+        cur.execute(
+            """
+            INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
+            VALUES (%s, %s, %s, %s, %s)
+            """,
+            (
+                business["id"],
+                user_id,
+                "profile_update",
+                "Mi perfil",
+                "Actualizó sus datos personales",
+            ),
+        )
+
+        conn.commit()
+        session["username"] = username
+        flash("Perfil actualizado correctamente.", "success")
+        return redirect(url_for("nails.dashboard"))
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(
+            f"NAILS_PROFILE_UPDATE_ERROR: Usuario ID {user_id} no pudo actualizar perfil - {e}"
+        )
+        flash("No se pudo actualizar tu perfil. Revisa los datos e intenta de nuevo.", "danger")
+        return redirect(url_for("nails.dashboard"))
+
+    finally:
+        cur.close()
+        conn.close()
 
 
 # =========================================================
@@ -1538,13 +1816,63 @@ def dashboard():
     business = get_user_nails_business(user_id)
 
     if not business:
+        # --- NUEVO: Buscar negocio de técnica inactiva ---
+        conn = get_db_connection()
+        cur = conn.cursor()
+        try:
+            cur.execute(
+                """
+                SELECT b.* FROM nails_businesses b
+                INNER JOIN nails_staff st ON st.business_id = b.id
+                WHERE st.user_id = %s AND st.is_active = FALSE
+                LIMIT 1
+                """,
+                (user_id,)
+            )
+            inactive_business = cur.fetchone()
+        finally:
+            cur.close()
+            conn.close()
+
+        if inactive_business:
+            # Renderizamos el dashboard pero inyectando el bloqueo
+            return render_template("nails/dashboard.html", business=inactive_business, is_active=False)
+
         return redirect(url_for("nails.onboarding"))
+        # -------------------------------------------------
 
     conn = get_db_connection()
     cur  = conn.cursor()
 
     try:
         business_timezone = business["timezone"] or "America/Monterrey"
+
+        # ── Perfil personal del usuario logueado ───────────
+        cur.execute(
+            """
+            SELECT
+                u.id,
+                u.username,
+                u.email,
+                u.telefono,
+                u.company_name,
+                u.created_at,
+                st.name AS staff_name,
+                st.email AS staff_email,
+                st.phone AS staff_phone,
+                st.role AS staff_role,
+                st.is_active AS staff_is_active
+            FROM usuarios u
+            LEFT JOIN nails_staff st
+                   ON st.user_id = u.id
+                  AND st.business_id = %s
+            WHERE u.id = %s
+            ORDER BY st.is_active DESC NULLS LAST, st.id DESC NULLS LAST
+            LIMIT 1
+            """,
+            (business["id"], user_id),
+        )
+        user_profile = cur.fetchone()
 
         # ── Ventas de hoy ──────────────────────────────────
         cur.execute(
@@ -1855,10 +2183,12 @@ def dashboard():
             stats=stats,
             now_local=now_local,
             current_nails_role=get_current_nails_role(cur, user_id, business),
+            user_profile=user_profile,
             today_appointments=today_appointments,
             upcoming_appointments=upcoming_appointments,
             next_appointment=next_appointment,
             recent_sales=recent_sales,
+            is_active=True,
             pending_sales=pending_sales,
             today_clients=today_clients,
             available_slots=available_slots,
@@ -5274,10 +5604,35 @@ def personal():
         )
         staff_members = cur.fetchall()
 
+        business_timezone = business["timezone"] or "America/Monterrey"
+        activity_logs = []
+        if is_owner:
+            cur.execute(
+                """
+                SELECT
+                    l.id,
+                    l.user_id,
+                    l.action,
+                    l.module,
+                    l.detail,
+                    l.created_at,
+                    TO_CHAR(l.created_at AT TIME ZONE %s, 'DD/MM/YYYY HH24:MI') AS created_at_label,
+                    COALESCE(u.username, u.company_name, u.email, 'Sistema') AS actor_name
+                FROM nails_activity_logs l
+                LEFT JOIN usuarios u ON u.id = l.user_id
+                WHERE l.business_id = %s
+                ORDER BY l.created_at DESC
+                LIMIT 150
+                """,
+                (business_timezone, business["id"]),
+            )
+            activity_logs = cur.fetchall()
+
         return render_template(
             "nails/personal.html",
             business=business,
             staff_members=staff_members,
+            activity_logs=activity_logs,
             is_owner=is_owner,
             role_labels=NAILS_ROLE_LABELS,
             role_descriptions=NAILS_ROLE_DESCRIPTIONS,
@@ -5320,7 +5675,7 @@ def editar_personal(staff_id):
         color = clean_hex_color(request.form.get("color"), DEFAULT_PRIMARY_COLOR)
         commission_type = "none"
         commission_value = 0
-        is_active = request.form.get("is_active") == "on"
+        # Eliminamos is_active de aquí para que solo se controle con los botones
 
         if not name or role not in NAILS_STAFF_ROLES:
             flash("Revisa nombre y rol.", "warning")
@@ -5328,7 +5683,7 @@ def editar_personal(staff_id):
 
         cur.execute(
             """
-            SELECT role, user_id
+            SELECT role, user_id, is_active
             FROM nails_staff
             WHERE id = %s AND business_id = %s
             LIMIT 1
@@ -5341,26 +5696,19 @@ def editar_personal(staff_id):
             return redirect(url_for("nails.personal"))
 
         editing_self = current_staff["user_id"] and int(current_staff["user_id"]) == int(user_id)
+
         if editing_self and current_staff["role"] == "owner" and role != "owner":
             flash("No puedes quitarte tu propio rol de jefa.", "warning")
             return redirect(url_for("nails.personal"))
 
-        if editing_self and not is_active:
-            flash("No puedes desactivarte a ti misma.", "warning")
+        if (
+            current_staff["role"] == "owner"
+            and current_staff["is_active"]
+            and role != "owner"
+            and would_leave_business_without_active_owner(cur, business["id"], staff_id)
+        ):
+            flash("Debe existir al menos una jefa activa.", "warning")
             return redirect(url_for("nails.personal"))
-
-        if current_staff["role"] == "owner" and role != "owner":
-            cur.execute(
-                """
-                SELECT COUNT(*) AS owners_count
-                FROM nails_staff
-                WHERE business_id = %s AND role = 'owner' AND is_active = TRUE
-                """,
-                (business["id"],),
-            )
-            if (cur.fetchone()["owners_count"] or 0) <= 1:
-                flash("Debe existir al menos una jefa activa.", "warning")
-                return redirect(url_for("nails.personal"))
 
         cur.execute(
             """
@@ -5372,13 +5720,12 @@ def editar_personal(staff_id):
                 color = %s,
                 commission_type = %s,
                 commission_value = %s,
-                is_active = %s,
                 updated_at = CURRENT_TIMESTAMP
             WHERE id = %s AND business_id = %s
             """,
             (
                 name, email, phone, role, color, commission_type,
-                commission_value, is_active, staff_id, business["id"],
+                commission_value, staff_id, business["id"],
             ),
         )
         conn.commit()
@@ -5416,7 +5763,7 @@ def desactivar_personal(staff_id):
 
         cur.execute(
             """
-            SELECT role, user_id
+            SELECT role, user_id, is_active
             FROM nails_staff
             WHERE id = %s AND business_id = %s
             LIMIT 1
@@ -5432,18 +5779,13 @@ def desactivar_personal(staff_id):
             flash("No puedes desactivarte a ti misma.", "warning")
             return redirect(url_for("nails.personal"))
 
-        if staff["role"] == "owner":
-            cur.execute(
-                """
-                SELECT COUNT(*) AS owners_count
-                FROM nails_staff
-                WHERE business_id = %s AND role = 'owner' AND is_active = TRUE
-                """,
-                (business["id"],),
-            )
-            if (cur.fetchone()["owners_count"] or 0) <= 1:
-                flash("No puedes desactivar a la única jefa activa.", "warning")
-                return redirect(url_for("nails.personal"))
+        if (
+            staff["role"] == "owner"
+            and staff["is_active"]
+            and would_leave_business_without_active_owner(cur, business["id"], staff_id)
+        ):
+            flash("No puedes desactivar a la única jefa activa.", "warning")
+            return redirect(url_for("nails.personal"))
 
         cur.execute(
             """
@@ -5461,6 +5803,48 @@ def desactivar_personal(staff_id):
     except Exception as e:
         conn.rollback()
         flash(f"No se pudo desactivar personal: {e}", "danger")
+        return redirect(url_for("nails.personal"))
+
+    finally:
+        cur.close()
+        conn.close()
+
+
+@nails_bp.route("/personal/<int:staff_id>/reactivar", methods=["POST"])
+def reactivar_personal(staff_id):
+    if not require_login():
+        return redirect(url_for("auth.login"))
+
+    user_id = session.get("user_id")
+    business = get_user_nails_business(user_id)
+
+    if not business:
+        return redirect(url_for("nails.onboarding"))
+
+    conn = get_db_connection()
+    cur = conn.cursor()
+
+    try:
+        if not user_is_nails_owner(cur, user_id, business):
+            flash("Solo la jefa puede reactivar personal.", "warning")
+            return redirect(url_for("nails.personal"))
+
+        cur.execute(
+            """
+            UPDATE nails_staff
+            SET is_active = TRUE,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s AND business_id = %s
+            """,
+            (staff_id, business["id"]),
+        )
+        conn.commit()
+        flash("Personal reactivado correctamente.", "success")
+        return redirect(url_for("nails.personal"))
+
+    except Exception as e:
+        conn.rollback()
+        flash(f"No se pudo reactivar personal: {e}", "danger")
         return redirect(url_for("nails.personal"))
 
     finally:

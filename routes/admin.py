@@ -24,7 +24,7 @@ from flask import (
     redirect, url_for, flash, session, current_app,
     send_from_directory, abort, jsonify
 )
-from werkzeug.security import generate_password_hash
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
 
@@ -303,8 +303,8 @@ def dashboard():
 @admin_required
 def nails_dashboard():
     """
-    Vista administrativa enfocada en usuarios Sianeffects y su acceso a Nails.
-    Permite auditar quién ya fue pasado al módulo, qué salón tiene y qué rol Nails usa.
+    Vista administrativa de Sianeffects Nails.
+    Lista los salones (negocios), su estado de suscripción y el personal asignado.
     """
     search_query = request.args.get('q', '').strip()
 
@@ -312,135 +312,122 @@ def nails_dashboard():
     cursor = conn.cursor()
 
     try:
-        like = f"%{search_query}%"
-        where_sql = "WHERE COALESCE(u.active_module, 'cotizador') = 'nails'"
+        # 1. Construir filtros de búsqueda
+        where_sql = "WHERE b.is_active = TRUE"
         params = []
 
         if search_query:
+            like = f"%{search_query}%"
             where_sql += """
                 AND (
-                    LOWER(COALESCE(u.username, '')) LIKE LOWER(%s)
-                    OR LOWER(COALESCE(u.email, '')) LIKE LOWER(%s)
-                    OR LOWER(COALESCE(u.company_name, '')) LIKE LOWER(%s)
-                    OR LOWER(COALESCE(b.name, '')) LIKE LOWER(%s)
-                    OR LOWER(COALESCE(b.slug, '')) LIKE LOWER(%s)
+                    LOWER(b.name) LIKE LOWER(%s)
+                    OR LOWER(b.slug) LIKE LOWER(%s)
+                    OR LOWER(u.username) LIKE LOWER(%s)
+                    OR LOWER(u.email) LIKE LOWER(%s)
                 )
             """
-            params.extend([like, like, like, like, like])
+            params.extend([like, like, like, like])
 
+        # 2. Consultar Estadísticas Generales
         cursor.execute(
-            """
-            SELECT
-                COUNT(*) FILTER (WHERE COALESCE(active_module, 'cotizador') = 'nails') AS users_count,
+            f"""
+            SELECT 
+                COUNT(*) AS salons_count,
                 COUNT(*) FILTER (
-                    WHERE COALESCE(active_module, 'cotizador') = 'nails'
-                      AND EXISTS (
-                        SELECT 1 FROM nails_businesses nb
-                        WHERE nb.user_id = u.id AND nb.is_active = TRUE
-                      )
-                ) AS configured_users_count,
+                    WHERE b.subscription_expires_at IS NOT NULL 
+                      AND (NOW() AT TIME ZONE 'America/Monterrey') <= (b.subscription_expires_at + TIME '23:59:59')
+                ) AS active_count,
                 COUNT(*) FILTER (
-                    WHERE COALESCE(u.active_module, 'cotizador') = 'nails'
-                      AND NOT EXISTS (
-                        SELECT 1 FROM nails_businesses nb
-                        WHERE nb.user_id = u.id AND nb.is_active = TRUE
-                      )
-                ) AS nails_without_business_count
-            FROM usuarios u
-            """
+                    WHERE b.subscription_expires_at IS NULL 
+                       OR (NOW() AT TIME ZONE 'America/Monterrey') > (b.subscription_expires_at + TIME '23:59:59')
+                ) AS expired_count
+            FROM nails_businesses b
+            LEFT JOIN usuarios u ON b.user_id = u.id
+            {where_sql}
+            """,
+            params
         )
         stats = cursor.fetchone()
 
+        # 3. Consultar la lista de Salones
         cursor.execute(
             f"""
-            SELECT
-                u.id,
-                u.username,
-                u.email,
-                u.telefono,
-                u.company_name,
-                u.role AS platform_role,
-                u.active_module,
-                u.estado_suscripcion,
-                u.plan_type,
-                u.subscription_end,
-                u.last_login,
-                b.id AS business_id,
-                b.name AS business_name,
-                b.slug AS business_slug,
-                b.is_active AS business_is_active,
-                st.staff_id,
-                st.staff_name,
-                st.staff_role,
-                st.staff_is_active,
-                COALESCE(a.appointments_count, 0) AS appointments_count,
-                COALESCE(s.sales_count, 0) AS sales_count,
-                COALESCE(s.sales_total, 0) AS sales_total,
-                a.last_appointment_at
-            FROM usuarios u
-            LEFT JOIN LATERAL (
-                SELECT *
-                FROM nails_businesses nb
-                WHERE nb.user_id = u.id AND nb.is_active = TRUE
-                ORDER BY nb.id DESC
-                LIMIT 1
-            ) b ON TRUE
-            LEFT JOIN LATERAL (
-                SELECT id AS staff_id, name AS staff_name, role AS staff_role, is_active AS staff_is_active
-                FROM nails_staff ns
-                WHERE ns.user_id = u.id
-                ORDER BY
-                    CASE ns.role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 WHEN 'reception' THEN 3 ELSE 4 END,
-                    ns.id DESC
-                LIMIT 1
-            ) st ON TRUE
-            LEFT JOIN (
-                SELECT business_id, COUNT(*) AS appointments_count, MAX(start_time) AS last_appointment_at
-                FROM nails_appointments
-                GROUP BY business_id
-            ) a ON a.business_id = b.id
-            LEFT JOIN (
-                SELECT business_id, COUNT(*) AS sales_count, SUM(total) AS sales_total
-                FROM nails_sales
-                GROUP BY business_id
-            ) s ON s.business_id = b.id
+            SELECT 
+                b.id,
+                b.name,
+                b.slug,
+                b.subscription_expires_at,
+                (b.subscription_expires_at IS NULL OR 
+                 (NOW() AT TIME ZONE 'America/Monterrey') > (b.subscription_expires_at + TIME '23:59:59')) AS is_expired,
+                u.id AS owner_user_id,
+                COALESCE(u.username, u.company_name, u.email, 'Sin dueña') AS owner_name
+            FROM nails_businesses b
+            LEFT JOIN usuarios u ON b.user_id = u.id
             {where_sql}
-            ORDER BY u.created_at DESC NULLS LAST, u.id DESC
-            LIMIT 120
+            ORDER BY b.created_at DESC
+            LIMIT 100
             """,
-            params,
+            params
         )
-        users = cursor.fetchall()
+        salones_db = cursor.fetchall()
 
-        cursor.execute(
-            """
-            SELECT
-                st.id,
-                st.business_id,
-                st.name,
-                st.email,
-                st.phone,
-                st.role,
-                st.user_id,
-                st.is_active,
-                b.name AS business_name,
-                u.username,
-                u.email AS user_email,
-                u.role AS platform_role
-            FROM nails_staff st
-            INNER JOIN nails_businesses b ON b.id = st.business_id
-            LEFT JOIN usuarios u ON u.id = st.user_id
-            ORDER BY b.created_at DESC, st.role ASC, st.name ASC
-            LIMIT 160
-            """
-        )
-        staff_members = cursor.fetchall()
+        salones = []
+        if salones_db:
+            business_ids = [s['id'] for s in salones_db]
+            
+            # 4. Obtener el Staff de todos los salones consultados
+            cursor.execute(
+                """
+                SELECT id, business_id, name, email, role, is_active
+                FROM nails_staff
+                WHERE business_id = ANY(%s)
+                ORDER BY 
+                    CASE role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 WHEN 'reception' THEN 3 ELSE 4 END,
+                    name ASC
+                """,
+                (business_ids,)
+            )
+            staff_db = cursor.fetchall()
+
+            # Agrupar el staff por business_id
+            staff_por_salon = {}
+            for st in staff_db:
+                bid = st['business_id']
+                if bid not in staff_por_salon:
+                    staff_por_salon[bid] = []
+                
+                role_label = {
+                    'owner': 'Jefa',
+                    'admin': 'Admin',
+                    'staff': 'Técnica',
+                    'reception': 'Recepción'
+                }.get(st['role'], 'Staff')
+                
+                staff_por_salon[bid].append({
+                    'id': st['id'],
+                    'name': st['name'],
+                    'email': st['email'] or 'Sin correo',
+                    'role': st['role'],
+                    'role_label': role_label,
+                    'is_active': st['is_active']
+                })
+
+            # 5. Formatear los datos para enviarlos al HTML
+            for s in salones_db:
+                salon_dict = dict(s)
+                if salon_dict['subscription_expires_at']:
+                    # Lo convertimos a string para mostrarlo en el frontend y en el input type="date"
+                    salon_dict['subscription_expires_at'] = salon_dict['subscription_expires_at'].strftime('%Y-%m-%d')
+                else:
+                    salon_dict['subscription_expires_at'] = ""
+                
+                salon_dict['staff'] = staff_por_salon.get(s['id'], [])
+                salones.append(salon_dict)
 
         return render_template(
             'admin_nails.html',
             stats=stats,
-            users=users,
-            staff_members=staff_members,
+            salones=salones,
             search_query=search_query,
         )
 
@@ -517,10 +504,10 @@ def nails_cambiar_modulo():
 @admin_bp.route('/nails/cambiar-rol', methods=['POST'])
 @admin_required
 def nails_cambiar_rol():
-    """Actualiza el rol Nails de un staff ligado a usuario."""
+    """Actualiza el rol Nails desde el admin, evitando dejar al salón sin Jefa."""
     staff_id = request.form.get('staff_id', type=int)
     new_role = (request.form.get('role') or '').strip().lower()
-    roles_validos = {'owner', 'staff', 'reception'}
+    roles_validos = {'owner', 'admin', 'staff', 'reception'}
 
     if not staff_id or new_role not in roles_validos:
         flash("Datos inválidos para cambiar rol Nails.", "warning")
@@ -530,42 +517,186 @@ def nails_cambiar_rol():
     cursor = conn.cursor()
 
     try:
+        # 1. Obtener datos actuales
+        cursor.execute("SELECT business_id, role, is_active FROM nails_staff WHERE id = %s", (staff_id,))
+        current_staff = cursor.fetchone()
+
+        if not current_staff:
+            flash("No se encontró el perfil de personal.", "warning")
+            return redirect(url_for('admin.nails_dashboard'))
+
+        # 2. Regla "Última Jefa"
+        # Solo protegemos estrictamente el rol 'owner' (Jefa)
+        if current_staff['role'] == 'owner' and new_role != 'owner':
+            cursor.execute(
+                """
+                SELECT COUNT(*) as owners_count
+                FROM nails_staff
+                WHERE business_id = %s AND role = 'owner' AND is_active = TRUE
+                """,
+                (current_staff['business_id'],)
+            )
+            owners_count = cursor.fetchone()['owners_count']
+            
+            if owners_count <= 1:
+                flash("El salón debe tener al menos una Jefa activa. Asigna a otra Jefa primero.", "danger")
+                return redirect(url_for('admin.nails_dashboard'))
+
+        # 3. Actualizar el rol
         cursor.execute(
             """
             UPDATE nails_staff
-            SET role = %s,
-                updated_at = CURRENT_TIMESTAMP
+            SET role = %s, updated_at = CURRENT_TIMESTAMP
             WHERE id = %s
-            RETURNING user_id, name
             """,
-            (new_role, staff_id),
+            (new_role, staff_id)
         )
-        updated = cursor.fetchone()
+        
+        cursor.execute(
+            """
+            INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (session.get('user_id'), "Cambió rol Nails", "Admin Nails", f"El staff Nails #{staff_id} ahora tiene el rol {new_role}")
+        )
+        
+        conn.commit()
+        flash("El rol se actualizó correctamente.", "success")
 
-        if not updated:
-            conn.rollback()
-            flash("No se encontró el staff Nails.", "warning")
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"ADMIN_NAILS_ROLE_CHANGE_ERROR: {e}")
+        flash("Ocurrió un error al intentar cambiar el rol.", "danger")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('admin.nails_dashboard'))
+
+# =============================================================================
+# RENOVAR SUSCRIPCIÓN NAILS (SaaS por Salón)
+# =============================================================================
+
+@admin_bp.route('/nails/renovar', methods=['POST'])
+@admin_required
+def nails_renovar_suscripcion():
+    """
+    Renueva la suscripción de un Salón Nails (SaaS).
+    Suma 1 o 6 meses desde el final del periodo actual (o desde hoy si ya venció),
+    o aplica una fecha exacta enviada desde el formulario.
+    El vencimiento siempre se fuerza a las 23:59:59 (zona Monterrey).
+    """
+    if session.get('role', 0) < 1:
+        flash("No tienes permisos para renovar suscripciones de salones.", "danger")
+        return redirect(url_for('admin.nails_dashboard'))
+
+    business_id = request.form.get('business_id', type=int)
+    tipo_renovacion = request.form.get('tipo_renovacion', '').strip()
+    custom_date_str = request.form.get('custom_date', '').strip()
+    
+    admin_id = session.get('user_id')
+    admin_name = session.get('username', 'Admin_Desconocido')
+
+    if not business_id or not tipo_renovacion:
+        flash("Datos incompletos para la renovación.", "warning")
+        return redirect(url_for('admin.nails_dashboard'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        # 1. Obtener datos actuales del salón
+        cursor.execute(
+            """
+            SELECT id, name, subscription_expires_at 
+            FROM nails_businesses 
+            WHERE id = %s
+            """,
+            (business_id,)
+        )
+        salon = cursor.fetchone()
+
+        if not salon:
+            flash("No se encontró el salón especificado.", "danger")
             return redirect(url_for('admin.nails_dashboard'))
 
+        salon_name = salon['name']
+        current_sub_end = salon['subscription_expires_at']  # Es un tipo DATE en postgres
+        
+        # Obtenemos la fecha actual en Monterrey para comparaciones
+        tz_mty = pytz.timezone('America/Monterrey')
+        ahora_local = datetime.now(tz_mty)
+        hoy = ahora_local.date()
+
+        # 2. Calcular la nueva fecha de expiración
+        nueva_fecha_fin = None
+
+        if tipo_renovacion == 'custom':
+            if not custom_date_str:
+                flash("Debes seleccionar una fecha de corte exacta.", "warning")
+                return redirect(url_for('admin.nails_dashboard'))
+            
+            try:
+                # El formulario envía YYYY-MM-DD
+                nueva_fecha_fin = datetime.strptime(custom_date_str, '%Y-%m-%d').date()
+            except ValueError:
+                flash("El formato de la fecha personalizada es inválido.", "warning")
+                return redirect(url_for('admin.nails_dashboard'))
+
+        else:
+            # Tipos basados en meses: 1_month o 6_months
+            meses_a_sumar = 6 if tipo_renovacion == '6_months' else 1
+            
+            if current_sub_end and current_sub_end >= hoy:
+                # Sigue activa: sumar a la fecha de término actual
+                nueva_fecha_fin = current_sub_end + relativedelta(months=meses_a_sumar)
+            else:
+                # Vencida o sin fecha: sumar desde hoy
+                nueva_fecha_fin = hoy + relativedelta(months=meses_a_sumar)
+
+        # Validamos que no nos estén mandando una fecha pasada accidentalmente
+        if nueva_fecha_fin < hoy:
+            flash("La fecha de vencimiento no puede ser en el pasado.", "warning")
+            return redirect(url_for('admin.nails_dashboard'))
+
+        # 3. Aplicar en base de datos
+        # Actualizamos solo la fecha de suscripción (is_active se mantiene en TRUE si no fue eliminado)
+        cursor.execute(
+            """
+            UPDATE nails_businesses 
+            SET subscription_expires_at = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE id = %s
+            """,
+            (nueva_fecha_fin, business_id)
+        )
+        
+        # 4. Registrar en el Log del sistema para auditoría
         cursor.execute(
             """
             INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
             VALUES (%s, %s, %s, %s)
             """,
             (
-                session.get('user_id'),
-                "Cambió rol Nails",
+                admin_id,
+                "Renovación Salón Nails",
                 "Admin Nails",
-                f"Staff #{staff_id} ahora es {new_role}",
-            ),
+                f"Renovó licencia del salón '{salon_name}' (ID:{business_id}) hasta {nueva_fecha_fin.strftime('%d/%m/%Y')} a las 23:59"
+            )
         )
+
         conn.commit()
-        flash("Rol Nails actualizado.", "success")
+        current_app.logger.info(
+            f"NAILS_RENEWAL: Admin '{admin_name}' (ID:{admin_id}) renovó la suscripción "
+            f"del Salón '{salon_name}' (ID:{business_id}) hasta {nueva_fecha_fin}."
+        )
+        flash(f"La licencia del salón '{salon_name}' fue extendida hasta el {nueva_fecha_fin.strftime('%d/%m/%Y')}.", "success")
 
     except Exception as e:
         conn.rollback()
-        current_app.logger.error(f"ADMIN_NAILS_ROLE_CHANGE_ERROR: {e}")
-        flash(f"No se pudo cambiar el rol Nails: {e}", "danger")
+        current_app.logger.error(f"NAILS_RENEWAL_ERROR: Admin '{admin_name}' (ID:{admin_id}) → {e}")
+        flash(f"No se pudo renovar la suscripción: {str(e)}", "danger")
 
     finally:
         cursor.close()
@@ -575,7 +706,104 @@ def nails_cambiar_rol():
 
 
 # =============================================================================
-# RENOVAR SUSCRIPCIÓN (POST — anti-CSRF)
+# ELIMINAR SALÓN NAILS (POST)
+# =============================================================================
+
+@admin_bp.route('/nails/eliminar-salon', methods=['POST'])
+@admin_required
+def delete_business():
+    """
+    Elimina permanentemente un salón y todos sus datos relacionados (personal, citas, ventas, gastos, etc.).
+    Requiere que el admin sea Superadmin (role=2).
+    """
+    admin_id = session.get('user_id')
+    admin_name = session.get('username', 'Admin_Desconocido')
+    admin_role = session.get('role', 0)
+    business_id = request.form.get('business_id', type=int)
+
+    if not business_id:
+        flash("Datos inválidos para eliminar salón.", "warning")
+        return redirect(url_for('admin.nails_dashboard'))
+
+    if admin_role < 2:
+        flash("Solo un Superadmin puede eliminar salones permanentemente.", "danger")
+        return redirect(url_for('admin.nails_dashboard'))
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    try:
+        # Obtener datos del salón antes de borrar para el log y limpieza
+        cursor.execute("SELECT name, logo_url FROM nails_businesses WHERE id = %s", (business_id,))
+        salon = cursor.fetchone()
+
+        if not salon:
+            flash("El salón no existe o ya fue eliminado.", "danger")
+            return redirect(url_for('admin.nails_dashboard'))
+
+        salon_name = salon['name']
+
+        # Limpiar R2 si tenía logo
+        if salon['logo_url'] and 'http' in salon['logo_url']:
+            try:
+                delete_from_cloudflare(salon['logo_url'])
+                current_app.logger.info(f"R2_CLEANUP: Logo del salón '{salon_name}' eliminado.")
+            except Exception as e:
+                current_app.logger.warning(f"R2_CLEANUP_WARN: No se pudo borrar logo del salón '{salon_name}' → {e}")
+
+        # Borrado en Cascada usando SQL
+        cursor.execute("DELETE FROM nails_activity_logs WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_appointment_extras WHERE appointment_id IN (SELECT id FROM nails_appointments WHERE business_id = %s)", (business_id,))
+        cursor.execute("DELETE FROM nails_appointment_services WHERE appointment_id IN (SELECT id FROM nails_appointments WHERE business_id = %s)", (business_id,))
+        cursor.execute("DELETE FROM nails_appointments WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_sale_details WHERE sale_id IN (SELECT id FROM nails_sales WHERE business_id = %s)", (business_id,))
+        cursor.execute("DELETE FROM nails_payments WHERE sale_id IN (SELECT id FROM nails_sales WHERE business_id = %s)", (business_id,))
+        cursor.execute("DELETE FROM nails_sales WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_gallery WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_expenses WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_extras WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_services WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_service_categories WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_staff WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_clients WHERE business_id = %s", (business_id,))
+        cursor.execute("DELETE FROM nails_businesses WHERE id = %s", (business_id,))
+
+        # Registrar en bitácora
+        cursor.execute(
+            """
+            INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
+            VALUES (%s, %s, %s, %s)
+            """,
+            (
+                admin_id,
+                "Eliminación Salón Nails",
+                "Admin Nails",
+                f"Eliminó permanentemente el salón '{salon_name}' (ID:{business_id}) y todos sus datos"
+            )
+        )
+
+        conn.commit()
+        current_app.logger.warning(
+            f"NAILS_BUSINESS_DELETED: Admin '{admin_name}' (ID:{admin_id}) eliminó permanentemente "
+            f"el Salón '{salon_name}' (ID:{business_id})."
+        )
+        flash(f"El salón '{salon_name}' y todos sus datos han sido eliminados del sistema.", "success")
+
+    except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"NAILS_BUSINESS_DELETE_ERROR: Admin '{admin_name}' (ID:{admin_id}) → {e}")
+        flash("Error crítico al intentar eliminar el salón.", "danger")
+
+    finally:
+        cursor.close()
+        conn.close()
+
+    return redirect(url_for('admin.nails_dashboard'))
+
+
+
+# =============================================================================
+# RENOVAR SUSCRIPCIÓN (POST — anti-CSRF)@admin_bp.route('/nails')
 # =============================================================================
 
 @admin_bp.route('/renovar', methods=['POST'])
@@ -966,12 +1194,40 @@ def eliminar_cotizacion():
 # ELIMINAR USUARIO (POST)
 # =============================================================================
 
+def _admin_delete_cotizador_data(cursor, user_id):
+    cursor.execute('DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id = %s)', (user_id,))
+    cursor.execute('DELETE FROM ventas WHERE user_id = %s', (user_id,))
+    cursor.execute('DELETE FROM movimientos_inventario WHERE user_id = %s', (user_id,))
+    cursor.execute('DELETE FROM producto_detalles WHERE producto_id IN (SELECT id FROM productos WHERE user_id = %s)', (user_id,))
+    cursor.execute('DELETE FROM producto_maquinaria WHERE producto_id IN (SELECT id FROM productos WHERE user_id = %s)', (user_id,))
+    cursor.execute('DELETE FROM productos WHERE user_id = %s', (user_id,))
+    cursor.execute('DELETE FROM materiales WHERE user_id = %s', (user_id,))
+    cursor.execute('DELETE FROM maquinaria WHERE user_id = %s', (user_id,))
+    cursor.execute('DELETE FROM shipping_rates WHERE zone_id IN (SELECT id FROM shipping_zones WHERE user_id = %s)', (user_id,))
+    cursor.execute('DELETE FROM shipping_zones WHERE user_id = %s', (user_id,))
+    cursor.execute('DELETE FROM shipping_configs WHERE user_id = %s', (user_id,))
+    cursor.execute(
+        """
+        DELETE FROM tutoriales_estado
+        WHERE user_id = %s
+          AND modulo IN ('cotizador', 'historial', 'materiales', 'equipos', 'recetas', 'configuracion')
+        """,
+        (user_id,)
+    )
+    cursor.execute('DELETE FROM configuracion WHERE user_id = %s', (user_id,))
+
+
+def _admin_delete_nails_data(cursor, user_id):
+    cursor.execute('DELETE FROM nails_businesses WHERE user_id = %s', (user_id,))
+    cursor.execute('DELETE FROM nails_staff WHERE user_id = %s', (user_id,))
+
+
 @admin_bp.route('/delete_user', methods=['POST'])
 @admin_required
 def delete_user():
     """
-    Elimina permanentemente un usuario y TODOS sus datos relacionados.
-    Borra en cascada respetando el orden de FK para no violar constraints.
+    Elimina el modulo correspondiente al dashboard actual.
+    Si el usuario no conserva otro modulo activo, elimina permanentemente la cuenta.
     También limpia archivos de Cloudflare R2 (logos).
     """
     user_id    = request.form.get('user_id')
@@ -980,6 +1236,9 @@ def delete_user():
     admin_role = session.get('role', 0)
     redirect_to = request.form.get('redirect_to', 'admin.dashboard')
     redirect_endpoint = 'admin.nails_dashboard' if redirect_to == 'admin.nails_dashboard' else 'admin.dashboard'
+    delete_scope = (request.form.get('delete_scope') or '').strip().lower()
+    if delete_scope not in {'cotizador', 'nails'}:
+        delete_scope = 'nails' if redirect_endpoint == 'admin.nails_dashboard' else 'cotizador'
 
     if not user_id or str(user_id) == str(admin_id):
         flash('No puedes borrarte a ti mismo.', 'danger')
@@ -1007,6 +1266,68 @@ def delete_user():
             flash('No puedes eliminar a un usuario de tu mismo rango o superior.', 'danger')
             return redirect(url_for(redirect_endpoint))
 
+        cursor.execute(
+            """
+            SELECT module_key, status
+            FROM user_modules
+            WHERE user_id = %s
+            ORDER BY module_key
+            """,
+            (user_id,)
+        )
+        modules = [dict(row) for row in cursor.fetchall()]
+        remaining_modules = [
+            module for module in modules
+            if module['module_key'] != delete_scope
+            and (module.get('status') or '').strip().lower() in {'trial', 'active'}
+        ]
+
+        if remaining_modules:
+            if delete_scope == 'cotizador':
+                cursor.execute('SELECT logo_empresa FROM configuracion WHERE user_id = %s', (user_id,))
+                config_user = cursor.fetchone()
+                if config_user and config_user['logo_empresa'] and 'http' in config_user['logo_empresa']:
+                    try:
+                        delete_from_cloudflare(config_user['logo_empresa'])
+                        current_app.logger.info(f"R2_CLEANUP: Logo de '{target_name}' (ID:{user_id}) eliminado.")
+                    except Exception as e:
+                        current_app.logger.warning(f"R2_CLEANUP_WARN: No se pudo borrar logo de '{target_name}' → {e}")
+
+            if delete_scope == 'cotizador':
+                _admin_delete_cotizador_data(cursor, user_id)
+            else:
+                _admin_delete_nails_data(cursor, user_id)
+
+            cursor.execute(
+                'DELETE FROM user_modules WHERE user_id = %s AND module_key = %s',
+                (user_id, delete_scope)
+            )
+            next_module = remaining_modules[0]['module_key']
+            cursor.execute(
+                'UPDATE usuarios SET active_module = %s WHERE id = %s',
+                (next_module, user_id)
+            )
+            cursor.execute(
+                """
+                INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
+                VALUES (%s, %s, %s, %s)
+                """,
+                (
+                    admin_id,
+                    'Eliminó acceso de módulo',
+                    'Admin',
+                    f"Usuario #{user_id} ({target_name}) perdió acceso a {delete_scope}; conserva {next_module}",
+                )
+            )
+            conn.commit()
+
+            current_app.logger.warning(
+                f"USER_MODULE_DELETED: Admin '{admin_name}' (ID:{admin_id}) eliminó módulo "
+                f"{delete_scope} de '{target_name}' (ID:{user_id}); conserva {next_module}."
+            )
+            flash(f'Se eliminó {delete_scope} de {target_name}. La cuenta se conserva en {next_module}.', 'success')
+            return redirect(url_for(redirect_endpoint))
+
         # Limpieza de archivos R2
         cursor.execute('SELECT logo_empresa FROM configuracion WHERE user_id = %s', (user_id,))
         config_user = cursor.fetchone()
@@ -1021,6 +1342,7 @@ def delete_user():
         cursor.execute('DELETE FROM auth_codes WHERE user_id = %s', (user_id,))
         cursor.execute('DELETE FROM password_resets WHERE user_id = %s', (user_id,))
         cursor.execute('DELETE FROM logs_actividad WHERE user_id = %s', (user_id,))
+        cursor.execute('DELETE FROM user_modules WHERE user_id = %s', (user_id,))
         cursor.execute('DELETE FROM nails_staff WHERE user_id = %s', (user_id,))
         cursor.execute('DELETE FROM venta_detalles WHERE venta_id IN (SELECT id FROM ventas WHERE user_id = %s)', (user_id,))
         cursor.execute('DELETE FROM ventas WHERE user_id = %s', (user_id,))

@@ -410,6 +410,84 @@ def init_db():
     print("    ✓ Índices: email, username, stripe_customer_id")
 
     # =============================
+    # 4.2B TABLA: USER_MODULES
+    # =============================
+    """
+    Modulos activados por usuario.
+
+    No reemplaza usuarios.email ni usuarios.active_module:
+      - email sigue siendo unico.
+      - active_module indica el modulo actual.
+      - user_modules indica que modulos puede usar la cuenta.
+    """
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS user_modules (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+        module_key TEXT NOT NULL,
+        status TEXT DEFAULT 'trial',
+        plan_type TEXT,
+        trial_start TIMESTAMP,
+        trial_ends_at TIMESTAMP,
+        subscription_end TIMESTAMP,
+        created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, module_key)
+    )
+    """)
+    cursor.execute("ALTER TABLE user_modules ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'trial'")
+    cursor.execute("ALTER TABLE user_modules ALTER COLUMN status SET DEFAULT 'trial'")
+    cursor.execute("ALTER TABLE user_modules ADD COLUMN IF NOT EXISTS plan_type TEXT")
+    cursor.execute("ALTER TABLE user_modules ADD COLUMN IF NOT EXISTS trial_start TIMESTAMP")
+    cursor.execute("ALTER TABLE user_modules ADD COLUMN IF NOT EXISTS trial_ends_at TIMESTAMP")
+    cursor.execute("ALTER TABLE user_modules ADD COLUMN IF NOT EXISTS subscription_end TIMESTAMP")
+    cursor.execute("ALTER TABLE user_modules ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP")
+    cursor.execute("ALTER TABLE user_modules ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT CURRENT_TIMESTAMP")
+    cursor.execute("""
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_user_modules_user_module
+    ON user_modules(user_id, module_key)
+    """)
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_user_modules_module_status
+    ON user_modules(module_key, status)
+    """)
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_user_modules_user_id
+    ON user_modules(user_id)
+    """)
+    cursor.execute("""
+    INSERT INTO user_modules (
+        user_id, module_key, status, plan_type, trial_start, trial_ends_at,
+        subscription_end, created_at, updated_at
+    )
+    SELECT id,
+           module_key,
+           module_status,
+           plan_type,
+           CASE WHEN module_status = 'trial' THEN COALESCE(created_at, CURRENT_TIMESTAMP) ELSE NULL END,
+           CASE WHEN module_status = 'trial' THEN COALESCE(created_at, CURRENT_TIMESTAMP) + INTERVAL '7 days' ELSE NULL END,
+           CASE WHEN module_status IN ('trial', 'active') THEN subscription_end ELSE NULL END,
+           COALESCE(created_at, CURRENT_TIMESTAMP),
+           CURRENT_TIMESTAMP
+    FROM (
+        SELECT id,
+               COALESCE(active_module, 'cotizador') AS module_key,
+               CASE
+                   WHEN LOWER(COALESCE(estado_suscripcion, '')) IN ('activo', 'active') THEN 'active'
+                   WHEN LOWER(COALESCE(estado_suscripcion, '')) IN ('inactivo', 'inactive', 'pago fallido') THEN 'inactive'
+                   WHEN LOWER(COALESCE(estado_suscripcion, '')) IN ('cancelado', 'cancelled') THEN 'cancelled'
+                   ELSE 'trial'
+               END AS module_status,
+               plan_type,
+               subscription_end,
+               created_at
+        FROM usuarios
+    ) usuarios_modulos
+    ON CONFLICT (user_id, module_key) DO NOTHING
+    """)
+    print("  ✓ Tabla: user_modules")
+
+    # =============================
     # 4.3 TABLA: TUTORIALES_ESTADO
     # =============================
     """
@@ -844,6 +922,14 @@ def init_db():
     """)
     cursor.execute("""
     CREATE INDEX IF NOT EXISTS idx_auth_codes_code ON auth_codes(code)
+    """)
+    cursor.execute("""
+    ALTER TABLE auth_codes
+    ADD COLUMN IF NOT EXISTS purpose TEXT DEFAULT 'verify_email'
+    """)
+    cursor.execute("""
+    CREATE INDEX IF NOT EXISTS idx_auth_codes_activation_lookup
+    ON auth_codes(user_id, email, code, purpose, used, expires_at)
     """)
 
     # =============================

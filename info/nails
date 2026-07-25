@@ -1,7 +1,7 @@
 ================================================================================
                     MANUAL COMPLETO: SIANEFFECTS NAILS
 ================================================================================
-Ultima actualizacion: Junio 2026
+Ultima actualizacion: Julio 2026
 Modulo: Sianeffects Nails
 Audiencia: usuarias finales, soporte, administracion y desarrollo.
 
@@ -167,6 +167,70 @@ Secciones principales:
   - Cancelacion.
   - Anticipo.
 
+Reglas de suscripcion:
+- `nails_businesses.subscription_expires_at` controla el acceso operativo del
+  salon.
+- Si `subscription_expires_at` es NULL, el salon se considera sin licencia
+  activa y por lo tanto vencido.
+- Si la fecha existe, vence hasta las 11:59:59 PM de ese dia en zona horaria
+  `America/Monterrey`.
+- La funcion `get_user_nails_business(user_id)` debe calcular `is_expired` con:
+  `subscription_expires_at IS NULL OR NOW() > subscription_expires_at + 23:59:59`.
+- Si el salon esta vencido:
+  - El backend permite entrar a Dashboard y Configuracion.
+  - El backend bloquea rutas operativas como Agenda, Ventas, Clientas, Servicios,
+    Gastos, Reportes, Galeria y Personal.
+  - El layout oculta botones operativos del menu lateral.
+  - Configuracion permanece visible para que la jefa pueda revisar datos y
+    contactar soporte/renovacion.
+  - El catalogo publico y accesos operativos internos no deben mostrarse como
+    acciones disponibles.
+- El dashboard vencido debe mostrar dos mensajes distintos:
+  - Con fecha: "la licencia finalizo el DD/MM/YYYY a las 11:59 PM".
+  - Sin fecha: "aun no cuentas con una licencia activa".
+
+Separacion entre Configuracion y Mi perfil:
+- Configuracion pertenece al salon: nombre del salon, logo, colores, horarios,
+  politicas, slug, codigo del salon, datos publicos y suscripcion.
+- Mi perfil pertenece al usuario logueado: nombre personal, telefono, correo de
+  acceso visible y cambio de password.
+- No mezclar datos personales del usuario en la configuracion del salon salvo
+  campos de solo lectura necesarios para soporte.
+
+Mi perfil desde Dashboard:
+- En `/nails/dashboard`, la tarjeta del usuario en el encabezado debe ser
+  clickeable.
+- Al hacer click, abre un modal Bootstrap 5 `#profileModal`.
+- El modal muestra:
+  - Correo de acceso (`usuarios.email`) como dato visible/no editable.
+  - Password enmascarado.
+  - Perfil/rol dentro del salon.
+  - Formulario para editar nombre y telefono personal.
+  - Pestana de seguridad para cambiar password.
+- Guardar datos personales usa ruta POST `/nails/perfil/datos`.
+- Cambiar password usa ruta `/nails/perfil/seguridad`.
+- Si el cambio de password viene desde dashboard, puede volver a
+  `/nails/dashboard?profile=1` para reabrir el modal.
+- El modal debe usar Bootstrap 5 (`data-bs-toggle="modal"`) y evitar HTML
+  invalido dentro de botones.
+
+Cambio de password:
+- Ruta: `/nails/perfil/seguridad`, metodos GET y POST.
+- Requiere sesion (`session["user_id"]`).
+- POST recibe:
+  - `current_password`
+  - `new_password`
+  - `confirm_password`
+- La nueva password debe tener minimo 6 caracteres.
+- La confirmacion debe coincidir.
+- La password actual se valida contra `usuarios.password` con
+  `check_password_hash`.
+- El nuevo hash se genera con
+  `generate_password_hash(new_password, method="pbkdf2:sha256")`.
+- La tabla `usuarios` se actualiza con SQL puro.
+- Registrar auditoria en `nails_activity_logs` con modulo "Seguridad".
+- Usar `flash` para errores/exito y `redirect` para responder.
+
 --------------------------------------------------------------------------------
 6. PERSONAL
 --------------------------------------------------------------------------------
@@ -185,6 +249,54 @@ Reglas de UX:
 - Solo una jefa puede promover a otra persona a jefa.
 - Quitar comisiones de la UI para no confundir mientras no exista modulo de
   comisiones real.
+
+Regla critica: ultimo owner activo:
+- Un salon nunca puede quedarse sin al menos un perfil `owner` activo en
+  `nails_staff`.
+- Antes de desactivar personal:
+  - Bloquear si el registro pertenece al usuario actual.
+  - Bloquear si el registro tiene `role = 'owner'`, esta activo y al
+    desactivarlo no quedaria otra owner activa.
+- Antes de editar personal:
+  - Bloquear si se cambia `role = 'owner'` a cualquier otro rol, el registro
+    esta activo y al hacerlo no quedaria otra owner activa.
+- La validacion debe contar owners activos del mismo `business_id`, excluyendo
+  el `staff_id` que se intenta modificar.
+- Helpers recomendados:
+  - `count_active_owners(cur, business_id, exclude_staff_id=None)`
+  - `would_leave_business_without_active_owner(cur, business_id, staff_id)`
+
+Soft delete de personal:
+- Bajo ninguna circunstancia se debe ejecutar `DELETE FROM nails_staff` en el
+  modulo Nails operativo.
+- Desactivar personal significa:
+  - `UPDATE nails_staff SET is_active = FALSE`.
+- Reactivar personal significa:
+  - `UPDATE nails_staff SET is_active = TRUE`.
+- Los historiales de citas, ventas y auditoria deben conservar la referencia a
+  `nails_staff.id` aunque la persona este inactiva.
+- Editar personal no debe controlar `is_active`; el estado activo/inactivo se
+  maneja solo con botones de Desactivar/Reactivar.
+
+Historial individual por personal:
+- La vista `/nails/personal` recibe `activity_logs`.
+- Si la usuaria es owner, el backend consulta los ultimos 150 registros del
+  salon desde `nails_activity_logs`.
+- La consulta debe hacer `LEFT JOIN usuarios` para mostrar actor:
+  `COALESCE(u.username, u.company_name, u.email, 'Sistema')`.
+- La consulta debe incluir `l.user_id` para filtrar logs por persona en Jinja.
+- La fecha debe formatearse con la zona horaria del salon:
+  `TO_CHAR(l.created_at AT TIME ZONE business.timezone, 'DD/MM/YYYY HH24:MI')`.
+- Ya no se muestra un bloque global "Ojo de la Jefa" al final de la pagina.
+- Cada tarjeta de personal tiene un boton `Historial` visible solo para owner.
+- El boton abre un modal Bootstrap unico por staff:
+  `#historyStaff{{ person.id }}`.
+- Dentro del modal se filtra en Jinja:
+  `{% for log in activity_logs if log.user_id == person.user_id %}`
+- Si no hay actividad para ese perfil:
+  "No hay actividad reciente registrada para este perfil."
+- Si `person.user_id` es NULL, el modal debe mostrar el estado vacio porque no
+  hay cuenta vinculada que comparar contra `nails_activity_logs.user_id`.
 
 --------------------------------------------------------------------------------
 7. SERVICIOS Y EXTRAS
@@ -530,6 +642,61 @@ Campos clave en nails_businesses:
 - deposit_policy
 - is_active
 
+Campos y tablas usados por seguridad/auditoria Nails:
+- `usuarios.password`:
+  - Hash generado por Werkzeug.
+  - Para cambios nuevos de password en Nails usar metodo `pbkdf2:sha256`.
+- `usuarios.username`:
+  - Nombre personal visible en el dashboard/modal de perfil.
+- `usuarios.telefono`:
+  - Telefono personal editable desde Mi perfil.
+- `nails_staff.user_id`:
+  - Vincula un perfil operativo del salon con una cuenta de login.
+  - Se usa para permisos, historial individual y filtros de auditoria.
+- `nails_staff.is_active`:
+  - Soft delete operativo.
+  - Nunca reemplazar por DELETE en el modulo Nails.
+- `nails_activity_logs`:
+  - Tabla de auditoria interna del salon.
+  - Campos esperados: id, business_id, user_id, action, module, detail,
+    created_at.
+  - `user_id` puede ser NULL; en UI se muestra como "Sistema".
+
+Consultas SQL de referencia para soft delete e historial:
+- Historial contable de citas con tecnica aunque este inactiva:
+
+  SELECT
+      a.id,
+      a.start_time,
+      a.status,
+      a.estimated_total,
+      a.deposit_amount,
+      st.name AS staff_name,
+      st.role AS staff_role,
+      st.is_active AS staff_is_active
+  FROM nails_appointments a
+  LEFT JOIN nails_staff st
+         ON st.id = a.staff_id
+        AND st.business_id = a.business_id
+  WHERE a.business_id = %s
+  ORDER BY a.start_time DESC, a.id DESC;
+
+- Select de tecnicas disponibles para una cita nueva:
+
+  SELECT id, name, role, color
+  FROM nails_staff
+  WHERE business_id = %s
+    AND is_active = TRUE
+    AND role IN ('owner', 'admin', 'staff')
+  ORDER BY
+      CASE role WHEN 'owner' THEN 1 WHEN 'admin' THEN 2 ELSE 3 END,
+      LOWER(name) ASC;
+
+- Regla: en consultas de historial no filtrar `st.is_active = TRUE`, porque
+  eso ocultaria nombres de tecnicas inactivas en registros antiguos.
+- Regla: en consultas para asignar trabajo nuevo si filtrar
+  `st.is_active = TRUE`.
+
 --------------------------------------------------------------------------------
 16. CHECKLIST ANTES DE SUBIR A PRODUCCION
 --------------------------------------------------------------------------------
@@ -545,11 +712,24 @@ Autenticacion:
 
 Nails:
 - Dashboard carga.
+- La tarjeta del usuario en Dashboard abre el modal Mi perfil.
+- El modal Mi perfil muestra correo, password enmascarado, rol y datos
+  personales.
+- Mi perfil permite editar nombre/telefono sin tocar configuracion del salon.
+- Mi perfil permite cambiar password validando password actual.
 - Configuracion guarda.
+- Configuracion sigue visible si el salon esta vencido.
 - Codigo de salon visible.
 - Registro con codigo crea tecnica.
 - Registro sin codigo crea salon y jefa.
 - Personal no muestra agregar manual.
+- Personal muestra boton Historial por cada miembro si la usuaria es owner.
+- Personal no muestra el feed global de auditoria al final de la pagina.
+- Historial por persona filtra logs por `activity_logs.user_id == person.user_id`.
+- Personal bloquea que la jefa se desactive a si misma.
+- Personal bloquea dejar el salon sin owner activa.
+- Desactivar personal usa soft delete (`is_active = FALSE`), no DELETE.
+- Reactivar personal usa `is_active = TRUE`.
 - Servicios permiten iconos.
 - Agenda crea citas con varios servicios repetibles.
 - Validacion de empalmes se muestra antes de guardar.
@@ -561,6 +741,10 @@ Nails:
 - Reportes muestran gastos por categoria.
 - Excel descarga.
 - Catalogo publico muestra servicios y agenda con disponibilidad.
+- Si `subscription_expires_at` es NULL, el salon aparece vencido/sin licencia.
+- Si el salon esta vencido, rutas operativas redirigen al Dashboard con mensaje.
+- Si el salon esta vencido, el menu lateral oculta modulos operativos pero deja
+  Configuracion visible.
 
 Seguridad Nails:
 - `utils/nails_security.py` contiene helpers propios de Nails.
@@ -576,6 +760,18 @@ Seguridad Nails:
   de solicitudes de cita.
 - El rate limit vive en memoria de proceso; si hay multiples workers o replicas,
   conviene moverlo a Redis o almacenamiento compartido.
+- Password:
+  - Nunca guardar password en texto plano.
+  - Cambios de password desde Nails usan `check_password_hash` y
+    `generate_password_hash(..., method='pbkdf2:sha256')`.
+  - Registrar cambio de password en `nails_activity_logs`.
+- Auditoria:
+  - Acciones sensibles deben insertar en `nails_activity_logs`.
+  - El historial visible para owner en Personal se consulta con LIMIT 150.
+  - La UI de auditoria individual debe manejar logs sin usuario como "Sistema".
+- Suscripcion:
+  - `subscription_expires_at IS NULL` significa sin licencia activa.
+  - No tratar NULL como acceso infinito.
 
 Correos:
 - `RESEND_API_KEY` configurada.
@@ -615,3 +811,142 @@ Resultado esperado:
   que Cotizador o si requiere campos nuevos.
 - Si se requiere app de clientas, separar claramente acceso clienta de acceso
   staff/admin.
+
+--------------------------------------------------------------------------------
+19. CONVIVENCIA MULTI-MODULO CON COTIZADOR
+--------------------------------------------------------------------------------
+
+Contexto:
+- Una cuenta de `usuarios` puede tener acceso a Nails y Cotizador al mismo
+  tiempo.
+- La tabla `usuarios` sigue siendo la identidad de login.
+- La tabla `user_modules` define a que modulos puede entrar la cuenta.
+
+Estados validos en `user_modules.status`:
+- `trial`
+- `active`
+- `inactive`
+- `cancelled`
+
+Regla critica:
+- Nails no debe escribir estados historicos como `Trial`, `Activo` o
+  `Cancelado` en `user_modules.status`.
+- Esos valores historicos pueden seguir existiendo en
+  `usuarios.estado_suscripcion`, pero no en `user_modules.status`.
+
+Registro Nails:
+- `/registro-nails` crea el usuario cuando el correo no existe.
+- Tambien crea `user_modules` con:
+  - `module_key = 'nails'`
+  - `status = 'trial'`
+
+Activacion de Nails en cuenta existente:
+- Si el correo ya existe en Cotizador y se registra en Nails:
+  1. No se crea otro usuario.
+  2. Se genera codigo con `auth_codes.purpose = 'activate_nails'`.
+  3. Se manda correo de activacion Nails.
+  4. Al validar codigo, se agrega `user_modules.module_key = 'nails'`.
+  5. El nuevo modulo entra como `trial`.
+  6. Se crea o vincula el salon/tecnica segun corresponda.
+
+Selector de modulo:
+- Si la cuenta tiene mas de un modulo activo (`trial` o `active`), despues del
+  login entra a `/seleccionar-modulo`.
+- El usuario puede escoger Nails o Cotizador.
+- Al escoger Nails:
+  - `session['active_module'] = 'nails'`.
+  - `usuarios.active_module = 'nails'`.
+  - Redirige a `/nails/dashboard`.
+
+Boton "Cambiar de modulo":
+- En `templates/nails/base_nails.html`, el menu lateral muestra "Cambiar de
+  modulo" entre "Catalogo publico" y "Cerrar sesion".
+- Este boton aparece si y solo si `has_multiple_active_modules` es verdadero.
+- `has_multiple_active_modules` se inyecta desde `app.py` contando registros de
+  `user_modules` con `status IN ('trial', 'active')`.
+
+Eliminacion por modulo:
+- Si desde Admin Nails se elimina una cuenta que tambien tiene Cotizador:
+  - Se elimina solo el acceso/datos de Nails.
+  - Se borra `user_modules` donde `module_key = 'nails'`.
+  - La fila de `usuarios` se conserva.
+  - `usuarios.active_module` pasa al modulo restante (`cotizador`).
+
+- Si la cuenta no tiene otro modulo activo:
+  - Se permite el borrado completo de la cuenta, como antes.
+
+Reglas de QA:
+1. Crear cuenta en Cotizador.
+2. Registrar el mismo correo en Nails.
+3. Confirmar que llega codigo de activacion Nails.
+4. Confirmar que no se duplica `usuarios`.
+5. Confirmar que existen filas en `user_modules` para ambos modulos.
+6. Confirmar que login muestra selector.
+7. Confirmar que al elegir Nails entra a `/nails/dashboard`.
+8. Confirmar que el boton "Cambiar de modulo" aparece solo si tiene mas de un
+   modulo activo.
+
+--------------------------------------------------------------------------------
+20. REGLAS TECNICAS RECIENTES (PERFIL, SUSCRIPCION Y AUDITORIA)
+--------------------------------------------------------------------------------
+
+Perfil de usuario:
+- El acceso principal al perfil personal vive en el Dashboard, no en
+  Configuracion del salon.
+- La tarjeta de usuario del Dashboard abre un modal Bootstrap.
+- Datos de usuario:
+  - `usuarios.username` y `usuarios.telefono` se editan desde
+    `/nails/perfil/datos`.
+  - `usuarios.email` se muestra como correo de acceso, no editable desde ese
+    modal.
+  - El password se muestra enmascarado y se cambia desde
+    `/nails/perfil/seguridad`.
+- Si el usuario tiene registro en `nails_staff`, al actualizar nombre/telefono
+  desde Mi perfil se sincroniza el perfil operativo del salon.
+- Cada actualizacion de perfil debe registrar auditoria en `nails_activity_logs`.
+
+Password:
+- Requerir password actual.
+- Validar con `check_password_hash`.
+- Requerir nueva password de minimo 6 caracteres.
+- Confirmacion obligatoria.
+- Hashear con `pbkdf2:sha256`.
+- Usar SQL puro con `cursor.execute`.
+- Responder con `flash` y `redirect`.
+
+Suscripcion:
+- `NULL` en `nails_businesses.subscription_expires_at` equivale a sin licencia
+  activa.
+- No volver a usar la condicion `subscription_expires_at IS NOT NULL AND ...`
+  para determinar vencimiento, porque eso convierte NULL en acceso infinito.
+- Si esta vencido:
+  - Dashboard muestra pantalla de bloqueo.
+  - Configuracion sigue accesible.
+  - Menu operativo se oculta.
+  - Mensaje con fecha y mensaje sin fecha deben ser distintos.
+
+Personal:
+- No DELETE fisico de `nails_staff` en rutas operativas.
+- Soft delete con `is_active = FALSE`.
+- Reactivacion con `is_active = TRUE`.
+- No permitir autodesactivacion.
+- No permitir que el salon quede sin owner activa.
+- El rol `owner` activo debe existir siempre por cada `business_id`.
+
+Auditoria:
+- `nails_activity_logs` es el registro base para "Ojo de la Jefa".
+- La vista Personal carga hasta 150 logs recientes del salon para filtrar por
+  persona en el template.
+- El historial se ve por modal individual en cada tarjeta de personal, no como
+  feed global al final.
+- El modal se abre con `#historyStaff{{ person.id }}`.
+- El filtro de Jinja compara `log.user_id` contra `person.user_id`.
+- Si no hay logs para ese perfil, mostrar estado vacio especifico.
+
+UI:
+- Botones operativos del menu lateral se ocultan si el salon esta vencido.
+- Configuracion se mantiene visible si `is_active != False`.
+- El catalogo publico y acciones operativas no se muestran como disponibles en
+  estado vencido.
+- Evitar textos confusos como "finalizo el Proximamente"; si no hay fecha,
+  decir que no hay licencia activa.

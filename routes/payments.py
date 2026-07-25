@@ -123,13 +123,14 @@ def webhook():
         procesar_pago_fallido(stripe_customer_id)
         # 4. Si un pago recurrente se cobra con éxito (Renovación o "Resurrección")
     elif event.type == 'invoice.paid':
-        invoice_obj = event.data.object
-        
-        # IMPORTANTE: Validamos que el motivo del cobro sea una renovación (subscription_cycle)
-        # Esto evita que se ejecute en el primer pago, porque el primer pago ya lo maneja 'checkout.session.completed'
-        if invoice_obj.billing_reason == 'subscription_cycle':
-            stripe_customer_id = invoice_obj.customer
-            procesar_resurreccion(stripe_customer_id, invoice_obj)
+            invoice_obj = event.data.object
+            
+            # Ampliamos para aceptar ciclos normales, actualizaciones y creaciones
+            motivos_validos = ['subscription_cycle', 'subscription_update', 'subscription_create']
+            
+            if invoice_obj.billing_reason in motivos_validos:
+                stripe_customer_id = invoice_obj.customer
+                procesar_resurreccion(stripe_customer_id, invoice_obj)
 
     return jsonify(success=True)
 

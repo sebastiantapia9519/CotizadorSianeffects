@@ -1,0 +1,73 @@
+{% extends "nails/base_nails.html" %}
+
+{% block title %}Seguridad | Sianeffects Nails{% endblock %}
+{% block page_title %}Mi perfil{% endblock %}
+{% block page_subtitle %}Actualiza tu contraseña de acceso al salón.{% endblock %}
+
+{% block extra_head %}
+<style>
+    .security-wrap {
+        display: grid;
+        max-width: 620px;
+    }
+
+    .security-card {
+        background: rgba(255,255,255,.96);
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        box-shadow: 0 14px 34px rgba(26,31,44,.06);
+        padding: 20px;
+    }
+
+    .security-title {
+        align-items: center;
+        color: var(--nails-ink);
+        display: flex;
+        font-size: 17px;
+        font-weight: 900;
+        gap: 9px;
+        margin: 0 0 16px;
+    }
+
+    .security-title i {
+        color: var(--nails-primary-strong);
+        width: 18px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="security-wrap">
+    <form method="POST" class="security-card">
+        <input type="hidden" name="{{ nails_csrf_field }}" value="{{ nails_csrf_token }}">
+
+        <h2 class="security-title">
+            <i class="fa-solid fa-lock"></i>
+            Seguridad
+        </h2>
+
+        <div class="mb-3">
+            <label class="form-label" for="current_password">Contraseña actual</label>
+            <input type="password" name="current_password" id="current_password" class="form-control" required autocomplete="current-password">
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label" for="new_password">Nueva contraseña</label>
+            <input type="password" name="new_password" id="new_password" class="form-control" minlength="6" required autocomplete="new-password">
+        </div>
+
+        <div class="mb-4">
+            <label class="form-label" for="confirm_password">Confirmar nueva contraseña</label>
+            <input type="password" name="confirm_password" id="confirm_password" class="form-control" minlength="6" required autocomplete="new-password">
+        </div>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button type="submit" class="btn btn-primary">
+                <i class="fa-solid fa-floppy-disk me-1"></i>
+                Guardar contraseña
+            </button>
+            <a href="{{ url_for('nails.dashboard') }}" class="btn btn-light border fw-bold">Cancelar</a>
+        </div>
+    </form>
+</section>
+{% endblock %}

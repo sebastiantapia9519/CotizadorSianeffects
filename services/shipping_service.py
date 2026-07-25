@@ -237,3 +237,66 @@ def obtener_coordenadas_universales(url_input):
 
     logging.warning(f"No se pudieron extraer coordenadas: {url_final}")
     return None, None
+
+
+def resolver_ubicacion(ubicacion_input):
+    if not ubicacion_input:
+        return {
+            "success": False,
+            "error": "No fue posible encontrar la ubicación."
+        }
+
+    ubicacion = ubicacion_input.strip()
+
+    es_url = re.search(
+        r'^(https?://|www\.)|(?:^|\s)(maps\.app\.goo\.gl|goo\.gl|google\.com/maps|maps\.google\.)',
+        ubicacion,
+        re.IGNORECASE
+    )
+
+    if es_url:
+        lat, lng = obtener_coordenadas_universales(ubicacion)
+        if lat is not None and lng is not None:
+            return {
+                "success": True,
+                "lat": lat,
+                "lng": lng,
+                "address": limpiar_direccion(ubicacion)
+            }
+        return {
+            "success": False,
+            "error": "No fue posible encontrar la ubicación."
+        }
+
+    match_coords = re.match(
+        r'^\s*(-?(?:\d+(?:\.\d+)?))\s*,\s*(-?(?:\d+(?:\.\d+)?))\s*$',
+        ubicacion
+    )
+    if match_coords:
+        lat = float(match_coords.group(1))
+        lng = float(match_coords.group(2))
+        if -90 <= lat <= 90 and -180 <= lng <= 180:
+            return {
+                "success": True,
+                "lat": lat,
+                "lng": lng,
+                "address": f"{lat},{lng}"
+            }
+        return {
+            "success": False,
+            "error": "No fue posible encontrar la ubicación."
+        }
+
+    lat, lng = geocodificar(ubicacion)
+    if lat is not None and lng is not None:
+        return {
+            "success": True,
+            "lat": lat,
+            "lng": lng,
+            "address": limpiar_direccion(ubicacion)
+        }
+
+    return {
+        "success": False,
+        "error": "No fue posible encontrar la ubicación."
+    }

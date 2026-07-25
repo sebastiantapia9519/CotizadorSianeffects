@@ -104,12 +104,91 @@
     .staff-actions {
         display: flex;
         gap: 8px;
+        flex-wrap: wrap;
     }
 
     .staff-form-grid {
         display: grid;
         gap: 12px;
         grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .activity-subtitle {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-top: 2px;
+    }
+
+    .activity-feed {
+        display: grid;
+        gap: 10px;
+    }
+
+    .activity-row {
+        align-items: flex-start;
+        border: 1px solid var(--nails-border);
+        border-radius: 10px;
+        display: grid;
+        gap: 12px;
+        grid-template-columns: 38px minmax(0, 1fr) auto;
+        padding: 12px;
+    }
+
+    .activity-icon {
+        align-items: center;
+        background: var(--nails-primary-soft);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        display: flex;
+        height: 38px;
+        justify-content: center;
+        width: 38px;
+    }
+
+    .activity-actor {
+        color: var(--nails-ink);
+        font-weight: 900;
+    }
+
+    .activity-detail {
+        color: var(--nails-ink);
+        font-size: 13px;
+        font-weight: 800;
+        margin-top: 3px;
+    }
+
+    .activity-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 7px;
+    }
+
+    .activity-tag {
+        background: var(--nails-primary-soft);
+        border-radius: 999px;
+        color: var(--nails-primary-strong);
+        font-size: 11px;
+        font-weight: 900;
+        padding: 4px 8px;
+    }
+
+    .activity-date {
+        color: var(--nails-muted);
+        font-size: 12px;
+        font-weight: 900;
+        white-space: nowrap;
+    }
+
+    .activity-empty {
+        background: var(--nails-primary-soft);
+        border: 1px dashed var(--nails-border);
+        border-radius: 10px;
+        color: var(--nails-muted);
+        font-weight: 900;
+        padding: 16px;
+        text-align: center;
     }
 
     @media (max-width: 1000px) {
@@ -121,6 +200,16 @@
     @media (max-width: 720px) {
         .staff-member {
             grid-template-columns: 1fr;
+            text-align: center;
+            justify-items: center;
+        }
+
+        .activity-row {
+            grid-template-columns: 1fr;
+        }
+
+        .activity-date {
+            white-space: normal;
         }
 
         .roles-grid,
@@ -128,8 +217,22 @@
             grid-template-columns: 1fr;
         }
 
+        .staff-badges {
+            justify-content: center;
+        }
+
         .staff-actions {
-            justify-content: stretch;
+            justify-content: center;
+            width: 100%;
+        }
+        
+        .staff-actions form {
+            flex: 1;
+            display: flex;
+        }
+        
+        .staff-actions button {
+            width: 100%;
         }
     }
 </style>
@@ -157,7 +260,7 @@
         {% set label = role_labels.get(person.role, person.role|title) %}
         {% set is_self = person.user_id and current_user_id and person.user_id|string == current_user_id|string %}
         <article class="staff-card staff-member">
-            <div class="staff-avatar" style="--staff-color: {{ person.color or business.secondary_color or '#fce7f3' }};">
+            <div class="staff-avatar" style="--staff-color: {{ business.secondary_color or '#fce7f3' }};">
                 {{ (person.name or 'P')[:1]|upper }}
             </div>
             <div class="min-w-0">
@@ -183,15 +286,26 @@
                 <button class="btn btn-sm btn-outline-primary" type="button" data-bs-toggle="modal" data-bs-target="#editStaff{{ person.id }}">
                     Editar
                 </button>
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#historyStaff{{ person.id }}">
+                    <i class="fa-regular fa-clock me-1"></i>Historial
+                </button>
+                
                 {% if person.is_active and not is_self %}
-                <form method="POST" action="{{ url_for('nails.desactivar_personal', staff_id=person.id) }}" class="require-confirm" data-title="¿Desactivar personal?" data-text="Ya no aparecerá como activo para asignaciones nuevas." data-btn-text="Sí, desactivar">
+                <form method="POST" action="{{ url_for('nails.desactivar_personal', staff_id=person.id) }}" class="require-confirm" data-title="¿Desactivar personal?" data-text="Ya no aparecerá como activo para asignaciones nuevas ni tendrá acceso al sistema." data-btn-text="Sí, desactivar">
                     <button class="btn btn-sm btn-outline-danger" type="submit">Desactivar</button>
                 </form>
+                
+                {% elif not person.is_active and not is_self %}
+                <form method="POST" action="{{ url_for('nails.reactivar_personal', staff_id=person.id) }}" class="require-confirm" data-title="¿Reactivar personal?" data-text="Volverá a tener acceso al sistema y podrá ser asignada a citas." data-btn-text="Sí, reactivar" data-btn-color="#059669">
+                    <button class="btn btn-sm btn-outline-success" type="submit">Reactivar</button>
+                </form>
+                
                 {% elif is_self %}
-                <span class="text-muted fw-bold small">Tu cuenta</span>
+                <span class="text-muted fw-bold small align-self-center px-2">Tu cuenta</span>
                 {% endif %}
+                
                 {% else %}
-                <span class="text-muted fw-bold small">Solo lectura</span>
+                <span class="text-muted fw-bold small align-self-center px-2">Solo lectura</span>
                 {% endif %}
             </div>
         </article>
@@ -212,6 +326,44 @@
                         <button type="submit" class="btn btn-primary">Guardar</button>
                     </div>
                 </form>
+            </div>
+        </div>
+
+        <div class="modal fade" id="historyStaff{{ person.id }}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered modal-lg">
+                <div class="modal-content border-0 rounded-4">
+                    <div class="modal-header border-0">
+                        <div>
+                            <h2 class="modal-title h5 fw-black">Historial de actividad - {{ person.name }}</h2>
+                            <div class="activity-subtitle">Últimos movimientos registrados para este perfil.</div>
+                        </div>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="activity-feed">
+                            {% for log in activity_logs if person.user_id and log.user_id and log.user_id|string == person.user_id|string %}
+                            <article class="activity-row">
+                                <div class="activity-icon">
+                                    <i class="fa-regular fa-clock"></i>
+                                </div>
+                                <div class="min-w-0">
+                                    <div class="activity-actor">{{ log.actor_name or 'Sistema' }}</div>
+                                    <div class="activity-detail">{{ log.detail or log.action or 'Movimiento registrado' }}</div>
+                                    <div class="activity-tags">
+                                        <span class="activity-tag">{{ log.module or 'General' }}</span>
+                                        {% if log.action %}
+                                        <span class="activity-tag">{{ log.action }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <time class="activity-date" datetime="{{ log.created_at }}">{{ log.created_at_label }}</time>
+                            </article>
+                            {% else %}
+                            <div class="activity-empty">No hay actividad reciente registrada para este perfil.</div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         {% endif %}

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Workspace Launcher - Sianeffects</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --accent: #ff5a73;
+            --accent-strong: #ff3f5f;
+            --accent-soft: rgba(255, 90, 115, 0.08);
+            --ink: #0f172a;
+            --muted: #64748b;
+            --line: #e2e8f0;
+            --bg-start: #fafafa;
+            --bg-end: #fff7f8;
+            --surface: #ffffff;
+            
+            /* Status Colors */
+            --bg-trial: #ecfdf5;
+            --text-trial: #047857;
+            --bg-premium: #eff6ff;
+            --text-premium: #1d4ed8;
+            --bg-expired: #fef2f2;
+            --text-expired: #b91c1c;
+        }
+
+        * { 
+            box-sizing: border-box; 
+            margin: 0; 
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            background: linear-gradient(135deg, var(--bg-start) 0%, var(--bg-end) 100%);
+            color: var(--ink);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            padding: 40px 24px;
+        }
+
+        /* Top Navigation Header */
+        .launcher-header {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto 60px auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+        }
+
+        .brand-logo {
+            width: 38px;
+            height: 38px;
+            object-fit: contain;
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .brand-title {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--ink);
+            letter-spacing: -0.02em;
+        }
+
+        .brand-subtitle {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .btn-logout {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--muted);
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-logout:hover {
+            color: var(--ink);
+            background: rgba(0, 0, 0, 0.04);
+        }
+
+        /* Main Container */
+        .launcher-container {
+            width: 100%;
+            max-width: 1100px;
+            margin: 0 auto;
+            flex: 1;
+        }
+
+        .intro-section {
+            margin-bottom: 40px;
+        }
+
+        h1 {
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -0.03em;
+            line-height: 1.2;
+            margin-bottom: 12px;
+        }
+
+        .subtitle {
+            color: var(--muted);
+            font-size: 16px;
+            line-height: 1.6;
+            max-width: 600px;
+        }
+
+        /* Flash Messages */
+        .flash-container {
+            margin-bottom: 24px;
+        }
+
+        .flash {
+            padding: 14px 18px;
+            border-radius: 8px;
+            background: #fff7ed;
+            border: 1px solid #ffedd5;
+            color: #9a3412;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        /* Responsive Grid System */
+        .module-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        .module-card-form {
+            display: block;
+            width: 100%;
+        }
+
+        .module-option-btn {
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            text-align: left;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 28px;
+            cursor: pointer;
+            font: inherit;
+            position: relative;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02), 0 2px 4px -1px rgba(0, 0, 0, 0.02);
+            transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+                        border-color 0.25s ease, 
+                        box-shadow 0.25s ease;
+        }
+
+        .module-option-btn:hover,
+        .module-option-btn:focus-visible {
+            outline: none;
+            border-color: var(--accent);
+            transform: translateY(-4px);
+            box-shadow: 0 20px 25px -5px rgba(255, 90, 115, 0.1), 0 10px 10px -5px rgba(255, 90, 115, 0.04);
+        }
+
+        /* Top Row info */
+        .card-header-row {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .module-icon-box {
+            font-size: 32px;
+            line-height: 1;
+            transition: transform 0.25s ease;
+        }
+
+        .module-option-btn:hover .module-icon-box {
+            transform: scale(1.12) rotate(-3deg);
+        }
+
+        /* Dynamic Status Badges */
+        .status-badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .status-badge::before {
+            content: "";
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: currentColor;
+        }
+
+        .status-badge.trial { background: var(--bg-trial); color: var(--text-trial); }
+        .status-badge.premium { background: var(--bg-premium); color: var(--text-premium); }
+        .status-badge.active { background: var(--bg-premium); color: var(--text-premium); }
+        .status-badge.expired { background: var(--bg-expired); color: var(--text-expired); }
+
+        /* Card Content */
+        .module-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--ink);
+            letter-spacing: -0.01em;
+            margin-bottom: 8px;
+        }
+
+        .module-description {
+            font-size: 14px;
+            color: var(--muted);
+            line-height: 1.5;
+            margin-bottom: 28px;
+            flex-grow: 1;
+        }
+
+        /* Action Link Trigger */
+        .card-action-trigger {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--ink);
+            border-top: 1px solid var(--line);
+            padding-top: 16px;
+            margin-top: auto;
+            transition: color 0.2s ease;
+        }
+
+        .module-option-btn:hover .card-action-trigger {
+            color: var(--accent-strong);
+        }
+
+        .action-arrow {
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+
+        .module-option-btn:hover .action-arrow {
+            transform: translateX(4px);
+        }
+
+        /* Responsive Breakpoints */
+        @media (max-width: 640px) {
+            body { padding: 24px 16px; }
+            .launcher-header { margin-bottom: 40px; }
+            h1 { font-size: 28px; }
+            .module-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="launcher-header">
+        <a href="#" class="brand">
+            <img src="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" alt="Logo Sianeffects" class="brand-logo">
+            <div class="brand-text">
+                <span class="brand-title">Sianeffects</span>
+                <span class="brand-subtitle">Workspace</span>
+            </div>
+        </a>
+        <a href="{{ url_for('auth.logout') }}" class="btn-logout">Cerrar sesión</a>
+    </header>
+
+    <main class="launcher-container">
+        
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="flash-container">
+                    {% for message in messages %}
+                        <div class="flash">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <section class="intro-section">
+            <h1>¿Qué deseas abrir hoy?</h1>
+            <p class="subtitle">Selecciona el espacio de trabajo con el que quieres operar. Puedes alternar entre tus herramientas activas en cualquier momento.</p>
+        </section>
+
+        {% set module_info = {
+            'cotizador': {
+                'icon': '📋',
+                'description': 'Gestión avanzada de cotizaciones, control inteligente de inventarios e historial unificado.'
+            },
+            'nails': {
+                'icon': '💅',
+                'description': 'Control total de tu agenda, expediente personalizado de clientes y reportería de ventas diarias.'
+            },
+            'pos': {
+                'icon': '🛒',
+                'description': 'Punto de venta ágil, control de caja chica y emisión rápida de comprobantes.'
+            }
+        } %}
+
+        <div class="module-grid">
+            {% for module in modules %}
+                {% set key = module.module_key %}
+                {% set meta = module_info[key] if key in module_info else {'icon': '📦', 'description': 'Módulo de gestión del ecosistema.'} %}
+                
+                <form method="POST" action="{{ url_for('auth.seleccionar_modulo') }}" class="module-card-form">
+                    <input type="hidden" name="module_key" value="{{ key }}">
+                    
+                    <button class="module-option-btn" type="submit">
+                        <div class="card-header-row">
+                            <span class="module-icon-box">{{ meta.icon }}</span>
+                            <span class="status-badge {{ module.status | lower }}">{{ module.status }}</span>
+                        </div>
+                        
+                        <h2 class="module-title">{{ module_label(key) }}</h2>
+                        <p class="module-description">{{ meta.description }}</p>
+                        
+                        <div class="card-action-trigger">
+                            <span>Abrir módulo</span>
+                            <span class="action-arrow">→</span>
+                        </div>
+                    </button>
+                </form>
+            {% endfor %}
+        </div>
+    </main>
+
+</body>
+</html>

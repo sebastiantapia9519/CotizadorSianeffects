@@ -739,6 +739,35 @@ def inject_user_config():
     # Retorna la configuración por defecto para Jobs en segundo plano o usuarios no logueados
     return {'config': default_config}
 
+
+@app.context_processor
+def inject_module_switcher():
+    """Expone si la cuenta tiene mas de un modulo activo para mostrar el cambio de modulo."""
+    if not has_request_context() or 'user_id' not in session:
+        return {'has_multiple_active_modules': False}
+
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT COUNT(*) AS module_count
+            FROM user_modules
+            WHERE user_id = %s
+              AND status IN ('trial', 'active')
+            """,
+            (session['user_id'],)
+        )
+        row = cursor.fetchone()
+        cursor.close()
+        conn.close()
+        return {'has_multiple_active_modules': int(row['module_count'] or 0) > 1}
+    except Exception as e:
+        app.logger.error(
+            f"CONTEXT_ERROR: Fallo al revisar modulos activos para usuario {session.get('user_id')}: {e}"
+        )
+        return {'has_multiple_active_modules': False}
+
 #============================================================================
 # CONTEXT PROCESSOR — Inyecta IDs de Stripe en TODAS las plantillas HTML
 #============================================================================

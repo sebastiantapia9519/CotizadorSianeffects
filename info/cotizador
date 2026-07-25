@@ -1688,5 +1688,154 @@ CHECKLIST DE QA
 11. Confirmar que otro usuario no puede consultar ni modificar el folio.
 
 ================================================================================
+20. CUENTAS MULTI-MODULO, ACTIVACION Y ONBOARDING COTIZADOR
+================================================================================
+
+Contexto:
+  Sianeffects ahora permite que una misma fila en `usuarios` tenga acceso a mas
+  de un modulo del ecosistema, por ejemplo:
+    - Cotizador.
+    - Nails.
+
+  La identidad principal de autenticacion sigue viviendo en `usuarios`, pero el
+  acceso funcional por modulo se controla desde `user_modules`.
+
+Tabla de control:
+  user_modules:
+    - user_id: usuario propietario del acceso.
+    - module_key: `cotizador` o `nails`.
+    - status: estado del modulo.
+    - plan_type: plan asociado al modulo cuando aplique.
+    - trial_start: inicio de prueba del modulo.
+    - trial_ends_at: fin de prueba del modulo.
+    - subscription_end: fin de acceso pagado o heredado del modulo.
+    - created_at / updated_at: auditoria basica.
+
+Estados permitidos en `user_modules.status`:
+  - `trial`
+  - `active`
+  - `inactive`
+  - `cancelled`
+
+Regla critica:
+  No confundir `user_modules.status` con `usuarios.estado_suscripcion`.
+
+  `usuarios.estado_suscripcion` conserva los valores historicos del sistema:
+    - `Trial`
+    - `Activo`
+    - `Cancelado`
+    - `Pago Fallido`
+
+  `user_modules.status` SIEMPRE debe escribirse en minusculas y solo con los
+  cuatro valores permitidos por el CHECK constraint.
+
+Helpers principales:
+  utils/module_activation.py:
+    - `normalize_module_status(status)`:
+      convierte valores historicos a estados validos de `user_modules`.
+    - `ensure_user_module(user_id, module_key, status, plan_type, cursor)`:
+      inserta o actualiza el acceso de modulo sin escribir estados invalidos.
+    - `user_has_module(user_id, module_key, active_only=True)`:
+      valida acceso aceptando solo `trial` y `active` cuando `active_only=True`.
+    - `get_user_modules(user_id)`:
+      devuelve los modulos asociados al usuario.
+    - `create_activation_code`, `validate_activation_code`, `mark_auth_code_used`:
+      soportan codigos de activacion de modulo usando `auth_codes.purpose`.
+
+Registro:
+  `/registro`:
+    - Crea usuario normal de Cotizador.
+    - Inserta `user_modules.module_key = 'cotizador'`.
+    - Inserta `user_modules.status = 'trial'`.
+
+  `/registro-nails`:
+    - Crea usuario normal de Nails.
+    - Inserta `user_modules.module_key = 'nails'`.
+    - Inserta `user_modules.status = 'trial'`.
+
+Activacion cruzada:
+  Si un correo ya existe en un modulo y se registra en el otro:
+    1. No se crea otro usuario.
+    2. Se genera codigo de activacion con `auth_codes.purpose`:
+       - `activate_cotizador`
+       - `activate_nails`
+    3. Se manda correo de activacion.
+    4. Al validar codigo, se agrega el nuevo modulo en `user_modules`.
+    5. El modulo activado entra como `trial`.
+
+Login y seleccion de modulo:
+  Al iniciar sesion, `routes/auth.py` revisa los modulos activos del usuario:
+    - activos = `status IN ('trial', 'active')`.
+
+  Si solo hay un modulo activo:
+    - Redirige directo al modulo correspondiente.
+
+  Si hay mas de un modulo activo:
+    - Redirige a `/seleccionar-modulo`.
+    - El usuario elige entre Cotizador y Nails.
+    - Se actualiza `session['active_module']`.
+    - Se actualiza `usuarios.active_module` para recordar la ultima eleccion.
+
+  Plantilla:
+    - `templates/seleccionar_modulo.html`.
+
+Vigencia por modulo:
+  Para Cotizador, `session['is_pro_active']` ya no debe depender unicamente de
+  `usuarios.subscription_end` cuando el usuario tiene varios modulos.
+
+  La vigencia se calcula desde el modulo seleccionado:
+    - `user_modules.subscription_end`
+    - `user_modules.trial_ends_at`
+    - fallback para trials: `user_modules.created_at + 7 dias`
+
+  Esto evita que una cuenta nacida en Nails con la suscripcion global vencida
+  aparezca como vencida al activar Cotizador por primera vez.
+
+Onboarding Cotizador:
+  El onboarding inicial del Cotizador vive en:
+    - Ruta: `/cotizador/onboarding`
+    - Blueprint: `routes/configuracion_bp.py`
+    - Template: `templates/cotizador_onboarding.html`
+
+  El login/selector manda al onboarding cuando:
+    - El usuario tiene modulo `cotizador` en `trial`.
+    - No existe log `Completó onboarding cotizador`.
+    - No hay actividad real de Cotizador:
+      - ventas
+      - materiales
+      - productos
+      - maquinaria
+
+  Importante:
+    No usar solamente campos de `configuracion` como `slogan`, `website` o
+    `notas_ticket` para decidir si ya hizo onboarding, porque pueden venir con
+    datos default o heredados.
+
+  Al completar onboarding:
+    - Se guarda identidad del negocio.
+    - Puede guardar configuracion de envios de forma opcional.
+    - Se inserta log `Completó onboarding cotizador`.
+
+Boton para cambiar de modulo:
+  `templates/layout.html` muestra "Cambiar de modulo" en el menu del Cotizador
+  si y solo si `has_multiple_active_modules` es verdadero.
+
+  `has_multiple_active_modules` se inyecta desde `app.py` contando registros en
+  `user_modules` con `status IN ('trial', 'active')`.
+
+Reglas de QA:
+  1. Crear cuenta en Nails.
+  2. Registrar el mismo correo en Cotizador.
+  3. Confirmar que pide codigo de activacion, no crea otro usuario.
+  4. Confirmar que `user_modules` tenga filas para `nails` y `cotizador`.
+  5. Confirmar que Cotizador queda `trial`.
+  6. Iniciar sesion y confirmar que aparece selector de modulo.
+  7. Elegir Cotizador y confirmar que no aparece vencido durante su trial.
+  8. Confirmar que abre `/cotizador/onboarding` si no se ha completado.
+  9. Completar onboarding y confirmar que ya no se vuelve a mostrar.
+  10. Confirmar que el boton "Cambiar de modulo" aparece solo cuando hay mas de
+      un modulo activo.
+
+================================================================================
 FIN DEL MANUAL
 ================================================================================
