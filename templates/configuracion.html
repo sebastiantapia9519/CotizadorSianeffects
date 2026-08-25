@@ -1110,10 +1110,24 @@
         .emoji-grid-modern {
             grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
         }
+    }
 
-        /* Chatbot en móvil: toma toda la pantalla como una app, así el header
-           (con el botón de cerrar) siempre queda visible y fijo, sin que el
-           teclado o la barra de autocompletar de iOS lo empujen fuera. */
+    /* Fondo oscuro detrás del chat en móvil: permite cerrar tocando fuera,
+       en vez de obligar a usar solo la X */
+    .chatbot-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.45);
+        z-index: 1055;
+    }
+
+    @media (max-width: 768px) {
+        /* Chatbot en móvil: se comporta como una hoja modal que sube desde
+           abajo (como WhatsApp/Instagram), dejando ver un poco de la página
+           detrás con un fondo oscuro que también sirve para cerrar el chat.
+           El header (con el botón de cerrar) siempre queda visible y fijo,
+           sin que el teclado o la barra de autocompletar de iOS lo empujen fuera. */
         .chatbot-widget {
             bottom: max(16px, env(safe-area-inset-bottom));
             right: 16px;
@@ -1123,22 +1137,22 @@
             display: none;
         }
 
+        .chatbot-backdrop.show {
+            display: block;
+        }
+
         .chatbot-panel {
             position: fixed;
-            top: 0;
+            top: auto;
             left: 0;
             right: 0;
             bottom: 0;
             width: 100%;
             max-width: 100%;
-            height: 100dvh;
-            max-height: 100dvh;
-            border-radius: 0;
+            height: 90dvh;
+            max-height: 90dvh;
+            border-radius: 20px 20px 0 0;
             z-index: 1060;
-        }
-
-        .chatbot-header {
-            padding-top: calc(16px + env(safe-area-inset-top));
         }
 
         .chatbot-input-area {
@@ -2434,6 +2448,7 @@
 
 <!-- CHATBOT FLOTANTE (MANTENIDO) -->
 <div id="chatbot-container" class="chatbot-widget">
+    <div id="chatbot-backdrop" class="chatbot-backdrop"></div>
     <button id="chatbot-toggle" class="chatbot-fab">
         <i class="fas fa-robot"></i>
     </button>
@@ -3261,6 +3276,7 @@
     const chatbotContainer = document.getElementById('chatbot-container');
     const chatToggle = document.getElementById('chatbot-toggle');
     const chatPanel = document.getElementById('chatbot-panel');
+    const chatBackdrop = document.getElementById('chatbot-backdrop');
     const chatClose = document.getElementById('chatbot-close');
     const chatInput = document.getElementById('chatbot-input');
     const chatSend = document.getElementById('chatbot-send');
@@ -3273,6 +3289,7 @@
         chatAbierto = true;
         chatbotContainer.classList.add('chat-open');
         document.body.classList.add('chat-panel-open');
+        if (chatBackdrop) chatBackdrop.classList.add('show');
         chatInput.focus();
     }
 
@@ -3281,6 +3298,7 @@
         chatAbierto = false;
         chatbotContainer.classList.remove('chat-open');
         document.body.classList.remove('chat-panel-open');
+        if (chatBackdrop) chatBackdrop.classList.remove('show');
     }
 
     chatToggle.addEventListener('click', () => {
@@ -3292,6 +3310,7 @@
     });
 
     chatClose.addEventListener('click', cerrarChatbot);
+    if (chatBackdrop) chatBackdrop.addEventListener('click', cerrarChatbot);
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape' && chatAbierto) cerrarChatbot();
