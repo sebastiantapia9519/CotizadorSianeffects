@@ -955,10 +955,30 @@
     .chatbot-header {
         background: linear-gradient(135deg, #ff4a5a, #ff6b7a);
         color: white;
-        padding: 20px 24px;
+        padding: 18px 20px;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-shrink: 0;
+    }
+
+    /* Botón de cerrar más visible y fácil de tocar (antes era una X blanca diminuta) */
+    #chatbot-close {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.22);
+        opacity: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: background-color 0.15s ease;
+    }
+
+    #chatbot-close:hover,
+    #chatbot-close:active {
+        background-color: rgba(255, 255, 255, 0.4);
     }
 
     .chatbot-messages {
@@ -1091,10 +1111,44 @@
             grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
         }
 
-        .chatbot-panel {
-            width: calc(100vw - 20px);
-            height: calc(100vh - 100px);
+        /* Chatbot en móvil: toma toda la pantalla como una app, así el header
+           (con el botón de cerrar) siempre queda visible y fijo, sin que el
+           teclado o la barra de autocompletar de iOS lo empujen fuera. */
+        .chatbot-widget {
+            bottom: max(16px, env(safe-area-inset-bottom));
+            right: 16px;
         }
+
+        .chatbot-widget.chat-open .chatbot-fab {
+            display: none;
+        }
+
+        .chatbot-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: 100%;
+            height: 100dvh;
+            max-height: 100dvh;
+            border-radius: 0;
+            z-index: 1060;
+        }
+
+        .chatbot-header {
+            padding-top: calc(16px + env(safe-area-inset-top));
+        }
+
+        .chatbot-input-area {
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+        }
+    }
+
+    /* Evita que el fondo haga scroll detrás del chat en móvil */
+    body.chat-panel-open {
+        overflow: hidden;
     }
 
     /* Fix para switches de Bootstrap existentes */
@@ -3204,6 +3258,7 @@
     // ============================================
     // CHATBOT
     // ============================================
+    const chatbotContainer = document.getElementById('chatbot-container');
     const chatToggle = document.getElementById('chatbot-toggle');
     const chatPanel = document.getElementById('chatbot-panel');
     const chatClose = document.getElementById('chatbot-close');
@@ -3213,15 +3268,33 @@
 
     let chatAbierto = false;
 
-    chatToggle.addEventListener('click', () => {
-        chatPanel.classList.toggle('d-none');
-        chatAbierto = !chatAbierto;
-        if (chatAbierto) chatInput.focus();
-    });
+    function abrirChatbot() {
+        chatPanel.classList.remove('d-none');
+        chatAbierto = true;
+        chatbotContainer.classList.add('chat-open');
+        document.body.classList.add('chat-panel-open');
+        chatInput.focus();
+    }
 
-    chatClose.addEventListener('click', () => {
+    function cerrarChatbot() {
         chatPanel.classList.add('d-none');
         chatAbierto = false;
+        chatbotContainer.classList.remove('chat-open');
+        document.body.classList.remove('chat-panel-open');
+    }
+
+    chatToggle.addEventListener('click', () => {
+        if (chatAbierto) {
+            cerrarChatbot();
+        } else {
+            abrirChatbot();
+        }
+    });
+
+    chatClose.addEventListener('click', cerrarChatbot);
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && chatAbierto) cerrarChatbot();
     });
 
     chatSend.addEventListener('click', enviarMensajeCoach);

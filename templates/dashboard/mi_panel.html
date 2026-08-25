@@ -522,6 +522,26 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-shrink: 0;
+    }
+
+    /* Botón de cerrar más visible y fácil de tocar (antes era una X blanca diminuta) */
+    #chatbot-close {
+        width: 34px;
+        height: 34px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.22);
+        opacity: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: background-color 0.15s ease;
+    }
+
+    #chatbot-close:hover,
+    #chatbot-close:active {
+        background-color: rgba(255, 255, 255, 0.4);
     }
 
     .chatbot-messages {
@@ -632,15 +652,44 @@
     }
 
     @media (max-width: 768px) {
-        .chatbot-panel {
-            width: calc(100vw - 20px);
-            height: calc(100vh - 100px);
+        /* Chatbot en móvil: toma toda la pantalla como una app, así el header
+           (con el botón de cerrar) siempre queda visible y fijo, sin que el
+           teclado o la barra de autocompletar de iOS lo empujen fuera. */
+        .chatbot-widget {
+            bottom: max(16px, env(safe-area-inset-bottom));
+            right: 16px;
         }
 
-        .chatbot-widget {
-            bottom: 10px;
-            right: 10px;
+        .chatbot-widget.chat-open .chatbot-fab {
+            display: none;
         }
+
+        .chatbot-panel {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100%;
+            max-width: 100%;
+            height: 100dvh;
+            max-height: 100dvh;
+            border-radius: 0;
+            z-index: 1060;
+        }
+
+        .chatbot-header {
+            padding-top: calc(16px + env(safe-area-inset-top));
+        }
+
+        .chatbot-input-area {
+            padding-bottom: calc(16px + env(safe-area-inset-bottom));
+        }
+    }
+
+    /* Evita que el fondo haga scroll detrás del chat en móvil */
+    body.chat-panel-open {
+        overflow: hidden;
     }
 </style>
 {% endblock %}
@@ -1327,6 +1376,7 @@
     // ==============================================================================
     // CHATBOT DASHBOARD
     // ==============================================================================
+    const chatbotContainer = document.getElementById('chatbot-container');
     const chatToggle = document.getElementById('chatbot-toggle');
     const chatPanel = document.getElementById('chatbot-panel');
     const chatClose = document.getElementById('chatbot-close');
@@ -1348,16 +1398,34 @@
             .replace(/\n/g, '<br>');
     }
 
+    function abrirChatbotDashboard() {
+        chatPanel.classList.remove('d-none');
+        chatAbierto = true;
+        chatbotContainer.classList.add('chat-open');
+        document.body.classList.add('chat-panel-open');
+        chatInput.focus();
+    }
+
+    function cerrarChatbotDashboard() {
+        chatPanel.classList.add('d-none');
+        chatAbierto = false;
+        chatbotContainer.classList.remove('chat-open');
+        document.body.classList.remove('chat-panel-open');
+    }
+
     if (chatToggle && chatPanel && chatClose && chatInput && chatSend && chatMessages) {
         chatToggle.addEventListener('click', () => {
-            chatPanel.classList.toggle('d-none');
-            chatAbierto = !chatAbierto;
-            if (chatAbierto) chatInput.focus();
+            if (chatAbierto) {
+                cerrarChatbotDashboard();
+            } else {
+                abrirChatbotDashboard();
+            }
         });
 
-        chatClose.addEventListener('click', () => {
-            chatPanel.classList.add('d-none');
-            chatAbierto = false;
+        chatClose.addEventListener('click', cerrarChatbotDashboard);
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && chatAbierto) cerrarChatbotDashboard();
         });
 
         chatSend.addEventListener('click', enviarMensajeDashboard);
