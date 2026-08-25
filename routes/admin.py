@@ -178,8 +178,17 @@ def dashboard():
 
         # 5. DATOS PAGINADOS
         data_sql = f"""
-            SELECT u.*, (SELECT COUNT(*) FROM ventas v WHERE v.user_id = u.id) as total_cotizaciones
+            SELECT
+                u.*,
+                (SELECT COUNT(*) FROM ventas v WHERE v.user_id = u.id) as total_cotizaciones,
+                c.nombre_empresa AS config_nombre_empresa,
+                c.slogan AS config_slogan,
+                c.website AS config_website,
+                c.notas_ticket AS config_notas_ticket,
+                c.icono_empresa AS config_icono_empresa,
+                c.logo_empresa AS config_logo_empresa
             FROM usuarios u
+            LEFT JOIN configuracion c ON c.user_id = u.id
             {base_where}
             {order_clause}
             LIMIT %s OFFSET %s
