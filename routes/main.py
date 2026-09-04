@@ -678,12 +678,15 @@ def guardar_venta():
         materiales_a_descontar = {}
 
         for item in items:
+            # Atrapamos el valor de cortesía (por defecto False si no viene)
+            es_cortesia = bool(item.get('es_cortesia', False))
+
             cursor.execute('''
                 INSERT INTO venta_detalles (
                     venta_id, concepto, cantidad, precio_unitario, 
-                    costo_unitario, subtotal, composicion
+                    costo_unitario, subtotal, composicion, es_cortesia
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             ''', (
                 venta_id,
                 item['concepto'],
@@ -691,7 +694,8 @@ def guardar_venta():
                 float(item.get('precio_unitario', 0)),
                 float(item.get('costo_unitario', 0)),
                 float(item['subtotal']),
-                item.get('composicion', '[]')
+                item.get('composicion', '[]'),
+                es_cortesia
             ))
 
             if usar_inventario and not data.get('id'): 

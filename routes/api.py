@@ -199,7 +199,8 @@ def obtener_detalles_venta(id):
         'precio_unitario': d['precio_unitario'],
         'costo_unitario': d['costo_unitario'],
         'subtotal': d['subtotal'],
-        'composicion': d['composicion']
+        'composicion': d['composicion'],
+        'es_cortesia': d.get('es_cortesia', False)
     } for d in detalles]
 
     # Manejo seguro de la fecha para evitar errores de JSON

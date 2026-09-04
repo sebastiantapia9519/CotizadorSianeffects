@@ -279,9 +279,21 @@
             <tbody>
                 {% for item in detalles %}
                 <tr>
-                    <td style="font-weight: bold; color: #333;">{{ item['cantidad']|int }}</td>
-                    <td>{{ item['concepto'] }}</td>
-                    <td style="text-align: right;">${{ "%.2f"|format(item['subtotal']) }}</td>
+                    <td style="font-weight: bold; color: #333; vertical-align: top;">{{ item['cantidad']|int }}</td>
+                    <td style="vertical-align: top;">
+                        {% if item['es_cortesia'] %}
+                            <span style="font-weight: 700;">🎁 {{ item['concepto'] }}</span>
+                            <br>
+                            <small style="color: #2ec4b6; font-weight: 800; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.5px;">
+                                Cortesía
+                            </small>
+                        {% else %}
+                            {{ item['concepto'] }}
+                        {% endif %}
+                    </td>
+                    <td style="text-align: right; vertical-align: top; font-weight: {% if item['es_cortesia'] %}bold{% else %}normal{% endif %}; color: {% if item['es_cortesia'] %}#2ec4b6{% else %}inherit{% endif %};">
+                        ${{ "%.2f"|format(item['subtotal']) }}
+                    </td>
                 </tr>
                 {% endfor %}
             </tbody>

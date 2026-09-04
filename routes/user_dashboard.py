@@ -194,6 +194,20 @@ def mi_panel():
         """, (user_id, periodo_str))
         top_productos = cursor.fetchall()
 
+        # --- 5.5 MEJORES CLIENTES ---
+        cursor.execute("""
+            SELECT 
+                cliente AS nombre, 
+                COUNT(id) AS tickets, 
+                SUM(total) AS total_comprado
+            FROM ventas 
+            WHERE user_id = %s AND to_char(fecha, 'YYYY-MM') = %s AND estado IN ('pagado', 'anticipo')
+            GROUP BY cliente 
+            ORDER BY total_comprado DESC 
+            LIMIT 5
+        """, (user_id, periodo_str))
+        top_clientes = cursor.fetchall()
+
         # --- 6. ALERTAS DE STOCK BAJO ---
         cursor.execute("SELECT inventario_activo FROM configuracion WHERE user_id = %s", (user_id,))
         config_row = cursor.fetchone()
@@ -227,7 +241,7 @@ def mi_panel():
             'nivel': 'Sin datos',
             'siguiente_meta': None
         }
-        fechas_diarias, ing_diarios, gan_diarias, meses_hist, ing_hist, gan_hist, top_productos, stock_bajo = [], [], [], [], [], [], [], []
+        fechas_diarias, ing_diarios, gan_diarias, meses_hist, ing_hist, gan_hist, top_productos, top_clientes, stock_bajo = [], [], [], [], [], [], [], [], []
         inventario_activo = False
     finally:
         cursor.close()
@@ -243,6 +257,7 @@ def mi_panel():
         kpis=kpis, 
         chart_data=chart_data, 
         top_productos=[dict(p) for p in top_productos],
+        top_clientes=[dict(c) for c in top_clientes],
         stock_bajo=[dict(s) for s in stock_bajo],
         inventario_activo=inventario_activo,
         total_cotizaciones_creadas=total_cotizaciones_creadas,

@@ -16,6 +16,8 @@ PRECIOS_PLAN = {
     'mensual': PRECIO_MENSUAL,
     'anual': PRECIO_ANUAL,
 }
+CLIENTE_COTIZADOR_SQL = "role = 0 AND COALESCE(active_module, 'cotizador') = 'cotizador'"
+ESTADOS_NO_ACTIVOS_SQL = "('cancelada', 'cancelado', 'pago fallido', 'vencida', 'vencido', 'expirada')"
 
 
 def _period_filter(column, mes_sel, anio_sel):
@@ -73,11 +75,17 @@ def index():
         elif anio_sel:
             periodo_label = f"Año {anio_sel}"
 
-        cursor.execute("SELECT COUNT(id) as total FROM usuarios WHERE role <= 1")
+        cursor.execute(f"SELECT COUNT(id) as total FROM usuarios WHERE {CLIENTE_COTIZADOR_SQL}")
         total_usuarios = cursor.fetchone()['total'] or 0
 
         cursor.execute(
-            "SELECT COUNT(id) as total FROM usuarios WHERE role <= 1 AND subscription_end > %s",
+            f"""
+            SELECT COUNT(id) as total
+            FROM usuarios
+            WHERE {CLIENTE_COTIZADOR_SQL}
+              AND subscription_end >= %s
+              AND LOWER(COALESCE(estado_suscripcion, '')) NOT IN {ESTADOS_NO_ACTIVOS_SQL}
+            """,
             (ahora,)
         )
         activos = cursor.fetchone()['total'] or 0
@@ -87,7 +95,10 @@ def index():
             """
             SELECT COUNT(id) as total
             FROM usuarios
-            WHERE role <= 1 AND subscription_end BETWEEN %s AND %s
+            WHERE role = 0
+              AND COALESCE(active_module, 'cotizador') = 'cotizador'
+              AND subscription_end BETWEEN %s AND %s
+              AND LOWER(COALESCE(estado_suscripcion, '')) NOT IN ('cancelada', 'cancelado', 'pago fallido', 'vencida', 'vencido', 'expirada')
             """,
             (ahora, semana_proxima)
         )
@@ -97,7 +108,8 @@ def index():
             SELECT id, username, email, company_name, created_at, plan_type,
                    estado_suscripcion, subscription_end
             FROM usuarios
-            WHERE role <= 1
+            WHERE role = 0
+              AND COALESCE(active_module, 'cotizador') = 'cotizador'
         """
         params_nuevos_usuarios = []
         if periodo_clauses:
@@ -110,7 +122,7 @@ def index():
 
         if periodo_clauses:
             cursor.execute(
-                "SELECT COUNT(id) as total FROM usuarios WHERE role <= 1 AND " + " AND ".join(periodo_clauses),
+                f"SELECT COUNT(id) as total FROM usuarios WHERE {CLIENTE_COTIZADOR_SQL} AND " + " AND ".join(periodo_clauses),
                 periodo_params
             )
             nuevos_usuarios_total = cursor.fetchone()['total'] or 0
@@ -119,7 +131,8 @@ def index():
             SELECT LOWER(COALESCE(plan_type, 'free')) as plan_normalizado, COUNT(id) as cantidad
             FROM usuarios
             WHERE LOWER(COALESCE(estado_suscripcion, '')) IN ('activo', 'activa')
-              AND role <= 1
+              AND role = 0
+              AND COALESCE(active_module, 'cotizador') = 'cotizador'
               AND subscription_end > %s
             GROUP BY LOWER(COALESCE(plan_type, 'free'))
         """, (ahora,))
@@ -141,8 +154,10 @@ def index():
         cursor.execute("""
             SELECT COUNT(id) as total
             FROM usuarios
-            WHERE role <= 1
+            WHERE role = 0
+              AND COALESCE(active_module, 'cotizador') = 'cotizador'
               AND subscription_end > %s
+              AND LOWER(COALESCE(estado_suscripcion, '')) NOT IN ('cancelada', 'cancelado', 'pago fallido', 'vencida', 'vencido', 'expirada')
               AND LOWER(COALESCE(plan_type, 'free')) NOT IN ('mensual', 'anual')
         """, (ahora,))
         planes_dict['free'] = cursor.fetchone()['total'] or 0
@@ -164,7 +179,8 @@ def index():
                    ) as fecha_suscripcion
             FROM usuarios
             WHERE LOWER(COALESCE(estado_suscripcion, '')) IN ('activo', 'activa')
-              AND role <= 1
+              AND role = 0
+              AND COALESCE(active_module, 'cotizador') = 'cotizador'
               AND subscription_end > %s
               AND LOWER(COALESCE(plan_type, 'free')) IN ('mensual', 'anual')
             ORDER BY
@@ -189,6 +205,8 @@ def index():
             FROM logs_actividad l
             JOIN usuarios u ON u.id = l.user_id
             WHERE l.modulo = 'Pagos'
+              AND u.role = 0
+              AND COALESCE(u.active_module, 'cotizador') = 'cotizador'
               AND (
                 l.accion ILIKE 'Activación PRO%%'
                 OR l.accion ILIKE 'Renovación PRO%%'
@@ -208,6 +226,7 @@ def index():
         pagos_unicos = {}
         nuevos_pro = 0
         renovaciones = 0
+        ingresos_renovaciones = 0
 
         for pago in pagos_db:
             plan = _infer_plan(pago.get('accion'), pago.get('detalle'), pago.get('plan_type'))
@@ -218,15 +237,21 @@ def index():
                 pagos_unicos[key] = pago
             else:
                 renovaciones += 1
+                ingresos_renovaciones += _extraer_monto(pago.get('detalle'), plan)
 
         nuevos_pro = len(pagos_unicos)
-        ingresos_brutos = round(mrr_total, 2)
+        ingresos_activaciones = sum(
+            _extraer_monto(pago.get('detalle'), _infer_plan(pago.get('accion'), pago.get('detalle'), pago.get('plan_type')))
+            for pago in pagos_unicos.values()
+        )
+        ingresos_brutos = round(ingresos_activaciones + ingresos_renovaciones, 2)
 
         query_churn = """
             SELECT u.id, u.username, u.email, u.company_name, u.plan_type, u.fecha_cancelacion
             FROM usuarios u
             WHERE LOWER(COALESCE(u.estado_suscripcion, '')) IN ('cancelada', 'cancelado')
-              AND u.role <= 1
+              AND u.role = 0
+              AND COALESCE(u.active_module, 'cotizador') = 'cotizador'
         """
         params_churn = []
         churn_clauses, churn_params = _period_filter('u.fecha_cancelacion', mes_sel, anio_sel)
@@ -241,9 +266,10 @@ def index():
             cursor.execute(
                 """
                 SELECT COUNT(id) as total
-                FROM usuarios
-                WHERE LOWER(COALESCE(estado_suscripcion, '')) IN ('cancelada', 'cancelado')
-                  AND role <= 1
+                FROM usuarios u
+                WHERE LOWER(COALESCE(u.estado_suscripcion, '')) IN ('cancelada', 'cancelado')
+                  AND u.role = 0
+                  AND COALESCE(u.active_module, 'cotizador') = 'cotizador'
                   AND """ + " AND ".join(churn_clauses),
                 churn_params
             )
@@ -254,17 +280,22 @@ def index():
                 SELECT COUNT(id) as total
                 FROM usuarios
                 WHERE LOWER(COALESCE(estado_suscripcion, '')) IN ('cancelada', 'cancelado')
-                  AND role <= 1
+                  AND role = 0
+                  AND COALESCE(active_module, 'cotizador') = 'cotizador'
             """)
             churn_total = cursor.fetchone()['total'] or 0
 
         query_heavy = """
             SELECT u.username, u.company_name, u.subscription_end,
-                   (u.subscription_end > %s) as suscripcion_activa,
+                   (
+                       u.subscription_end >= %s
+                       AND LOWER(COALESCE(u.estado_suscripcion, '')) NOT IN ('cancelada', 'cancelado', 'pago fallido', 'vencida', 'vencido', 'expirada')
+                   ) as suscripcion_activa,
                    COUNT(v.id) as total_cotizaciones
             FROM usuarios u
             LEFT JOIN ventas v ON u.id = v.user_id
-            WHERE u.role <= 1
+            WHERE u.role = 0
+              AND COALESCE(u.active_module, 'cotizador') = 'cotizador'
         """
         params_heavy = [ahora]
         venta_clauses, venta_params = _period_filter('v.fecha', mes_sel, anio_sel)
@@ -296,7 +327,10 @@ def index():
             cursor.execute("""
                 SELECT COUNT(id) as total
                 FROM usuarios
-                WHERE role <= 1 AND to_char(created_at, 'MM') = %s AND to_char(created_at, 'YYYY') = %s
+                WHERE role = 0
+                  AND COALESCE(active_module, 'cotizador') = 'cotizador'
+                  AND to_char(created_at, 'MM') = %s
+                  AND to_char(created_at, 'YYYY') = %s
             """, (m, y))
             total_mes = cursor.fetchone()['total'] or 0
             usuarios_data.append(total_mes)
@@ -330,14 +364,18 @@ def index():
                           )
                     ) as renovaciones
                 FROM logs_actividad l
+                JOIN usuarios u ON u.id = l.user_id
                 WHERE l.created_at >= %s AND l.created_at < %s
+                  AND u.role = 0
+                  AND COALESCE(u.active_module, 'cotizador') = 'cotizador'
             """, (inicio_mes, fin_mes))
             pagos_mes = cursor.fetchone() or {}
 
             cursor.execute("""
                 SELECT COUNT(id) as total
                 FROM usuarios
-                WHERE role <= 1
+                WHERE role = 0
+                  AND COALESCE(active_module, 'cotizador') = 'cotizador'
                   AND LOWER(COALESCE(estado_suscripcion, '')) IN ('cancelada', 'cancelado')
                   AND fecha_cancelacion >= %s
                   AND fecha_cancelacion < %s
@@ -346,18 +384,28 @@ def index():
 
             cursor.execute("""
                 SELECT
-                    COUNT(id) FILTER (WHERE subscription_end >= %s) as activos_cierre,
-                    COUNT(id) FILTER (WHERE subscription_end < %s OR subscription_end IS NULL) as vencidos_cierre,
                     COUNT(id) FILTER (
                         WHERE subscription_end >= %s
+                          AND LOWER(COALESCE(estado_suscripcion, '')) NOT IN ('cancelada', 'cancelado', 'pago fallido', 'vencida', 'vencido', 'expirada')
+                    ) as activos_cierre,
+                    COUNT(id) FILTER (
+                        WHERE subscription_end < %s
+                           OR subscription_end IS NULL
+                           OR LOWER(COALESCE(estado_suscripcion, '')) IN ('cancelada', 'cancelado', 'pago fallido', 'vencida', 'vencido', 'expirada')
+                    ) as vencidos_cierre,
+                    COUNT(id) FILTER (
+                        WHERE subscription_end >= %s
+                          AND LOWER(COALESCE(estado_suscripcion, '')) IN ('activo', 'activa')
                           AND LOWER(COALESCE(plan_type, 'free')) = 'mensual'
                     ) as mensual_cierre,
                     COUNT(id) FILTER (
                         WHERE subscription_end >= %s
+                          AND LOWER(COALESCE(estado_suscripcion, '')) IN ('activo', 'activa')
                           AND LOWER(COALESCE(plan_type, 'free')) = 'anual'
                     ) as anual_cierre
                 FROM usuarios
-                WHERE role <= 1
+                WHERE role = 0
+                  AND COALESCE(active_module, 'cotizador') = 'cotizador'
                   AND created_at < %s
             """, (fin_mes, fin_mes, fin_mes, fin_mes, fin_mes))
             snapshot_mes = cursor.fetchone() or {}
@@ -366,7 +414,8 @@ def index():
                 SELECT COUNT(v.id) as total
                 FROM ventas v
                 JOIN usuarios u ON u.id = v.user_id
-                WHERE u.role <= 1
+                WHERE u.role = 0
+                  AND COALESCE(u.active_module, 'cotizador') = 'cotizador'
                   AND v.fecha >= %s
                   AND v.fecha < %s
             """, (inicio_mes, fin_mes))
@@ -398,12 +447,20 @@ def index():
             SELECT COUNT(v.id) as total_v
             FROM usuarios u
             LEFT JOIN ventas v ON u.id = v.user_id
-            WHERE u.role <= 1
         """
         params_seg = []
         if venta_clauses:
-            query_segmentos += " AND " + " AND ".join(venta_clauses)
+            query_segmentos = """
+                SELECT COUNT(v.id) as total_v
+                FROM usuarios u
+                LEFT JOIN ventas v ON u.id = v.user_id
+                  AND """ + " AND ".join(venta_clauses) + """
+            """
             params_seg.extend(venta_params)
+        query_segmentos += """
+            WHERE u.role = 0
+              AND COALESCE(u.active_module, 'cotizador') = 'cotizador'
+        """
         query_segmentos += " GROUP BY u.id"
         cursor.execute(query_segmentos, params_seg)
         for user in cursor.fetchall():
@@ -505,7 +562,7 @@ def index():
             churn_reciente=churn_reciente,
             nuevos_pro=nuevos_pro,
             renovaciones=renovaciones,
-            pagos_total=nuevos_pro,
+            pagos_total=nuevos_pro + renovaciones,
             nuevos_usuarios=nuevos_usuarios,
             nuevos_usuarios_total=nuevos_usuarios_total,
             precios_plan={'mensual': PRECIO_MENSUAL, 'anual': PRECIO_ANUAL},

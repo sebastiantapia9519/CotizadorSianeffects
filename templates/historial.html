@@ -3375,14 +3375,30 @@
                         sumaCostos += costoTotalItem;
                         sumaGanancias += gananciaTotalItem;
 
+                        // --- LÓGICA VISUAL PARA CORTESÍAS ---
+                        let conceptoHtml = item.concepto;
+                        let pUnitarioHtml = `$${(ventaTotalItem / cant).toFixed(2)}`;
+                        let importeHtml = `$${ventaTotalItem.toFixed(2)}`;
+                        let colorConcepto = 'text-dark';
+
+                        if (item.es_cortesia) {
+                            conceptoHtml = `🎁 ${item.concepto} <br><span class="badge bg-success bg-opacity-10 text-success border border-success mt-1" style="font-size:0.6rem">Cortesía</span>`;
+                            pUnitarioHtml = '<span class="text-success">$0.00</span>';
+                            importeHtml = '<span class="text-success">$0.00</span>';
+                            colorConcepto = 'text-success'; // Resalta que fue un regalo
+                        }
+
+                        // Dinamismo de color: si regalaste algo, la ganancia es negativa (roja)
+                        let colorGanancia = gananciaTotalItem < 0 ? 'text-danger' : 'text-success';
+
                         tbody.innerHTML += `
                             <tr class="border-bottom border-light">
-                                <td class="ps-4 py-3 fw-bold text-dark">${item.concepto}</td>
+                                <td class="ps-4 py-3 fw-bold ${colorConcepto}">${conceptoHtml}</td>
                                 <td class="text-center align-middle">${cant}</td>
-                                <td class="text-end text-muted align-middle">$${(ventaTotalItem / cant).toFixed(2)}</td>
-                                <td class="text-end text-dark fw-bold align-middle">$${ventaTotalItem.toFixed(2)}</td>
+                                <td class="text-end text-muted align-middle">${pUnitarioHtml}</td>
+                                <td class="text-end fw-bold align-middle ${item.es_cortesia ? '' : 'text-dark'}">${importeHtml}</td>
                                 <td class="text-end text-danger align-middle">-$${costoTotalItem.toFixed(2)}</td>
-                                <td class="text-end pe-4 fw-bold text-success align-middle">$${gananciaTotalItem.toFixed(2)}</td>
+                                <td class="text-end pe-4 fw-bold ${colorGanancia} align-middle">$${gananciaTotalItem.toFixed(2)}</td>
                             </tr>`;
                     });
 

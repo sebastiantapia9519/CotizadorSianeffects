@@ -246,10 +246,10 @@
 <input type="hidden" id="datoMargen" value="{{ config['margen_ganancia'] }}">
 <input type="hidden" id="datoFactorOperativo" value="{{ config.get('porcentaje_gastos_operativos', 0) }}">
 <input type="hidden" id="datoLaborActiva" value="{{ 'true' if config.get('labor_activa') else 'false' }}">
-	<input type="hidden" id="datoSalario" value="{{ config.get('salario_deseado', 15000) }}">
-	<input type="hidden" id="datoHoras" value="{{ config.get('horas_semanales', 20) }}">
-	<input type="hidden" id="ventaIdEdicion" value="">
-	<input type="hidden" id="clienteIdSeleccionado" value="">
+<input type="hidden" id="datoSalario" value="{{ config.get('salario_deseado', 15000) }}">
+<input type="hidden" id="datoHoras" value="{{ config.get('horas_semanales', 20) }}">
+<input type="hidden" id="ventaIdEdicion" value="">
+<input type="hidden" id="clienteIdSeleccionado" value="">
 
 <select id="masterSelect" class="d-none">
     <option value="0" data-precio="0" data-unidad="pza">-- Seleccionar --</option>
@@ -335,7 +335,8 @@
                                         class="check-maquinaria-label d-flex align-items-center gap-2 border p-2 rounded shadow-sm h-100">
                                         <input type="checkbox" class="form-check-input check-maquinaria-input m-0"
                                             value="{{ eq['costo_desgaste'] }}" data-id="{{ eq['id'] }}"
-                                            data-nombre="{{ eq['nombre'] }}" onchange="invalidarPrecioManualPorEdicion(); calcularTotal()">
+                                            data-nombre="{{ eq['nombre'] }}"
+                                            onchange="invalidarPrecioManualPorEdicion(); calcularTotal()">
                                         <span class="lh-sm">{{ eq['nombre'] }} <br> <small class="text-success"
                                                 style="font-size:0.75rem">(+${{ eq['costo_desgaste'] }})</small></span>
                                     </label>
@@ -655,11 +656,11 @@
                     </div>
 
                     <div id="tour-botones-finales">
-	                        <div class="mb-3 cliente-autocomplete" id="tour-cliente-inteligente">
-	                            <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
-	                                placeholder="Nombre del Cliente" autocomplete="off">
-	                            <div id="clienteSuggestions" class="cliente-suggestions d-none"></div>
-	                        </div>
+                        <div class="mb-3 cliente-autocomplete" id="tour-cliente-inteligente">
+                            <input type="text" id="nombreCliente" class="form-control form-control-lg border-2"
+                                placeholder="Nombre del Cliente" autocomplete="off">
+                            <div id="clienteSuggestions" class="cliente-suggestions d-none"></div>
+                        </div>
 
                         <div class="row g-2">
                             <div class="col-6">
@@ -1082,69 +1083,70 @@
             // Conectamos con la base de datos cuando el tour termina o se cierra
             onDestroyed: () => {
                 {% if mostrar_tour %}
-                marcarTutorialVisto('cotizador', {{ version_tour | default(1) }});
-                {% endif %}
+                marcarTutorialVisto('cotizador', {{ version_tour | default(1)
+        }});
+    {% endif %}
             },
 
-            steps: [
-	                {
-	                    popover: {
-	                        title: 'Bienvenido al Cotizador 💸',
-	                        description: 'Aquí armarás precios, clientes y cobros sin perder el control. Demos un paseo rápido por las partes clave.',
-	                        align: 'center'
-	                    }
-	                },
-                {
-                    element: '#tour-cargar-receta',
-                    popover: {
-                        title: '1. Carga una Receta (Ahorra tiempo)',
-                        description: 'Si guardaste un producto antes (como "Playera Negra" o "Pastel Vainilla"), selecciónalo aquí. Los insumos se agregarán solos.',
-                        side: "bottom", align: 'start'
-                    }
-                },
-                {
-                    element: '#tour-insumos',
-                    popover: {
-                        title: '2. Tus Materiales',
-                        description: 'Aquí verás todo lo que lleva tu producto. Elige de la lista, pon cuántos usaste y Sianeffects calculará el costo exacto por porción.',
-                        side: "top", align: 'start'
-                    }
-                },
-                {
-                    element: '#tour-resultados',
-                    popover: {
-                        title: '3. El Precio Sugerido',
-                        description: 'El sistema sumará tus materiales, desgaste de máquinas y tu Margen de Ganancia para darte un Precio de Venta recomendado. Haz clic en "AGREGAR AL CARRITO" cuando estés listo.',
-                        side: "left", align: 'center'
-                    }
-                },
-                {
-                    element: '#tour-total-magico',
-                    popover: {
-                        title: '4. El Total Mágico ✨',
-                        description: '¿El total quedó en $1,432 y quieres redondearlo a $1,500? Solo haz clic sobre el precio azul. El sistema ajustará todos los insumos matemáticamente para que el cuadro cuadre.',
-                        side: "top", align: 'end'
-                    }
-                },
-	                {
-	                    element: '#tour-cliente-inteligente',
-	                    popover: {
-	                        title: '5. Cliente Inteligente',
-	                        description: 'Escribe el nombre del cliente. Si ya existe, elige una sugerencia para asociar la venta a su ficha real. Si escribes uno nuevo o usas Cliente General, no se mezcla con clientes guardados.',
-	                        side: "left", align: 'start'
-	                    }
-	                },
-	                {
-	                    element: '#tour-botones-finales',
-	                    popover: {
-	                        title: '6. Cerrando el Trato',
-	                        description: 'Usa "Solo Cotizar" para mandar precio sin cobrar, o "Cobrar" si ya recibiste pago completo o anticipo.',
-	                        side: "left", align: 'start'
-	                    }
-	                }
-	            ]
+    steps: [
+        {
+            popover: {
+                title: 'Bienvenido al Cotizador 💸',
+                description: 'Aquí armarás precios, clientes y cobros sin perder el control. Demos un paseo rápido por las partes clave.',
+                align: 'center'
+            }
+        },
+        {
+            element: '#tour-cargar-receta',
+            popover: {
+                title: '1. Carga una Receta (Ahorra tiempo)',
+                description: 'Si guardaste un producto antes (como "Playera Negra" o "Pastel Vainilla"), selecciónalo aquí. Los insumos se agregarán solos.',
+                side: "bottom", align: 'start'
+            }
+        },
+        {
+            element: '#tour-insumos',
+            popover: {
+                title: '2. Tus Materiales',
+                description: 'Aquí verás todo lo que lleva tu producto. Elige de la lista, pon cuántos usaste y Sianeffects calculará el costo exacto por porción.',
+                side: "top", align: 'start'
+            }
+        },
+        {
+            element: '#tour-resultados',
+            popover: {
+                title: '3. El Precio Sugerido',
+                description: 'El sistema sumará tus materiales, desgaste de máquinas y tu Margen de Ganancia para darte un Precio de Venta recomendado. Haz clic en "AGREGAR AL CARRITO" cuando estés listo.',
+                side: "left", align: 'center'
+            }
+        },
+        {
+            element: '#tour-total-magico',
+            popover: {
+                title: '4. El Total Mágico ✨',
+                description: '¿El total quedó en $1,432 y quieres redondearlo a $1,500? Solo haz clic sobre el precio azul. El sistema ajustará todos los insumos matemáticamente para que el cuadro cuadre.',
+                side: "top", align: 'end'
+            }
+        },
+        {
+            element: '#tour-cliente-inteligente',
+            popover: {
+                title: '5. Cliente Inteligente',
+                description: 'Escribe el nombre del cliente. Si ya existe, elige una sugerencia para asociar la venta a su ficha real. Si escribes uno nuevo o usas Cliente General, no se mezcla con clientes guardados.',
+                side: "left", align: 'start'
+            }
+        },
+        {
+            element: '#tour-botones-finales',
+            popover: {
+                title: '6. Cerrando el Trato',
+                description: 'Usa "Solo Cotizar" para mandar precio sin cobrar, o "Cobrar" si ya recibiste pago completo o anticipo.',
+                side: "left", align: 'start'
+            }
+        }
+    ]
         });
-        driverObj.drive();
+    driverObj.drive();
     }
 
     // ============================================================================
@@ -1178,6 +1180,7 @@
             costo_unitario: costo,
             cantidad: cantidad,
             fecha_registro: fecha,
+            es_cortesia: false,
             subtotal: precio * cantidad,
             composicion: JSON.stringify([{ tipo: 'manual', nombre: 'Venta Rápida' }])
         });
@@ -1634,6 +1637,7 @@
             precio_unitario: Math.round(precioVentaCalculado * 100) / 100,
             costo_unitario: costoProduccionCalculado,
             cantidad: cant,
+            es_cortesia: false,
             subtotal: precioVentaCalculado * cant,
             composicion: composicionActual
         });
@@ -1657,20 +1661,37 @@
         } else {
             vac.classList.add('d-none');
             carrito.forEach((i, x) => {
+                // Etiquetas (Badges)
+                let badgeReceta = (i.composicion && i.composicion.length > 0 && typeof i.composicion !== 'string')
+                    ? '<span class="badge bg-light text-secondary border mt-1 me-1" style="font-size:0.6rem">Con Receta</span>'
+                    : '';
+                let badgeCortesia = i.es_cortesia
+                    ? '<span class="badge bg-success bg-opacity-10 text-success border border-success mt-1" style="font-size:0.6rem"><i class="fas fa-gift"></i> Cortesía</span>'
+                    : '';
+
+                // Botón de Cortesía (solo se muestra si NO es cortesía aún)
+                let btnCortesia = !i.es_cortesia
+                    ? `<i class="fas fa-gift text-primary me-3" onclick="marcarComoCortesia(${x})" style="cursor:pointer; transition: transform 0.2s;" title="Marcar como cortesía" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></i>`
+                    : '';
+
                 tb.innerHTML += `
                 <tr>
-                    <td class="ps-3">
-                        <small class="fw-bold" style="cursor:pointer"
+                    <td class="ps-3 py-3">
+                        <div class="fw-bold" style="cursor:pointer; color: ${i.es_cortesia ? 'var(--sian-teal)' : 'inherit'};"
                         onclick="cargarRecetaDesdeCarrito(${x})"
                         title="Editar receta">
-                        ${i.concepto}
-                        </small>
-                        ${i.composicion && i.composicion.length > 0 && typeof i.composicion !== 'string' ? '<br><span class="badge bg-light text-secondary border" style="font-size:0.6rem">Con Receta</span>' : ''}
+                        ${i.es_cortesia ? '🎁 ' : ''}${i.concepto}
+                        </div>
+                        <div class="d-flex flex-wrap mt-1">
+                            ${badgeReceta}
+                            ${badgeCortesia}
+                        </div>
                     </td>
-                    <td class="text-center small">${i.cantidad}</td>
-                    <td class="text-end small fw-bold">$${i.subtotal.toFixed(2)}</td>
-                    <td class="text-end pe-3">
-                        <i class="fas fa-trash-alt text-danger" onclick="eliminarDelCarrito(${x})" style="cursor:pointer" title="Eliminar"></i>
+                    <td class="text-center small align-middle">${i.cantidad}</td>
+                    <td class="text-end small fw-bold align-middle ${i.es_cortesia ? 'text-success' : ''}">$${i.subtotal.toFixed(2)}</td>
+                    <td class="text-end pe-3 align-middle text-nowrap">
+                        ${btnCortesia}
+                        <i class="fas fa-trash-alt text-danger" onclick="eliminarDelCarrito(${x})" style="cursor:pointer; transition: transform 0.2s;" title="Eliminar" onmouseover="this.style.transform='scale(1.2)'" onmouseout="this.style.transform='scale(1)'"></i>
                     </td>
                 </tr>`;
             });
@@ -1777,6 +1798,7 @@
                     costo_unitario: i.costo_unitario,
                     fecha_item: i.fecha_registro,
                     subtotal: i.subtotal,
+                    es_cortesia: i.es_cortesia || false,
                     composicion: typeof i.composicion === 'string' ? i.composicion : JSON.stringify(i.composicion)
                 })),
                 subtotal: subtotal,
@@ -2057,6 +2079,7 @@
             precio_unitario: Math.round(precio * 100) / 100,
             costo_unitario: Math.round(costo * 100) / 100,
             cantidad: cantidad,
+            es_cortesia: item.es_cortesia || false,
             fecha_registro: item.fecha_registro || item.fecha_item || null,
             subtotal: Math.round(subtotalBase * 100) / 100,
             composicion: item.composicion || JSON.stringify([{ tipo: 'manual', nombre: 'Venta Rápida' }])
@@ -2300,6 +2323,86 @@
         // Actualizamos la variable global que usa agregarAlCarrito
         // (Ojo: precioVentaCalculado ahora servirá como el valor final a subir al carrito)
         // Pero solo si precioUnitarioManual existe.
+    }
+
+    async function marcarComoCortesia(index) {
+        const item = carrito[index];
+
+        // Si hay más de un producto, preguntamos cuántos serán cortesía
+        if (item.cantidad > 1) {
+            const { value: qty } = await Swal.fire({
+                title: '¿Cuántas unidades serán cortesía?',
+                html: `Actualmente hay <b>${item.cantidad}</b> unidades de <i>${item.concepto}</i>.<br>¿Cuántas se entregarán sin costo?`,
+                input: 'number',
+                inputAttributes: {
+                    min: 1,
+                    max: item.cantidad,
+                    step: 1
+                },
+                inputValue: 1,
+                showCancelButton: true,
+                confirmButtonText: 'Aplicar',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: 'var(--sian-pink)',
+                borderRadius: '15px'
+            });
+
+            if (!qty) return;
+            const cantidadCortesia = parseInt(qty);
+
+            if (cantidadCortesia <= 0 || cantidadCortesia > item.cantidad) {
+                Swal.fire({ icon: 'error', title: 'Cantidad inválida', borderRadius: '15px' });
+                return;
+            }
+
+            // Si selecciona TODAS las unidades, aplicamos directo
+            if (cantidadCortesia === item.cantidad) {
+                convertirItemACortesia(index);
+            } else {
+                // Dividimos la línea en dos
+                // 1. Restamos al original
+                item.cantidad -= cantidadCortesia;
+                item.subtotal = item.cantidad * item.precio_unitario;
+
+                // 2. Creamos el nuevo objeto de cortesía clonando el original
+                const itemCortesia = JSON.parse(JSON.stringify(item));
+                itemCortesia.cantidad = cantidadCortesia;
+                itemCortesia.precio_unitario = 0;
+                itemCortesia.subtotal = 0;
+                itemCortesia.es_cortesia = true;
+                // Nota: el costo_unitario se mantiene intacto gracias al clon
+
+                // 3. Lo insertamos justo debajo en el carrito
+                carrito.splice(index + 1, 0, itemCortesia);
+            }
+        }
+        // Si solo hay 1 producto, confirmamos directamente
+        else {
+            const { isConfirmed } = await Swal.fire({
+                title: '¿Marcar como cortesía?',
+                text: 'Este producto se entregará sin costo, pero se registrará su costo real como salida de inventario.',
+                icon: 'question',
+                showCancelButton: true,
+                confirmButtonText: 'Sí, es cortesía',
+                cancelButtonText: 'Cancelar',
+                confirmButtonColor: 'var(--sian-pink)',
+                borderRadius: '15px'
+            });
+
+            if (isConfirmed) {
+                convertirItemACortesia(index);
+            }
+        }
+
+        // Refrescamos la tabla y recalculamos los totales
+        renderizarCarrito();
+    }
+
+    function convertirItemACortesia(index) {
+        carrito[index].es_cortesia = true;
+        carrito[index].precio_unitario = 0;
+        carrito[index].subtotal = 0;
+        // El costo unitario se mantiene
     }
 
 </script>
