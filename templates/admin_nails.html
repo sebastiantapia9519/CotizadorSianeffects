@@ -24,6 +24,9 @@
         font-size: 0.9rem;
         flex-shrink: 0;
     }
+    /* Modificador para avatares pequeños (fila de equipo) — antes se
+       repetía con style="" inline en cada tarjeta de staff */
+    .avatar-circle.avatar-sm { width: 28px; height: 28px; font-size: 0.7rem; }
 
     .table-card {
         border: 1px solid #eaecf0;
@@ -37,6 +40,8 @@
         overflow: visible !important;
         min-height: 180px;
     }
+
+    .nails-table { table-layout: fixed; width: 100%; }
 
     .table thead th {
         background-color: #f9fafb;
@@ -179,12 +184,18 @@
         color: #667085;
         white-space: nowrap;
         text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        cursor: pointer;
     }
+    .btn-filter:hover { background: #f9fafb; color: #475467; text-decoration: none; }
+    .btn-filter:focus-visible { outline: 2px solid #101828; outline-offset: 2px; }
     .btn-filter.active {
         background: #101828;
         color: #fff;
         border-color: #101828;
     }
+    .btn-filter.active:hover { background: #101828; color: #fff; }
 
     .staff-row {
         background-color: #f9fafb;
@@ -195,6 +206,18 @@
         margin: 0;
         border-left: 3px solid #d0d5dd;
     }
+    .staff-member-card {
+        background: #fff;
+        border: 1px solid #eaecf0;
+    }
+    .letter-spacing-1 { letter-spacing: 0.05em; }
+
+    /* Lista de tarjetas para móvil (reemplaza la tabla con columnas
+       ocultas, que se rompía por el bug de table-layout:fixed) */
+    .salon-mobile-list { display: flex; flex-direction: column; }
+    .salon-mobile-card { padding: 16px; border-bottom: 1px solid #f2f4f7; }
+    .salon-mobile-card:last-child { border-bottom: none; }
+    [data-bs-theme="dark"] .salon-mobile-card { border-color: #334155; }
 
     @media (max-width: 768px) {
         .table tbody td, .table thead th { padding: 14px 10px; }
@@ -209,10 +232,103 @@
     [data-bs-theme="dark"] .avatar-circle { background-color: #334155 !important; color: #f8fafc !important; }
     [data-bs-theme="dark"] .custom-dropdown-menu { background-color: #1e293b !important; border-color: #334155 !important; }
     [data-bs-theme="dark"] .staff-row { background-color: #0f172a; }
+    [data-bs-theme="dark"] .staff-member-card { background: #1e293b !important; border-color: #334155 !important; }
+    [data-bs-theme="dark"] .filtros-wrapper,
+    [data-bs-theme="dark"] .table-card { background-color: #1e293b !important; }
+    [data-bs-theme="dark"] .filtros-search-wrap { background: #0f172a !important; border-color: #334155 !important; }
+    [data-bs-theme="dark"] .btn-filter { background: #0f172a !important; border-color: #334155 !important; color: #94a3b8 !important; }
+    [data-bs-theme="dark"] .btn-filter.active { background: #f8fafc !important; color: #0f172a !important; border-color: #f8fafc !important; }
 </style>
 {% endblock %}
 
 {% block content %}
+{# Filtro de estado activo, leído directo de la URL (?estado=active|expired).
+   request siempre existe en Jinja/Flask, así que esto nunca truena aunque
+   la vista todavía no lo use. #}
+{% set estado_sel = request.args.get('estado', 'all') %}
+
+{# Estos dos macros se usan tanto en la tabla (desktop/tablet) como en las
+   tarjetas (móvil) para no duplicar el mismo HTML dos veces. #}
+{% macro salon_dropdown_menu(salon) %}
+<li><h6 class="dropdown-header">GESTIÓN</h6></li>
+<li>
+    <button type="button" class="dropdown-item js-abrir-suscripcion"
+        data-salon-id="{{ salon.id }}"
+        data-salon-name="{{ salon.name }}"
+        data-salon-expires="{{ salon.subscription_expires_at or '' }}">
+        <i class="fas fa-calendar-alt text-success opacity-75 me-1" aria-hidden="true"></i> Renovar suscripción
+    </button>
+</li>
+{% if session.get('role', 0) >= 1 and salon.owner_user_id != session.get('user_id') %}
+<li>
+    <a href="{{ url_for('admin.impersonate', user_id=salon.owner_user_id, next='nails') }}" class="dropdown-item">
+        <i class="fas fa-user-secret text-secondary opacity-75 me-1" aria-hidden="true"></i> Entrar como Dueña
+    </a>
+</li>
+{% endif %}
+<li>
+    <a href="/b/{{ salon.slug }}" target="_blank" rel="noopener" class="dropdown-item">
+        <i class="fas fa-store text-primary opacity-75 me-1" aria-hidden="true"></i> Ver catálogo público
+    </a>
+</li>
+{% if session.get('role', 0) == 2 %}
+<li><hr class="dropdown-divider my-1"></li>
+<li><h6 class="dropdown-header">PELIGRO</h6></li>
+<li>
+    <form method="POST" action="{{ url_for('admin.delete_business') }}" class="m-0 p-0 require-confirm"
+        data-title="¿Eliminar Salón?"
+        data-text="Se borrarán citas, ventas, personal y configuración permanentemente."
+        data-icon="error"
+        data-btn-color="#d33"
+        data-btn-text="Sí, eliminar">
+        <!-- Si usas Flask-WTF con CSRFProtect activo, agrega aquí tu campo
+             de csrf_token (revísalo: no lo agrego a ciegas para no romper
+             la vista si no está configurado). -->
+        <input type="hidden" name="business_id" value="{{ salon.id }}">
+        <button type="submit" class="dropdown-item text-danger text-start">
+            <i class="fas fa-trash-alt opacity-75 me-1" aria-hidden="true"></i> Eliminar salón
+        </button>
+    </form>
+</li>
+{% endif %}
+{% endmacro %}
+
+{% macro staff_list(salon, contexto) %}
+<div class="small fw-bold text-muted mb-2 text-uppercase letter-spacing-1">Equipo de {{ salon.name }}</div>
+<div class="d-flex flex-column gap-2">
+    {% for member in salon.staff %}
+    <div class="d-flex align-items-center justify-content-between p-2 rounded staff-member-card">
+        <div class="d-flex align-items-center gap-2">
+            <div class="avatar-circle avatar-sm">{{ member.name[0]|upper }}</div>
+            <div>
+                <div class="fw-bold text-dark" style="font-size: 0.85rem;">{{ member.name }}</div>
+                <div class="text-muted" style="font-size: 0.75rem;">{{ member.email }}</div>
+            </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+            <form method="POST" action="{{ url_for('admin.nails_cambiar_rol') }}" class="m-0">
+                <input type="hidden" name="staff_id" value="{{ member.id }}">
+                {# 'contexto' (desktop/mobile) evita ids duplicados: el mismo
+                   miembro de staff se puede renderizar en las dos vistas a
+                   la vez, y un id repetido en el DOM rompe el <label for="">
+                   y es HTML inválido. #}
+                <label for="rol-{{ contexto }}-{{ member.id }}" class="visually-hidden">Rol de {{ member.name }}</label>
+                <select id="rol-{{ contexto }}-{{ member.id }}" name="role" class="form-select form-select-sm shadow-none" style="width: 140px; font-size: 0.75rem; font-weight: 600; border-radius: 8px; cursor: pointer;" onchange="this.form.submit()">
+                    <option value="owner" {% if member.role == 'owner' %}selected{% endif %}>Jefa</option>
+                    <option value="admin" {% if member.role == 'admin' %}selected{% endif %}>Administración</option>
+                    <option value="staff" {% if member.role == 'staff' %}selected{% endif %}>Técnica</option>
+                    <option value="reception" {% if member.role == 'reception' %}selected{% endif %}>Recepción</option>
+                </select>
+            </form>
+            {% if not member.is_active %}
+            <span class="badge bg-danger text-white ms-1">Desactivada</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endmacro %}
+
 <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center mb-4 gap-3 mt-2">
     <div>
         <h4 class="fw-bold m-0 text-dark">Suscripciones Nails</h4>
@@ -221,40 +337,62 @@
 
     <div class="d-flex flex-wrap gap-2">
         <a href="{{ url_for('admin.dashboard') }}" class="btn btn-white btn-sm rounded-pill px-3">
-            <i class="fas fa-arrow-left text-secondary me-2"></i>Admin Cotizador
+            <i class="fas fa-arrow-left text-secondary me-2" aria-hidden="true"></i>Admin Cotizador
         </a>
         <span class="badge bg-white text-dark border px-3 py-2 rounded-pill shadow-sm d-flex align-items-center m-0 fw-medium">
-            <i class="fas fa-store text-primary me-2"></i> {{ stats.salons_count or 0 }} Salones
+            <i class="fas fa-store text-primary me-2" aria-hidden="true"></i> {{ stats.salons_count or 0 }} Salones
         </span>
     </div>
 </div>
 
 <form id="formFiltrosNails" class="filtros-wrapper" method="GET" action="{{ url_for('admin.nails_dashboard') }}">
+    <!-- Conserva el filtro de estado activo al buscar por texto -->
+    <input type="hidden" name="estado" value="{{ estado_sel }}">
+
     <div class="filtros-row-1">
         <div class="filtros-search-wrap">
-            <i class="fas fa-search text-muted me-2"></i>
-            <input type="text" name="q" value="{{ search_query }}" placeholder="Buscar salón, slug o dueña...">
+            <i class="fas fa-search text-muted me-2" aria-hidden="true"></i>
+            <label for="inputBuscarSalon" class="visually-hidden">Buscar salón, slug o dueña</label>
+            <input type="text" id="inputBuscarSalon" name="q" value="{{ search_query }}" placeholder="Buscar salón, slug o dueña...">
         </div>
-        <button type="submit" class="btn btn-white btn-sm rounded-3 px-3"><i class="fas fa-arrow-right"></i></button>
-        <a href="{{ url_for('admin.nails_dashboard') }}" class="btn btn-white btn-sm rounded-3 px-3 text-muted"><i class="fas fa-times"></i></a>
+        <button type="submit" class="btn btn-white btn-sm rounded-3 px-3" aria-label="Buscar">
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+        </button>
+        <a href="{{ url_for('admin.nails_dashboard') }}" class="btn btn-white btn-sm rounded-3 px-3 text-muted" aria-label="Limpiar búsqueda y filtros">
+            <i class="fas fa-times" aria-hidden="true"></i>
+        </a>
     </div>
 
     <div class="filtros-divider"></div>
 
     <div class="d-flex gap-2 overflow-auto pb-1" style="scrollbar-width: none;">
-        <span class="btn-filter active">Todos <span class="opacity-50 fw-normal">{{ stats.salons_count or 0 }}</span></span>
-        <span class="btn-filter">Activos <span class="opacity-50 fw-normal">{{ stats.active_count or 0 }}</span></span>
-        <span class="btn-filter">Vencidos <span class="opacity-50 fw-normal">{{ stats.expired_count or 0 }}</span></span>
+        <a href="{{ url_for('admin.nails_dashboard', q=search_query, estado='all') }}"
+           class="btn-filter {{ 'active' if estado_sel == 'all' else '' }}"
+           aria-current="{{ 'page' if estado_sel == 'all' else 'false' }}">
+            Todos <span class="opacity-50 fw-normal ms-1">{{ stats.salons_count or 0 }}</span>
+        </a>
+        <a href="{{ url_for('admin.nails_dashboard', q=search_query, estado='active') }}"
+           class="btn-filter {{ 'active' if estado_sel == 'active' else '' }}"
+           aria-current="{{ 'page' if estado_sel == 'active' else 'false' }}">
+            Activos <span class="opacity-50 fw-normal ms-1">{{ stats.active_count or 0 }}</span>
+        </a>
+        <a href="{{ url_for('admin.nails_dashboard', q=search_query, estado='expired') }}"
+           class="btn-filter {{ 'active' if estado_sel == 'expired' else '' }}"
+           aria-current="{{ 'page' if estado_sel == 'expired' else 'false' }}">
+            Vencidos <span class="opacity-50 fw-normal ms-1">{{ stats.expired_count or 0 }}</span>
+        </a>
     </div>
 </form>
 
 <div class="card table-card border-0 shadow-sm mb-4">
-    <div class="table-responsive">
-        <table class="table align-middle mb-0" style="table-layout: fixed; width: 100%;">
+
+    <!-- ============ VISTA DESKTOP / TABLET (>= md): TABLA ============ -->
+    <div class="table-responsive d-none d-md-block">
+        <table class="table nails-table align-middle mb-0">
             <thead>
                 <tr>
                     <th class="ps-3 ps-md-4" style="width: 35%;">Salón / Dueña</th>
-                    <th class="d-none d-md-table-cell" style="width: 25%;">Suscripción</th>
+                    <th style="width: 25%;">Suscripción</th>
                     <th class="d-none d-lg-table-cell" style="width: 20%;">Equipo</th>
                     <th class="text-center pe-3 pe-md-4" style="width: 20%;">Acciones</th>
                 </tr>
@@ -273,32 +411,20 @@
                                         {{ salon.name|upper }}
                                     </div>
                                     <div class="text-muted small text-truncate">
-                                        <i class="fas fa-link me-1"></i> /b/{{ salon.slug }}
+                                        <i class="fas fa-link me-1" aria-hidden="true"></i> /b/{{ salon.slug }}
                                     </div>
                                     <div class="text-primary small text-truncate mt-1">
-                                        <i class="fas fa-user-tie me-1"></i> {{ salon.owner_name or 'Sin dueña' }}
+                                        <i class="fas fa-user-tie me-1" aria-hidden="true"></i> {{ salon.owner_name or 'Sin dueña' }}
                                     </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Vista móvil de la suscripción -->
-                            <div class="d-md-none mt-3">
-                                {% if salon.is_expired %}
-                                    <span class="status-badge badge-suspendido mb-1">Vencida</span>
-                                {% else %}
-                                    <span class="status-badge badge-activo mb-1">Activa</span>
-                                {% endif %}
-                                <div class="small fw-medium text-muted">
-                                    Vence: {{ salon.subscription_expires_at or 'Sin asignar' }}
                                 </div>
                             </div>
                         </td>
 
-                        <td class="d-none d-md-table-cell">
+                        <td>
                             {% if salon.is_expired %}
-                                <span class="status-badge badge-suspendido mb-1"><i class="fas fa-lock me-1"></i>Vencida</span>
+                                <span class="status-badge badge-suspendido mb-1"><i class="fas fa-lock me-1" aria-hidden="true"></i>Vencida</span>
                             {% else %}
-                                <span class="status-badge badge-activo mb-1"><i class="fas fa-check-circle me-1"></i>Activa</span>
+                                <span class="status-badge badge-activo mb-1"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>Activa</span>
                             {% endif %}
                             <div class="small text-muted mt-1 fw-medium">
                                 {% if salon.subscription_expires_at %}
@@ -307,125 +433,69 @@
                                     Sin fecha de expiración
                                 {% endif %}
                             </div>
-                            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none mt-1 fw-bold text-primary" 
-                                onclick="abrirSuscripcion({{ salon.id }}, '{{ salon.name }}', '{{ salon.subscription_expires_at }}')">
-                                <i class="fas fa-calendar-plus me-1"></i>Ajustar fecha
+                            <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none mt-1 fw-bold text-primary js-abrir-suscripcion"
+                                data-salon-id="{{ salon.id }}"
+                                data-salon-name="{{ salon.name }}"
+                                data-salon-expires="{{ salon.subscription_expires_at or '' }}">
+                                <i class="fas fa-calendar-plus me-1" aria-hidden="true"></i>Ajustar fecha
                             </button>
                         </td>
 
                         <td class="d-none d-lg-table-cell">
                             <div class="fw-bold text-dark">{{ salon.staff|length }} personas</div>
                             {% if salon.staff|length > 0 %}
-                            <button class="btn btn-sm btn-link p-0 text-decoration-none text-muted small mt-1" type="button" data-bs-toggle="collapse" data-bs-target="#staff-{{ salon.id }}">
-                                <i class="fas fa-chevron-down me-1"></i>Ver desglose
+                            <button class="btn btn-sm btn-link p-0 text-decoration-none text-muted small mt-1" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#staff-{{ salon.id }}"
+                                aria-expanded="false" aria-controls="staff-{{ salon.id }}">
+                                <i class="fas fa-chevron-down me-1" aria-hidden="true"></i>Ver desglose
                             </button>
                             {% endif %}
                         </td>
 
                         <td class="text-center pe-3 pe-md-4">
                             <div class="d-flex justify-content-center gap-2">
-                                <!-- Botón rápido para celular de expandir staff -->
+                                <!-- Botón rápido tablet/md-lg de expandir staff (la col. Equipo solo se ve en lg+) -->
                                 {% if salon.staff|length > 0 %}
-                                <button class="btn action-btn d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#staff-{{ salon.id }}" title="Ver equipo">
-                                    <i class="fas fa-users"></i>
+                                <button class="btn action-btn d-lg-none" type="button"
+                                    data-bs-toggle="collapse" data-bs-target="#staff-{{ salon.id }}"
+                                    aria-expanded="false" aria-controls="staff-{{ salon.id }}"
+                                    aria-label="Ver equipo de {{ salon.name }}" title="Ver equipo">
+                                    <i class="fas fa-users" aria-hidden="true"></i>
                                 </button>
                                 {% endif %}
 
                                 <div class="dropdown">
-                                    <button class="btn action-btn mx-auto" type="button" data-bs-toggle="dropdown">
-                                        <i class="fas fa-ellipsis-v"></i>
+                                    <button class="btn action-btn mx-auto" type="button" data-bs-toggle="dropdown" aria-label="Más acciones para {{ salon.name }}">
+                                        <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end custom-dropdown-menu">
-                                        <li><h6 class="dropdown-header">GESTIÓN</h6></li>
-                                        <li>
-                                            <button class="dropdown-item" onclick="abrirSuscripcion({{ salon.id }}, '{{ salon.name }}', '{{ salon.subscription_expires_at }}')">
-                                                <i class="fas fa-calendar-alt text-success opacity-75 me-1"></i> Renovar suscripción
-                                            </button>
-                                        </li>
-                                        {% if session.get('role', 0) >= 1 and salon.owner_user_id != session.get('user_id') %}
-                                        <li>
-                                            <a href="{{ url_for('admin.impersonate', user_id=salon.owner_user_id, next='nails') }}" class="dropdown-item">
-                                                <i class="fas fa-user-secret text-secondary opacity-75 me-1"></i> Entrar como Dueña
-                                            </a>
-                                        </li>
-                                        {% endif %}
-                                        <li>
-                                            <a href="/b/{{ salon.slug }}" target="_blank" class="dropdown-item">
-                                                <i class="fas fa-store text-primary opacity-75 me-1"></i> Ver catálogo público
-                                            </a>
-                                        </li>
-                                        
-                                        {% if session.get('role', 0) == 2 %}
-                                        <li><hr class="dropdown-divider my-1"></li>
-                                        <li><h6 class="dropdown-header">PELIGRO</h6></li>
-                                        <li>
-                                            <form method="POST" action="{{ url_for('admin.delete_business') }}" class="m-0 p-0 require-confirm"
-                                                data-title="¿Eliminar Salón?"
-                                                data-text="Se borrarán citas, ventas, personal y configuración permanentemente."
-                                                data-icon="error"
-                                                data-btn-color="#d33"
-                                                data-btn-text="Sí, eliminar">
-                                                <input type="hidden" name="business_id" value="{{ salon.id }}">
-                                                <button type="submit" class="dropdown-item text-danger text-start">
-                                                    <i class="fas fa-trash-alt opacity-75 me-1"></i> Eliminar salón
-                                                </button>
-                                            </form>
-                                        </li>
-                                        {% endif %}
+                                        {{ salon_dropdown_menu(salon) }}
                                     </ul>
                                 </div>
                             </div>
                         </td>
                     </tr>
-                    
-                    <!-- Fila colapsable del Staff -->
+
+                    <!-- Fila colapsable del Staff (desktop/tablet) -->
                     {% if salon.staff|length > 0 %}
                     <tr class="p-0 border-0">
                         <td colspan="4" class="p-0 border-0">
                             <div class="collapse" id="staff-{{ salon.id }}">
                                 <div class="staff-row">
                                     <div class="staff-list-container">
-                                        <div class="small fw-bold text-muted mb-2 text-uppercase letter-spacing-1">Equipo de {{ salon.name }}</div>
-                                        <div class="d-flex flex-column gap-2">
-                                            {% for member in salon.staff %}
-                                            <div class="d-flex align-items-center justify-content-between p-2 rounded" style="background: #fff; border: 1px solid #eaecf0;">
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <div class="avatar-circle" style="width:28px; height:28px; font-size:0.7rem;">{{ member.name[0]|upper }}</div>
-                                                    <div>
-                                                        <div class="fw-bold text-dark" style="font-size: 0.85rem;">{{ member.name }}</div>
-                                                        <div class="text-muted" style="font-size: 0.75rem;">{{ member.email }}</div>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <form method="POST" action="{{ url_for('admin.nails_cambiar_rol') }}" class="m-0">
-                                                        <input type="hidden" name="staff_id" value="{{ member.id }}">
-                                                        <select name="role" class="form-select form-select-sm shadow-none" style="width: 140px; font-size: 0.75rem; font-weight: 600; border-radius: 8px; cursor: pointer;" onchange="this.form.submit()">
-                                                            <option value="owner" {% if member.role == 'owner' %}selected{% endif %}>Jefa</option>
-                                                            <option value="admin" {% if member.role == 'admin' %}selected{% endif %}>Administración</option>
-                                                            <option value="staff" {% if member.role == 'staff' %}selected{% endif %}>Técnica</option>
-                                                            <option value="reception" {% if member.role == 'reception' %}selected{% endif %}>Recepción</option>
-                                                        </select>
-                                                    </form>
-                                                    
-                                                    {% if not member.is_active %}
-                                                    <span class="badge bg-danger text-white ms-1">Desactivada</span>
-                                                    {% endif %}
-                                                </div>
-                                            </div>
-                                            {% endfor %}
-                                        </div>
+                                        {{ staff_list(salon, 'desktop') }}
                                     </div>
                                 </div>
                             </div>
                         </td>
                     </tr>
                     {% endif %}
-                    
+
                     {% endfor %}
                 {% else %}
                     <tr>
                         <td colspan="4" class="text-center py-5 text-muted">
-                            <i class="fas fa-store-slash fs-2 mb-3 text-secondary opacity-50"></i>
+                            <i class="fas fa-store-slash fs-2 mb-3 text-secondary opacity-50" aria-hidden="true"></i>
                             <p class="m-0">No se encontraron salones registrados.</p>
                         </td>
                     </tr>
@@ -433,15 +503,98 @@
             </tbody>
         </table>
     </div>
+
+    <!-- ============ VISTA MÓVIL (< md): TARJETAS ============
+         No reutilizamos la tabla ocultando columnas: con table-layout:fixed
+         los navegadores reservan el ancho de una columna aunque su celda
+         tenga display:none, así que "Salón/Dueña" se quedaba comprimida al
+         35% del ancho real aunque las otras 2 columnas no se vieran. Una
+         lista de tarjetas evita ese problema de raíz y da más espacio para
+         el nombre completo del salón. -->
+    <div class="d-md-none">
+        {% if salones %}
+        <div class="salon-mobile-list">
+            {% for salon in salones %}
+            <div class="salon-mobile-card">
+                <div class="d-flex align-items-start gap-3">
+                    <div class="avatar-circle flex-shrink-0">{{ salon.name[0]|upper }}</div>
+                    <div class="flex-grow-1" style="min-width: 0;">
+                        <div class="fw-bold text-dark" style="font-size: 0.95rem;">{{ salon.name|upper }}</div>
+                        <div class="text-muted small text-truncate">
+                            <i class="fas fa-link me-1" aria-hidden="true"></i>/b/{{ salon.slug }}
+                        </div>
+                        <div class="text-primary small text-truncate mt-1">
+                            <i class="fas fa-user-tie me-1" aria-hidden="true"></i>{{ salon.owner_name or 'Sin dueña' }}
+                        </div>
+                    </div>
+                    <div class="dropdown flex-shrink-0">
+                        <button class="btn action-btn" type="button" data-bs-toggle="dropdown" aria-label="Más acciones para {{ salon.name }}">
+                            <i class="fas fa-ellipsis-v" aria-hidden="true"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end custom-dropdown-menu">
+                            {{ salon_dropdown_menu(salon) }}
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="salon-mobile-status mt-3 d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                    <div>
+                        {% if salon.is_expired %}
+                            <span class="status-badge badge-suspendido"><i class="fas fa-lock me-1" aria-hidden="true"></i>Vencida</span>
+                        {% else %}
+                            <span class="status-badge badge-activo"><i class="fas fa-check-circle me-1" aria-hidden="true"></i>Activa</span>
+                        {% endif %}
+                        <div class="small text-muted mt-1">
+                            {% if salon.subscription_expires_at %}
+                                Vence el {{ salon.subscription_expires_at }}
+                            {% else %}
+                                Sin fecha de expiración
+                            {% endif %}
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-link p-0 text-decoration-none fw-bold text-primary js-abrir-suscripcion"
+                        data-salon-id="{{ salon.id }}"
+                        data-salon-name="{{ salon.name }}"
+                        data-salon-expires="{{ salon.subscription_expires_at or '' }}">
+                        <i class="fas fa-calendar-plus me-1" aria-hidden="true"></i>Ajustar
+                    </button>
+                </div>
+
+                {% if salon.staff|length > 0 %}
+                <button class="btn btn-sm btn-link p-0 text-decoration-none text-muted small mt-3" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#staff-mobile-{{ salon.id }}"
+                    aria-expanded="false" aria-controls="staff-mobile-{{ salon.id }}">
+                    <i class="fas fa-users me-1" aria-hidden="true"></i>{{ salon.staff|length }} en el equipo · Ver desglose
+                </button>
+                <div class="collapse mt-2" id="staff-mobile-{{ salon.id }}">
+                    <div class="staff-row rounded-3">
+                        <div class="staff-list-container">
+                            {{ staff_list(salon, 'mobile') }}
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="small text-muted mt-3"><i class="fas fa-users me-1" aria-hidden="true"></i>Sin personal registrado</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="text-center py-5 text-muted">
+            <i class="fas fa-store-slash fs-2 mb-3 text-secondary opacity-50" aria-hidden="true"></i>
+            <p class="m-0">No se encontraron salones registrados.</p>
+        </div>
+        {% endif %}
+    </div>
 </div>
 
 <!-- Modal Suscripción -->
-<div class="modal fade" id="modalSuscripcion" tabindex="-1">
+<div class="modal fade" id="modalSuscripcion" tabindex="-1" aria-labelledby="modalSuscripcionLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-sm">
         <div class="modal-content border-0 rounded-4 shadow">
             <div class="modal-header border-0 pb-0">
-                <h6 class="modal-title fw-bold text-dark">Renovar Suscripción</h6>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                <h6 class="modal-title fw-bold text-dark" id="modalSuscripcionLabel">Renovar Suscripción</h6>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
             </div>
             <form action="{{ url_for('admin.nails_renovar_suscripcion') }}" method="POST">
                 <!-- Se asume que el blueprint de admin valida su propio CSRF si es necesario -->
@@ -449,15 +602,15 @@
                     <p class="small text-muted mb-3">Salón: <strong id="susNailsBusinessName" class="text-dark"></strong></p>
                     <input type="hidden" name="business_id" id="susNailsBusinessId">
                     
-                    <label class="form-label small fw-bold">Tiempo a añadir:</label>
-                    <select class="form-select mb-3" name="tipo_renovacion" id="tipoRenovacion" onchange="toggleCustomDate()">
+                    <label class="form-label small fw-bold" for="tipoRenovacion">Tiempo a añadir:</label>
+                    <select class="form-select mb-3" name="tipo_renovacion" id="tipoRenovacion">
                         <option value="1_month">+ 1 Mes (30 días)</option>
                         <option value="6_months">+ 6 Meses (180 días)</option>
                         <option value="custom">Fecha exacta...</option>
                     </select>
 
                     <div id="customDateContainer" style="display: none;">
-                        <label class="form-label small fw-bold">Fecha de corte exacta:</label>
+                        <label class="form-label small fw-bold" for="customDateInput">Fecha de corte exacta:</label>
                         <input type="date" name="custom_date" id="customDateInput" class="form-control">
                         <div class="form-text" style="font-size: 0.7rem;">Se vencerá a las 11:59 PM del día seleccionado.</div>
                     </div>
@@ -497,6 +650,22 @@ function toggleCustomDate() {
         customInput.value = '';
     }
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    document.getElementById('tipoRenovacion').addEventListener('change', toggleCustomDate);
+
+    // Delegación de eventos: un solo listener para todos los botones
+    // "Ajustar fecha" / "Renovar suscripción" de la tabla, leyendo los
+    // datos desde data-* en vez de interpolar el nombre del salón dentro
+    // de un onclick="..." (eso se rompía con apóstrofes en el nombre,
+    // ej. "O'Nails", porque el HTML decodifica las comillas antes de que
+    // el JS las vea).
+    document.addEventListener('click', function (event) {
+        const btn = event.target.closest('.js-abrir-suscripcion');
+        if (!btn) return;
+        abrirSuscripcion(btn.dataset.salonId, btn.dataset.salonName, btn.dataset.salonExpires);
+    });
+});
 
 document.addEventListener('submit', function (event) {
     const form = event.target;
