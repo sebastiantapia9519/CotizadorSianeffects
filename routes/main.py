@@ -8,9 +8,11 @@ import io
 import json
 import math
 import os
+from functools import wraps
 from utils.datetime_utils import now_utc, utc_to_local, ahora_sql
 from db import get_db_connection as get_db
 from dateutil import parser
+from openpyxl.utils import get_column_letter
 from helpers import login_required, subscription_required, obtener_alertas
 from utils.tutorial_utils import debe_mostrar_tutorial, obtener_version_tutorial
 
@@ -136,16 +138,29 @@ def procesar_fila_fechas(fila_db):
                 dt_utc = parser.parse(str(valor_original))
                 if dt_utc.tzinfo is None:
                     dt_utc = dt_utc.replace(tzinfo=timezone.utc)
-                dt_local = utc_to_local(dt_utc)               
+                dt_local = utc_to_local(dt_utc)
+                if dt_local is None:
+                    continue
                 if campo == 'fecha_vencimiento':
-                    item[campo] = dt_local.strftime('%d/%m/%Y') 
+                    item[campo] = dt_local.strftime('%d/%m/%Y')
                 else:
-                    item[campo] = dt_local.strftime('%d/%m/%Y %H:%M')                     
-            except ValueError:
-                pass 
+                    item[campo] = dt_local.strftime('%d/%m/%Y %H:%M')
+            except (ValueError, OverflowError):
+                pass
     return item
 
+def landing_si_no_hay_sesion(f):
+    """Si no hay sesión, manda a la landing (/) en lugar de al login."""
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('main.index'))
+        return f(*args, **kwargs)
+    return wrapper
+
+
 @main_bp.route('/cotizador')
+@landing_si_no_hay_sesion
 @login_required
 def cotizador():
     conn = get_db()
@@ -462,7 +477,8 @@ def guardar_venta():
         # --- BLOQUE DE FECHAS SEGURO ---
         fecha_usuario = data.get('fecha_venta') 
         # Obtenemos la fecha de hoy local para comparar y no adelantarnos al futuro
-        hoy_local = utc_to_local(now_utc()).strftime('%Y-%m-%d')
+        ahora_local = utc_to_local(now_utc())
+        hoy_local = ahora_local.strftime('%Y-%m-%d') if ahora_local else now_utc().strftime('%Y-%m-%d')
 
         # 1. Definimos fecha_actual
         if fecha_usuario and fecha_usuario != hoy_local:
@@ -1041,7 +1057,13 @@ def descargar_excel():
     conn = get_db()
     uid = session['user_id']
     u_name = session.get('username', 'Anonimo')
-    
+
+    def fmt_fecha_excel(x, vacio=''):
+        if pd.isnull(x):
+            return vacio
+        dt_local = utc_to_local(x.to_pydatetime())
+        return dt_local.strftime('%d/%m/%Y %I:%M %p') if dt_local else vacio
+
     query_tickets = '''
         SELECT
             v.id as "Folio",
@@ -1081,19 +1103,19 @@ def descargar_excel():
         ORDER BY v.fecha DESC, v.id DESC
     '''
     try:
-        df_tickets = pd.read_sql_query(query_tickets, conn, params=(uid,))
-        df_productos = pd.read_sql_query(query_productos, conn, params=(uid,))
+        df_tickets = pd.read_sql_query(query_tickets, conn, params=(uid,))  # type: ignore
+        df_productos = pd.read_sql_query(query_productos, conn, params=(uid,))  # type: ignore
         conn.close()
-        
+
         for df in (df_tickets, df_productos):
             if not df.empty and 'Fecha' in df.columns:
                 df['Fecha'] = pd.to_datetime(df['Fecha'], errors='coerce').apply(
-                    lambda x: utc_to_local(x.to_pydatetime()).strftime('%d/%m/%Y %I:%M %p') if pd.notnull(x) else 'Pendiente'
+                    lambda x: fmt_fecha_excel(x, 'Pendiente')
                 )
 
         if not df_tickets.empty:
             df_tickets['Fecha_Vencimiento'] = pd.to_datetime(df_tickets['Fecha_Vencimiento'], errors='coerce').apply(
-                lambda x: utc_to_local(x.to_pydatetime()).strftime('%d/%m/%Y %I:%M %p') if pd.notnull(x) else ''
+                lambda x: fmt_fecha_excel(x, '')
             )
 
         tickets_activos = df_tickets[df_tickets['Estado'].isin(['pagado', 'anticipo'])] if not df_tickets.empty else df_tickets
@@ -1115,22 +1137,25 @@ def descargar_excel():
         df_resumen = pd.DataFrame([resumen])
 
         output = io.BytesIO()
-        with pd.ExcelWriter(output, engine='openpyxl') as writer: 
+        with pd.ExcelWriter(output, engine='openpyxl') as writer:
             df_resumen.to_excel(writer, index=False, sheet_name='Resumen')
             df_tickets.to_excel(writer, index=False, sheet_name='Tickets')
             df_productos.to_excel(writer, index=False, sheet_name='Productos')
 
             for sheet in writer.book.worksheets:
                 sheet.freeze_panes = 'A2'
-                for column_cells in sheet.columns:
+                for idx, column_cells in enumerate(sheet.columns, start=1):
                     max_length = max(len(str(cell.value)) if cell.value is not None else 0 for cell in column_cells)
-                    sheet.column_dimensions[column_cells[0].column_letter].width = min(max(max_length + 2, 12), 30)
+                    sheet.column_dimensions[get_column_letter(idx)].width = min(max(max_length + 2, 12), 30)
 
         current_app.logger.info(f"EXPORT_DATA: Usuario '{u_name}' (ID: {uid}) descargo el reporte global de ventas en Excel")
-        
 
         output.seek(0)
         return send_file(output, download_name=f"Reporte_Sianeffects_{datetime.now().strftime('%Y%m%d')}.xlsx", as_attachment=True)
     except Exception as e:
+        try:
+            conn.close()
+        except Exception:
+            pass
         current_app.logger.error(f"EXPORT_ERROR: Usuario {uid} fallo al exportar Excel - {e}")
         return f"Error al generar el Excel: {str(e)}", 500
