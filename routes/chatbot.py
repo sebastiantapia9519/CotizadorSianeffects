@@ -1768,29 +1768,11 @@ def responder_equipo(datos, usos_override=None):
 # ==============================================================================
 
 def merge_equipo_anterior(datos_nuevos, ultimo):
-    """
-    Combina la interpretación nueva de Gemini con el último equipo guardado.
-
-    Esto permite conversaciones como:
-
-    Usuario:
-        Cricut Explore 4
-
-    Usuario:
-        me costó 8500
-
-    Usuario:
-        la uso 20 veces por semana
-
-    sin perder los datos anteriores.
-
-    La información nueva tiene prioridad sobre la anterior.
-    """
-
     if not ultimo:
         return datos_nuevos
 
-    resultado = {}
+    # 1. Clonar los datos nuevos para NO perder 'intencion'
+    resultado = datos_nuevos.copy()
 
     for campo in EQUIPOS_CAMPOS_SESION:
         anterior = ultimo.get(campo)
@@ -1799,8 +1781,6 @@ def merge_equipo_anterior(datos_nuevos, ultimo):
         # Si Gemini no proporcionó un dato nuevo, conserva el anterior.
         if nuevo is None and anterior is not None:
             resultado[campo] = anterior
-        else:
-            resultado[campo] = nuevo
 
     return resultado
 
@@ -2225,14 +2205,27 @@ Mensaje del usuario:
         # ------------------------------------------------------------------
 
         try:
-            datos = json.loads(response.text)
+            # Garantiza que sea un string aunque response.text sea None
+            raw_text = (response.text or "").strip()
+            
+            if not raw_text:
+                raise ValueError("Respuesta vacía o nula de Gemini")
+
+            # Remover bloques markdown si Gemini los incluye
+            if raw_text.startswith('```'):
+                raw_text = re.sub(r'^```[a-zA-Z]*\n', '', raw_text)
+                raw_text = re.sub(r'\n```$', '', raw_text).strip()
+
+            datos = json.loads(raw_text)
 
             if not isinstance(datos, dict):
                 datos = {}
 
-        except (ValueError, TypeError, json.JSONDecodeError):
+        except (ValueError, TypeError, json.JSONDecodeError) as e:
+            # Protegemos el logger también
+            texto_error = response.text if hasattr(response, 'text') else 'Ninguno'
             current_app.logger.warning(
-                f"EQUIPOS_GEMINI_JSON_INVALIDO: {response.text}"
+                f"EQUIPOS_GEMINI_JSON_INVALIDO: {texto_error} - Error: {e}"
             )
             datos = {}
 
