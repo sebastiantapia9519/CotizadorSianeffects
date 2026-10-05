@@ -156,10 +156,17 @@ def materiales():
 @subscription_required
 def eliminar_material(id):
     user_id = session['user_id']
+    u_name = session.get('username', 'Anonimo')
     conn = get_db()
     cursor = conn.cursor()
     try:
-        # 1. Buscar dependencias
+        # 0. Verificar que el material exista y sea de este usuario
+        cursor.execute("SELECT nombre FROM materiales WHERE id=%s AND user_id=%s", (id, user_id))
+        mat = cursor.fetchone()
+        if not mat:
+            return jsonify({"status": "error", "message": "Material no encontrado."}), 404
+
+        # 1. Buscar dependencias en recetas
         cursor.execute("""
             SELECT p.nombre FROM productos p
             JOIN producto_detalles pd ON p.id = pd.producto_id
@@ -168,18 +175,27 @@ def eliminar_material(id):
         recetas = cursor.fetchall()
 
         if recetas:
-            # En lugar de devolver un script, devolvemos JSON
             return jsonify({
                 "status": "blocked",
                 "recetas": [r['nombre'] for r in recetas]
             })
 
-        # 2. Borrar si no hay dependencias
+        # 2. Limpiar historial de movimientos (FK) y borrar el material
+        cursor.execute("DELETE FROM movimientos_inventario WHERE material_id=%s AND user_id=%s", (id, user_id))
         cursor.execute("DELETE FROM materiales WHERE id=%s AND user_id=%s", (id, user_id))
+
+        if cursor.rowcount == 0:
+            conn.rollback()
+            return jsonify({"status": "error", "message": "No se pudo eliminar el material."}), 400
+
+        cursor.execute("INSERT INTO logs_actividad (user_id, accion, modulo) VALUES (%s, %s, %s)",
+                       (user_id, f"Eliminó el material '{mat['nombre']}'", "Inventario"))
         conn.commit()
         return jsonify({"status": "success"})
 
     except Exception as e:
+        conn.rollback()
+        current_app.logger.error(f"MATERIAL_DELETE_ERROR: Usuario '{u_name}' (ID: {user_id}) fallo al eliminar material #{id} - {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
     finally:
         cursor.close()

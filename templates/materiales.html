@@ -814,15 +814,21 @@
     function confirmarEliminar(urlReal, nombre) {
         Swal.fire({ title: '¿Eliminar?', text: `Borrar "${nombre}".`, icon: 'warning', showCancelButton: true, confirmButtonColor: '#dc3545', confirmButtonText: 'Sí, borrar' })
             .then((result) => {
-                if (result.isConfirmed) {
-                    Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                    fetch(urlReal).then(r => r.json()).then(data => {
+                if (!result.isConfirmed) return;
+                Swal.fire({ title: 'Eliminando...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                fetch(urlReal)
+                    .then(r => r.json())
+                    .then(data => {
                         if (data.status === 'blocked') {
                             Swal.fire({ title: 'En uso', html: `Está en: <b>${data.recetas.join(', ')}</b>.`, icon: 'info', confirmButtonText: 'Ir a Recetas' })
                                 .then(res => { if (res.isConfirmed) window.location.href = "{{ url_for('inventory.recetas') }}"; });
-                        } else location.reload();
-                    });
-                }
+                        } else if (data.status === 'success') {
+                            location.reload();
+                        } else {
+                            Swal.fire('Error', data.message || 'No se pudo eliminar el material.', 'error');
+                        }
+                    })
+                    .catch(() => Swal.fire('Error', 'Respuesta inesperada del servidor. Recarga e intenta de nuevo.', 'error'));
             });
     }
 
