@@ -781,9 +781,10 @@
                             Swal.fire({ icon: 'success', title: 'Eliminado', timer: 1200, showConfirmButton: false })
                                 .then(() => location.reload());
                         } else {
-                            Swal.fire('Error', 'No se pudo eliminar.', 'error');
+                            Swal.fire('Error', data.message || 'No se pudo eliminar el equipo.', 'error');
                         }
-                    });
+                    })
+                    .catch(() => Swal.fire('Error', 'Respuesta inesperada del servidor. Recarga e intenta de nuevo.', 'error'));
             }
         });
     }
@@ -881,12 +882,18 @@
             });
     }
 
+        let contadorMensajes = 0;
+
+    function escaparHtml(t) {
+        return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
     function agregarMensaje(texto, tipo, esLoading = false) {
         const msgDiv = document.createElement('div');
-        const msgId = 'msg-' + Date.now();
+        const msgId = 'msg-' + Date.now() + '-' + (++contadorMensajes);
         msgDiv.id = msgId;
         msgDiv.className = `message ${tipo === 'user' ? 'user-message' : 'bot-message'}`;
-        msgDiv.innerHTML = `<div class="message-content">${texto}</div>`;
+        msgDiv.innerHTML = `<div class="message-content">${escaparHtml(texto).replace(/\n/g, '<br>')}</div>`;
 
         chatMessages.appendChild(msgDiv);
         chatMessages.scrollTop = chatMessages.scrollHeight;
