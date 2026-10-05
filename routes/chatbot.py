@@ -1769,18 +1769,44 @@ def responder_equipo(datos, usos_override=None):
 # ==============================================================================
 
 def merge_equipo_anterior(datos_nuevos, ultimo):
+    """
+    Combina la interpretación nueva de Gemini con el último equipo guardado.
+    Si el usuario cambia de equipo, evita heredar precios y usos anteriores.
+    """
     if not ultimo:
         return datos_nuevos
 
-    # 1. Clonar los datos nuevos para NO perder 'intencion'
     resultado = datos_nuevos.copy()
+
+    # Detectar si el usuario está mencionando una máquina totalmente distinta
+    nombre_nuevo = (datos_nuevos.get('nombre') or '').strip().lower()
+    tipo_nuevo = datos_nuevos.get('tipo')
+    
+    nombre_anterior = (ultimo.get('nombre') or '').strip().lower()
+    tipo_anterior = ultimo.get('tipo')
+
+    cambio_de_equipo = False
+    
+    # Si hay un nombre nuevo y es diferente al anterior, es otra máquina
+    if nombre_nuevo and nombre_anterior and nombre_nuevo != nombre_anterior:
+        cambio_de_equipo = True
+        
+    # O si el tipo de máquina cambió (ej. de 'plancha' a 'laser_diodo')
+    if tipo_nuevo and tipo_anterior and tipo_nuevo != tipo_anterior:
+        cambio_de_equipo = True
 
     for campo in EQUIPOS_CAMPOS_SESION:
         anterior = ultimo.get(campo)
         nuevo = datos_nuevos.get(campo)
 
-        # Si Gemini no proporcionó un dato nuevo, conserva el anterior.
+        # Si Gemini no proporcionó un dato nuevo, decidimos si heredarlo
         if nuevo is None and anterior is not None:
+            
+            # Si cambiamos de máquina, NO heredamos precio, usos o piezas.
+            # (Pero sí podemos heredar la 'moneda' o los 'consumibles' para mantener el hilo).
+            if cambio_de_equipo and campo not in ('moneda', 'consumibles'):
+                continue
+                
             resultado[campo] = anterior
 
     return resultado
