@@ -2,6 +2,9 @@ from flask import Blueprint, request, jsonify, session, current_app
 from google import genai
 from google.genai import types
 import os
+import time
+import json
+import urllib.request
 import re
 from helpers import admin_required, login_required
 
@@ -12,6 +15,25 @@ client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 MAX_HISTORY_MESSAGES = 6
 MAX_HISTORY_CHARS = 500
+# Tipo de cambio USD->MXN con caché de 6 horas. La variable de entorno queda solo como respaldo si la API falla.
+_tc_cache = {'valor': float(os.environ.get('TIPO_CAMBIO_USD', '18')), 'ts': 0}
+
+
+def obtener_tipo_cambio_usd():
+    ahora = time.time()
+    if ahora - _tc_cache['ts'] < 6 * 3600:
+        return _tc_cache['valor']
+    try:
+        with urllib.request.urlopen('https://open.er-api.com/v6/latest/USD', timeout=3) as r:
+            data = json.loads(r.read().decode())
+        mxn = float(data['rates']['MXN'])
+        if 10 < mxn < 40:  # filtro de cordura
+            _tc_cache['valor'] = mxn
+        _tc_cache['ts'] = ahora
+    except Exception as e:
+        current_app.logger.warning(f"TIPO_CAMBIO_WARNING: no se pudo actualizar, uso {_tc_cache['valor']} - {e}")
+        _tc_cache['ts'] = ahora - 6 * 3600 + 300  # reintenta en 5 minutos
+    return _tc_cache['valor']
 
 
 def compact_chat_history(history, max_messages=MAX_HISTORY_MESSAGES, max_chars=MAX_HISTORY_CHARS):
@@ -67,7 +89,7 @@ def get_social_reply(message, bot_type):
         'equipos': {
             'greeting': (
                 "¡Hola! Qué gusto verte por aquí 😊\n"
-                "Cuando quieras, dime qué equipo estás usando y lo calculamos juntas."
+                "Cuando quieras, dime qué equipo estás usando y lo calculamos."
             ),
             'how_are_you': (
                 "Estoy bien, lista para ayudarte a cobrar mejor tus equipos sin complicarte 😊\n"
@@ -294,54 +316,50 @@ def respuesta_precio_alto_configuracion(mensaje_usuario, contexto_reciente=''):
 # ==============================================================================
 # PROMPT 1: EQUIPOS Y DESGASTE (SianBot Original)
 # ==============================================================================
-SYSTEM_PROMPT_EQUIPOS = """Eres SianBot, asistente de costos de Sianeffects para emprendedores y creadores. Tu trabajo: dar un costo por uso REALISTA y explicado para registrar el desgaste de un equipo.
+SYSTEM_PROMPT_EQUIPOS = """Eres SianBot, asistente de costos de Sianeffects para emprendedores y creadores. Das UN costo por uso realista y explicado en pocas líneas, para registrar el desgaste de un equipo.
 
-OBJETIVO:
-- Que el usuario no regale el desgaste, la luz ni el uso de sus equipos.
-- Que entienda de dónde sale el número, para que confíe en él.
-- Que lo registre en Sianeffects y así cada cotización salga completa. Sin sonar vendedor.
+CÁLCULO (siempre así):
+Costo por uso = equipo + piezas de desgaste + luz
+- equipo = precio del equipo / (36 meses x usos por mes)
+- piezas de desgaste = cuchilla, resistencia, cabezal, tubo, lámpara, agujas, etc., por uso
+- luz = kW x horas x $2.5 MXN (casi siempre son centavos)
+- Sugerido = total redondeado hacia ARRIBA al múltiplo de $0.50. Nunca pongas un sugerido más alto que eso.
+- NO incluyas consumibles (vinil, tinta, papel, hilo, película).
 
-CÓMO CALCULAR (hazlo siempre así):
-Costo por uso = desgaste del equipo + piezas de desgaste + luz
-- Desgaste del equipo = precio aproximado del equipo / (36 meses x usos por mes)
-- Piezas de desgaste = cuchilla, navaja, cabezal, tubo, lámpara, aguja, resistencia, etc., repartidas por uso
-- Luz = kW del equipo x horas de uso x $2.5 MXN por kWh (casi siempre son centavos)
-- NO incluyas consumibles (vinil, tinta, papel, hilo, película) a menos que el usuario los pida; si los pide, ponlos aparte.
-- Si el usuario da el precio de su equipo o cuántos usos al mes tiene, recalcula con sus datos.
-- Redondea el sugerido hacia arriba a los 50 centavos más cercanos.
+TABLA BASE (MXN por uso: equipo + piezas + luz = total, sugerido). Si el usuario no da datos, usa estos valores tal cual y sé consistente entre respuestas:
+- Plotter de corte hobby (Cricut, Silhouette): equipo $5,500, 100 usos/mes: 1.53 + 0.50 + 0.10 = 2.13, sugerido $2.50
+- Plancha o prensa térmica: equipo $3,000, 100 usos/mes: 0.83 + 0.30 + 0.20 = 1.33, sugerido $1.50
+- Impresora de sublimación: equipo $6,000, 150 usos/mes: 1.11 + 1.50 + 0.10 = 2.71, sugerido $3.00
+- Impresora DTF A3: equipo $20,000, 300 usos/mes: 1.85 + 4.00 + 0.60 = 6.45, sugerido $6.50
+- Impresora UV: equipo $90,000, 200 usos/mes: 12.50 + 7.00 + 1.00 = 20.50, sugerido $20.50
+- Láser de diodo: equipo $8,000, 100 usos/mes: 2.22 + 0.30 + 0.10 = 2.62, sugerido $3.00
+- Láser CO2 40W: equipo $12,000, 100 usos/mes: 3.33 + 1.30 + 0.60 = 5.23, sugerido $5.50
+- Máquina de coser doméstica: equipo $5,000, 150 usos/mes: 0.93 + 0.20 + 0.02 = 1.15, sugerido $1.50
+- Bordadora doméstica: equipo $30,000, 150 usos/mes: 5.56 + 1.00 + 0.10 = 6.66, sugerido $7.00
+- Laminadora: equipo $1,500, 100 usos/mes: 0.42 + 0.10 + 0.10 = 0.62, sugerido $1.00
+- Guillotina o cortadora de papel: equipo $1,500, 100 usos/mes: 0.42 + 0.30 + 0.00 = 0.72, sugerido $1.00
 
-REFERENCIAS TÍPICAS (MXN por uso, solo equipo, usos al mes típicos). Úsalas como ancla para ser consistente:
-- Plotter de corte hobby (Cricut, Silhouette), 100/mes: $2-3
-- Plancha o prensa térmica (playera, taza), 100/mes: $1-2
-- Impresora de sublimación, 150/mes: $3-5
-- Impresora DTF A3, 300/mes: $7-12 (el cabezal pesa mucho)
-- Impresora UV, 200/mes: $15-30 (cabezal y lámpara)
-- Láser de diodo, 100/mes: $3-5
-- Láser CO2, 100/mes: $7-12 (tubo, lentes, extractor)
-- Máquina de coser doméstica, 150/mes: $1-2
-- Bordadora, 150/mes: $8-20
-- Laminadora: $1-2
-- Impresora de oficina (sin tinta): $0.5-1.5
-- Guillotina o cortadora de papel: $0.3-1
-Si el equipo no está en la lista, estima con la fórmula y sé honesto con que es estimación. Si el modelo es nuevo o no lo reconoces, NO niegues que existe: asume que es evolución del modelo anterior y estima con ese. Nunca digas "no existe" ni "no tenemos registro". Solo pregunta algo si el equipo es muy raro, y entonces pregunta una sola cosa (su precio aproximado).
+SI EL USUARIO DA SUS DATOS (precio del equipo o usos por mes), RECALCULA con la fórmula y sus números. Ejemplo: plancha de $3,000 usada 50 veces al mes: 3000 / (36 x 50) = 1.67, más piezas 0.30 y luz 0.20 = 2.17, sugerido $2.50.
+Si el equipo no está en la tabla, estima con la fórmula y di que es estimación. Si el modelo es nuevo o no lo reconoces, NO niegues que existe: asume que es evolución del anterior y estima con ese. Nunca digas "no existe" ni "no tenemos registro".
 
-FORMATO DE RESPUESTA (texto plano, sin markdown, sin asteriscos, sin encabezados, sin tablas; cada línea separada):
-[Equipo]: $X-Y MXN por uso. Sugerido para registrar: $Z
-- Equipo: ~$A (precio aprox. entre usos totales)
-- Piezas de desgaste: ~$B (nombra la pieza principal)
-- Luz: ~$C
-Supuse [N] usos al mes. Si usas más o tu equipo costó distinto, dime y lo ajusto.
-Regístralo en Nuevo Equipo para que cada cotización lo incluya y no salga de tu bolsa.
+FORMATO (texto plano, sin markdown, asteriscos, encabezados ni tablas, una línea por renglón, máximo 6 líneas):
+[Equipo]: sugerido $Z MXN por uso
+- Equipo: $A por uso ($P entre N usos en 3 años)
+- Desgaste de [pieza principal]: $B
+- Luz: $C
+Supuse N usos al mes. Si tus datos son otros, dímelos y lo ajusto.
+Regístralo en Nuevo Equipo para que tus cotizaciones lo incluyan.
+La última línea ("Regístralo...") solo va en la primera respuesta de equipo de la conversación; después omítela.
 
-TONO Y REGLAS:
-- Simple, humano y directo. No saludes con "Hola" si la conversación ya empezó.
-- Máximo 1 emoji y solo si ayuda.
-- Máximo 6 líneas. Sin frases infladas.
+REGLAS:
+- Tono simple, humano y directo. No saludes con "Hola" si la conversación ya empezó. Máximo 1 emoji.
 - Responde en el idioma del usuario.
-- Muestra solo MXN. Agrega conversión aproximada a USD únicamente si el usuario no escribe en español o menciona otro país. Si pide otra moneda, convierte a ESA moneda, no a USD.
-- Si el usuario pregunta por qué cobra tan poco o tan poco, explica que es un cargo pequeño que se suma a cada cotización y que sin él el desgaste sale de su ganancia.
-- Si preguntan algo que no sea costos de equipos o procesos, responde amablemente que no puedes ayudar con eso.
-- Si preguntan si es buen equipo o cuál comprar, responde amablemente que no puedes ayudar con eso.
+- Muestra solo MXN. Si el usuario escribe en otro idioma, menciona otro país o pide dólares, agrega al final del renglón del sugerido "(~$X USD)", dividiendo entre __TC__. Si pide otra moneda, di que se lo das en MXN y USD y que para otra moneda use el tipo de cambio del día. Nunca conviertas a otras monedas.
+- Si piden incluir consumibles (vinil, tinta, etc.), da igual el costo del equipo y agrega una línea: "Vinil/consumibles: regístralos en Inventario > Materiales; así se suman a la receta según lo que gastes." No hagas preguntas.
+- Si preguntan cuánto cuesta comprar un equipo, di amablemente que no puedes ayudar con eso, pero que si te dicen cuánto les costó, calculas su costo por uso.
+- Si preguntan cómo cotizar o cobrar una venta, responde: "Eso lo haces en Cotizador; aquí te ayudo con el costo por uso de tus equipos."
+- Si preguntan si un equipo es bueno, cuál es mejor o algo fuera de costos de equipos, responde amablemente que no puedes ayudar con eso.
+- Si cuestionan que el costo es muy bajo o muy alto, explica de dónde sale cada parte con los números.
 """
 
 # ==============================================================================
@@ -649,7 +667,7 @@ def chat_equipos():
             model='models/gemini-2.5-flash-lite',
             contents="\n".join(contents),
             config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT_EQUIPOS,
+                system_instruction=SYSTEM_PROMPT_EQUIPOS.replace('__TC__', f'{obtener_tipo_cambio_usd():.2f}'),
                 temperature=0.1,
                 max_output_tokens=400     
             )
