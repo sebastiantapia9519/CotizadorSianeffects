@@ -1679,7 +1679,8 @@ def calcular_costo_equipo(datos, usos_override=None):
         'luz': luz,
         'sugerido': sugerido,
         'estimado': estimado,
-        'mostrar_opciones': usos_escrito is None,
+        # Cambia solo esta línea:
+        'mostrar_opciones': (usos_escrito is None) and (usos_override is None),
     }
 
 
@@ -2124,6 +2125,11 @@ def chat_equipos():
                     'opciones': [],
                     'status': 'success'
                 })
+
+            # Guardar la elección del botón en la sesión
+            ultimo['usos_mes'] = usos_boton
+            session['equipos_ultimo'] = ultimo
+            session.modified = True
 
             return jsonify({
                 'reply': respuesta,
