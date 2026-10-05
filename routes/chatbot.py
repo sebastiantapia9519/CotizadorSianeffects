@@ -2,10 +2,11 @@ from flask import Blueprint, request, jsonify, session, current_app
 from google import genai
 from google.genai import types
 import os
+import re
 import time
 import json
+import math
 import urllib.request
-import re
 from helpers import admin_required, login_required
 
 chatbot_bp = Blueprint('chatbot', __name__)
@@ -15,7 +16,9 @@ client = genai.Client(api_key=os.environ.get('GEMINI_API_KEY'))
 
 MAX_HISTORY_MESSAGES = 6
 MAX_HISTORY_CHARS = 500
-# Tipo de cambio USD->MXN con caché de 6 horas. La variable de entorno queda solo como respaldo si la API falla.
+
+# Tipo de cambio USD->MXN con caché de 6 horas.
+# La variable de entorno TIPO_CAMBIO_USD queda solo como respaldo si la API falla.
 _tc_cache = {'valor': float(os.environ.get('TIPO_CAMBIO_USD', '18')), 'ts': 0}
 
 
@@ -314,53 +317,158 @@ def respuesta_precio_alto_configuracion(mensaje_usuario, contexto_reciente=''):
 
 
 # ==============================================================================
-# PROMPT 1: EQUIPOS Y DESGASTE (SianBot Original)
+# EQUIPOS: tabla base + cálculo en Python (Gemini solo extrae datos)
 # ==============================================================================
-SYSTEM_PROMPT_EQUIPOS = """Eres SianBot, asistente de costos de Sianeffects para emprendedores y creadores. Das UN costo por uso realista y explicado en pocas líneas, para registrar el desgaste de un equipo.
+EQUIPOS_BASE = {
+    'plotter':     {'precio': 5500,  'usos': 100, 'piezas': 0.50, 'luz': 0.10, 'pieza': 'cuchilla', 'nombre': 'Plotter de corte'},
+    'plancha':     {'precio': 3000,  'usos': 100, 'piezas': 0.30, 'luz': 0.20, 'pieza': 'resistencia', 'nombre': 'Plancha o prensa térmica'},
+    'sublimacion': {'precio': 6000,  'usos': 150, 'piezas': 1.50, 'luz': 0.10, 'pieza': 'cabezal', 'nombre': 'Impresora de sublimación'},
+    'dtf':         {'precio': 20000, 'usos': 300, 'piezas': 4.00, 'luz': 0.60, 'pieza': 'cabezal e inyectores', 'nombre': 'Impresora DTF A3'},
+    'uv':          {'precio': 90000, 'usos': 200, 'piezas': 7.00, 'luz': 1.00, 'pieza': 'cabezal y lámpara', 'nombre': 'Impresora UV'},
+    'laser_diodo': {'precio': 8000,  'usos': 100, 'piezas': 0.30, 'luz': 0.10, 'pieza': 'módulo láser', 'nombre': 'Láser de diodo'},
+    'laser_co2':   {'precio': 12000, 'usos': 100, 'piezas': 1.30, 'luz': 0.60, 'pieza': 'tubo y lentes', 'nombre': 'Láser CO2 40W'},
+    'coser':       {'precio': 5000,  'usos': 150, 'piezas': 0.20, 'luz': 0.02, 'pieza': 'agujas', 'nombre': 'Máquina de coser'},
+    'bordadora':   {'precio': 30000, 'usos': 150, 'piezas': 1.00, 'luz': 0.10, 'pieza': 'agujas', 'nombre': 'Bordadora'},
+    'laminadora':  {'precio': 1500,  'usos': 100, 'piezas': 0.10, 'luz': 0.10, 'pieza': 'rodillos', 'nombre': 'Laminadora'},
+    'guillotina':  {'precio': 1500,  'usos': 100, 'piezas': 0.30, 'luz': 0.00, 'pieza': 'cuchilla', 'nombre': 'Guillotina'},
+}
 
-CÁLCULO (siempre así):
-Costo por uso = equipo + piezas de desgaste + luz
-- equipo = precio del equipo / (36 meses x usos por mes)
-- piezas de desgaste = cuchilla, resistencia, cabezal, tubo, lámpara, agujas, etc., por uso
-- luz = kW x horas x $2.5 MXN (casi siempre son centavos)
-- Sugerido = total redondeado hacia ARRIBA al múltiplo de $0.50. Nunca pongas un sugerido más alto que eso.
-- NO incluyas consumibles (vinil, tinta, papel, hilo, película).
+# Campos que se guardan en sesión para poder recalcular con los botones o correcciones
+EQUIPOS_CAMPOS_SESION = (
+    'tipo', 'nombre', 'precio', 'usos_mes', 'usos_semana', 'moneda', 'consumibles',
+    'precio_estimado', 'piezas_estimado', 'luz_estimado', 'pieza'
+)
 
-TABLA BASE (MXN por uso: equipo + piezas + luz = total, sugerido). Si el usuario no da datos, usa estos valores tal cual y sé consistente entre respuestas:
-- Plotter de corte hobby (Cricut, Silhouette): equipo $5,500, 100 usos/mes: 1.53 + 0.50 + 0.10 = 2.13, sugerido $2.50
-- Plancha o prensa térmica: equipo $3,000, 100 usos/mes: 0.83 + 0.30 + 0.20 = 1.33, sugerido $1.50
-- Impresora de sublimación: equipo $6,000, 150 usos/mes: 1.11 + 1.50 + 0.10 = 2.71, sugerido $3.00
-- Impresora DTF A3: equipo $20,000, 300 usos/mes: 1.85 + 4.00 + 0.60 = 6.45, sugerido $6.50
-- Impresora UV: equipo $90,000, 200 usos/mes: 12.50 + 7.00 + 1.00 = 20.50, sugerido $20.50
-- Láser de diodo: equipo $8,000, 100 usos/mes: 2.22 + 0.30 + 0.10 = 2.62, sugerido $3.00
-- Láser CO2 40W: equipo $12,000, 100 usos/mes: 3.33 + 1.30 + 0.60 = 5.23, sugerido $5.50
-- Máquina de coser doméstica: equipo $5,000, 150 usos/mes: 0.93 + 0.20 + 0.02 = 1.15, sugerido $1.50
-- Bordadora doméstica: equipo $30,000, 150 usos/mes: 5.56 + 1.00 + 0.10 = 6.66, sugerido $7.00
-- Laminadora: equipo $1,500, 100 usos/mes: 0.42 + 0.10 + 0.10 = 0.62, sugerido $1.00
-- Guillotina o cortadora de papel: equipo $1,500, 100 usos/mes: 0.42 + 0.30 + 0.00 = 0.72, sugerido $1.00
+SYSTEM_PROMPT_EQUIPOS_EXTRACTOR = """Eres un clasificador. Lees el mensaje de un usuario de Sianeffects que habla de equipos de producción (plotters de corte, planchas, impresoras, láseres, máquinas de coser, etc.) y respondes SOLO un JSON, sin texto extra.
 
-SI EL USUARIO DA SUS DATOS (precio del equipo o usos por mes), RECALCULA con la fórmula y sus números. Ejemplo: plancha de $3,000 usada 50 veces al mes: 3000 / (36 x 50) = 1.67, más piezas 0.30 y luz 0.20 = 2.17, sugerido $2.50.
-Si el equipo no está en la tabla, estima con la fórmula y di que es estimación. Si el modelo es nuevo o no lo reconoces, NO niegues que existe: asume que es evolución del anterior y estima con ese. Nunca digas "no existe" ni "no tenemos registro".
-
-FORMATO (texto plano, sin markdown, asteriscos, encabezados ni tablas, una línea por renglón, máximo 6 líneas):
-[Equipo]: sugerido $Z MXN por uso
-- Equipo: $A por uso ($P entre N usos en 3 años)
-- Desgaste de [pieza principal]: $B
-- Luz: $C
-Supuse N usos al mes. Si tus datos son otros, dímelos y lo ajusto.
-Regístralo en Nuevo Equipo para que tus cotizaciones lo incluyan.
-La última línea ("Regístralo...") solo va en la primera respuesta de equipo de la conversación; después omítela.
-
-REGLAS:
-- Tono simple, humano y directo. No saludes con "Hola" si la conversación ya empezó. Máximo 1 emoji.
-- Responde en el idioma del usuario.
-- Muestra solo MXN. Si el usuario escribe en otro idioma, menciona otro país o pide dólares, agrega al final del renglón del sugerido "(~$X USD)", dividiendo entre __TC__. Si pide otra moneda, di que se lo das en MXN y USD y que para otra moneda use el tipo de cambio del día. Nunca conviertas a otras monedas.
-- Si piden incluir consumibles (vinil, tinta, etc.), da igual el costo del equipo y agrega una línea: "Vinil/consumibles: regístralos en Inventario > Materiales; así se suman a la receta según lo que gastes." No hagas preguntas.
-- Si preguntan cuánto cuesta comprar un equipo, di amablemente que no puedes ayudar con eso, pero que si te dicen cuánto les costó, calculas su costo por uso.
-- Si preguntan cómo cotizar o cobrar una venta, responde: "Eso lo haces en Cotizador; aquí te ayudo con el costo por uso de tus equipos."
-- Si preguntan si un equipo es bueno, cuál es mejor o algo fuera de costos de equipos, responde amablemente que no puedes ayudar con eso.
-- Si cuestionan que el costo es muy bajo o muy alto, explica de dónde sale cada parte con los números.
+Campos:
+- "intencion": "calcular" si pide o menciona un equipo para calcular su costo por uso, corrige datos del equipo anterior (precio, usos, moneda) o pide explicar el costo; "compra" si pregunta cuánto cuesta comprar un equipo o dónde comprarlo; "cotizar" si pregunta cómo cotizar, cobrar o vender; "otro" para todo lo demás (comparar equipos, si es bueno, temas ajenos).
+- "tipo": uno de plotter, plancha, sublimacion, dtf, uv, laser_diodo, laser_co2, coser, bordadora, laminadora, guillotina, otro. Cricut y Silhouette son plotter. Usa "otro" si no encaja.
+- "nombre": nombre del equipo como lo escribió el usuario, limpio y corto.
+- "precio": precio que pagó el usuario en MXN, número; null si no lo dijo.
+- "usos_mes": usos por mes que dijo el usuario, número; null si no lo dijo.
+- "usos_semana": usos, piezas o trabajos por semana que dijo el usuario, número; si lo dijo por día, multiplícalo por 6; null si no lo dijo.
+- "moneda": "usd" si pide dólares, escribe en inglés o menciona otro país; "otra" si pide una moneda distinta de MXN y USD; si no, "mxn".
+- "consumibles": true si pide incluir vinil, tinta, papel u otro consumible.
+- Solo si tipo es "otro": "precio_estimado" (precio típico del equipo nuevo en MXN), "piezas_estimado" (costo de piezas de desgaste por uso en MXN), "luz_estimado" (costo de luz por uso en MXN) y "pieza" (nombre de la pieza principal que se desgasta). Usa valores realistas y no hagas ninguna división.
+Si el mensaje corrige datos del equipo anterior (ej. "y con 10 a la semana?" o "en dólares"), conserva tipo, nombre y los demás campos del "Último equipo" y cambia solo lo que el usuario cambió.
 """
+
+RESP_EQUIPOS_COMPRA = "No te ayudo con precios de compra. Dime cuánto te costó y calculo su costo por uso."
+RESP_EQUIPOS_COTIZAR = "Eso se hace en Cotizador. Aquí calculo el costo por uso de tus equipos."
+RESP_EQUIPOS_OTRO = "No puedo ayudarte con eso. Solo calculo el costo por uso de equipos."
+RESP_EQUIPOS_SIN_DATOS = "No pude calcularlo. Dime el equipo y, si puedes, cuánto costó y cuántas veces lo usas a la semana."
+
+
+def _num(valor):
+    try:
+        valor = float(valor)
+        return valor if valor > 0 else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _texto_semana(usos_mes):
+    semanal = usos_mes / 4.33
+    if semanal < 1:
+        return "menos de 1 por semana"
+    return f"~{round(semanal)} por semana"
+
+
+def opciones_uso(datos):
+    """Tres botones de uso (poco / normal / mucho), etiquetados por semana."""
+    base = EQUIPOS_BASE.get(datos.get('tipo'))
+    normal = base['usos'] if base else 100
+    poco = max(5, round(normal * 0.25))
+    mucho = normal * 2
+    etiquetas = [('Pocas', poco), ('Normal', normal), ('Muchas', mucho)]
+    return [
+        {'label': f"{nombre} · {_texto_semana(usos)}", 'usos_mes': usos}
+        for nombre, usos in etiquetas
+    ]
+
+
+def calcular_costo_equipo(datos, usos_override=None):
+    base = EQUIPOS_BASE.get(datos.get('tipo'))
+
+    # Usos que escribió el usuario (por mes o por semana). Si no hay, se usa el supuesto.
+    usos_escrito = _num(datos.get('usos_mes'))
+    if usos_escrito is None:
+        semana = _num(datos.get('usos_semana'))
+        if semana:
+            usos_escrito = semana * 4.33
+    if usos_escrito:
+        usos_escrito = math.ceil(usos_escrito)  # usos al mes siempre redondeados hacia arriba
+
+    precio_usuario = _num(datos.get('precio'))
+
+    if base:
+        precio = precio_usuario or base['precio']
+        usos_base = base['usos']
+        piezas, luz, pieza = base['piezas'], base['luz'], base['pieza']
+        nombre = (datos.get('nombre') or base['nombre']).strip()
+        estimado = False
+    else:
+        precio = precio_usuario or _num(datos.get('precio_estimado'))
+        usos_base = 100
+        piezas = _num(datos.get('piezas_estimado'))
+        luz = _num(datos.get('luz_estimado')) or 0.10
+        pieza = datos.get('pieza') or 'piezas principales'
+        nombre = (datos.get('nombre') or 'Equipo').strip()
+        estimado = True
+        if not precio or not piezas:
+            return None
+
+    usos = _num(usos_override) or usos_escrito or usos_base
+
+    if precio > 1_000_000 or usos > 10_000:
+        return None
+
+    equipo_uso = precio / (36 * usos)
+    total = equipo_uso + piezas + luz
+    sugerido = math.ceil(total * 2) / 2  # redondeo hacia arriba a $0.50
+
+    return {
+        'nombre': nombre, 'precio': precio, 'usos': usos, 'equipo_uso': equipo_uso,
+        'piezas': piezas, 'pieza': pieza, 'luz': luz, 'sugerido': sugerido,
+        'estimado': estimado,
+        'mostrar_opciones': usos_escrito is None,  # si no dio su uso, ofrecemos los botones
+    }
+
+
+def armar_respuesta_equipo(c, moneda='mxn', consumibles=False):
+    usd = ''
+    if moneda in ('usd', 'otra'):
+        usd = f" (~${c['sugerido'] / obtener_tipo_cambio_usd():.2f} USD)"
+
+    estimado = " (estimado)" if c['estimado'] else ""
+    lineas = [
+        f"{c['nombre']}: ${c['sugerido']:.2f} MXN por uso{usd}{estimado}",
+        f"${c['precio']:,.0f} de equipo ({c['usos']:g} usos/mes): ${c['equipo_uso']:.2f} + {c['pieza']} ${c['piezas']:.2f} + luz ${c['luz']:.2f}",
+    ]
+
+    if c['usos'] < 10:
+        lineas.append("Con tan poco uso conviene cobrar por trabajo.")
+    if moneda == 'otra':
+        lineas.append("Solo manejo MXN y USD.")
+    if consumibles:
+        lineas.append("Vinil y consumibles: regístralos en Inventario > Materiales.")
+    if c['mostrar_opciones']:
+        lineas.append("¿Cuántas piezas o trabajos a la semana? Elige o escribe el número.")
+
+    return "\n".join(lineas)
+
+
+def responder_equipo(datos, usos_override=None):
+    """Devuelve (respuesta, opciones). Si no se puede calcular, (None, [])."""
+    calculo = calcular_costo_equipo(datos, usos_override)
+    if not calculo:
+        return None, []
+
+    respuesta = armar_respuesta_equipo(calculo, datos.get('moneda', 'mxn'), bool(datos.get('consumibles')))
+    opciones = opciones_uso(datos) if calculo['mostrar_opciones'] else []
+    return respuesta, opciones
+
 
 # ==============================================================================
 # PROMPT 2: Experto en Configuración y Negocios de Sianeffects (v2.1)
@@ -638,46 +746,75 @@ Respuesta breve con diagnóstico, evidencia numérica y siguiente acción. Si pi
 @chatbot_bp.route('/api/chat-equipos', methods=['POST'])
 def chat_equipos():
     try:
-        data = request.json
+        data = request.json or {}
         mensaje_usuario = data.get('message', '').strip()
-        
-        if not mensaje_usuario:
+        usos_boton = _num(data.get('usos_mes'))  # viene de los botones Pocas / Normal / Muchas
+
+        if not mensaje_usuario and not usos_boton:
             return jsonify({'error': 'Mensaje vacío'}), 400
-        
-        # Historial específico para Equipos
+
         if 'chat_history' not in session:
             session['chat_history'] = []
-        
         historial = session['chat_history']
+
+        ultimo = session.get('equipos_ultimo')
+
+        # --- Botón de uso: recalcula en Python, sin llamar a Gemini ---
+        if usos_boton:
+            if not ultimo:
+                return jsonify({'reply': RESP_EQUIPOS_SIN_DATOS, 'opciones': [], 'status': 'success'})
+            respuesta, opciones = responder_equipo(ultimo, usos_override=usos_boton)
+            if not respuesta:
+                return jsonify({'reply': RESP_EQUIPOS_SIN_DATOS, 'opciones': [], 'status': 'success'})
+            return jsonify({'reply': respuesta, 'opciones': opciones, 'status': 'success'})
 
         respuesta_social = get_social_reply(mensaje_usuario, 'equipos')
         if respuesta_social:
-            respuesta = respuesta_social
-            store_chat_reply('chat_history', historial, mensaje_usuario, respuesta)
-            return jsonify({'reply': respuesta, 'status': 'success'})
+            store_chat_reply('chat_history', historial, mensaje_usuario, respuesta_social)
+            return jsonify({'reply': respuesta_social, 'opciones': [], 'status': 'success'})
 
-        contents = []
+        contexto = f"Último equipo: {json.dumps(ultimo, ensure_ascii=False)}\n" if ultimo else ""
 
-        for msg in historial[-6:]:
-            role = msg['role']
-            contents.append(f"{role}: {msg['content']}")
-        contents.append(f"Usuario: {mensaje_usuario}")
-        
         response = client.models.generate_content(
             model='models/gemini-2.5-flash-lite',
-            contents="\n".join(contents),
+            contents=f"{contexto}Mensaje: {mensaje_usuario}",
             config=types.GenerateContentConfig(
-                system_instruction=SYSTEM_PROMPT_EQUIPOS.replace('__TC__', f'{obtener_tipo_cambio_usd():.2f}'),
-                temperature=0.1,
-                max_output_tokens=400     
+                system_instruction=SYSTEM_PROMPT_EQUIPOS_EXTRACTOR,
+                temperature=0,
+                max_output_tokens=300,
+                response_mime_type='application/json'
             )
         )
-        
-        respuesta = response.text
-        store_chat_reply('chat_history', historial, mensaje_usuario, respuesta)
-        
-        return jsonify({'reply': respuesta, 'status': 'success'})
-    
+
+        try:
+            datos = json.loads(response.text)
+            if not isinstance(datos, dict):
+                datos = {}
+        except (ValueError, TypeError):
+            datos = {}
+
+        intencion = datos.get('intencion', 'otro')
+        opciones = []
+
+        if intencion == 'compra':
+            respuesta = RESP_EQUIPOS_COMPRA
+        elif intencion == 'cotizar':
+            respuesta = RESP_EQUIPOS_COTIZAR
+        elif intencion == 'calcular':
+            respuesta, opciones = responder_equipo(datos)
+            if respuesta:
+                if not session.get('equipos_cta'):
+                    respuesta += "\nRegístralo en Nuevo Equipo."
+                    session['equipos_cta'] = True
+                session['equipos_ultimo'] = {k: datos.get(k) for k in EQUIPOS_CAMPOS_SESION}
+                session.modified = True
+            else:
+                respuesta = RESP_EQUIPOS_SIN_DATOS
+        else:
+            respuesta = RESP_EQUIPOS_OTRO
+
+        return jsonify({'reply': respuesta, 'opciones': opciones, 'status': 'success'})
+
     except Exception as e:
         current_app.logger.error(f"Error en chatbot equipos: {str(e)}")
         return jsonify({'error': str(e)}), 500
@@ -685,6 +822,8 @@ def chat_equipos():
 @chatbot_bp.route('/api/chat-equipos/reset', methods=['POST'])
 def reset_chat_equipos():
     session.pop('chat_history', None)
+    session.pop('equipos_ultimo', None)
+    session.pop('equipos_cta', None)
     return jsonify({'status': 'success'})
 
 # ==============================================================================

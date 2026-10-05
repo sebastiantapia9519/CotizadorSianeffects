@@ -615,6 +615,44 @@
         }
     }
 
+    /* Botones de respuesta rápida (Pocas / Normal / Muchas) */
+    .quick-replies {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-self: flex-start;
+        max-width: 100%;
+    }
+
+    .quick-reply-btn {
+        border: 1px solid var(--sian-primary);
+        background: #fff;
+        color: var(--sian-primary);
+        border-radius: 20px;
+        padding: 8px 14px;
+        min-height: 40px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.15s;
+    }
+
+    .quick-reply-btn:hover,
+    .quick-reply-btn:active {
+        background: var(--sian-primary);
+        color: #fff;
+    }
+
+    [data-bs-theme="dark"] .quick-reply-btn {
+        background: #1e293b;
+    }
+
+    [data-bs-theme="dark"] .quick-reply-btn:hover,
+    [data-bs-theme="dark"] .quick-reply-btn:active {
+        background: var(--sian-primary);
+        color: #fff;
+    }
+
     /* Evita que el fondo haga scroll detrás del chat en móvil */
     body.chat-panel-open {
         overflow: hidden;
@@ -843,46 +881,80 @@
         if (e.key === 'Escape' && chatAbierto) cerrarChatbot();
     });
 
-    chatSend.addEventListener('click', enviarMensaje);
+    chatSend.addEventListener('click', () => enviarMensaje());
     chatInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') enviarMensaje();
     });
 
-    function enviarMensaje() {
-        const mensaje = chatInput.value.trim();
+    // Quita los botones de respuesta rápida anteriores
+    function quitarOpciones() {
+        chatMessages.querySelectorAll('.quick-replies').forEach(el => el.remove());
+    }
+
+    // Dibuja los botones Pocas / Normal / Muchas debajo de la respuesta del bot
+    function mostrarOpciones(opciones) {
+        if (!Array.isArray(opciones) || opciones.length === 0) return;
+
+        const cont = document.createElement('div');
+        cont.className = 'quick-replies';
+
+        opciones.forEach(op => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'quick-reply-btn';
+            btn.textContent = op.label;
+            btn.addEventListener('click', () => enviarMensaje({ texto: op.label, usos_mes: op.usos_mes }));
+            cont.appendChild(btn);
+        });
+
+        chatMessages.appendChild(cont);
+        chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    // opcion (opcional): { texto, usos_mes } cuando el usuario toca un botón
+    function enviarMensaje(opcion) {
+        const esBoton = !!(opcion && opcion.usos_mes);
+        const mensaje = esBoton ? opcion.texto : chatInput.value.trim();
         if (!mensaje) return;
+
+        quitarOpciones();
 
         // Mostrar mensaje del usuario
         agregarMensaje(mensaje, 'user');
-        chatInput.value = '';
+        if (!esBoton) chatInput.value = '';
 
         // Mostrar indicador de "escribiendo..."
         const loadingId = agregarMensaje('Pensando...', 'bot', true);
+
+        const payload = esBoton ? { message: mensaje, usos_mes: opcion.usos_mes } : { message: mensaje };
 
         // Llamar al backend
         fetch('/api/chat-equipos', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: mensaje })
+            body: JSON.stringify(payload)
         })
             .then(r => r.json())
             .then(data => {
                 // Quitar el "pensando..."
-                document.getElementById(loadingId).remove();
+                const loading = document.getElementById(loadingId);
+                if (loading) loading.remove();
 
                 if (data.reply) {
                     agregarMensaje(data.reply, 'bot');
+                    mostrarOpciones(data.opciones);
                 } else {
                     agregarMensaje('❌ Hubo un error, intenta de nuevo.', 'bot');
                 }
             })
             .catch(() => {
-                document.getElementById(loadingId).remove();
+                const loading = document.getElementById(loadingId);
+                if (loading) loading.remove();
                 agregarMensaje('❌ No pude conectar con el servidor.', 'bot');
             });
     }
 
-        let contadorMensajes = 0;
+    let contadorMensajes = 0;
 
     function escaparHtml(t) {
         return String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
