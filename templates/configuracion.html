@@ -1517,7 +1517,7 @@
                                         <div class="form-group-modern">
                                             <label class="form-label-modern">Slogan o Giro</label>
                                             <input type="text" name="slogan" id="inputSlogan" class="form-input-modern"
-                                                value="{{ config['slogan'] }}" placeholder="Soluciones creativas">
+                                                 value="{{ config.get('slogan', '') }}" placeholder="Soluciones creativas">
                                         </div>
                                     </div>
                                     <div class="col-12">
@@ -2638,15 +2638,84 @@
                 </h6>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body p-4 text-center">
-                <div class="form-group-modern text-start">
+            <div class="modal-body p-4">
+                <div class="form-group-modern text-start mb-0">
                     <label class="form-label-modern">Enlace o Texto</label>
-                    <input type="text" id="qrInputText" class="form-input-modern" placeholder="Ej. https://tu-enlace.com o texto libre" oninput="generarQR()">
+                    <input type="text" id="qrInputText" class="form-input-modern" placeholder="Ej. https://tu-enlace.com o texto" oninput="generarQR()">
+                </div>
+
+                <!-- Toggle Básico / Pro -->
+                <div class="toggle-row px-3 py-2 mt-3 mb-2 rounded-3 border">
+                    <div class="toggle-info">
+                        <div class="toggle-title m-0"><i class="fas fa-star text-warning me-2"></i>Diseño PRO</div>
+                    </div>
+                    <div class="toggle-switch">
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" id="qrProSwitch" onchange="toggleQrPro()">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opciones PRO (Ocultas por defecto) -->
+                <div id="qrProOptions" class="d-none text-start p-3 bg-light rounded-3 border mb-3">
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <label class="form-label-modern" style="font-size: 0.75rem;">Color QR</label>
+                            <input type="color" id="qrColor" class="form-control form-control-color w-100 p-1" value="#111827" onchange="generarQR()">
+                        </div>
+                        <div class="col-6">
+                            <label class="form-label-modern" style="font-size: 0.75rem;">Color Fondo</label>
+                            <input type="color" id="qrBgColor" class="form-control form-control-color w-100 p-1" value="#ffffff" onchange="generarQR()">
+                        </div>
+                        <div class="col-12 mt-2">
+                            <label class="form-label-modern" style="font-size: 0.75rem;">Estilo de Marco</label>
+                            <select id="qrFrameStyle" class="form-input-modern py-1 px-2" style="height: 35px;" onchange="generarQR()">
+                                <option value="bottom">Caja con Texto Inferior</option>
+                                <option value="border">Borde Simple Completo</option>
+                            </select>
+                        </div>
+                        <div class="col-8 mt-2">
+                            <label class="form-label-modern" style="font-size: 0.75rem;">Texto</label>
+                            <input type="text" id="qrText" class="form-input-modern py-1 px-2" style="height: 35px;" value="SCAN ME" oninput="generarQR()" maxlength="15">
+                        </div>
+                        <div class="col-4 mt-2">
+                            <label class="form-label-modern" style="font-size: 0.75rem;">Color Marco</label>
+                            <input type="color" id="qrFrameColor" class="form-control form-control-color w-100 p-1" value="#ff4a5a" onchange="generarQR()">
+                        </div>
+                        <!-- Nuevas opciones de formas debajo de los colores -->
+                        <div class="col-12 mt-2 border-top pt-2">
+                            <label class="form-label-modern fw-bold text-primary" style="font-size: 0.75rem;">Estilo del Patrón</label>
+                        </div>
+                        <div class="col-4 mt-1">
+                            <label class="form-label-modern" style="font-size: 0.75rem;">Cuerpo</label>
+                            <select id="qrBodyShape" class="form-input-modern py-1 px-2 w-100" style="height: 35px;" onchange="generarQR()">
+                                <option value="square">Cuadrados</option>
+                                <option value="dots">Puntos</option>
+                                <option value="rounded">Redondeados</option>
+                                <option value="classy">Elegante</option>
+                            </select>
+                        </div>
+                        <div class="col-4 mt-1">
+                            <label class="form-label-modern" style="font-size: 0.75rem;">Marco del Ojo</label>
+                            <select id="qrEyeFrame" class="form-input-modern py-1 px-2 w-100" style="height: 35px;" onchange="generarQR()">
+                                <option value="square">Cuadrado</option>
+                                <option value="extra-rounded">Curvo</option>
+                                <option value="dot">Punto</option>
+                            </select>
+                        </div>
+                        <div class="col-4 mt-1">
+                            <label class="form-label-modern" style="font-size: 0.75rem;">Ojo Interno</label>
+                            <select id="qrEyeDot" class="form-input-modern py-1 px-2 w-100" style="height: 35px;" onchange="generarQR()">
+                                <option value="square">Cuadrado</option>
+                                <option value="dot">Punto</option>
+                            </select>
+                        </div>
+                    </div>
                 </div>
                 
-                <div class="mt-4 p-3 border rounded-3 bg-light d-flex justify-content-center align-items-center" style="min-height: 280px;">
-                    <canvas id="qrCanvas" style="display: none; border-radius: 8px; max-width: 100%;"></canvas>
-                    <span id="qrPlaceholder" class="text-muted small">
+                <div class="mt-3 p-3 border rounded-3 bg-light d-flex justify-content-center align-items-center" style="min-height: 280px;">
+                    <canvas id="qrCanvas" style="display: none; max-width: 100%; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border-radius: 16px;"></canvas>
+                    <span id="qrPlaceholder" class="text-muted small text-center">
                         <i class="fas fa-image fa-2x mb-2 d-block opacity-50"></i>
                         Ingresa un texto arriba
                     </span>
@@ -2663,7 +2732,7 @@
 </div>
 
 <!-- Librería para generar el QR sin internet/backend -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
@@ -2700,9 +2769,9 @@
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
-                        modulo: 'configuracion',
-                        version: {{ version_tour | default(1)
-                }}
+                    modulo: 'configuracion',
+                    version: {{ version_tour | default(1) }}
+                })
         })
     }).catch (e => console.error("Error guardando tutorial:", e));
     {% endif %}
@@ -2760,7 +2829,7 @@
         if (hash) {
             let activeTab = document.querySelector(`a[href="${hash}"]`);
             if (activeTab) {
-                bootstrap.ListGroup.getOrCreateInstance(activeTab).show();
+                bootstrap.Tab.getOrCreateInstance(activeTab).show();
             }
         }
 
@@ -3370,35 +3439,287 @@
     // ============================================
     // UTILIDADES: GENERADOR DE QR
     // ============================================
+
     let qrInstance;
 
-    function generarQR() {
+    async function generarQR() {
+
         const input = document.getElementById('qrInputText').value.trim();
         const canvas = document.getElementById('qrCanvas');
         const placeholder = document.getElementById('qrPlaceholder');
         const btnCopy = document.getElementById('btnCopiarQR');
 
-        if (input) {
-            canvas.style.display = 'block';
-            placeholder.style.display = 'none';
-            btnCopy.disabled = false;
-            
-            if (!qrInstance) {
-                qrInstance = new QRious({
-                    element: canvas,
-                    size: 250,
-                    value: input,
-                    backgroundAlpha: 0, // Transparente opcional
-                    foreground: '#111827' // Color oscuro del tema
-                });
-            } else {
-                qrInstance.value = input;
-            }
-        } else {
+        const isPro = document.getElementById('qrProSwitch').checked;
+
+        const qrColor = document.getElementById('qrColor').value;
+        const qrBgColor = document.getElementById('qrBgColor').value;
+        const frameStyle = document.getElementById('qrFrameStyle').value;
+        const frameText = document.getElementById('qrText').value.toUpperCase();
+        const frameColor = document.getElementById('qrFrameColor').value;
+
+        const bodyShape = document.getElementById('qrBodyShape')?.value || 'square';
+        const eyeFrame = document.getElementById('qrEyeFrame')?.value || 'square';
+        const eyeDot = document.getElementById('qrEyeDot')?.value || 'square';
+
+        // Si no hay texto, regresar al placeholder
+        if (!input) {
+
             canvas.style.display = 'none';
             placeholder.style.display = 'block';
             btnCopy.disabled = true;
+
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            return;
         }
+
+        try {
+
+            canvas.style.display = 'block';
+            placeholder.style.display = 'none';
+            btnCopy.disabled = false;
+
+            const baseQrSize = 200;
+
+            // ============================================
+            // CREAR QR
+            // ============================================
+
+            const qrCode = new QRCodeStyling({
+
+                width: baseQrSize,
+                height: baseQrSize,
+
+                // IMPORTANTE:
+                // Le indicamos explícitamente que queremos CANVAS
+                type: "canvas",
+
+                data: input,
+
+                margin: 5,
+
+                dotsOptions: {
+                    color: isPro ? qrColor : '#111827',
+                    type: isPro ? bodyShape : 'square'
+                },
+
+                backgroundOptions: {
+                    color: isPro ? qrBgColor : '#ffffff'
+                },
+
+                cornersSquareOptions: {
+                    color: isPro ? qrColor : '#111827',
+                    type: isPro ? eyeFrame : 'square'
+                },
+
+                cornersDotOptions: {
+                    color: isPro ? qrColor : '#111827',
+                    type: isPro ? eyeDot : 'square'
+                }
+
+            });
+
+            // ============================================
+            // OBTENER EL QR COMO IMAGEN
+            // ============================================
+
+            const blob = await qrCode.getRawData("png");
+
+            if (!blob) {
+                throw new Error("No se pudo obtener la imagen del QR.");
+            }
+
+            // Convertimos el Blob en una imagen
+            const imageUrl = URL.createObjectURL(blob);
+
+            const qrImage = new Image();
+
+            await new Promise((resolve, reject) => {
+
+                qrImage.onload = resolve;
+
+                qrImage.onerror = () => {
+                    reject(new Error("No se pudo cargar la imagen del QR."));
+                };
+
+                qrImage.src = imageUrl;
+
+            });
+
+            const ctx = canvas.getContext('2d');
+
+            // ============================================
+            // QR BÁSICO
+            // ============================================
+
+            if (!isPro) {
+
+                canvas.width = baseQrSize;
+                canvas.height = baseQrSize;
+
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                ctx.drawImage(
+                    qrImage,
+                    0,
+                    0,
+                    baseQrSize,
+                    baseQrSize
+                );
+
+            }
+
+            // ============================================
+            // QR PRO
+            // ============================================
+
+            else {
+
+                // ----------------------------------------
+                // MARCO INFERIOR
+                // ----------------------------------------
+
+                if (frameStyle === 'bottom') {
+
+                    canvas.width = 260;
+                    canvas.height = 320;
+
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                    // Fondo del marco
+                    ctx.fillStyle = frameColor;
+
+                    ctx.beginPath();
+
+                    ctx.roundRect(
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height,
+                        20
+                    );
+
+                    ctx.fill();
+
+                    // Fondo interno
+                    ctx.fillStyle = qrBgColor;
+
+                    ctx.beginPath();
+
+                    ctx.roundRect(
+                        10,
+                        10,
+                        240,
+                        240,
+                        12
+                    );
+
+                    ctx.fill();
+
+                    // QR
+                    ctx.drawImage(
+                        qrImage,
+                        30,
+                        30,
+                        baseQrSize,
+                        baseQrSize
+                    );
+
+                    // Texto
+                    ctx.fillStyle = '#ffffff';
+
+                    ctx.font = 'bold 24px "Nunito", sans-serif';
+
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+
+                    ctx.fillText(
+                        frameText,
+                        canvas.width / 2,
+                        285
+                    );
+
+                }
+
+                // ----------------------------------------
+                // BORDE COMPLETO
+                // ----------------------------------------
+
+                else if (frameStyle === 'border') {
+
+                    canvas.width = 260;
+                    canvas.height = 260;
+
+                    ctx.clearRect(
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height
+                    );
+
+                    // Marco
+                    ctx.fillStyle = frameColor;
+
+                    ctx.beginPath();
+
+                    ctx.roundRect(
+                        0,
+                        0,
+                        canvas.width,
+                        canvas.height,
+                        20
+                    );
+
+                    ctx.fill();
+
+                    // Fondo interno
+                    ctx.fillStyle = qrBgColor;
+
+                    ctx.beginPath();
+
+                    ctx.roundRect(
+                        15,
+                        15,
+                        230,
+                        230,
+                        12
+                    );
+
+                    ctx.fill();
+
+                    // QR
+                    ctx.drawImage(
+                        qrImage,
+                        30,
+                        30,
+                        baseQrSize,
+                        baseQrSize
+                    );
+
+                }
+
+            }
+
+            // Liberamos la URL temporal
+            URL.revokeObjectURL(imageUrl);
+
+        } catch (error) {
+
+            console.error("Error generando QR:", error);
+
+            canvas.style.display = 'none';
+            placeholder.style.display = 'block';
+            btnCopy.disabled = true;
+
+            Swal.fire({
+                icon: 'error',
+                title: 'No se pudo generar el QR',
+                text: 'Ocurrió un error al generar la imagen. Revisa la consola para más detalles.'
+            });
+
+        }
+
     }
 
     function copiarQR() {
@@ -3427,6 +3748,20 @@
                 Swal.fire('Ups', 'Haz clic derecho sobre la imagen (o mantén presionado) para copiarla.', 'info');
             }
         });
+    }
+
+    // ============================================
+    // UTILIDADES: GENERADOR DE QR (VERSIÓN PRO)
+    // ============================================
+    function toggleQrPro() {
+        const isPro = document.getElementById('qrProSwitch').checked;
+        const panelPro = document.getElementById('qrProOptions');
+        if (isPro) {
+            panelPro.classList.remove('d-none');
+        } else {
+            panelPro.classList.add('d-none');
+        }
+        generarQR(); // Regenerar para aplicar o quitar formato
     }
 </script>
 {% endblock %}
