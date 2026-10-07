@@ -1312,6 +1312,7 @@
 {% endblock %}
 
 {% block content %}
+{% set qr_habilitado = (usuario['role'] >= 1) or session.get('is_pro_active') %}
 <!-- Header mejorado -->
 <div class="config-container">
     <div class="config-header">
@@ -2323,10 +2324,10 @@
                         <div class="card-body-modern text-center py-5">
                             <div class="row justify-content-center">
                                 <div class="col-md-6">
-                                    <div class="p-4 border rounded-4 bg-light text-center" style="cursor: pointer; transition: all 0.2s ease;" data-bs-toggle="modal" data-bs-target="#modalQR" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
+                                    <div class="p-4 border rounded-4 bg-light text-center" style="cursor: pointer; transition: all 0.2s ease;" data-bs-toggle="modal" data-bs-target="{{ '#modalQR' if qr_habilitado else '#modalRenovacion' }}" onmouseover="this.style.transform='scale(1.02)'" onmouseout="this.style.transform='scale(1)'">
                                         <i class="fas fa-qrcode fa-3x text-primary mb-3"></i>
-                                        <h6 class="fw-bold">Generador de QR</h6>
-                                        <p class="text-muted small mb-0">Crea códigos QR al instante para links, Wi-Fi o textos. Listo para copy-paste.</p>
+                                        <h6 class="fw-bold">Generador de QR{% if not qr_habilitado %} <span class="badge bg-warning text-dark ms-1"><i class="fas fa-lock me-1"></i>PRO</span>{% endif %}</h6>
+                                        <p class="text-muted small mb-0">{% if qr_habilitado %}Crea códigos QR al instante para links, Wi-Fi o textos. Listo para copy-paste.{% else %}Disponible con suscripción activa. Toca para ver los planes.{% endif %}</p>
                                     </div>
                                 </div>
                             </div>
@@ -2628,6 +2629,7 @@
     </div>
 </div>
 
+{% if qr_habilitado %}
 <!-- Modal: Generador de QR -->
 <div class="modal fade" id="modalQR" tabindex="-1">
     <div class="modal-dialog modal-dialog-centered">
@@ -2733,12 +2735,15 @@
 
 <!-- Librería para generar el QR sin internet/backend -->
 <script src="https://cdn.jsdelivr.net/npm/qr-code-styling@1.5.0/lib/qr-code-styling.js"></script>
+{% endif %}
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <script>
     // ============================================
     // FUNCIONES DE TOGGLE COLAPSABLES
     // ============================================
+    const QR_HABILITADO = {{ 'true' if qr_habilitado else 'false' }};
+
     function toggleCollapsible(header) {
         const body = header.nextElementSibling;
         const arrow = header.querySelector('.collapsible-arrow');
@@ -2773,7 +2778,7 @@
                     version: {{ version_tour | default(1) }}
                 })
         })
-    }).catch (e => console.error("Error guardando tutorial:", e));
+    .catch (e => console.error("Error guardando tutorial:", e));
     {% endif %}
         },
     steps: [
@@ -3443,6 +3448,7 @@
     let qrInstance;
 
     async function generarQR() {
+        if (!QR_HABILITADO) return;
 
         const input = document.getElementById('qrInputText').value.trim();
         const canvas = document.getElementById('qrCanvas');
@@ -3723,6 +3729,7 @@
     }
 
     function copiarQR() {
+        if (!QR_HABILITADO) return;
         const canvas = document.getElementById('qrCanvas');
         const btnCopy = document.getElementById('btnCopiarQR');
         
@@ -3754,6 +3761,7 @@
     // UTILIDADES: GENERADOR DE QR (VERSIÓN PRO)
     // ============================================
     function toggleQrPro() {
+        if (!QR_HABILITADO) return;
         const isPro = document.getElementById('qrProSwitch').checked;
         const panelPro = document.getElementById('qrProOptions');
         if (isPro) {

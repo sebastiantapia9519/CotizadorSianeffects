@@ -8,6 +8,8 @@ from db import get_db_connection as get_db
 from services.mail_service import enviar_correo_sian
 from utils.datetime_utils import now_utc
 from datetime import timedelta, timezone, datetime
+import json
+import urllib.request
 
 # Registramos el Blueprint para segmentar la lógica de pagos
 payments_bp = Blueprint('payments', __name__)
@@ -15,6 +17,45 @@ payments_bp = Blueprint('payments', __name__)
 # Configuración de llaves de Stripe
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET') 
+
+
+def notificar_admin(texto):
+    """Envía un aviso a Telegram. Nunca debe romper el webhook."""
+    token = os.getenv('TELEGRAM_BOT_TOKEN')
+    chat_id = os.getenv('TELEGRAM_CHAT_ID')
+    if not token or not chat_id:
+        return
+    try:
+        data = json.dumps({'chat_id': chat_id, 'text': texto}).encode('utf-8')
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data=data,
+            headers={'Content-Type': 'application/json'}
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        current_app.logger.error(f"NOTIFY_ERROR: {e}")
+
+
+def obtener_cupon_usado(session_id):
+    """Devuelve el código de promoción (o cupón) usado en un Checkout, o None."""
+    try:
+        sesion = stripe.checkout.Session.retrieve(session_id, expand=['total_details.breakdown'])
+        for d in (sesion.total_details.breakdown.discounts or []):
+            disc = d.discount
+            promo = getattr(disc, 'promotion_code', None)
+            if promo:
+                promo_id = promo if isinstance(promo, str) else promo.id
+                return stripe.PromotionCode.retrieve(promo_id).code
+            source = getattr(disc, 'source', None)
+            coupon = getattr(source, 'coupon', None) if source else None
+            if coupon:
+                coupon_id = coupon if isinstance(coupon, str) else coupon.id
+                cp = stripe.Coupon.retrieve(coupon_id)
+                return cp.name or coupon_id
+    except Exception as e:
+        current_app.logger.error(f"COUPON_LOOKUP_ERROR: {e}")
+    return None
 
 
 def get_invoice_subscription_id(invoice_obj):
@@ -144,7 +185,8 @@ def webhook():
             stripe_subscription_id = session_obj.subscription 
             
             if user_id:
-                procesar_pago_exitoso(user_id, plan, stripe_session_id, stripe_customer_id, stripe_subscription_id)
+                cupon = obtener_cupon_usado(stripe_session_id)
+                procesar_pago_exitoso(user_id, plan, stripe_session_id, stripe_customer_id, stripe_subscription_id, monto=(session_obj.amount_total or 0) / 100, cupon=cupon)
         except Exception as e:
             current_app.logger.error(f"Falta un dato clave en webhook checkout.session.completed: {e}")
 
@@ -183,7 +225,7 @@ def webhook():
 # =============================================================================
 # FUNCIONES DE LÓGICA DE NEGOCIO Y BASE DE DATOS
 # =============================================================================
-def procesar_pago_exitoso(user_id, plan, stripe_session_id, stripe_customer_id, stripe_subscription_id):
+def procesar_pago_exitoso(user_id, plan, stripe_session_id, stripe_customer_id, stripe_subscription_id, monto=None, cupon=None):
     """
     Activa al usuario y guarda el ID exacto de la nueva suscripción de Stripe en la BD.
     """
@@ -239,6 +281,16 @@ def procesar_pago_exitoso(user_id, plan, stripe_session_id, stripe_customer_id, 
             
             current_app.logger.info(f"PAYMENT_SUCCESS: Usuario {user_id} actualizado a PRO ({plan}).")
 
+            monto_txt = f"${monto:,.2f} MXN" if monto is not None else "—"
+            notificar_admin(
+                f"💰 Nueva suscripción PRO ({plan})\n"
+                f"Usuario: {user['username']} (ID {user_id})\n"
+                f"Email: {user['email']}\n"
+                f"Monto: {monto_txt}\n"
+                f"Cupón: {cupon or 'ninguno'}\n"
+                f"Vigente hasta: {nueva_fecha.strftime('%d/%m/%Y')}"
+            )
+
     except Exception as e:
         if conn: conn.rollback()
         current_app.logger.error(f"PAYMENT_PROCESS_ERROR para usuario {user_id}: {e}")
@@ -273,6 +325,7 @@ def procesar_cancelacion(stripe_customer_id, stripe_subscription_id):
 
             conn.commit()
             current_app.logger.info(f"SUBSCRIPTION_DELETED: El usuario {user['id']} ha cancelado su suscripción.")
+            notificar_admin(f"❌ Cancelación\nUsuario: {user['username']} (ID {user['id']})\nEmail: {user['email']}")
         else:
             current_app.logger.info(f"IGNORADO: Cancelación de una suscripción antigua para customer {stripe_customer_id}")
 
@@ -309,6 +362,7 @@ def procesar_pago_fallido(stripe_customer_id, stripe_subscription_id):
 
             conn.commit()
             current_app.logger.info(f"PAYMENT_FAILED: Cobro fallido para usuario {user['id']}.")
+            notificar_admin(f"⚠️ Pago fallido\nUsuario: {user['username']} (ID {user['id']})\nEmail: {user['email']}")
 
             enviar_correo_sian(
                 subject="💳 Acción Requerida: Problema con tu pago de Sianeffects",
@@ -357,6 +411,16 @@ def procesar_resurreccion(stripe_customer_id, invoice_obj, stripe_subscription_i
 
             conn.commit()
             current_app.logger.info(f"RESURRECTION: Usuario {user['id']} renovado automáticamente hasta {nueva_fecha_fin}.")
+
+            if getattr(invoice_obj, 'billing_reason', None) == 'subscription_cycle':
+                monto_renov = (getattr(invoice_obj, 'amount_paid', 0) or 0) / 100
+                notificar_admin(
+                    f"🔄 Renovación PRO\n"
+                    f"Usuario: {user['username']} (ID {user['id']})\n"
+                    f"Email: {user['email']}\n"
+                    f"Monto: ${monto_renov:,.2f} MXN\n"
+                    f"Vigente hasta: {nueva_fecha_fin.strftime('%d/%m/%Y')}"
+                )
         else:
              current_app.logger.info(f"IGNORADO: Pago exitoso de una suscripción antigua para customer {stripe_customer_id}")
 
