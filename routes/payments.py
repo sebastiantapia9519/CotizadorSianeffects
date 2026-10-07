@@ -16,6 +16,30 @@ payments_bp = Blueprint('payments', __name__)
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
 endpoint_secret = os.getenv('STRIPE_WEBHOOK_SECRET') 
 
+
+def get_invoice_subscription_id(invoice_obj):
+    """
+    Obtiene el ID de suscripción de una Invoice sin importar la versión de API.
+    - API >= 2025-03-31 (basil): invoice.parent.subscription_details.subscription
+    - API anterior: invoice.subscription
+    Devuelve None si la factura no pertenece a una suscripción.
+    """
+    try:
+        sub = invoice_obj.parent.subscription_details.subscription
+        if sub:
+            return sub if isinstance(sub, str) else sub.id
+    except (AttributeError, KeyError, TypeError):
+        pass
+
+    try:
+        sub = invoice_obj.subscription
+        if sub:
+            return sub if isinstance(sub, str) else sub.id
+    except (AttributeError, KeyError, TypeError):
+        pass
+
+    return None
+
 # =============================================================================
 # CREAR SESIÓN DE PAGO (CHECKOUT)
 # =============================================================================
@@ -46,8 +70,8 @@ def create_checkout_session():
             subs = stripe.Subscription.list(customer=customer_id, status='all', limit=5)
             
             for sub in subs.data:
-                # Si encontramos una suscripción que está activa, atrasada o sin pagar
-                if sub.status in ['active', 'past_due', 'unpaid']:
+                # Si encontramos una suscripción que está activa, en prueba, atrasada o sin pagar
+                if sub.status in ['active', 'trialing', 'past_due', 'unpaid']:
                     current_app.logger.info(f"Usuario {user_id} intentó duplicar suscripción. Redirigiendo al portal de facturación.")
                     # Lo mandamos directo al Portal de Facturación para que arregle su pago actual
                     portal_session = stripe.billing_portal.Session.create(
@@ -135,8 +159,11 @@ def webhook():
     elif event.type == 'invoice.payment_failed':
         invoice_obj = event.data.object
         stripe_customer_id = invoice_obj.customer
-        stripe_subscription_id = invoice_obj.subscription 
-        procesar_pago_fallido(stripe_customer_id, stripe_subscription_id)
+        stripe_subscription_id = get_invoice_subscription_id(invoice_obj)
+        if stripe_subscription_id:
+            procesar_pago_fallido(stripe_customer_id, stripe_subscription_id)
+        else:
+            current_app.logger.info(f"IGNORADO: invoice.payment_failed sin suscripción asociada (customer {stripe_customer_id}).")
 
     # 4. Pago recurrente exitoso (Renovación)
     elif event.type == 'invoice.paid':
@@ -145,8 +172,11 @@ def webhook():
         
         if invoice_obj.billing_reason in motivos_validos:
             stripe_customer_id = invoice_obj.customer
-            stripe_subscription_id = invoice_obj.subscription 
-            procesar_resurreccion(stripe_customer_id, invoice_obj, stripe_subscription_id)
+            stripe_subscription_id = get_invoice_subscription_id(invoice_obj)
+            if stripe_subscription_id:
+                procesar_resurreccion(stripe_customer_id, invoice_obj, stripe_subscription_id)
+            else:
+                current_app.logger.info(f"IGNORADO: invoice.paid sin suscripción asociada (customer {stripe_customer_id}).")
 
     return jsonify(success=True)
 
