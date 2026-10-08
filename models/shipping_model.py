@@ -7,41 +7,45 @@ class ShippingModel:
     def get_config(user_id):
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT * FROM shipping_configs WHERE user_id = %s", (user_id,)
-        )
-        config = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return config
+        try:
+            cursor.execute(
+                "SELECT * FROM shipping_configs WHERE user_id = %s", (user_id,)
+            )
+            return cursor.fetchone()
+        finally:
+            cursor.close()
+            conn.close()
 
     @staticmethod
     def get_rate_for_zone(zone_id, weight):
         """Busca la tarifa adecuada para el peso y zona"""
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Buscamos la tarifa donde el peso máximo sea mayor o igual al peso del paquete
-        # Ordenamos por peso para agarrar la más cercana (la más barata que cubra el peso)
-        cursor.execute("""
-            SELECT * FROM shipping_rates 
-            WHERE zone_id = %s AND max_weight_kg >= %s
-            ORDER BY max_weight_kg ASC
-            LIMIT 1
-        """, (zone_id, weight))
-        rate = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return rate
+        try:
+            # Buscamos la tarifa donde el peso máximo sea mayor o igual al peso del paquete
+            # Ordenamos por peso para agarrar la más cercana (la más barata que cubra el peso)
+            cursor.execute("""
+                SELECT * FROM shipping_rates 
+                WHERE zone_id = %s AND max_weight_kg >= %s
+                ORDER BY max_weight_kg ASC
+                LIMIT 1
+            """, (zone_id, weight))
+            return cursor.fetchone()
+        finally:
+            cursor.close()
+            conn.close()
 
     @staticmethod
     def get_zone_by_state(user_id, state_code):
         """Busca en qué zona está un estado (ej: 'NL')"""
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM shipping_zones WHERE user_id = %s", (user_id,))
-        zones = cursor.fetchall()
-        cursor.close()
-        conn.close()
+        try:
+            cursor.execute("SELECT * FROM shipping_zones WHERE user_id = %s", (user_id,))
+            zones = cursor.fetchall()
+        finally:
+            cursor.close()
+            conn.close()
         
         for zone in zones:
             try:

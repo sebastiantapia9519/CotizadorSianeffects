@@ -133,144 +133,155 @@ def get_pool():
 # SECCIÓN 2: WRAPPER DE CONEXIÓN
 # ================================================================================
 """
-Este wrapper es un "patrón de diseño" que permite que nuestro código Flask
-trate la conexión del pool como si fuera una conexión normal de psycopg2.
+Simula una conexión psycopg2 normal pero usa el pool.
 
-La magia: cuando llamamos a conn.close(), en lugar de destruir la conexión,
-la devuelve al pool para que otro request la reutilice.
-
-Esto es crítico para rendimiento: crear/destruir conexiones es lento.
-Reutilizarlas es rápido.
+Protecciones contra fugas:
+  - close() es idempotente (se puede llamar 2 veces sin romper el pool).
+  - __del__ y __exit__ devuelven la conexión si alguien olvidó cerrarla.
+  - Cada wrapper creado dentro de un request se registra en flask.g y se
+    devuelve en teardown_appcontext (ver init_db_teardown) aunque la ruta falle.
+  - getconn espera hasta POOL_WAIT_SECONDS si el pool está lleno.
+  - Si la conexión del pool está muerta, se descarta y se pide otra.
 """
+
+import time
+import logging
+from flask import g, has_app_context, has_request_context, request
+
+_log = logging.getLogger(__name__)
+
+POOL_WAIT_SECONDS = 5.0
+POOL_WAIT_STEP = 0.05
+
+
+def _acquire_conn(p):
+    """Obtiene una conexión viva del pool; espera un poco si está agotado."""
+    deadline = time.monotonic() + POOL_WAIT_SECONDS
+    while True:
+        try:
+            conn = p.getconn()
+        except psycopg2.pool.PoolError:
+            if time.monotonic() >= deadline:
+                _log.error("DB_POOL_EXHAUSTED: sin conexiones libres tras %.1fs", POOL_WAIT_SECONDS)
+                raise
+            time.sleep(POOL_WAIT_STEP)
+            continue
+
+        if conn.closed:
+            # Conexión muerta (cerrada por el servidor): descartarla y pedir otra
+            p.putconn(conn, close=True)
+            continue
+        return conn
 
 
 class PooledConnectionWrapper:
     """
-    Simula una conexión PostgreSQL normal, pero internamente usa el pool.
-    
-    Ejemplo de uso:
-        conn = get_db_connection()  # Obtiene conexión del pool
-        cursor = conn.cursor()       # Crea cursor
-        cursor.execute("SELECT ...")
-        conn.commit()                # Commit
-        conn.close()                 # ← Devuelve al pool (no destruye)
-    
-    Atributos privados (prefijo _):
-        _pool: referencia al pool global
-        _conn: conexión actual obtenida del pool
+    Uso (igual que antes):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        ...
+        conn.commit()
+        conn.close()   # devuelve al pool
+
+    También soporta:
+        with get_db_connection() as conn:
+            ...
     """
-    
-    def __init__(self, pool):
-        """
-        Inicializa el wrapper obteniendo una conexión del pool.
-        
-        Args:
-            pool: psycopg2.pool.ThreadedConnectionPool
-        """
-        self._pool = pool
-        # getconn() OBTIENE una conexión viva (o espera si todas están en uso)
-        self._conn = pool.getconn()
-    
-    def cursor(self, *args, **kwargs):
-        """
-        Crea un cursor desde la conexión del pool.
-        
-        Los argumentos se pasan tal cual a psycopg2.connection.cursor()
-        Ejemplo: cursor(cursor_factory=RealDictCursor)
-        
-        Returns:
-            psycopg2.extensions.cursor: Cursor listo para ejecutar queries
-        """
-        return self._conn.cursor(*args, **kwargs)
-    
-    def commit(self):
-        """
-        Confirma los cambios en la base de datos.
-        
-        Sin esto, los INSERTs/UPDATEs/DELETEs se revierten automáticamente.
-        
-        Ejemplo:
-            cursor.execute("UPDATE usuarios SET nombre = %s", (name,))
-            conn.commit()  # ← Guardar cambios de verdad
-        """
-        self._conn.commit()
-    
-    def rollback(self):
-        """
-        Deshace los cambios desde el último commit.
-        
-        Útil si algo falla a mitad de una transacción.
-        
-        Ejemplo:
+
+    def __init__(self, p):
+        self._pool = p
+        self._conn = None
+        self._origin = request.path if has_request_context() else 'sin-request'
+        self._conn = _acquire_conn(p)
+
+        # Red de seguridad: se devolverá al terminar el request/app context
+        if has_app_context():
             try:
-                cursor.execute("INSERT ...")
-                cursor.execute("UPDATE ...")
-                conn.commit()
-            except Exception as e:
-                conn.rollback()  # Undo de ambas queries
-                raise
-        """
-        self._conn.rollback()
-    
+                g.setdefault('_pooled_conns', []).append(self)
+            except Exception:
+                pass
+
+    def _get(self):
+        if self._conn is None:
+            raise psycopg2.InterfaceError("La conexión ya fue devuelta al pool")
+        return self._conn
+
+    def cursor(self, *args, **kwargs):
+        return self._get().cursor(*args, **kwargs)
+
+    def commit(self):
+        self._get().commit()
+
+    def rollback(self):
+        self._get().rollback()
+
     def close(self):
-        """
-        Devuelve la conexión al pool (NO la destruye).
-        
-        Esto es la magia del wrapper. En lugar de:
-            self._conn.close()  # ← Destruir (lento)
-        
-        Hacemos:
-            self._pool.putconn(self._conn)  # ← Devolver al pool (rápido)
-        
-        La siguiente request reutilizará esta misma conexión en milisegundos.
-        """
-        self._pool.putconn(self._conn)
+        """Devuelve la conexión al pool. Seguro de llamar varias veces."""
+        conn = self.__dict__.get('_conn')
+        if conn is None:
+            return
+        self._conn = None
+        try:
+            if not conn.closed:
+                conn.rollback()  # no-op si ya hubo commit; limpia transacciones abortadas
+        except Exception:
+            pass
+        try:
+            self._pool.putconn(conn, close=bool(conn.closed))
+        except Exception as e:
+            _log.warning("DB_PUTCONN_ERROR: %s", e)
+
+    def __getattr__(self, name):
+        # Delegar atributos no definidos (autocommit, closed, etc.) a la conexión real
+        conn = self.__dict__.get('_conn')
+        if conn is None:
+            raise AttributeError(name)
+        return getattr(conn, name)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.close()
+        return False
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
+
+
+def init_db_teardown(app):
+    """
+    Registra en la app la devolución automática de conexiones olvidadas.
+    Llamar UNA vez en app.py después de crear `app`:
+        from db import init_db_teardown
+        init_db_teardown(app)
+    """
+    @app.teardown_appcontext
+    def _release_pooled_conns(exc):
+        conns = g.pop('_pooled_conns', None)
+        if not conns:
+            return
+        for w in conns:
+            if w.__dict__.get('_conn') is not None:
+                app.logger.warning(f"DB_LEAK_RECUPERADO: conexión sin cerrar creada en '{w._origin}'")
+                w.close()
 
 
 # ================================================================================
 # SECCIÓN 3: FUNCIÓN PRINCIPAL DE CONEXIÓN
 # ================================================================================
-"""
-Esta es la función que usarás en TODAS tus rutas Flask:
-
-    @app.route('/api/ventas')
-    def get_ventas():
-        conn = get_db_connection()  # ← UNA LÍNEA
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM ventas WHERE user_id = %s", (user_id,))
-        resultado = cursor.fetchall()
-        conn.close()  # Devuelve al pool automáticamente
-        return jsonify(resultado)
-"""
-
 
 def get_db_connection():
     """
     Obtiene una conexión reutilizable del pool.
-    
-    Esta es la función que importarás en tu app Flask:
-        from db import get_db_connection
-        
-    Uso recomendado:
-        1. conn = get_db_connection()
-        2. cursor = conn.cursor()
-        3. cursor.execute(...)
-        4. conn.commit()
-        5. conn.close()  # Devuelve al pool
-    
+
     Returns:
-        PooledConnectionWrapper: Conexión que simula psycopg2.connection
-        
-    Ventajas:
-        - Rápido: conexión reutilizada del pool (~1-5ms)
-        - Seguro: thread-safe, funciona en Flask con múltiples threads
-        - Simple: misma API que psycopg2 normal
-    
-    Nota: NUNCA hagas conn.close() sin llamar a conn.commit() antes
-    si hay cambios. El close() devuelve la conexión al pool.
+        PooledConnectionWrapper: simula psycopg2.connection
     """
-    p = get_pool()
-    return PooledConnectionWrapper(p)
+    return PooledConnectionWrapper(get_pool())
 
 
 # ================================================================================

@@ -21,17 +21,19 @@ def login_required(f):
         if 'user_id' not in session:
             flash('Por favor inicia sesión.', 'warning')
             return redirect(url_for('auth.login'))
-        
+
         # -----------------------------------------------------------
         # AUTO-SYNC: Sincronizamos la suscripción en CADA petición
         # -----------------------------------------------------------
         uid = session['user_id']
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute('SELECT subscription_end, role, estado_suscripcion FROM usuarios WHERE id = %s', (uid,))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
+        try:
+            cursor.execute('SELECT subscription_end, role, estado_suscripcion FROM usuarios WHERE id = %s', (uid,))
+            user = cursor.fetchone()
+        finally:
+            cursor.close()
+            conn.close()
 
         if not user:
             session.clear()
@@ -48,7 +50,7 @@ def login_required(f):
         # --- LÓGICA DE DÍAS CALENDARIO ---
         f_end = user['subscription_end']
         estado = (user.get('estado_suscripcion') or '').strip().lower()
-        
+
         tz_mx = pytz.timezone('America/Mexico_City')
         hoy_mx = datetime.now(tz_mx).date()
 
@@ -64,7 +66,7 @@ def login_required(f):
             else:
                 fecha_vence_mx = f_end.date() if hasattr(f_end, 'date') else f_end
 
-            # REGLA DE SEBASTIÁN: Todo el día siguiente es de gracia
+            # Todo el día siguiente es de gracia
             dia_gracia = fecha_vence_mx + timedelta(days=1)
 
             if hoy_mx <= fecha_vence_mx:
@@ -72,7 +74,7 @@ def login_required(f):
             elif hoy_mx == dia_gracia:
                 session['is_pro_active'] = True
                 session['grace_period'] = True
-        
+
         return f(*args, **kwargs)
     return decorated_function
 

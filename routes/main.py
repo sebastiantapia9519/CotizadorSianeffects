@@ -93,18 +93,27 @@ def landing_cotizador():
 @main_bp.app_context_processor
 def inject_notifications():
     if 'user_id' in session:
-        return {'notificaciones': obtener_alertas(session['user_id'])}
+        try:
+            return {'notificaciones': obtener_alertas(session['user_id'])}
+        except Exception as e:
+            current_app.logger.error(f"CONTEXT_ERROR: Fallo al inyectar notificaciones para usuario {session.get('user_id')}: {e}")
     return {'notificaciones': []}
+
+@main_bp.route('/favicon.ico')
+def favicon():
+    return '', 204
 
 @main_bp.route('/marcar-leida/<int:notif_id>')
 @login_required
 def marcar_leida(notif_id):
-    conn = get_db()  
+    conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("UPDATE notificaciones_manuales SET leida = TRUE WHERE id = %s", (notif_id,))
-    conn.commit()
-    cursor.close()
-    conn.close()
+    try:
+        cursor.execute("UPDATE notificaciones_manuales SET leida = TRUE WHERE id = %s", (notif_id,))
+        conn.commit()
+    finally:
+        cursor.close()
+        conn.close()
     return redirect(request.referrer)
 
 @main_bp.route('/marcar-visto-global/<int:anuncio_id>')
@@ -874,13 +883,11 @@ def bulk_update_estado_pedido():
 @main_bp.route('/historial')
 @login_required
 def historial():
-    conn = get_db()
-    cursor = conn.cursor()
     uid = session['user_id']
 
     mostrar_tour = debe_mostrar_tutorial(uid, 'historial')
     version_tour = obtener_version_tutorial('historial')
-    
+
     # --- CAPTURA DE PARÁMETROS ---
     q = request.args.get('q', '').strip()
     status = request.args.get('status', 'all')
@@ -897,10 +904,9 @@ def historial():
     params_count = [uid]
 
     if q:
-        # CAMBIO 1: Ignorar acentos y mayúsculas en el conteo
         sql_count += " AND (CAST(id AS TEXT) ILIKE %s OR TRANSLATE(LOWER(cliente), 'áéíóú', 'aeiou') ILIKE TRANSLATE(LOWER(%s), 'áéíóú', 'aeiou'))"
         params_count.extend([f'%{q}%', f'%{q}%'])
-    
+
     if status != 'all':
         sql_count += " AND estado = %s"
         params_count.append(status)
@@ -909,19 +915,14 @@ def historial():
         sql_count += entrega_sql
         params_count.extend(entrega_params)
 
-    cursor.execute(sql_count, params_count)
-    total_registros = cursor.fetchone()[0]
-    total_pages = math.ceil(total_registros / per_page)
-
     # --- 2. QUERY PARA DATOS ---
     sql = 'SELECT id, cliente, fecha, total, estado, estado_pedido, saldo_pendiente, fecha_vencimiento, impuestos, tax_engine, fecha_entrega FROM ventas WHERE user_id=%s'
     params = [uid]
-    
+
     if q:
-        # CAMBIO 2: Ignorar acentos y mayúsculas en la búsqueda real
         sql += " AND (CAST(id AS TEXT) ILIKE %s OR TRANSLATE(LOWER(cliente), 'áéíóú', 'aeiou') ILIKE TRANSLATE(LOWER(%s), 'áéíóú', 'aeiou'))"
         params.extend([f'%{q}%', f'%{q}%'])
-        
+
     if status != 'all':
         sql += " AND estado = %s"
         params.append(status)
@@ -929,23 +930,30 @@ def historial():
     if entrega_sql:
         sql += entrega_sql
         params.extend(entrega_params)
-        
+
     sql += " ORDER BY id DESC LIMIT %s OFFSET %s"
     params.extend([per_page, offset])
-    
-    cursor.execute(sql, params)
-    ventas_db = cursor.fetchall()
-    
-    cursor.close()
-    conn.close()
-    
+
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute(sql_count, params_count)
+        total_registros = cursor.fetchone()[0]
+        total_pages = math.ceil(total_registros / per_page)
+
+        cursor.execute(sql, params)
+        ventas_db = cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+
     # --- 3. PROCESAMIENTO EN PYTHON ---
     ventas_display = [procesar_fila_fechas(v) for v in ventas_db]
 
-    return render_template('historial.html', 
-                           ventas=ventas_display, 
-                           page=page, 
-                           total_pages=total_pages, 
+    return render_template('historial.html',
+                           ventas=ventas_display,
+                           page=page,
+                           total_pages=total_pages,
                            q=q,
                            status=status,
                            entrega_filter=entrega_filter,
@@ -955,38 +963,39 @@ def historial():
 
 @main_bp.route('/ticket/<int:id>')
 def ver_ticket(id):
+    u_name = session.get('username', 'Visitante')
     conn = get_db()
     cursor = conn.cursor()
-    u_name = session.get('username', 'Visitante')
-    
-    cursor.execute('SELECT * FROM ventas WHERE id = %s', (id,))
-    venta_db = cursor.fetchone()
-    
-    if venta_db is None:
-        cursor.close(); conn.close(); return "Ticket no encontrado", 404
-
-    venta = procesar_fila_fechas(venta_db)
-    cursor.execute('SELECT * FROM venta_detalles WHERE venta_id = %s', (id,))
-    detalles = cursor.fetchall()
-    
-    cursor.execute('SELECT * FROM configuracion WHERE user_id = %s', (venta_db['user_id'],))
-    config = cursor.fetchone() or {'nombre_empresa': 'Mi Negocio', 'slogan': 'Gracias por su compra', 'website': ''}
-
-    current_app.logger.info(f"TICKET_VIEW: Usuario '{u_name}' visualizo el ticket #{id}")
-
-    # --- REGISTRAR EN BITÁCORA ---
     try:
-        cursor.execute("""
-            INSERT INTO logs_actividad (user_id, accion, modulo) 
-            VALUES (%s, %s, %s)
-        """, (venta_db['user_id'], f"Imprimió o visualizó el Ticket #{id}", "Tickets"))
-        conn.commit()
-    except Exception as e:
-        current_app.logger.error(f"Error al registrar log de ticket: {e}")
-    
+        cursor.execute('SELECT * FROM ventas WHERE id = %s', (id,))
+        venta_db = cursor.fetchone()
 
-    cursor.close()
-    conn.close()
+        if venta_db is None:
+            return "Ticket no encontrado", 404
+
+        venta = procesar_fila_fechas(venta_db)
+        cursor.execute('SELECT * FROM venta_detalles WHERE venta_id = %s', (id,))
+        detalles = cursor.fetchall()
+
+        cursor.execute('SELECT * FROM configuracion WHERE user_id = %s', (venta_db['user_id'],))
+        config = cursor.fetchone() or {'nombre_empresa': 'Mi Negocio', 'slogan': 'Gracias por su compra', 'website': ''}
+
+        current_app.logger.info(f"TICKET_VIEW: Usuario '{u_name}' visualizo el ticket #{id}")
+
+        # --- REGISTRAR EN BITÁCORA ---
+        try:
+            cursor.execute("""
+                INSERT INTO logs_actividad (user_id, accion, modulo)
+                VALUES (%s, %s, %s)
+            """, (venta_db['user_id'], f"Imprimió o visualizó el Ticket #{id}", "Tickets"))
+            conn.commit()
+        except Exception as e:
+            conn.rollback()
+            current_app.logger.error(f"Error al registrar log de ticket: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
     return render_template('ticket.html', venta=venta, detalles=detalles, config=config)
 
 @main_bp.route('/terminos')

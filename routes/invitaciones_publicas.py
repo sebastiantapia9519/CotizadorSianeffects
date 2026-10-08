@@ -64,16 +64,18 @@ def upload_rollo(invitacion_id):
         url_final = f"{PUBLIC_URL}/{nombre_archivo}"
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO fotos_invitados (invitacion_id, url, fecha_creacion)
-            VALUES (%s, %s, %s)
-            """,
-            (invitacion_id, url_final, ahora_sql())
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
+        try:
+            cursor.execute(
+                """
+                INSERT INTO fotos_invitados (invitacion_id, url, fecha_creacion)
+                VALUES (%s, %s, %s)
+                """,
+                (invitacion_id, url_final, ahora_sql())
+            )
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
         
         current_app.logger.info(f"GUEST_CAM_UPLOAD: Foto subida con éxito para la invitación ID {invitacion_id}.")
         return jsonify({'success': True, 'mensaje': '¡Foto revelada!', 'url': url_final})
@@ -95,13 +97,15 @@ def api_confirmar_asistencia(invitado_id):
 
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE pases_invitados SET estado_asistencia = %s WHERE id = %s",
-            (nuevo_estado, invitado_id)
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
+        try:
+            cursor.execute(
+                "UPDATE pases_invitados SET estado_asistencia = %s WHERE id = %s",
+                (nuevo_estado, invitado_id)
+            )
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
         return jsonify({'success': True, 'mensaje': 'Confirmación guardada'})
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
@@ -119,10 +123,12 @@ def recepcion_boda(slug):
         
     conn = get_db()
     cursor = conn.cursor()
-    cursor.execute("SELECT id, slug FROM invitaciones WHERE slug = %s", (slug,))
-    inv = cursor.fetchone()
-    cursor.close()
-    conn.close()
+    try:
+        cursor.execute("SELECT id, slug FROM invitaciones WHERE slug = %s", (slug,))
+        inv = cursor.fetchone()
+    finally:
+        cursor.close()
+        conn.close()
     
     if not inv:
         return "Boda no encontrada", 404
@@ -139,106 +145,103 @@ def scanner_global():
 # --- API DE VALIDACIÓN QR ---
 @invitaciones_publicas_bp.route('/api/validar-qr', methods=['POST'])
 def validar_qr():
-    import json
-    data = request.get_json()
+    data = request.get_json(silent=True) or {}
     codigo = data.get('codigo')
     invitacion_id = data.get('invitacion_id') 
     pases_a_ingresar = data.get('pases_a_ingresar') 
 
+    # Validamos el tipo ANTES de abrir la conexión
+    if pases_a_ingresar:
+        try:
+            pases_a_ingresar = int(pases_a_ingresar)
+        except (TypeError, ValueError):
+            return jsonify({'success': False, 'error': 'Cantidad de pases no válida'}), 400
+
     conn = get_db()
     cursor = conn.cursor()
-    
-    # 1. Buscamos al invitado según el modo
-    if invitacion_id:
-        cursor.execute("""
-            SELECT p.*, i.slug as boda_nombre 
-            FROM pases_invitados p
-            JOIN invitaciones i ON p.invitacion_id = i.id
-            WHERE p.codigo_qr_unique = %s AND p.invitacion_id = %s
-        """, (codigo, invitacion_id))
-        invitado = cursor.fetchone()
-    else:
-        cursor.execute("""
-            SELECT p.*, i.slug as boda_nombre 
-            FROM pases_invitados p
-            JOIN invitaciones i ON p.invitacion_id = i.id
-            WHERE p.codigo_qr_unique = %s
-        """, (codigo,))
-        invitado = cursor.fetchone()
+    try:
+        # 1. Buscamos al invitado según el modo
+        if invitacion_id:
+            cursor.execute("""
+                SELECT p.*, i.slug as boda_nombre 
+                FROM pases_invitados p
+                JOIN invitaciones i ON p.invitacion_id = i.id
+                WHERE p.codigo_qr_unique = %s AND p.invitacion_id = %s
+            """, (codigo, invitacion_id))
+            invitado = cursor.fetchone()
+        else:
+            cursor.execute("""
+                SELECT p.*, i.slug as boda_nombre 
+                FROM pases_invitados p
+                JOIN invitaciones i ON p.invitacion_id = i.id
+                WHERE p.codigo_qr_unique = %s
+            """, (codigo,))
+            invitado = cursor.fetchone()
 
-    if not invitado:
-        cursor.close()
-        conn.close()
-        current_app.logger.warning(f"QR_SCAN_DENIED: Intento de acceso con QR inválido o ajeno al evento: '{codigo}'")
-        return jsonify({'success': False, 'error': 'Código QR no válido para este evento'})
+        if not invitado:
+            current_app.logger.warning(f"QR_SCAN_DENIED: Intento de acceso con QR inválido o ajeno al evento: '{codigo}'")
+            return jsonify({'success': False, 'error': 'Código QR no válido para este evento'})
 
-    # 2. Calculamos los pases disponibles reales
-    pases_totales = invitado['pases_totales']
-    pases_usados = invitado['pases_usados']
-    pases_disponibles = pases_totales - pases_usados
+        # 2. Calculamos los pases disponibles reales
+        pases_totales = invitado['pases_totales']
+        pases_usados = invitado['pases_usados']
+        pases_disponibles = pases_totales - pases_usados
 
-    # Si ya entraron todos, bloqueamos
-    if pases_disponibles <= 0:
-        cursor.close()
-        conn.close()
-        current_app.logger.warning(f"QR_SCAN_EMPTY: La familia {invitado['nombre_familia']} intentó ingresar sin pases disponibles.")
-        return jsonify({
-            'success': False, 
-            'error': f"¡ALERTA! La familia {invitado['nombre_familia']} ya ingresó todos sus pases ({pases_totales}/{pases_totales}). Evento: {invitado['boda_nombre']}"
-        })
+        # Si ya entraron todos, bloqueamos
+        if pases_disponibles <= 0:
+            current_app.logger.warning(f"QR_SCAN_EMPTY: La familia {invitado['nombre_familia']} intentó ingresar sin pases disponibles.")
+            return jsonify({
+                'success': False, 
+                'error': f"¡ALERTA! La familia {invitado['nombre_familia']} ya ingresó todos sus pases ({pases_totales}/{pases_totales}). Evento: {invitado['boda_nombre']}"
+            })
 
-    # Extraer nombres de acompañantes de forma segura
-    nombres_lista = []
-    if invitado['nombres_acompanantes_json']:
-        try:
-            nombres_lista = json.loads(invitado['nombres_acompanantes_json'])
-        except:
-            nombres_lista = []
+        # Extraer nombres de acompañantes de forma segura
+        nombres_lista = []
+        if invitado['nombres_acompanantes_json']:
+            try:
+                nombres_lista = json.loads(invitado['nombres_acompanantes_json'])
+            except Exception:
+                nombres_lista = []
 
-    # ---------------------------------------------------------
-    # MODO A: Solo Consulta (Cuando escanean el QR por primera vez)
-    # ---------------------------------------------------------
-    if not pases_a_ingresar:
-        cursor.close()
-        conn.close()
+        # ---------------------------------------------------------
+        # MODO A: Solo Consulta (Cuando escanean el QR por primera vez)
+        # ---------------------------------------------------------
+        if not pases_a_ingresar:
+            return jsonify({
+                'success': True,
+                'requiere_confirmacion': True, 
+                'familia': invitado['nombre_familia'],
+                'pases_totales': pases_totales,
+                'pases_usados': pases_usados,
+                'pases_disponibles': pases_disponibles,
+                'mesa': invitado['mesa'] if invitado['mesa'] else '0',
+                'evento': invitado['boda_nombre'],
+                'nombres_acompanantes': nombres_lista
+            })
+
+        # ---------------------------------------------------------
+        # MODO B: Confirmación (Cuando la hostess dice "entran 3")
+        # ---------------------------------------------------------
+        # Validamos que no intenten meter a más gente de la que tienen disponible
+        if pases_a_ingresar > pases_disponibles:
+            return jsonify({'success': False, 'error': f'Solo le quedan {pases_disponibles} pases disponibles.'})
+
+        # Sumamos los nuevos ingresos a los que ya estaban adentro
+        nuevo_usados = pases_usados + pases_a_ingresar
+        
+        cursor.execute("UPDATE pases_invitados SET pases_usados = %s WHERE id = %s", (nuevo_usados, invitado['id']))
+        conn.commit()
+
+        current_app.logger.info(f"QR_SCAN_SUCCESS: Ingresaron {pases_a_ingresar} personas de la familia {invitado['nombre_familia']} al evento {invitado['boda_nombre']}.")
+
         return jsonify({
             'success': True,
-            'requiere_confirmacion': True, 
-            'familia': invitado['nombre_familia'],
-            'pases_totales': pases_totales,
-            'pases_usados': pases_usados,
-            'pases_disponibles': pases_disponibles,
-            'mesa': invitado['mesa'] if invitado['mesa'] else '0',
-            'evento': invitado['boda_nombre'],
-            'nombres_acompanantes': nombres_lista
+            'requiere_confirmacion': False,
+            'mensaje': f'Se registraron {pases_a_ingresar} accesos. Quedan {pases_totales - nuevo_usados} pases libres.'
         })
-
-    # ---------------------------------------------------------
-    # MODO B: Confirmación (Cuando la hostess dice "entran 3")
-    # ---------------------------------------------------------
-    pases_a_ingresar = int(pases_a_ingresar)
-    
-    # Validamos que no intenten meter a más gente de la que tienen disponible
-    if pases_a_ingresar > pases_disponibles:
+    finally:
         cursor.close()
         conn.close()
-        return jsonify({'success': False, 'error': f'Solo le quedan {pases_disponibles} pases disponibles.'})
-
-    # Sumamos los nuevos ingresos a los que ya estaban adentro
-    nuevo_usados = pases_usados + pases_a_ingresar
-    
-    cursor.execute("UPDATE pases_invitados SET pases_usados = %s WHERE id = %s", (nuevo_usados, invitado['id']))
-    conn.commit()
-    cursor.close()
-    conn.close()
-
-    current_app.logger.info(f"QR_SCAN_SUCCESS: Ingresaron {pases_a_ingresar} personas de la familia {invitado['nombre_familia']} al evento {invitado['boda_nombre']}.")
-
-    return jsonify({
-        'success': True,
-        'requiere_confirmacion': False,
-        'mensaje': f'Se registraron {pases_a_ingresar} accesos. Quedan {pases_totales - nuevo_usados} pases libres.'
-    })
 
 # =========================================================
 # BUENOS DESEOS (GUESTBOOK)
@@ -263,16 +266,18 @@ def guardar_buen_deseo():
         # 3. Guardar en Base de Datos
         conn = get_db()
         cursor = conn.cursor()
-        cursor.execute(
-            """
-            INSERT INTO buenos_deseos (invitacion_id, nombre, mensaje)
-            VALUES (%s, %s, %s)
-            """,
-            (invitacion_id, nombre_limpio, mensaje_limpio)
-        )
-        conn.commit()
-        cursor.close()
-        conn.close()
+        try:
+            cursor.execute(
+                """
+                INSERT INTO buenos_deseos (invitacion_id, nombre, mensaje)
+                VALUES (%s, %s, %s)
+                """,
+                (invitacion_id, nombre_limpio, mensaje_limpio)
+            )
+            conn.commit()
+        finally:
+            cursor.close()
+            conn.close()
 
         return jsonify({'success': True, 'mensaje': '¡Gracias por tus buenos deseos!'})
         

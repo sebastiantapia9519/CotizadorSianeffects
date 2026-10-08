@@ -58,6 +58,9 @@ from db import get_db_connection
 
 app = Flask(__name__)
 
+from db import init_db_teardown
+init_db_teardown(app)
+
 # Límite de 50 MB por petición (protección contra uploads masivos / DDoS)
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
 
@@ -721,13 +724,15 @@ def inject_user_config():
     # Validamos PRIMERO que estemos dentro de una petición HTTP
     # Si es un Job de APScheduler, esto dará False y se saltará la validación de sesión
     if has_request_context() and 'user_id' in session:
+        conn = None
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            cursor.execute('SELECT * FROM configuracion WHERE user_id = %s', (session['user_id'],))
-            user_config = cursor.fetchone()
-            cursor.close()
-            conn.close()
+            try:
+                cursor.execute('SELECT * FROM configuracion WHERE user_id = %s', (session['user_id'],))
+                user_config = cursor.fetchone()
+            finally:
+                cursor.close()
 
             if user_config:
                 return {'config': dict(user_config)}
@@ -735,6 +740,9 @@ def inject_user_config():
             app.logger.error(
                 f"CONTEXT_ERROR: Fallo al inyectar config para usuario {session.get('user_id')}: {e}"
             )
+        finally:
+            if conn is not None:
+                conn.close()
 
     # Retorna la configuración por defecto para Jobs en segundo plano o usuarios no logueados
     return {'config': default_config}
@@ -746,27 +754,32 @@ def inject_module_switcher():
     if not has_request_context() or 'user_id' not in session:
         return {'has_multiple_active_modules': False}
 
+    conn = None
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
-        cursor.execute(
-            """
-            SELECT COUNT(*) AS module_count
-            FROM user_modules
-            WHERE user_id = %s
-              AND status IN ('trial', 'active')
-            """,
-            (session['user_id'],)
-        )
-        row = cursor.fetchone()
-        cursor.close()
-        conn.close()
+        try:
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS module_count
+                FROM user_modules
+                WHERE user_id = %s
+                  AND status IN ('trial', 'active')
+                """,
+                (session['user_id'],)
+            )
+            row = cursor.fetchone()
+        finally:
+            cursor.close()
         return {'has_multiple_active_modules': int(row['module_count'] or 0) > 1}
     except Exception as e:
         app.logger.error(
             f"CONTEXT_ERROR: Fallo al revisar modulos activos para usuario {session.get('user_id')}: {e}"
         )
         return {'has_multiple_active_modules': False}
+    finally:
+        if conn is not None:
+            conn.close()
 
 #============================================================================
 # CONTEXT PROCESSOR — Inyecta IDs de Stripe en TODAS las plantillas HTML
