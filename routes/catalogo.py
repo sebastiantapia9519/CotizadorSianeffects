@@ -97,33 +97,34 @@ def upload_r2():
 @catalogo_bp.route('/admin/catalogo', methods=['GET', 'POST'])
 @login_required
 def admin_categorias():
-    conn = get_db()
-    cursor = conn.cursor()
     u_name = session.get('username', 'Anonimo')
     u_id = session.get('user_id', 'N/A')
-    
-    if request.method == 'POST':
-        nombre = request.form['nombre']
-        orden = request.form.get('orden', 0)
-        
-        try:
-            cursor.execute('INSERT INTO categorias (nombre, orden) VALUES (%s, %s)', (nombre, orden))
-            conn.commit()
-            current_app.logger.info(f"CATALOG_CATEGORY_CREATED: Usuario '{u_name}' (ID: {u_id}) creo la categoria '{nombre}'")
-            flash('Categoria creada con exito.', 'success')
-        except Exception as e:
-            conn.rollback()
-            current_app.logger.error(f"CATALOG_CATEGORY_ERROR: Usuario '{u_name}' (ID: {u_id}) - {e}")
-            flash(f'Error al crear categoria: {str(e)}', 'danger')
-            
-        return redirect(url_for('catalogo.admin_categorias'))
 
-    cursor.execute('SELECT * FROM categorias ORDER BY orden ASC, id DESC')
-    categorias = cursor.fetchall()
-    
-    cursor.close()
-    conn.close()
-    
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        if request.method == 'POST':
+            nombre = request.form['nombre']
+            orden = request.form.get('orden', 0)
+
+            try:
+                cursor.execute('INSERT INTO categorias (nombre, orden) VALUES (%s, %s)', (nombre, orden))
+                conn.commit()
+                current_app.logger.info(f"CATALOG_CATEGORY_CREATED: Usuario '{u_name}' (ID: {u_id}) creo la categoria '{nombre}'")
+                flash('Categoria creada con exito.', 'success')
+            except Exception as e:
+                conn.rollback()
+                current_app.logger.error(f"CATALOG_CATEGORY_ERROR: Usuario '{u_name}' (ID: {u_id}) - {e}")
+                flash(f'Error al crear categoria: {str(e)}', 'danger')
+
+            return redirect(url_for('catalogo.admin_categorias'))
+
+        cursor.execute('SELECT * FROM categorias ORDER BY orden ASC, id DESC')
+        categorias = cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
+
     return render_template('catalogo/admin_categorias.html', categorias=categorias)
 
 # =========================================================
@@ -132,78 +133,79 @@ def admin_categorias():
 @catalogo_bp.route('/admin/catalogo/<int:cat_id>', methods=['GET', 'POST'])
 @login_required
 def admin_productos(cat_id):
-    conn = get_db()
-    cursor = conn.cursor()
     u_name = session.get('username', 'Anonimo')
     u_id = session.get('user_id', 'N/A')
 
-    cursor.execute('SELECT * FROM categorias WHERE id = %s', (cat_id,))
-    categoria = cursor.fetchone()
+    conn = get_db()
+    cursor = conn.cursor()
+    try:
+        cursor.execute('SELECT * FROM categorias WHERE id = %s', (cat_id,))
+        categoria = cursor.fetchone()
 
-    if request.method == 'POST':
-        producto_id = request.form.get('producto_id')
-        titulo = request.form['titulo']
-        descripcion = request.form['descripcion']
-        precio = request.form.get('precio', 0)
-        stock_status = True if request.form.get('en_stock') else False
-        media_url = request.form.get('media_url', '').strip()
-        media_type = request.form.get('media_type')
+        if request.method == 'POST':
+            producto_id = request.form.get('producto_id')
+            titulo = request.form['titulo']
+            descripcion = request.form['descripcion']
+            precio = request.form.get('precio', 0)
+            stock_status = True if request.form.get('en_stock') else False
+            media_url = request.form.get('media_url', '').strip()
+            media_type = request.form.get('media_type')
 
-        if media_url:
-            ext = media_url.split('.')[-1].lower() 
-            if ext in ['mp3', 'wav', 'ogg', 'm4a']:
-                media_type = 'audio'
-            elif ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
-                media_type = 'imagen' 
-            elif ext in ['mp4', 'mov', 'avi', 'webm', 'mkv']:
-                media_type = 'video'
+            if media_url:
+                ext = media_url.split('.')[-1].lower() 
+                if ext in ['mp3', 'wav', 'ogg', 'm4a']:
+                    media_type = 'audio'
+                elif ext in ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg']:
+                    media_type = 'imagen' 
+                elif ext in ['mp4', 'mov', 'avi', 'webm', 'mkv']:
+                    media_type = 'video'
 
-        try:
-            if producto_id:
-                cursor.execute('''
-                    UPDATE catalogo_productos
-                    SET titulo = %s, descripcion = %s, precio = %s, media_url = %s, media_type = %s, stock = %s
-                    WHERE id = %s
-                ''', (titulo, descripcion, precio, media_url, media_type, stock_status, producto_id))
-                conn.commit()
-                current_app.logger.info(f"CATALOG_PRODUCT_UPDATED: Usuario '{u_name}' (ID: {u_id}) actualizo el producto '{titulo}' (ID: {producto_id})")
-                flash('Producto actualizado correctamente.', 'success')
-            else:
-                nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
-                prefix = nombre_limpio[:3].upper() if len(nombre_limpio) >= 2 else "PROD"
+            try:
+                if producto_id:
+                    cursor.execute('''
+                        UPDATE catalogo_productos
+                        SET titulo = %s, descripcion = %s, precio = %s, media_url = %s, media_type = %s, stock = %s
+                        WHERE id = %s
+                    ''', (titulo, descripcion, precio, media_url, media_type, stock_status, producto_id))
+                    conn.commit()
+                    current_app.logger.info(f"CATALOG_PRODUCT_UPDATED: Usuario '{u_name}' (ID: {u_id}) actualizo el producto '{titulo}' (ID: {producto_id})")
+                    flash('Producto actualizado correctamente.', 'success')
+                else:
+                    nombre_limpio = ''.join(filter(str.isalpha, categoria['nombre']))
+                    prefix = nombre_limpio[:3].upper() if len(nombre_limpio) >= 2 else "PROD"
 
-                while True:
-                    random_digits = ''.join(random.choices(string.digits, k=5))
-                    sku_generado = f"{prefix}-{random_digits}"
+                    while True:
+                        random_digits = ''.join(random.choices(string.digits, k=5))
+                        sku_generado = f"{prefix}-{random_digits}"
 
-                    cursor.execute('SELECT id FROM catalogo_productos WHERE sku = %s', (sku_generado,))
-                    existe = cursor.fetchone()
-                    if not existe:
-                        break
+                        cursor.execute('SELECT id FROM catalogo_productos WHERE sku = %s', (sku_generado,))
+                        existe = cursor.fetchone()
+                        if not existe:
+                            break
 
-                cursor.execute('''
-                    INSERT INTO catalogo_productos
-                    (categoria_id, sku, titulo, descripcion, media_url, media_type, precio, stock)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                ''', (cat_id, sku_generado, titulo, descripcion, media_url, media_type, precio, stock_status))
-                conn.commit()
-                current_app.logger.info(f"CATALOG_PRODUCT_CREATED: Usuario '{u_name}' (ID: {u_id}) creo el producto '{titulo}' (SKU: {sku_generado})")
-                flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
-        except Exception as e:
-            conn.rollback()
-            current_app.logger.error(f"CATALOG_PRODUCT_ERROR: Usuario '{u_name}' (ID: {u_id}) - {e}")
-            flash(f'Error al guardar producto: {str(e)}', 'danger')
+                    cursor.execute('''
+                        INSERT INTO catalogo_productos
+                        (categoria_id, sku, titulo, descripcion, media_url, media_type, precio, stock)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ''', (cat_id, sku_generado, titulo, descripcion, media_url, media_type, precio, stock_status))
+                    conn.commit()
+                    current_app.logger.info(f"CATALOG_PRODUCT_CREATED: Usuario '{u_name}' (ID: {u_id}) creo el producto '{titulo}' (SKU: {sku_generado})")
+                    flash(f'Producto agregado. SKU asignado: {sku_generado}', 'success')
+            except Exception as e:
+                conn.rollback()
+                current_app.logger.error(f"CATALOG_PRODUCT_ERROR: Usuario '{u_name}' (ID: {u_id}) - {e}")
+                flash(f'Error al guardar producto: {str(e)}', 'danger')
 
-        return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
-    
-    cursor.execute(
-        'SELECT * FROM catalogo_productos WHERE categoria_id = %s ORDER BY id DESC',
-        (cat_id,)
-    )
-    productos_db = cursor.fetchall()
-    
-    cursor.close()
-    conn.close()
+            return redirect(url_for('catalogo.admin_productos', cat_id=cat_id))
+
+        cursor.execute(
+            'SELECT * FROM catalogo_productos WHERE categoria_id = %s ORDER BY id DESC',
+            (cat_id,)
+        )
+        productos_db = cursor.fetchall()
+    finally:
+        cursor.close()
+        conn.close()
 
     productos = [dict(row) for row in productos_db] 
 
@@ -352,28 +354,28 @@ def delete_item(tipo, id_obj):
 def ver_catalogo():
     conn = get_db()
     cursor = conn.cursor()
-    
-    cursor.execute('SELECT * FROM categorias WHERE activo = True ORDER BY orden ASC')
-    categorias = cursor.fetchall()
-    
     catalogo_data = []
-    
-    for cat in categorias:
-        cursor.execute('''
-            SELECT * FROM catalogo_productos
-            WHERE categoria_id = %s AND activo = True
-            ORDER BY orden ASC, id DESC
-        ''', (cat['id'],))
-        productos = cursor.fetchall()
-        
-        if productos:
-            catalogo_data.append({
-                'info': dict(cat),
-                'productos': [dict(prod) for prod in productos]
-            })
-            
-    cursor.close()
-    conn.close()
+
+    try:
+        cursor.execute('SELECT * FROM categorias WHERE activo = True ORDER BY orden ASC')
+        categorias = cursor.fetchall()
+
+        for cat in categorias:
+            cursor.execute('''
+                SELECT * FROM catalogo_productos
+                WHERE categoria_id = %s AND activo = True
+                ORDER BY orden ASC, id DESC
+            ''', (cat['id'],))
+            productos = cursor.fetchall()
+
+            if productos:
+                catalogo_data.append({
+                    'info': dict(cat),
+                    'productos': [dict(prod) for prod in productos]
+                })
+    finally:
+        cursor.close()
+        conn.close()
     
     # LOG Opcional para vista pública.
     u_name = session.get('username', 'Visitante')
