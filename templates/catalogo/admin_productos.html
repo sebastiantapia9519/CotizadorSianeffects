@@ -349,6 +349,15 @@
         });
     }
 
+    // El borrado se envía por POST (un enlace GET podría dispararse sin querer)
+    function enviarEliminar(urlEliminar) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = urlEliminar;
+        document.body.appendChild(form);
+        form.submit();
+    }
+
     function confirmarEliminarProd(urlEliminar, nombre) {
         Swal.fire({
             title: `¿Borrar "${nombre}"?`,
@@ -367,7 +376,7 @@
         }).then((result) => {
             if (result.isConfirmed) {
                 mostrarCargando('Borrando...');
-                window.location.href = urlEliminar;
+                enviarEliminar(urlEliminar);
             }
         });
     }

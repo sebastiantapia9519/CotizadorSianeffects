@@ -358,36 +358,45 @@
             });
     }
 
-    function confirmarEliminarCat(id, nombre) {
-    Swal.fire({
-        title: `¿Borrar "${nombre}"?`,
-        text: "Se eliminarán todos los productos de esta categoría. No se puede deshacer.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#dc3545',
-        cancelButtonColor: '#f8f9fa',
-        confirmButtonText: 'Sí, borrar',
-        cancelButtonText: '<span style="color:#212529">Cancelar</span>',
-        reverseButtons: true,
-        customClass: {
-            confirmButton: 'rounded-pill px-4',
-            cancelButton: 'rounded-pill px-4 border'
-        }
-    }).then((result) => {
-        if (result.isConfirmed) {
-            Swal.fire({
-                title: 'Borrando...',
-                allowOutsideClick: false,
-                didOpen: () => {
-                    Swal.showLoading();
-                }
-            });
-            window.location.href = `/admin/catalogo/delete/categoria/${id}`;
-        }
-    });
-}
+    // El borrado se envía por POST (un enlace GET podría dispararse sin querer)
+    function enviarEliminar(tipo, id) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/admin/catalogo/delete/${tipo}/${id}`;
+        document.body.appendChild(form);
+        form.submit();
+    }
 
-function mostrarCargando(mensaje) {
+    function confirmarEliminarCat(id, nombre) {
+        Swal.fire({
+            title: `¿Borrar "${nombre}"?`,
+            text: "Se eliminarán todos los productos de esta categoría. No se puede deshacer.",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#f8f9fa',
+            confirmButtonText: 'Sí, borrar',
+            cancelButtonText: '<span style="color:#212529">Cancelar</span>',
+            reverseButtons: true,
+            customClass: {
+                confirmButton: 'rounded-pill px-4',
+                cancelButton: 'rounded-pill px-4 border'
+            }
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire({
+                    title: 'Borrando...',
+                    allowOutsideClick: false,
+                    didOpen: () => {
+                        Swal.showLoading();
+                    }
+                });
+                enviarEliminar('categoria', id);
+            }
+        });
+    }
+
+    function mostrarCargando(mensaje) {
         Swal.fire({
             title: mensaje,
             text: 'Por favor espera un momento...',

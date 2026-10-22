@@ -81,6 +81,22 @@ def get_invoice_subscription_id(invoice_obj):
 
     return None
 
+
+def suscripcion_sigue_viva(stripe_subscription_id):
+    """
+    Consulta en Stripe si una suscripción sigue vigente.
+    - Devuelve False si no existe o está cancelada/vencida.
+    - Ante cualquier otro error (red, API) devuelve True para NO pisar datos por duda.
+    """
+    try:
+        sub = stripe.Subscription.retrieve(stripe_subscription_id)
+        return sub.status in ('active', 'trialing', 'past_due', 'unpaid')
+    except Exception as e:
+        if getattr(e, 'http_status', None) == 404 or getattr(e, 'code', None) == 'resource_missing':
+            return False
+        current_app.logger.error(f"SUB_LOOKUP_ERROR {stripe_subscription_id}: {e}")
+        return True
+
 # =============================================================================
 # CREAR SESIÓN DE PAGO (CHECKOUT)
 # =============================================================================
@@ -384,49 +400,94 @@ def procesar_pago_fallido(stripe_customer_id, stripe_subscription_id):
 def procesar_resurreccion(stripe_customer_id, invoice_obj, stripe_subscription_id):
     """
     Rehabilita el acceso y sincroniza a los usuarios antiguos de PRD.
+    Si el stripe_subscription_id guardado difiere del de la factura:
+      - Si la guardada ya no existe/está cancelada en Stripe -> auto-sana y renueva con la nueva.
+      - Si la guardada sigue viva -> ignora el pago y avisa por Telegram (posible duplicada).
     """
     conn = get_db()
     cursor = conn.cursor()
     try:
+        billing_reason = getattr(invoice_obj, 'billing_reason', None)
+
         cursor.execute("SELECT id, email, username, estado_suscripcion, stripe_subscription_id FROM usuarios WHERE stripe_customer_id = %s", (stripe_customer_id,))
         user = cursor.fetchone()
 
-        # RETROCOMPATIBILIDAD
-        if user and (user['stripe_subscription_id'] == stripe_subscription_id or not user['stripe_subscription_id']):
-            period_end_unix = invoice_obj.lines.data[0].period.end
-            nueva_fecha_fin = datetime.fromtimestamp(period_end_unix, tz=timezone.utc)
+        # Pago exitoso de un customer que no existe en nuestra BD
+        if not user:
+            current_app.logger.warning(f"SIN_USUARIO: Pago exitoso sin usuario para customer {stripe_customer_id} (sub {stripe_subscription_id}).")
+            notificar_admin(
+                f"⚠️ Pago exitoso SIN usuario asociado\n"
+                f"Customer: {stripe_customer_id}\n"
+                f"Suscripción: {stripe_subscription_id}\n"
+                f"Motivo: {billing_reason}"
+            )
+            return
 
-            cursor.execute("""
-                UPDATE usuarios 
-                SET estado_suscripcion = 'Activo',
-                    subscription_end = %s,
-                    stripe_subscription_id = %s -- Auto-sanado para usuarios de PRD
-                WHERE id = %s
-            """, (nueva_fecha_fin, stripe_subscription_id, user['id']))
+        sub_guardada = user['stripe_subscription_id']
+        auto_sanado = False
 
-            cursor.execute("""
-                INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
-                VALUES (%s, %s, %s, %s)
-            """, (user['id'], "Renovación Automática Exitosa", "Pagos", "Cobro recurrente procesado por Stripe"))
-
-            conn.commit()
-            current_app.logger.info(f"RESURRECTION: Usuario {user['id']} renovado automáticamente hasta {nueva_fecha_fin}.")
-
-            if getattr(invoice_obj, 'billing_reason', None) == 'subscription_cycle':
-                monto_renov = (getattr(invoice_obj, 'amount_paid', 0) or 0) / 100
+        # La BD tiene otra suscripción distinta a la de esta factura
+        if sub_guardada and sub_guardada != stripe_subscription_id:
+            if suscripcion_sigue_viva(sub_guardada):
+                current_app.logger.info(f"IGNORADO: Pago exitoso de una suscripción antigua para customer {stripe_customer_id}")
                 notificar_admin(
-                    f"🔄 Renovación PRO\n"
+                    f"⚠️ Pago IGNORADO (suscripción distinta a la registrada)\n"
                     f"Usuario: {user['username']} (ID {user['id']})\n"
                     f"Email: {user['email']}\n"
-                    f"Monto: ${monto_renov:,.2f} MXN\n"
-                    f"Vigente hasta: {nueva_fecha_fin.strftime('%d/%m/%Y')}"
+                    f"Customer: {stripe_customer_id}\n"
+                    f"En BD: {sub_guardada} (sigue viva)\n"
+                    f"Factura: {stripe_subscription_id}\n"
+                    f"Motivo: {billing_reason}\n"
+                    f"Revisar posible suscripción duplicada."
                 )
-        else:
-             current_app.logger.info(f"IGNORADO: Pago exitoso de una suscripción antigua para customer {stripe_customer_id}")
+                return
+            auto_sanado = True
+            current_app.logger.warning(
+                f"AUTO_SANADO: Usuario {user['id']} tenía {sub_guardada} (ya no vigente); se reemplaza por {stripe_subscription_id}."
+            )
+
+        # Fecha fin: el mayor period.end de las líneas (con prorrateos la primera línea puede ser corta)
+        periodos = [l.period.end for l in invoice_obj.lines.data if getattr(l, 'period', None)]
+        period_end_unix = max(periodos) if periodos else invoice_obj.period_end
+        nueva_fecha_fin = datetime.fromtimestamp(period_end_unix, tz=timezone.utc)
+
+        cursor.execute("""
+            UPDATE usuarios 
+            SET estado_suscripcion = 'Activo',
+                subscription_end = %s,
+                stripe_subscription_id = %s -- Auto-sanado para usuarios de PRD
+            WHERE id = %s
+        """, (nueva_fecha_fin, stripe_subscription_id, user['id']))
+
+        detalle_log = "Cobro recurrente procesado por Stripe"
+        if auto_sanado:
+            detalle_log += f" | ID de suscripción corregido: {sub_guardada} -> {stripe_subscription_id}"
+        cursor.execute("""
+            INSERT INTO logs_actividad (user_id, accion, modulo, detalle)
+            VALUES (%s, %s, %s, %s)
+        """, (user['id'], "Renovación Automática Exitosa", "Pagos", detalle_log))
+
+        conn.commit()
+        current_app.logger.info(f"RESURRECTION: Usuario {user['id']} renovado automáticamente hasta {nueva_fecha_fin}.")
+
+        # 'subscription_create' ya lo avisa checkout.session.completed; aquí avisamos ciclo y cambios
+        if billing_reason in ('subscription_cycle', 'subscription_update'):
+            monto_renov = (getattr(invoice_obj, 'amount_paid', 0) or 0) / 100
+            titulo = "🔄 Renovación PRO" if billing_reason == 'subscription_cycle' else "🔁 Actualización de suscripción PRO"
+            extra = f"\nℹ️ ID de suscripción corregido (antes {sub_guardada})" if auto_sanado else ""
+            notificar_admin(
+                f"{titulo}\n"
+                f"Usuario: {user['username']} (ID {user['id']})\n"
+                f"Email: {user['email']}\n"
+                f"Monto: ${monto_renov:,.2f} MXN\n"
+                f"Vigente hasta: {nueva_fecha_fin.strftime('%d/%m/%Y')}"
+                f"{extra}"
+            )
 
     except Exception as e:
         if conn: conn.rollback()
         current_app.logger.error(f"RESURRECTION_PROCESS_ERROR: {e}")
+        notificar_admin(f"🚨 Error procesando renovación\nCustomer: {stripe_customer_id}\nError: {e}")
     finally:
         if cursor: cursor.close()
         if conn: conn.close()

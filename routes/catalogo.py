@@ -2,9 +2,10 @@ import random
 import string
 import os
 import uuid
+from functools import wraps
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
 from db import get_db_connection as get_db
-from helpers import login_required
+from helpers import login_required, admin_required
 import boto3
 from botocore.config import Config
 from werkzeug.utils import secure_filename
@@ -14,6 +15,20 @@ from dotenv import load_dotenv
 load_dotenv()  
 
 catalogo_bp = Blueprint('catalogo', __name__)
+
+
+def admin_api_required(f):
+    """
+    Igual que admin_required pero para endpoints JSON: responde 403 en JSON
+    en lugar de redirigir (una redirección rompería el fetch del frontend).
+    Debe ir DEBAJO de @login_required, que es quien sincroniza session['role'] con la BD.
+    """
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if session.get('role', 0) < 1:
+            return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
+        return f(*args, **kwargs)
+    return wrapper
 
 # =========================================================
 # CONFIGURACION DE CLOUDFLARE R2
@@ -40,6 +55,7 @@ s3_client = boto3.client(
 # =========================================================
 @catalogo_bp.route('/upload-r2', methods=['POST'])
 @login_required 
+@admin_api_required
 def upload_r2():
     """
     Recibe un archivo, arma una ruta de carpetas dinámica basada en 
@@ -96,6 +112,7 @@ def upload_r2():
 # =========================================================
 @catalogo_bp.route('/admin/catalogo', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def admin_categorias():
     u_name = session.get('username', 'Anonimo')
     u_id = session.get('user_id', 'N/A')
@@ -132,6 +149,7 @@ def admin_categorias():
 # =========================================================
 @catalogo_bp.route('/admin/catalogo/<int:cat_id>', methods=['GET', 'POST'])
 @login_required
+@admin_required
 def admin_productos(cat_id):
     u_name = session.get('username', 'Anonimo')
     u_id = session.get('user_id', 'N/A')
@@ -216,6 +234,7 @@ def admin_productos(cat_id):
 # =========================================================
 @catalogo_bp.route('/api/catalogo/toggle', methods=['POST'])
 @login_required
+@admin_api_required
 def toggle_status():
     u_name = session.get('username', 'Anonimo')
     u_id = session.get('user_id', 'N/A')
@@ -247,6 +266,7 @@ def toggle_status():
 # =========================================================
 @catalogo_bp.route('/admin/catalogo/editar_categoria', methods=['POST'])
 @login_required
+@admin_required
 def editar_categoria():
     u_name = session.get('username', 'Anonimo')
     u_id = session.get('user_id', 'N/A')
@@ -276,8 +296,9 @@ def editar_categoria():
 # =========================================================
 # 5. ELIMINAR ITEMS (CON LIMPIEZA TOTAL DE R2 Y CARPETAS)
 # =========================================================
-@catalogo_bp.route('/admin/catalogo/delete/<tipo>/<int:id_obj>')
+@catalogo_bp.route('/admin/catalogo/delete/<tipo>/<int:id_obj>', methods=['POST'])
 @login_required
+@admin_required
 def delete_item(tipo, id_obj):
     u_name = session.get('username', 'Anonimo')
     u_id = session.get('user_id', 'N/A')
@@ -391,6 +412,7 @@ def ver_catalogo():
 # =========================================================
 @catalogo_bp.route('/api/catalogo/update-stock', methods=['POST'])
 @login_required
+@admin_api_required
 def update_stock():
     u_name = session.get('username', 'Anonimo')
     u_id = session.get('user_id', 'N/A')
