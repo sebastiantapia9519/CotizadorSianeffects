@@ -4,7 +4,7 @@
   Se abre al hacer click en cualquier elemento .js-open-product dentro de una .card-producto.
   Lee los data-* de la tarjeta y muestra:
     - Preview del archivo (imagen, video, audio o documento PDF)
-    - Categoría, título, precio, disponibilidad, descripción, código (SKU) y tipo de archivo
+    - Categoría, código (SKU, pequeño), título, precio, disponibilidad y descripción
     - Selector de cantidad, botón "Añadir a la bolsa" y consulta directa por WhatsApp
 
   Depende de funciones globales definidas en galeria_sianeffects.html:
@@ -24,7 +24,10 @@
 
                 <!-- INFORMACIÓN -->
                 <div class="col-lg-5 pm-info">
-                    <span class="pm-chip" id="pmCategoria"></span>
+                    <div class="pm-top">
+                        <span class="pm-chip" id="pmCategoria"></span>
+                        <span class="pm-sku" id="pmSku"></span>
+                    </div>
                     <h2 class="pm-title" id="pmTitle"></h2>
 
                     <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
@@ -34,10 +37,6 @@
 
                     <p class="pm-desc" id="pmDesc"></p>
 
-                    <dl class="pm-details">
-                        <div><dt>Código</dt><dd id="pmSku"></dd></div>
-                        <div><dt>Formato</dt><dd id="pmTipo"></dd></div>
-                    </dl>
 
                     <a class="pm-whatsapp" id="pmWhats" href="#" target="_blank" rel="noopener">
                         <i class="fab fa-whatsapp me-1"></i> Preguntar por este producto
@@ -71,8 +70,6 @@
         let modal = null;     // instancia de bootstrap.Modal (se crea al cargar el DOM)
         let current = null;   // producto que se está viendo
         let qty = 1;
-
-        const TIPOS = { image: 'Imagen', imagen: 'Imagen', video: 'Video', audio: 'Audio', documento: 'Documento PDF' };
 
         /** Crea un elemento con clases y atributos opcionales (evita armar HTML con datos del usuario). */
         function el(tag, className, attrs) {
@@ -144,8 +141,9 @@
             document.getElementById('pmTitle').textContent = d.titulo || 'Detalle';
             document.getElementById('pmPrice').textContent = formatMoney(current.precio) + ' MXN';
             document.getElementById('pmDesc').textContent = d.desc || 'Sin descripción por el momento.';
-            document.getElementById('pmSku').textContent = d.sku || '—';
-            document.getElementById('pmTipo').textContent = d.src ? (TIPOS[tipo] || 'Archivo') : 'Sin archivo';
+            const skuEl = document.getElementById('pmSku');
+            skuEl.textContent = d.sku ? 'Cód. ' + d.sku : '';
+            skuEl.hidden = !d.sku;
 
             const stockEl = document.getElementById('pmStock');
             stockEl.textContent = hayStock ? 'Disponible' : 'Agotado';
