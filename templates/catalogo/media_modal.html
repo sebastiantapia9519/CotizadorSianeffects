@@ -1,79 +1,206 @@
-<div class="modal fade" id="mediaModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg" style="background-color: #1a1a1a; color: white;">
+{#
+  media_modal.html — Modal de detalle de producto (se incluye desde galeria_sianeffects.html)
 
-            <div class="modal-header border-bottom border-secondary">
-                <h5 class="modal-title fw-bold" id="modalTitulo"></h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+  Se abre al hacer click en cualquier elemento .js-open-product dentro de una .card-producto.
+  Lee los data-* de la tarjeta y muestra:
+    - Preview del archivo (imagen, video, audio o documento PDF)
+    - Categoría, título, precio, disponibilidad, descripción, código (SKU) y tipo de archivo
+    - Selector de cantidad, botón "Añadir a la bolsa" y consulta directa por WhatsApp
+
+  Depende de funciones globales definidas en galeria_sianeffects.html:
+    addToCart(item, cantidad), notifyAdded(item, elemento), formatMoney(n)  y la constante WHATSAPP_NUMBER.
+#}
+<div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="pmTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content pm-content">
+
+            <button type="button" class="btn-close pm-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+
+            <div class="pm-scroll">
+            <div class="row g-0">
+
+                <!-- PREVIEW -->
+                <div class="col-lg-7 pm-media" id="pmMedia" aria-live="polite"></div>
+
+                <!-- INFORMACIÓN -->
+                <div class="col-lg-5 pm-info">
+                    <span class="pm-chip" id="pmCategoria"></span>
+                    <h2 class="pm-title" id="pmTitle"></h2>
+
+                    <div class="d-flex align-items-center gap-3 flex-wrap mb-3">
+                        <span class="pm-price" id="pmPrice"></span>
+                        <span class="pm-stock" id="pmStock"></span>
+                    </div>
+
+                    <p class="pm-desc" id="pmDesc"></p>
+
+                    <dl class="pm-details">
+                        <div><dt>Código</dt><dd id="pmSku"></dd></div>
+                        <div><dt>Formato</dt><dd id="pmTipo"></dd></div>
+                    </dl>
+
+                    <a class="pm-whatsapp" id="pmWhats" href="#" target="_blank" rel="noopener">
+                        <i class="fab fa-whatsapp me-1"></i> Preguntar por este producto
+                    </a>
+
+                    <div class="pm-actions mt-auto">
+                        <div class="pm-qty" id="pmQtyBox">
+                            <button type="button" id="pmMinus" aria-label="Menos"><i class="fas fa-minus"></i></button>
+                            <span id="pmQty" aria-live="polite">1</span>
+                            <button type="button" id="pmPlus" aria-label="Más"><i class="fas fa-plus"></i></button>
+                        </div>
+                        <button type="button" class="btn-pm-add" id="pmAdd">
+                            <i class="fas fa-bag-shopping me-2"></i>Añadir a la bolsa
+                        </button>
+                    </div>
+
+                </div>
             </div>
-
-            <div class="modal-body p-0 text-center d-flex align-items-center justify-content-center position-relative"
-                style="min-height: 400px; background-color: #000;" id="mediaContainer">
             </div>
-
-            <div class="modal-footer border-top border-secondary justify-content-start">
-                <p id="modalDesc" class="text-white-50 m-0 small"></p>
-            </div>
-
         </div>
     </div>
 </div>
 
 <script>
-    let mediaModalObj;
+    (function () {
+        'use strict';
 
-    document.addEventListener('DOMContentLoaded', function () {
-        const modalEl = document.getElementById('mediaModal');
-        mediaModalObj = new bootstrap.Modal(modalEl);
+        const modalEl = document.getElementById('productModal');
+        const mediaBox = document.getElementById('pmMedia');
+        const qtyEl = document.getElementById('pmQty');
+        let modal = null;     // instancia de bootstrap.Modal (se crea al cargar el DOM)
+        let current = null;   // producto que se está viendo
+        let qty = 1;
 
-        modalEl.addEventListener('hidden.bs.modal', function () {
-            document.getElementById('mediaContainer').innerHTML = '';
+        const TIPOS = { image: 'Imagen', imagen: 'Imagen', video: 'Video', audio: 'Audio', documento: 'Documento PDF' };
+
+        /** Crea un elemento con clases y atributos opcionales (evita armar HTML con datos del usuario). */
+        function el(tag, className, attrs) {
+            const node = document.createElement(tag);
+            if (className) node.className = className;
+            Object.entries(attrs || {}).forEach(([k, v]) => node.setAttribute(k, v));
+            return node;
+        }
+
+        /** Mensaje/ícono cuando no hay preview o falla la carga. */
+        function placeholder(icono, texto) {
+            const box = el('div', 'pm-placeholder');
+            box.innerHTML = `<i class="fas ${icono}"></i><span></span>`;
+            box.querySelector('span').textContent = texto;
+            return box;
+        }
+
+        /** Construye el preview según el tipo de archivo. */
+        function buildPreview(tipo, src, titulo) {
+            if (!src) return placeholder('fa-gift', 'Este producto aún no tiene vista previa');
+
+            if (tipo === 'video') {
+                const v = el('video', 'pm-video', { controls: '', playsinline: '', preload: 'metadata' });
+                v.src = src;
+                return v;
+            }
+            if (tipo === 'audio') {
+                const wrap = el('div', 'pm-audio');
+                wrap.innerHTML = '<i class="fas fa-compact-disc fa-spin" style="--fa-animation-duration: 8s;"></i>';
+                const a = el('audio', '', { controls: '', preload: 'metadata' });
+                a.src = src;
+                wrap.appendChild(a);
+                return wrap;
+            }
+            if (tipo === 'documento') {
+                const f = el('iframe', 'pm-doc', { title: 'Vista previa de ' + titulo });
+                f.src = src;
+                return f;
+            }
+            // Por defecto: imagen ('image' o 'imagen')
+            const img = el('img', 'pm-img', { alt: titulo });
+            img.src = src;
+            img.addEventListener('error', () => {
+                mediaBox.replaceChildren(placeholder('fa-image', 'No se pudo cargar la imagen'));
+            });
+            return img;
+        }
+
+        function setQty(n) {
+            qty = Math.min(99, Math.max(1, n));
+            qtyEl.textContent = qty;
+        }
+
+        /** Llena el modal con los datos de una tarjeta y lo abre. */
+        function openProduct(card) {
+            const d = card.dataset;
+            current = {
+                id: d.id,
+                titulo: d.titulo,
+                precio: parseFloat(d.precio),
+                img: d.img || '',
+                sku: d.sku
+            };
+            const hayStock = d.stock === '1';
+            const tipo = (d.tipo || 'image').toLowerCase().trim();
+
+            document.getElementById('pmCategoria').textContent = d.categoria || 'Catálogo';
+            document.getElementById('pmCategoria').hidden = !d.categoria;
+            document.getElementById('pmTitle').textContent = d.titulo || 'Detalle';
+            document.getElementById('pmPrice').textContent = formatMoney(current.precio) + ' MXN';
+            document.getElementById('pmDesc').textContent = d.desc || 'Sin descripción por el momento.';
+            document.getElementById('pmSku').textContent = d.sku || '—';
+            document.getElementById('pmTipo').textContent = d.src ? (TIPOS[tipo] || 'Archivo') : 'Sin archivo';
+
+            const stockEl = document.getElementById('pmStock');
+            stockEl.textContent = hayStock ? 'Disponible' : 'Agotado';
+            stockEl.className = 'pm-stock ' + (hayStock ? 'ok' : 'out');
+
+            // Cantidad y botón de compra solo si hay stock
+            document.getElementById('pmQtyBox').hidden = !hayStock;
+            const addBtn = document.getElementById('pmAdd');
+            addBtn.disabled = !hayStock;
+            addBtn.innerHTML = hayStock
+                ? '<i class="fas fa-bag-shopping me-2"></i>Añadir a la bolsa'
+                : '<i class="fas fa-ban me-2"></i>Agotado';
+            setQty(1);
+
+            // Enlace de consulta por WhatsApp
+            const msg = `Hola Sianeffects! 👋 Me interesa "${d.titulo}" (código ${d.sku}). ¿Me das más información?`;
+            document.getElementById('pmWhats').href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
+
+            mediaBox.replaceChildren(buildPreview(tipo, d.src, d.titulo));
+            modal.show();
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            modal = new bootstrap.Modal(modalEl);
+
+            // Delegación: click o Enter/Espacio sobre cualquier .js-open-product
+            document.addEventListener('click', (e) => {
+                const trigger = e.target.closest('.js-open-product');
+                if (trigger) openProduct(trigger.closest('.card-producto'));
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter' && e.key !== ' ') return;
+                const trigger = e.target.closest && e.target.closest('.js-open-product');
+                if (trigger) {
+                    e.preventDefault();
+                    openProduct(trigger.closest('.card-producto'));
+                }
+            });
+
+            document.getElementById('pmMinus').addEventListener('click', () => setQty(qty - 1));
+            document.getElementById('pmPlus').addEventListener('click', () => setQty(qty + 1));
+
+            // Añadir: el preview "vuela" hacia la bolsa y el modal se cierra
+            document.getElementById('pmAdd').addEventListener('click', () => {
+                if (!current) return;
+                addToCart(current, qty);
+                notifyAdded(current, mediaBox.firstElementChild || mediaBox);
+                modal.hide();
+            });
+
+            // Al cerrar: detenemos video/audio y liberamos el preview
+            modalEl.addEventListener('hidden.bs.modal', () => {
+                mediaBox.querySelectorAll('video, audio').forEach(m => m.pause());
+                mediaBox.replaceChildren();
+            });
         });
-    });
-
-    function openMedia(el) {
-        // Obtenemos los datos y limpiamos espacios o mayúsculas
-        let tipo = (el.dataset.tipo || '').toLowerCase().trim();
-        const src = el.dataset.src;
-        const titulo = el.dataset.titulo;
-        const desc = el.dataset.desc;
-
-        const container = document.getElementById('mediaContainer');
-        document.getElementById('modalTitulo').textContent = titulo || 'Detalle';
-        document.getElementById('modalDesc').textContent = desc || '';
-
-        container.innerHTML = '<div class="spinner-border text-light" role="status"></div>';
-
-        setTimeout(() => {
-            // CORRECCIÓN AQUÍ: Aceptamos 'imagen' O 'image'
-            if (tipo === 'imagen' || tipo === 'image') {
-                container.innerHTML = `
-                    <img src="${src}" class="img-fluid" style="max-height: 80vh;" 
-                         onerror="this.parent.innerHTML='<p>Error al cargar imagen</p>'">`;
-            }
-            else if (tipo === 'video') {
-                container.innerHTML = `
-                    <video controls autoplay class="w-100" style="max-height: 80vh;">
-                        <source src="${src}">
-                        Tu navegador no soporta video.
-                    </video>`;
-            }
-            else if (tipo === 'audio') {
-                container.innerHTML = `
-                    <div class="p-5 text-center">
-                        <div class="mb-4 rounded-circle bg-dark d-inline-block p-4 border border-secondary">
-                            <i class="fas fa-music fa-4x text-info"></i>
-                        </div>
-                        <h4 class="mb-4">Reproduciendo Audio</h4>
-                        <audio controls autoplay class="w-100">
-                            <source src="${src}">
-                        </audio>
-                    </div>`;
-            } else {
-                // Esto es lo que estabas viendo, ahora ya no debería salir
-                container.innerHTML = '<p class="text-danger">Formato no reconocido (' + tipo + ')</p>';
-            }
-            mediaModalObj.show();
-        }, 100);
-    }
+    })();
 </script>

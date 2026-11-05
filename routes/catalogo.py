@@ -2,7 +2,9 @@ import random
 import string
 import os
 import uuid
+from datetime import datetime
 from functools import wraps
+from urllib.parse import urlparse
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, current_app, session
 from db import get_db_connection as get_db
 from helpers import login_required, admin_required
@@ -15,6 +17,15 @@ from dotenv import load_dotenv
 load_dotenv()  
 
 catalogo_bp = Blueprint('catalogo', __name__)
+
+# Cantidad máxima de productos destacados (aleatorios) en la portada
+MAX_DESTACADOS = 8
+
+# Extensiones por tipo de archivo (usadas para detectar el tipo de media a partir de la URL)
+EXT_AUDIO = ('.mp3', '.wav', '.ogg', '.m4a')
+EXT_IMAGEN = ('.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg')
+EXT_VIDEO = ('.mp4', '.mov', '.avi', '.webm', '.mkv')
+EXT_DOCUMENTO = ('.pdf',)
 
 
 def admin_api_required(f):
@@ -29,6 +40,25 @@ def admin_api_required(f):
             return jsonify({'success': False, 'error': 'Acceso denegado'}), 403
         return f(*args, **kwargs)
     return wrapper
+
+
+def tipo_por_url(url):
+    """
+    Devuelve 'image', 'video', 'audio' o 'documento' según la extensión de la URL.
+    Ignora querystrings (?v=1). Devuelve '' si no se reconoce o no hay URL.
+    """
+    if not url:
+        return ''
+    ext = os.path.splitext(urlparse(url).path)[1].lower()
+    if ext in EXT_AUDIO:
+        return 'audio'
+    if ext in EXT_VIDEO:
+        return 'video'
+    if ext in EXT_IMAGEN:
+        return 'image'
+    if ext in EXT_DOCUMENTO:
+        return 'documento'
+    return ''
 
 # =========================================================
 # CONFIGURACION DE CLOUDFLARE R2
@@ -81,7 +111,8 @@ def upload_r2():
         tipo_carpeta = 'imagenes'
 
     # Sanitizamos el nombre base
-    base_filename = secure_filename(file.filename) 
+    # file.filename puede ser None o vacío; en ese caso usamos un nombre genérico
+    base_filename = secure_filename(file.filename or '') or 'archivo'
     unique_filename = f"{uuid.uuid4().hex}_{base_filename}"
     
     # 3. ARMAMOS LA RUTA COMPLETA (Cloudflare crea las carpetas mágicamente)
@@ -177,6 +208,9 @@ def admin_productos(cat_id):
                     media_type = 'imagen' 
                 elif ext in ['mp4', 'mov', 'avi', 'webm', 'mkv']:
                     media_type = 'video'
+                elif ext == 'pdf':
+                    # Los PDF se muestran con vista previa en el modal del catálogo
+                    media_type = 'documento'
 
             try:
                 if producto_id:
@@ -373,6 +407,12 @@ def delete_item(tipo, id_obj):
 # =========================================================
 @catalogo_bp.route('/catalogo')
 def ver_catalogo():
+    """
+    Arma los datos de la vista pública:
+      - catalogo:   categorías activas con sus productos activos (+ portada calculada)
+      - destacados: productos en stock elegidos AL AZAR en cada carga (hasta MAX_DESTACADOS)
+      - hero_imgs / promo_img: imágenes aleatorias para el collage del hero (lista) y el banner (o None)
+    """
     conn = get_db()
     cursor = conn.cursor()
     catalogo_data = []
@@ -381,30 +421,69 @@ def ver_catalogo():
         cursor.execute('SELECT * FROM categorias WHERE activo = True ORDER BY orden ASC')
         categorias = cursor.fetchall()
 
-        for cat in categorias:
-            cursor.execute('''
-                SELECT * FROM catalogo_productos
-                WHERE categoria_id = %s AND activo = True
-                ORDER BY orden ASC, id DESC
-            ''', (cat['id'],))
-            productos = cursor.fetchall()
-
-            if productos:
-                catalogo_data.append({
-                    'info': dict(cat),
-                    'productos': [dict(prod) for prod in productos]
-                })
+        # Una sola consulta para todos los productos (evita una consulta por categoría)
+        cursor.execute('''
+            SELECT * FROM catalogo_productos
+            WHERE activo = True
+            ORDER BY orden ASC, id DESC
+        ''')
+        productos_por_cat = {}
+        for prod in cursor.fetchall():
+            productos_por_cat.setdefault(prod['categoria_id'], []).append(dict(prod))
     finally:
         cursor.close()
         conn.close()
-    
+
+    todos_los_productos = []
+
+    for cat in categorias:
+        productos = productos_por_cat.get(cat['id'], [])
+        if not productos:
+            continue
+
+        # El nombre de la categoría viaja con cada producto (lo usa el modal)
+        for p in productos:
+            p['categoria_nombre'] = cat['nombre']
+
+        # Portada de la categoría: preferimos la primera imagen; si no hay, el primer media disponible
+        portada, portada_tipo = '', ''
+        for p in productos:
+            tipo = tipo_por_url(p.get('media_url'))
+            if tipo == 'image':
+                portada, portada_tipo = p['media_url'], tipo
+                break
+            if tipo and not portada:
+                portada, portada_tipo = p['media_url'], tipo
+
+        info = dict(cat)
+        info['portada'] = portada
+        info['portada_tipo'] = portada_tipo
+
+        catalogo_data.append({'info': info, 'productos': productos})
+        todos_los_productos.extend(productos)
+
+    # Destacados aleatorios (solo con stock). Cuando haya productos reales para destacar,
+    # basta con cambiar este bloque (por ejemplo, filtrar por una columna "destacado").
+    con_stock = [p for p in todos_los_productos if p.get('stock')]
+    destacados = random.sample(con_stock, min(MAX_DESTACADOS, len(con_stock)))
+
+    # Imágenes aleatorias: 3 para el collage del hero y 1 para el banner (distintas entre sí cuando hay suficientes)
+    imagenes = [p['media_url'] for p in todos_los_productos if tipo_por_url(p.get('media_url')) == 'image']
+    muestra = random.sample(imagenes, min(4, len(imagenes)))
+    hero_imgs = muestra[:3]
+    promo_img = muestra[3] if len(muestra) > 3 else (muestra[0] if muestra else None)
+
     # LOG Opcional para vista pública.
     u_name = session.get('username', 'Visitante')
     current_app.logger.info(f"CATALOG_VIEW: Usuario '{u_name}' visualizo el catalogo publico")
     
     return render_template(
         'catalogo/galeria_sianeffects.html',
-        catalogo=catalogo_data
+        catalogo=catalogo_data,
+        destacados=destacados,
+        hero_imgs=hero_imgs,
+        promo_img=promo_img,
+        year=datetime.now().year
     )
         
 # =========================================================
