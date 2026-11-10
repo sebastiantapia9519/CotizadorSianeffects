@@ -8,7 +8,7 @@
     - Selector de cantidad, botón "Añadir a la bolsa" y consulta directa por WhatsApp
 
   Depende de funciones globales definidas en galeria_sianeffects.html:
-    addToCart(item, cantidad), notifyAdded(item, elemento), formatMoney(n)  y la constante WHATSAPP_NUMBER.
+    addToCart(item, cantidad), notifyAdded(item, elemento), formatMoney(n) y la constante WHATSAPP_NUMBER.
 #}
 <div class="modal fade" id="productModal" tabindex="-1" aria-labelledby="pmTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-xl">
@@ -36,7 +36,6 @@
                     </div>
 
                     <p class="pm-desc" id="pmDesc"></p>
-
 
                     <a class="pm-whatsapp" id="pmWhats" href="#" target="_blank" rel="noopener">
                         <i class="fab fa-whatsapp me-1"></i> Preguntar por este producto
@@ -162,6 +161,19 @@
             const msg = `Hola Sianeffects! 👋 Me interesa "${d.titulo}" (código ${d.sku}). ¿Me das más información?`;
             document.getElementById('pmWhats').href = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(msg)}`;
 
+            // Evento Analytics: view_item
+            if (typeof track === 'function') {
+                track('view_item', {
+                    currency: 'MXN',
+                    value: current.precio,
+                    items: [{
+                        item_id: current.id,
+                        item_name: current.titulo,
+                        price: current.precio
+                    }]
+                });
+            }
+
             mediaBox.replaceChildren(buildPreview(tipo, d.src, d.titulo));
             modal.show();
         }
@@ -185,6 +197,13 @@
 
             document.getElementById('pmMinus').addEventListener('click', () => setQty(qty - 1));
             document.getElementById('pmPlus').addEventListener('click', () => setQty(qty + 1));
+
+            // Evento Analytics: generate_lead desde el enlace de WhatsApp en el modal
+            document.getElementById('pmWhats').addEventListener('click', () => {
+                if (typeof track === 'function') {
+                    track('generate_lead', { method: 'whatsapp_modal' });
+                }
+            });
 
             // Añadir: el preview "vuela" hacia la bolsa y el modal se cierra
             document.getElementById('pmAdd').addEventListener('click', () => {
