@@ -1065,6 +1065,49 @@
             *, *::before, *::after { transition: none !important; animation: none !important; }
             .js .reveal { opacity: 1 !important; transform: none !important; }
         }
+
+        /* =====================================================
+           11. BANNER DE COOKIES / PRIVACIDAD
+           ===================================================== */
+        .cookie-banner {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            z-index: 1050;
+            background: #fff;
+            border-top: 1px solid var(--line);
+            box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.08);
+            padding: 16px 20px;
+            font-size: 0.85rem;
+            color: var(--ink);
+            transform: translateY(100%);
+            transition: transform 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .cookie-banner.show { transform: translateY(0); }
+
+        .cookie-banner a {
+            color: var(--salmon-deep);
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .cookie-banner a:hover { text-decoration: underline; }
+
+        .btn-cookie-accept {
+            background: var(--ink);
+            color: #fff;
+            border: none;
+            border-radius: 50px;
+            padding: 10px 24px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        .btn-cookie-accept:hover { background: #000; transform: translateY(-2px); }
     </style>
 </head>
 
@@ -1394,7 +1437,7 @@
                 </div>
 
                 <div class="footer-bottom text-center">
-                    <div>© {{ year }} Sianeffects. Todos los derechos reservados.</div>
+                    <div>© {{ year }} Sianeffects. Todos los derechos reservados. | <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal" style="color: inherit; text-decoration: underline;">Aviso de Privacidad</a></div>
 
                     <div class="dev-signature">
                         <span>Diseñado y administrado por</span>
@@ -1438,6 +1481,57 @@
     </div>
 
     {% include 'catalogo/media_modal.html' %}
+
+
+    <!-- =====================================================
+         MODAL DE AVISO DE PRIVACIDAD
+         ===================================================== -->
+    <div class="modal fade" id="privacyModal" tabindex="-1" aria-labelledby="privacyModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius: 28px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.1);">
+                <div class="modal-header" style="border-bottom: 1px solid var(--line); background: var(--salmon-soft); border-radius: 28px 28px 0 0;">
+                    <h5 class="modal-title fw-bold" id="privacyModalLabel" style="font-family: 'Fredoka', sans-serif; color: var(--ink);">
+                        <i class="fas fa-shield-halved me-2" style="color: var(--salmon-deep);"></i>Aviso de Privacidad
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body p-4" style="font-size: 0.9rem; color: var(--muted); line-height: 1.6;">
+                    <p><strong>Última actualización:</strong> Noviembre 2026</p>
+                    <p>En <strong>Sianeffects</strong>, valoramos y respetamos tu privacidad. Este sitio utiliza Google Analytics para recopilar datos estadísticos anónimos sobre el tráfico y uso de nuestra tienda, con el fin de mejorar tu experiencia.</p>
+                    
+                    <h6 class="fw-bold mt-4" style="color: var(--ink);">¿Qué datos recopilamos?</h6>
+                    <ul>
+                        <li>Interacciones con el catálogo (clics, vistas de productos).</li>
+                        <li>Productos agregados a la bolsa de compras.</li>
+                        <li>Información técnica básica (tipo de navegador, dispositivo, ubicación aproximada).</li>
+                    </ul>
+
+                    <h6 class="fw-bold mt-4" style="color: var(--ink);">Cookies</h6>
+                    <p>Utilizamos cookies propias (para recordar los artículos en tu bolsa y si ya aceptaste este aviso) y de terceros (Google Analytics) para análisis de tráfico.</p>
+
+                    <h6 class="fw-bold mt-4" style="color: var(--ink);">Contacto</h6>
+                    <p>Si tienes alguna duda sobre cómo manejamos tus datos o el funcionamiento de nuestro catálogo, puedes contactarnos directamente a través de nuestro botón de WhatsApp.</p>
+                </div>
+                <div class="modal-footer" style="border-top: 1px solid var(--line);">
+                    <button type="button" class="btn btn-ink w-100" data-bs-dismiss="modal">Cerrar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- =====================================================
+         BANNER DE PRIVACIDAD
+         ===================================================== -->
+    <div id="cookieBanner" class="cookie-banner d-none">
+        <div class="container-xxl d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 text-center text-md-start">
+            <div class="cookie-text">
+                Utilizamos cookies y herramientas de análisis como Google Analytics para mejorar tu experiencia en nuestra tienda. 
+                Al continuar navegando, aceptas nuestro <a href="#" data-bs-toggle="modal" data-bs-target="#privacyModal">Aviso de Privacidad</a>.
+            </div>
+            <button type="button" class="btn-cookie-accept" id="btnAcceptCookies">Entendido</button>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -1989,6 +2083,31 @@
         cartCanvasEl.addEventListener('hidden.bs.offcanvas', () => { lastAddedId = null; });
 
         initReveal();
+
+        /* =====================================================
+           AVISO DE PRIVACIDAD / COOKIES
+           ===================================================== */
+        const cookieBanner = $('#cookieBanner');
+        const btnAcceptCookies = $('#btnAcceptCookies');
+
+        if (cookieBanner && btnAcceptCookies) {
+            // Revisamos si ya aceptó previamente
+            const hasAccepted = localStorage.getItem('sianeffects_cookies_accepted');
+            
+            if (!hasAccepted) {
+                cookieBanner.classList.remove('d-none');
+                // Pequeño delay para que la animación de entrada se vea suave al cargar la página
+                setTimeout(() => cookieBanner.classList.add('show'), 800);
+            }
+
+            btnAcceptCookies.addEventListener('click', () => {
+                // Guardamos la preferencia y ocultamos el banner
+                localStorage.setItem('sianeffects_cookies_accepted', 'true');
+                cookieBanner.classList.remove('show');
+                // Esperamos a que termine la animación para aplicarle el display: none
+                setTimeout(() => cookieBanner.classList.add('d-none'), 500);
+            });
+        }
 
         renderCart();
     </script>
