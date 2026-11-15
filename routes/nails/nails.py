@@ -2,18 +2,25 @@
 nails.py — Blueprint principal del módulo Nails (salón de uñas)
 Cubre: onboarding, dashboard, agenda, clientes, servicios, ventas,
 reportes, configuración, galería, catálogo público y uploads a R2.
+
+CAMBIOS DE ESTA VERSIÓN (fuga de conexiones, 12/11/2026):
+  1) enforce_nails_role_permissions(): se eliminó un `get_db_connection()`
+     duplicado que dejaba una conexión abierta en CADA request a una ruta
+     protegida (era el origen de los warnings DB_LEAK_RECUPERADO).
+  2) get_user_nails_business(): ahora usa try/finally para cerrar siempre
+     cursor y conexión, incluso si el SELECT lanza una excepción.
 """
 
-import re
-import os
-import io
-import json
-import uuid
-import base64
-import threading
-import secrets
-import requests
-import boto3
+import re          # Expresiones regulares (validación de horas, slugs, emails)
+import os          # Variables de entorno y utilidades de archivos
+import io          # Buffers en memoria (para generar el Excel sin tocar disco)
+import json        # Serializar/deserializar horarios del negocio
+import uuid        # Nombres únicos para archivos subidos y códigos de respaldo
+import base64      # Convertir el logo a Data URI para el ticket
+import threading   # Lock para el singleton del cliente S3
+import secrets     # Generación segura de códigos de invitación
+import requests    # Descarga del logo remoto para el ticket
+import boto3       # Cliente S3 compatible con Cloudflare R2
 from botocore.config import Config
 from datetime import date, datetime, timedelta
 from werkzeug.utils import secure_filename
@@ -23,15 +30,16 @@ from flask import (
     session, request, flash, current_app, jsonify,
     send_file,
 )
-from db import get_db_connection
+from db import get_db_connection  # Devuelve una conexión del pool (hay que cerrarla siempre)
 from utils.nails_security import (
-    nails_csrf_context,
-    nails_csrf_error_response,
-    public_booking_rate_limited,
-    validate_nails_csrf,
+    nails_csrf_context,            # Inyecta el token CSRF a las plantillas
+    nails_csrf_error_response,     # Respuesta estándar cuando falla el CSRF
+    public_booking_rate_limited,   # Rate limit para reservas públicas
+    validate_nails_csrf,           # Valida el token CSRF de los POST
 )
 
 
+# Blueprint del módulo: todas las rutas cuelgan de /nails
 nails_bp = Blueprint("nails", __name__, url_prefix="/nails")
 
 
@@ -47,6 +55,7 @@ ENDPOINT_URL = os.getenv("R2_ENDPOINT_URL")
 BUCKET_NAME  = os.getenv("R2_BUCKET_NAME")
 PUBLIC_URL   = os.getenv("R2_PUBLIC_URL")
 
+# Extensiones de imagen permitidas al subir logos/galería
 ALLOWED_IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "svg", "webp"}
 
 # Conjuntos de valores válidos para campos de estado/tipo.
@@ -66,6 +75,7 @@ DEFAULT_PRIMARY_COLOR   = "#ff6b81"
 DEFAULT_SECONDARY_COLOR = "#fff0f3"
 DEFAULT_ACCENT_COLOR    = "#2ec4b6"
 
+# Íconos (Font Awesome) disponibles para los servicios: (clave, etiqueta)
 NAILS_SERVICE_ICON_OPTIONS = [
     ("hand-sparkles", "Manos"),
     ("wand-magic-sparkles", "Diseño"),
@@ -78,10 +88,13 @@ NAILS_SERVICE_ICON_OPTIONS = [
     ("heart", "Favorito"),
     ("star", "Especial"),
 ]
+# Set de claves para validar rápido si un ícono es válido
 NAILS_SERVICE_ICONS = {icon for icon, _label in NAILS_SERVICE_ICON_OPTIONS}
+# Roles que pueden recibir citas reservadas desde el catálogo público
 PUBLIC_BOOKING_STAFF_ROLES = ("staff", "owner", "admin")
 
 # Ejemplos SQL para mantener historial intocable con soft delete en nails_staff.
+# (Solo referencia/documentación: no se ejecutan en ninguna ruta.)
 # 1) Historial contable: no filtrar st.is_active, porque una cita vieja debe seguir
 #    mostrando la técnica aunque hoy esté inactiva.
 NAILS_STAFF_HISTORY_JOIN_SQL_EXAMPLE = """
@@ -122,8 +135,8 @@ ORDER BY
 # BUG CORREGIDO: antes no había lock → race condition posible.
 # =========================================================
 
-_s3_client      = None
-_s3_client_lock = threading.Lock()
+_s3_client      = None                 # Instancia única del cliente (se crea bajo demanda)
+_s3_client_lock = threading.Lock()     # Lock para crearla una sola vez
 
 
 def get_s3_client():
@@ -134,6 +147,7 @@ def get_s3_client():
     """
     global _s3_client
 
+    # Lista de variables de entorno que faltan (vacío = todo configurado)
     missing_config = [
         name for name, value in {
             "R2_ACCESS_KEY":   ACCESS_KEY,
@@ -145,6 +159,7 @@ def get_s3_client():
         if not value
     ]
 
+    # Si falta algo, abortar con un mensaje claro
     if missing_config:
         raise RuntimeError(
             "Faltan variables de entorno para subir imágenes: "
@@ -161,7 +176,7 @@ def get_s3_client():
                     endpoint_url=ENDPOINT_URL,
                     aws_access_key_id=ACCESS_KEY,
                     aws_secret_access_key=SECRET_KEY,
-                    region_name="auto",
+                    region_name="auto",  # R2 usa región "auto"
                     config=Config(signature_version="s3v4"),
                 )
 
@@ -191,10 +206,12 @@ def clean_text(value, max_length=None):
 
 
 def is_general_customer_name(value):
+    """True si el nombre es el genérico 'Cliente General' (no se guarda como clienta)."""
     return clean_text(value).lower() == "cliente general"
 
 
 def default_service_icon_for_category(category_name):
+    """Sugiere un ícono según palabras clave de la categoría del servicio."""
     category = clean_text(category_name).lower()
     if "gel" in category:
         return "bottle-droplet"
@@ -208,10 +225,11 @@ def default_service_icon_for_category(category_name):
         return "spa"
     if "dise" in category or "arte" in category:
         return "wand-magic-sparkles"
-    return "hand-sparkles"
+    return "hand-sparkles"  # Ícono por defecto
 
 
 def clean_service_icon(value, category_name=None):
+    """Valida el ícono recibido; si no es válido usa el sugerido por categoría."""
     icon = clean_text(value, 60).replace("fa-", "")
     if icon in NAILS_SERVICE_ICONS:
         return icon
@@ -219,6 +237,7 @@ def clean_service_icon(value, category_name=None):
 
 
 def ensure_nails_service_icon_column(cur):
+    """Migración idempotente: agrega la columna service_icon si aún no existe."""
     cur.execute(
         """
         ALTER TABLE nails_services
@@ -228,6 +247,7 @@ def ensure_nails_service_icon_column(cur):
 
 
 def ensure_nails_extra_quantity_columns(cur):
+    """Migración idempotente: columnas de cantidad para extras y extras por cita."""
     cur.execute(
         """
         ALTER TABLE nails_extras
@@ -252,9 +272,11 @@ def parse_positive_float(value, default=0.0, max_value=None):
     except (TypeError, ValueError):
         return default
 
+    # Los negativos se vuelven 0
     if number < 0:
         number = 0.0
 
+    # Techo opcional (ej. descuento no mayor al subtotal)
     if max_value is not None and number > max_value:
         number = max_value
 
@@ -296,7 +318,9 @@ def parse_date_value(value):
 
 def parse_time_to_minutes(value):
     """Convierte horas tipo 10:00, 10, 7:30 pm a minutos del día."""
+    # Normaliza: minúsculas y sin puntos ("p.m." -> "pm")
     text = clean_text(value).lower().replace(".", "")
+    # Acepta: H, HH, H:MM, HH:MM con am/pm opcional
     match = re.fullmatch(r"(\d{1,2})(?::(\d{2}))?\s*(am|pm)?", text)
     if not match:
         return None
@@ -309,6 +333,7 @@ def parse_time_to_minutes(value):
         return None
 
     if meridian:
+        # Formato 12 horas: la hora debe estar entre 1 y 12
         if hour < 1 or hour > 12:
             return None
         if meridian == "pm" and hour != 12:
@@ -316,6 +341,7 @@ def parse_time_to_minutes(value):
         if meridian == "am" and hour == 12:
             hour = 0
     elif hour > 23:
+        # Formato 24 horas: máximo 23
         return None
 
     return hour * 60 + minute
@@ -323,6 +349,7 @@ def parse_time_to_minutes(value):
 
 def minutes_to_time_value(minutes):
     """Devuelve HH:MM para inputs/SQL time."""
+    # Acota entre 00:00 y 24:00
     minutes = max(0, min(24 * 60, int(minutes)))
     hour = minutes // 60
     minute = minutes % 60
@@ -334,6 +361,7 @@ def parse_business_hours_json(raw_value):
     if not raw_value:
         return {}
 
+    # Si el driver ya lo devolvió como dict (jsonb), se usa tal cual
     if isinstance(raw_value, dict):
         return raw_value
 
@@ -352,8 +380,10 @@ def get_today_business_hours(business, local_dt):
     """
     day_keys = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     business_hours = parse_business_hours_json(business.get("business_hours_json") if hasattr(business, "get") else business["business_hours_json"])
+    # Texto configurado para el día de la semana de local_dt
     raw_hours = clean_text(business_hours.get(day_keys[local_dt.weekday()], ""))
 
+    # Sin configuración: horario abierto por defecto
     if not raw_hours:
         return {
             "is_open": True,
@@ -363,6 +393,7 @@ def get_today_business_hours(business, local_dt):
             "from_config": False,
         }
 
+    # Día marcado como cerrado
     if raw_hours.lower() in {"cerrado", "cerrada", "no abre", "closed", "descanso"}:
         return {
             "is_open": False,
@@ -372,8 +403,10 @@ def get_today_business_hours(business, local_dt):
             "from_config": True,
         }
 
+    # Separa apertura y cierre por guion, "a", "al" u "hasta"
     parts = re.split(r"\s*(?:-|–|—| a | al | hasta )\s*", raw_hours, maxsplit=1, flags=re.IGNORECASE)
     if len(parts) != 2:
+        # Formato irreconocible: usar horario por defecto
         return {
             "is_open": True,
             "opens_at": "08:00",
@@ -385,6 +418,7 @@ def get_today_business_hours(business, local_dt):
     open_minutes = parse_time_to_minutes(parts[0])
     close_minutes = parse_time_to_minutes(parts[1])
 
+    # Horas inválidas o cierre <= apertura: usar horario por defecto
     if open_minutes is None or close_minutes is None or close_minutes <= open_minutes:
         return {
             "is_open": True,
@@ -394,6 +428,7 @@ def get_today_business_hours(business, local_dt):
             "from_config": False,
         }
 
+    # Horario válido tomado de la configuración
     return {
         "is_open": True,
         "opens_at": minutes_to_time_value(open_minutes),
@@ -407,6 +442,7 @@ def parse_business_hours_entry(raw_hours):
     """Convierte un horario guardado en controles para el formulario."""
     raw_hours = clean_text(raw_hours)
 
+    # Día cerrado: el switch del formulario se muestra activado
     if raw_hours.lower() in {"cerrado", "cerrada", "no abre", "closed", "descanso"}:
         return {"closed": True, "open": "", "close": "", "label": raw_hours or "Cerrado"}
 
@@ -423,6 +459,7 @@ def parse_business_hours_entry(raw_hours):
                 "label": f"{minutes_to_time_value(open_minutes)} - {minutes_to_time_value(close_minutes)}",
             }
 
+    # Texto libre que no se pudo interpretar: se conserva como etiqueta
     return {"closed": False, "open": "", "close": "", "label": raw_hours}
 
 
@@ -436,14 +473,17 @@ def normalize_business_hours_from_form(form):
         open_value = clean_text(form.get(f"{day_key}_open"), 8)
         close_value = clean_text(form.get(f"{day_key}_close"), 8)
 
+        # Día marcado como cerrado
         if is_closed:
             normalized[day_key] = "Cerrado"
             continue
 
+        # Sin horas: queda vacío (se usará el horario por defecto)
         if not open_value and not close_value:
             normalized[day_key] = ""
             continue
 
+        # Solo una de las dos horas capturada
         if not open_value or not close_value:
             raise ValueError("Completa hora de apertura y cierre, o marca el día como cerrado.")
 
@@ -498,7 +538,9 @@ def clean_optional_id(value):
 
 def generate_nails_join_code(cur):
     """Genera un código corto único para invitar técnicas a un salón."""
+    # Alfabeto sin caracteres ambiguos (sin 0/O, 1/I)
     alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    # Hasta 20 intentos de generar un código que no exista aún
     for _ in range(20):
         code = "".join(secrets.choice(alphabet) for _ in range(8))
         cur.execute(
@@ -507,6 +549,7 @@ def generate_nails_join_code(cur):
         )
         if not cur.fetchone():
             return code
+    # Respaldo extremadamente improbable: código basado en UUID
     return uuid.uuid4().hex[:10].upper()
 
 
@@ -518,7 +561,9 @@ def row_belongs_to_business(cur, table, row_id, business_id, active_only=True):
     if not row_id:
         return False
 
+    # Filtro opcional para considerar solo registros activos
     active_sql = "AND is_active = TRUE" if active_only else ""
+    # `table` siempre viene de código interno (nunca del usuario), por eso se interpola
     cur.execute(
         f"""
         SELECT id
@@ -539,13 +584,16 @@ def find_overlapping_appointment(cur, business_id, start_time_db, end_time_db, t
     Si no hay técnica asignada, revisa toda la agenda del salón.
     Si hay técnica, revisa esa técnica y las citas todavía sin asignar.
     """
+    # Los dos primeros parámetros son la zona horaria para formatear las etiquetas del SELECT
     params = [timezone, timezone, business_id, start_time_db, end_time_db]
     staff_filter = ""
 
+    # Con técnica: choca con sus citas y con las citas sin asignar
     if staff_id:
         staff_filter = "AND (a.staff_id = %s OR a.staff_id IS NULL)"
         params.append(staff_id)
 
+    # Al editar una cita, se excluye ella misma de la búsqueda
     exclude_filter = ""
     if exclude_appointment_id:
         exclude_filter = "AND a.id != %s"
@@ -599,6 +647,7 @@ def find_available_public_booking_staff(cur, business_id, start_time_db, end_tim
         exclude_filter = "AND a.id != %s"
         params.append(exclude_appointment_id)
 
+    # Elige personal activo sin citas empalmadas; prioriza rol 'staff' > 'owner' > 'admin'
     cur.execute(
         f"""
         SELECT st.id, st.name, st.role
@@ -628,12 +677,15 @@ def find_available_public_booking_staff(cur, business_id, start_time_db, end_tim
 
 
 def build_overlap_message(overlap, staff_id=None):
+    """Arma el mensaje de advertencia que se muestra cuando hay empalme de horarios."""
     staff_label = overlap["staff_name"] or "sin técnica asignada"
     client_label = overlap["client_name"] or "Cliente General"
+    # Un "bloqueo" es un registro sin servicio con título especial
     is_block = overlap["title"] == "Bloqueo de horario" and not overlap["service_id"]
     item_label = "un bloqueo" if is_block else "una cita"
     detail_label = f" ({staff_label})" if is_block else f" con {client_label}"
 
+    # Caso 1: la persona elegida ya tiene algo programado
     if staff_id and overlap["staff_id"]:
         return (
             f"Ojo: esta persona ya tiene {item_label} programado de "
@@ -641,6 +693,7 @@ def build_overlap_message(overlap, staff_id=None):
             f"{detail_label}. Se empalman los horarios."
         )
 
+    # Caso 2: choca con actividad que no tiene técnica asignada
     if staff_id:
         return (
             f"Ojo: en ese horario ya existe actividad sin técnica asignada, de "
@@ -648,6 +701,7 @@ def build_overlap_message(overlap, staff_id=None):
             f"con {client_label}. Revisa la agenda antes de asignar otra actividad."
         )
 
+    # Caso 3: no se eligió técnica y el salón ya tiene actividad a esa hora
     return (
         f"Ojo: a esta hora ya tienes actividad programada de "
         f"{overlap['start_time_label']} a {overlap['end_time_label']} "
@@ -660,11 +714,13 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
     Calcula horarios libres para agendar desde el catálogo público.
     Muestra un horario si al menos una persona activa puede atenderlo.
     """
+    # ── Normalizar servicios recibidos (acepta un valor o una lista) ──
     if not isinstance(service_ids, (list, tuple)):
         service_ids = [service_ids]
     service_ids = [clean_optional_id(value) for value in service_ids]
     service_ids = [value for value in service_ids if value]
-    unique_service_ids = list(dict.fromkeys(service_ids))
+    unique_service_ids = list(dict.fromkeys(service_ids))  # Sin duplicados, conserva orden
+    # ── Normalizar extras igual que los servicios ──
     extra_ids = extra_ids or []
     if not isinstance(extra_ids, (list, tuple)):
         extra_ids = [extra_ids]
@@ -674,9 +730,11 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
     extra_quantities = extra_quantities or {}
     appointment_date_value = parse_date_value(appointment_date)
 
+    # Sin servicios o fecha válida no hay nada que calcular
     if not unique_service_ids or not appointment_date_value:
         return [], [], [], "Selecciona al menos un servicio y una fecha válida."
 
+    # Trae solo servicios activos Y públicos del salón
     cur.execute(
         """
         SELECT id, name, base_price, duration_minutes
@@ -691,6 +749,7 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
     )
     service_rows = cur.fetchall()
 
+    # Si alguno ya no existe/está oculto, se rechaza todo
     if len(service_rows) != len(unique_service_ids):
         return [], [], [], "Uno o más servicios seleccionados ya no están disponibles."
 
@@ -716,6 +775,7 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
         extras = []
         for extra_id in extra_ids:
             extra = extra_map[extra_id]
+            # Solo los extras con allow_quantity aceptan más de 1 unidad
             quantity = parse_positive_int(extra_quantities.get(extra_id, 1), default=1, max_value=50) if extra["allow_quantity"] else 1
             quantity = max(1, quantity)
             unit_price = float(extra["price"] or 0)
@@ -723,13 +783,15 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
             extra_item = dict(extra)
             extra_item["quantity"] = quantity
             extra_item["unit_price"] = unit_price
-            extra_item["price"] = unit_price * quantity
-            extra_item["duration_minutes"] = unit_duration * quantity
+            extra_item["price"] = unit_price * quantity            # Precio total de la línea
+            extra_item["duration_minutes"] = unit_duration * quantity  # Duración total de la línea
             extras.append(extra_item)
 
+    # Duración total = servicios (mínimo 15 min c/u) + extras
     total_duration = sum(max(15, int(service["duration_minutes"] or 60)) for service in services)
     total_duration += sum(max(0, int(extra["duration_minutes"] or 0)) for extra in extras)
 
+    # Horario del salón para ese día
     business_hours = get_today_business_hours(business, appointment_date_value)
     if not business_hours["is_open"]:
         return [], services, extras, "El salón no abre ese día."
@@ -737,11 +799,13 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
     open_minutes = parse_time_to_minutes(business_hours["opens_at"])
     close_minutes = parse_time_to_minutes(business_hours["closes_at"])
 
+    # Si el horario del día no alcanza para la duración total, no hay slots
     if open_minutes is None or close_minutes is None or close_minutes - open_minutes < total_duration:
         return [], services, extras, "No hay espacio suficiente para esos servicios en el horario del día."
 
     business_timezone = business["timezone"] or "America/Monterrey"
 
+    # Genera slots cada 30 min y deja solo los futuros donde alguien activo esté libre
     cur.execute(
         """
         WITH bounds AS (
@@ -799,6 +863,7 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
             total_duration,
         ),
     )
+    # Solo se exponen valor (HH:MM) y etiqueta (12h) al frontend
     slots = [
         {
             "value": row["value"],
@@ -814,14 +879,18 @@ def get_public_available_slots(cur, business, service_ids, appointment_date, ext
 
 
 def get_sale_status_from_amounts(total, paid_amount):
+    """Deriva el estado de una venta a partir del total y lo pagado."""
     total = float(total or 0)
     paid_amount = float(paid_amount or 0)
     balance_due = max(total - paid_amount, 0)
 
+    # Sin saldo (o total 0) => pagada
     if total <= 0 or balance_due <= 0:
         return "pagada"
+    # Pagó algo pero falta => anticipo
     if paid_amount > 0:
         return "anticipo"
+    # No ha pagado nada
     return "pendiente"
 
 
@@ -841,8 +910,10 @@ def sync_sale_for_appointment(
     Si la venta ya existe, conserva lo pagado y recalcula saldo/estado.
     """
     subtotal = round(float(subtotal or 0), 2)
+    # El anticipo inicial nunca puede exceder el subtotal
     initial_paid_amount = round(min(parse_positive_float(initial_paid_amount), subtotal), 2)
 
+    # Busca si ya hay una venta ligada a esta cita
     cur.execute(
         """
         SELECT *
@@ -856,9 +927,11 @@ def sync_sale_for_appointment(
     sale = cur.fetchone()
 
     if sale:
+        # ── Venta existente: actualizar montos conservando lo ya pagado ──
         sale_id = sale["id"]
         paid_amount = round(float(sale["paid_amount"] or 0), 2)
         balance_due = max(subtotal - paid_amount, 0)
+        # Una venta cancelada permanece cancelada
         status = sale["status"] if sale["status"] == "cancelada" else get_sale_status_from_amounts(subtotal, paid_amount)
 
         cur.execute(
@@ -888,6 +961,7 @@ def sync_sale_for_appointment(
             ),
         )
     else:
+        # ── Venta nueva: se crea con el anticipo inicial (si hay) ──
         sale_status = get_sale_status_from_amounts(subtotal, initial_paid_amount)
         balance_due = max(subtotal - initial_paid_amount, 0)
 
@@ -917,6 +991,7 @@ def sync_sale_for_appointment(
             ),
         )
         sale_id = cur.fetchone()["id"]
+        # Folio con formato N-000123
         sale_number = f"N-{sale_id:06d}"
 
         cur.execute(
@@ -924,6 +999,7 @@ def sync_sale_for_appointment(
             (sale_number, sale_id),
         )
 
+        # Si hubo anticipo, se registra también como pago
         if initial_paid_amount > 0:
             cur.execute(
                 """
@@ -941,6 +1017,7 @@ def sync_sale_for_appointment(
                 ),
             )
 
+    # Se reconstruye el detalle de la venta desde cero
     cur.execute("DELETE FROM nails_sale_details WHERE sale_id = %s", (sale_id,))
 
     for item in detail_items:
@@ -975,9 +1052,11 @@ def user_is_nails_owner(cur, user_id, business) -> bool:
     if not business or not user_id:
         return False
 
+    # Dueña directa del negocio
     if int(business["user_id"]) == int(user_id):
         return True
 
+    # O miembro del staff con rol 'owner' activo
     cur.execute(
         """
         SELECT id
@@ -1036,6 +1115,7 @@ def get_current_nails_role(cur, user_id, business):
     return "Usuario Nails"
 
 
+# Etiquetas visibles de cada rol
 NAILS_ROLE_LABELS = {
     "owner": "Jefa",
     "admin": "Administración",
@@ -1043,6 +1123,7 @@ NAILS_ROLE_LABELS = {
     "reception": "Recepción",
 }
 
+# Descripciones mostradas en la pantalla de Personal
 NAILS_ROLE_DESCRIPTIONS = {
     "owner": "Control total del salón: configuración, personal, citas, ventas, reportes y acciones sensibles.",
     "admin": "Apoya la operación diaria: agenda, ventas, clientas, servicios y reportes. No administra jefas.",
@@ -1050,8 +1131,10 @@ NAILS_ROLE_DESCRIPTIONS = {
     "reception": "Recepción: apoyo en agenda, clientas y cobros sin administrar configuración sensible.",
 }
 
+# Roles válidos para el personal
 NAILS_STAFF_ROLES = set(NAILS_ROLE_LABELS.keys())
 
+# Secciones a las que puede entrar cada rol
 NAILS_ROLE_PERMISSIONS = {
     "owner": {
         "dashboard", "agenda", "clientes", "servicios", "ventas",
@@ -1062,6 +1145,7 @@ NAILS_ROLE_PERMISSIONS = {
     "reception": {"dashboard", "agenda", "clientes", "ventas"},
 }
 
+# Relación endpoint -> sección protegida (la usa before_request)
 NAILS_ENDPOINT_SECTIONS = {
     "index": "dashboard",
     "api_clientes": "clientes",
@@ -1097,12 +1181,14 @@ NAILS_ENDPOINT_SECTIONS = {
     "upload_r2_nails": "galeria",
 }
 
+# Endpoints accesibles sin login (solo se valida CSRF en POST)
 NAILS_PUBLIC_ENDPOINTS = {
     "cliente_acceso",
     "catalogo_publico",
     "catalogo_horarios_disponibles",
 }
 
+# Endpoints sin restricción de rol (el onboarding lo usa quien aún no tiene salón)
 NAILS_UNRESTRICTED_ENDPOINTS = {
     "onboarding",
 }
@@ -1113,9 +1199,11 @@ def get_current_nails_role_key(cur, user_id, business):
     if not business or not user_id:
         return None
 
+    # El dueño directo del negocio siempre es 'owner'
     if int(business["user_id"]) == int(user_id):
         return "owner"
 
+    # Si no, se busca su rol activo en staff (el de mayor jerarquía primero)
     cur.execute(
         """
         SELECT role
@@ -1137,13 +1225,16 @@ def get_current_nails_role_key(cur, user_id, business):
 
 
 def user_can_access_nails_section(cur, user_id, business, section):
+    """True si el rol del usuario tiene permiso sobre la sección indicada."""
     role = get_current_nails_role_key(cur, user_id, business)
     return section in NAILS_ROLE_PERMISSIONS.get(role, set())
 
 
 @nails_bp.context_processor
 def inject_nails_role_context():
+    """Inyecta en todas las plantillas Nails el CSRF, el rol y los permisos del usuario."""
     csrf_context = nails_csrf_context()
+    # Solo aplica a endpoints de este blueprint
     if not request.endpoint or not request.endpoint.startswith("nails."):
         return csrf_context
 
@@ -1167,32 +1258,44 @@ def inject_nails_role_context():
             "nails_permissions": permissions,
         }
     finally:
+        # Siempre se libera la conexión, incluso con el return de arriba
         cur.close()
         conn.close()
 
 
 @nails_bp.before_request
 def enforce_nails_role_permissions():
+    """
+    Se ejecuta antes de cada request del blueprint:
+    valida CSRF, sesión, suscripción vigente y permisos por rol.
+    FIX FUGA DE CONEXIONES: se eliminó el `conn = get_db_connection()` duplicado
+    que dejaba una conexión sin cerrar en cada request a una ruta protegida.
+    """
+    # Ignorar requests que no son de este blueprint
     if not request.endpoint or not request.endpoint.startswith("nails."):
         return None
 
     endpoint_name = request.endpoint.split(".", 1)[1]
+    # Rutas públicas/sin restricción: solo se valida el CSRF en POST
     if endpoint_name in NAILS_PUBLIC_ENDPOINTS or endpoint_name in NAILS_UNRESTRICTED_ENDPOINTS:
         if request.method == "POST" and not validate_nails_csrf():
             flash("Tu sesión de seguridad expiró. Recarga la página e intenta de nuevo.", "warning")
             return nails_csrf_error_response()
         return None
 
+    # Si el endpoint no está mapeado a una sección, no se restringe
     section = NAILS_ENDPOINT_SECTIONS.get(endpoint_name)
     if not section:
         return None
 
+    # Sin sesión: 401 para APIs/JSON, redirección al login para el resto
     user_id = session.get("user_id")
     if not user_id:
         if endpoint_name.startswith("api_") or request.accept_mimetypes.best == "application/json":
             return jsonify({"success": False, "error": "No autorizado"}), 401
         return redirect(url_for("auth.login"))
 
+    # Validar CSRF en cualquier POST protegido
     if request.method == "POST" and not validate_nails_csrf():
         flash("Tu sesión de seguridad expiró. Recarga la página e intenta de nuevo.", "warning")
         return nails_csrf_error_response()
@@ -1228,8 +1331,8 @@ def enforce_nails_role_permissions():
             return redirect(url_for("nails.dashboard"))
     # ----------------------------------------------
 
-    conn = get_db_connection()
-
+    # Verificar que el rol del usuario tenga acceso a la sección
+    # (FIX: aquí había un segundo get_db_connection() duplicado que se filtraba)
     conn = get_db_connection()
     cur = conn.cursor()
     try:
@@ -1264,6 +1367,7 @@ def ensure_nails_appointment_services_table(cur):
         )
         """
     )
+    # Índices para acelerar los JOIN por cita y por servicio
     cur.execute(
         """
         CREATE INDEX IF NOT EXISTS idx_nails_appointment_services_appointment_id
@@ -1307,6 +1411,7 @@ def ensure_nails_expenses_table(cur):
         )
         """
     )
+    # Restricción: categoría válida
     cur.execute(
         """
         DO $$
@@ -1322,6 +1427,7 @@ def ensure_nails_expenses_table(cur):
         END $$
         """
     )
+    # Restricción: método de pago válido
     cur.execute(
         """
         DO $$
@@ -1334,6 +1440,7 @@ def ensure_nails_expenses_table(cur):
         END $$
         """
     )
+    # Restricción: frecuencia de recurrencia válida (o NULL)
     cur.execute(
         """
         DO $$
@@ -1349,6 +1456,7 @@ def ensure_nails_expenses_table(cur):
         END $$
         """
     )
+    # Restricción: estado válido
     cur.execute(
         """
         DO $$
@@ -1361,6 +1469,7 @@ def ensure_nails_expenses_table(cur):
         END $$
         """
     )
+    # Restricción: monto no negativo
     cur.execute(
         """
         DO $$
@@ -1373,6 +1482,7 @@ def ensure_nails_expenses_table(cur):
         END $$
         """
     )
+    # Restricción: día recurrente entre 1 y 31 (o NULL)
     cur.execute(
         """
         DO $$
@@ -1385,6 +1495,7 @@ def ensure_nails_expenses_table(cur):
         END $$
         """
     )
+    # Índices para las consultas más comunes de gastos
     cur.execute("CREATE INDEX IF NOT EXISTS idx_nails_expenses_business_id ON nails_expenses(business_id)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_nails_expenses_category ON nails_expenses(category)")
     cur.execute("CREATE INDEX IF NOT EXISTS idx_nails_expenses_expense_date ON nails_expenses(expense_date DESC)")
@@ -1415,6 +1526,7 @@ def image_url_to_data_uri(image_url):
         response = requests.get(image_url, timeout=(5, 8))
         response.raise_for_status()
 
+        # Tipo MIME de la respuesta; si no es imagen, se asume PNG
         content_type = response.headers.get("Content-Type", "").split(";")[0].strip()
         if not content_type.startswith("image/"):
             content_type = "image/png"
@@ -1465,42 +1577,45 @@ def get_user_nails_business(user_id):
     """
     Obtiene el negocio Nails activo del usuario logueado.
     Calcula si la suscripción está vencida: NULL equivale a vencida.
+    FIX FUGA DE CONEXIONES: ahora cursor y conexión se cierran siempre en
+    `finally`, incluso si el SELECT lanza una excepción.
     """
     conn = get_db_connection()
     cur  = conn.cursor()
 
-    cur.execute(
-        """
-        SELECT b.*,
-               (b.subscription_expires_at IS NULL OR
-                (NOW() AT TIME ZONE 'America/Monterrey') > (b.subscription_expires_at + TIME '23:59:59')) AS is_expired
-        FROM nails_businesses b
-        WHERE b.user_id = %s
-          AND b.is_active = TRUE
+    try:
+        # Une el negocio propio con el de los negocios donde el usuario es staff activo
+        cur.execute(
+            """
+            SELECT b.*,
+                   (b.subscription_expires_at IS NULL OR
+                    (NOW() AT TIME ZONE 'America/Monterrey') > (b.subscription_expires_at + TIME '23:59:59')) AS is_expired
+            FROM nails_businesses b
+            WHERE b.user_id = %s
+              AND b.is_active = TRUE
 
-        UNION ALL
+            UNION ALL
 
-        SELECT b.*,
-               (b.subscription_expires_at IS NULL OR
-                (NOW() AT TIME ZONE 'America/Monterrey') > (b.subscription_expires_at + TIME '23:59:59')) AS is_expired
-        FROM nails_businesses b
-        INNER JOIN nails_staff st ON st.business_id = b.id
-        WHERE st.user_id = %s
-          AND st.is_active = TRUE
-          AND b.is_active = TRUE
+            SELECT b.*,
+                   (b.subscription_expires_at IS NULL OR
+                    (NOW() AT TIME ZONE 'America/Monterrey') > (b.subscription_expires_at + TIME '23:59:59')) AS is_expired
+            FROM nails_businesses b
+            INNER JOIN nails_staff st ON st.business_id = b.id
+            WHERE st.user_id = %s
+              AND st.is_active = TRUE
+              AND b.is_active = TRUE
 
-        ORDER BY id DESC
-        LIMIT 1
-        """,
-        (user_id, user_id),
-    )
+            ORDER BY id DESC
+            LIMIT 1
+            """,
+            (user_id, user_id),
+        )
 
-    business = cur.fetchone()
-
-    cur.close()
-    conn.close()
-
-    return business
+        # Devuelve el negocio (o None si el usuario aún no tiene salón)
+        return cur.fetchone()
+    finally:
+        cur.close()
+        conn.close()
 
 
 # =========================================================
@@ -1520,9 +1635,11 @@ def perfil_seguridad():
     if not business:
         return redirect(url_for("nails.onboarding"))
 
+    # GET: solo se muestra el formulario
     if request.method == "GET":
         return render_template("nails/perfil_seguridad.html", business=business)
 
+    # A dónde regresar después de guardar (dashboard con modal de perfil o esta misma página)
     redirect_target = url_for("nails.perfil_seguridad")
     if request.form.get("next") == "dashboard":
         redirect_target = url_for("nails.dashboard", profile="1")
@@ -1531,6 +1648,7 @@ def perfil_seguridad():
     new_password = request.form.get("new_password", "")
     confirm_password = request.form.get("confirm_password", "")
 
+    # Validaciones básicas de la contraseña nueva
     if len(new_password) < 6:
         flash("La contraseña nueva debe tener al menos 6 caracteres.", "warning")
         return redirect(redirect_target)
@@ -1543,6 +1661,7 @@ def perfil_seguridad():
     cur = conn.cursor()
 
     try:
+        # Trae el hash actual del usuario
         cur.execute(
             """
             SELECT id, password
@@ -1554,6 +1673,7 @@ def perfil_seguridad():
         )
         user = cur.fetchone()
 
+        # La contraseña actual debe coincidir con el hash guardado
         if not user or not check_password_hash(user["password"] or "", current_password):
             flash("La contraseña actual no es correcta.", "danger")
             return redirect(redirect_target)
@@ -1569,6 +1689,7 @@ def perfil_seguridad():
             (hashed_password, user_id),
         )
 
+        # Auditoría del cambio de contraseña
         cur.execute(
             """
             INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
@@ -1602,6 +1723,7 @@ def perfil_seguridad():
 
 @nails_bp.route("/perfil/datos", methods=["POST"])
 def perfil_datos():
+    """Actualiza nombre y teléfono del usuario (y su registro de staff)."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -1622,6 +1744,7 @@ def perfil_datos():
     cur = conn.cursor()
 
     try:
+        # Actualiza el usuario base
         cur.execute(
             """
             UPDATE usuarios
@@ -1639,6 +1762,7 @@ def perfil_datos():
             flash("No se encontró tu usuario.", "warning")
             return redirect(url_for("nails.dashboard"))
 
+        # Sincroniza el nombre/teléfono en el registro de staff del salón
         cur.execute(
             """
             UPDATE nails_staff
@@ -1651,6 +1775,7 @@ def perfil_datos():
             (username.upper(), telefono, business["id"], user_id),
         )
 
+        # Auditoría del cambio de perfil
         cur.execute(
             """
             INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
@@ -1666,7 +1791,7 @@ def perfil_datos():
         )
 
         conn.commit()
-        session["username"] = username
+        session["username"] = username  # Refresca el nombre mostrado en la sesión
         flash("Perfil actualizado correctamente.", "success")
         return redirect(url_for("nails.dashboard"))
 
@@ -1702,9 +1827,11 @@ def index():
 @nails_bp.route("/cliente", methods=["GET", "POST"])
 @nails_bp.route("/cliente/<codigo>", methods=["GET"])
 def cliente_acceso(codigo=None):
+    # Código recibido por URL o por formulario, en mayúsculas
     code = clean_text(codigo or request.values.get("codigo"), 80).upper()
 
     def find_client_catalog_slug(raw_code):
+        """Busca un salón activo por join_code o por slug y devuelve su slug."""
         normalized_slug = generate_slug(raw_code)
         conn = get_db_connection()
         cur = conn.cursor()
@@ -1728,12 +1855,14 @@ def cliente_acceso(codigo=None):
             cur.close()
             conn.close()
 
+    # GET con código en la URL: redirige directo al catálogo si existe
     if request.method == "GET" and code:
         slug = find_client_catalog_slug(code)
         if slug:
             return redirect(url_for("nails.catalogo_publico", slug=slug))
         flash("No encontramos un salón activo con ese código.", "warning")
 
+    # POST: la clienta escribió el código en el formulario
     if request.method == "POST":
         code = clean_text(request.form.get("codigo"), 80).upper()
 
@@ -1768,6 +1897,7 @@ def api_clientes():
     if not business:
         return jsonify({"success": True, "clientes": []})
 
+    # Mínimo 2 caracteres y nunca busca "cliente general"
     q = clean_text(request.args.get("q"), 80)
     if len(q) < 2 or q.lower() == "cliente general":
         return jsonify({"success": True, "clientes": []})
@@ -1777,6 +1907,7 @@ def api_clientes():
 
     try:
         like = f"%{q}%"
+        # Búsqueda sin acentos por nombre, y por teléfono o instagram
         cur.execute("""
             SELECT id, name, phone, instagram
             FROM nails_clients
@@ -2003,6 +2134,7 @@ def dashboard():
         )
         upcoming_appointments = cur.fetchall()
 
+        # La próxima cita es la primera de la lista (si hay)
         next_appointment = upcoming_appointments[0] if upcoming_appointments else None
 
         # ── Últimas 5 ventas ───────────────────────────────
@@ -2072,6 +2204,7 @@ def dashboard():
         )
         today_clients = cur.fetchall()
 
+        # Hora local del salón (con zona horaria si zoneinfo está disponible)
         now_local = datetime.utcnow()
         try:
             from zoneinfo import ZoneInfo
@@ -2166,6 +2299,7 @@ def dashboard():
         )
         top_services_today = cur.fetchall()
 
+        # KPIs resumidos para las tarjetas superiores (todos con fallback a 0)
         stats = {
             "total_today":         sales_today["total_today"]              or 0,
             "sales_count_today":   sales_today["sales_count_today"]        or 0,
@@ -2221,12 +2355,15 @@ def onboarding():
 
     user_id  = session.get("user_id")
     business = get_user_nails_business(user_id)
+    # Datos precargados en sesión (si el usuario venía de otro flujo)
     prefill = session.get("nails_onboarding_prefill") or {}
 
+    # Si ya tiene salón, no necesita onboarding
     if business:
         return redirect(url_for("nails.dashboard"))
 
     if request.method == "POST":
+        # ── Leer y sanitizar datos del formulario ──────────
         name            = clean_text(request.form.get("name"), 120).upper()
         whatsapp        = clean_text(request.form.get("whatsapp"), 40)
         instagram       = clean_text(request.form.get("instagram"), 80)
@@ -2245,6 +2382,7 @@ def onboarding():
                 business_hours_controls=build_business_hours_controls({}),
             )
 
+        # Validar y normalizar los horarios capturados
         try:
             business_hours_json = normalize_business_hours_from_form(request.form)
         except ValueError as e:
@@ -2320,7 +2458,7 @@ def onboarding():
             )
 
             conn.commit()
-            session.pop("nails_onboarding_prefill", None)
+            session.pop("nails_onboarding_prefill", None)  # Limpia el prefill ya usado
             flash("Tu salón fue configurado correctamente.", "success")
             return redirect(url_for("nails.dashboard"))
 
@@ -2338,6 +2476,7 @@ def onboarding():
             cur.close()
             conn.close()
 
+    # ── GET: precargar nombre/teléfono desde el usuario si no hay prefill ──
     if not prefill:
         conn = get_db_connection()
         cur = conn.cursor()
@@ -2361,6 +2500,7 @@ def onboarding():
             cur.close()
             conn.close()
 
+    # Horario sugerido que se muestra por defecto en el formulario
     default_business_hours = {
         "monday": "09:00 - 18:00",
         "tuesday": "09:00 - 18:00",
@@ -2401,13 +2541,14 @@ def agenda():
     cur  = conn.cursor()
 
     try:
+        # Asegura tablas/columnas necesarias antes de operar
         ensure_nails_appointment_services_table(cur)
         ensure_nails_extra_quantity_columns(cur)
         conn.commit()
 
         if request.method == "POST":
             # ── Leer y sanitizar campos del formulario ─────
-            appointment_type   = clean_text(request.form.get("appointment_type", "appointment"))
+            appointment_type   = clean_text(request.form.get("appointment_type", "appointment"))  # 'appointment' o 'block'
             end_time_raw       = clean_text(request.form.get("end_time"))
             all_day_block      = request.form.get("all_day") == "1"
             
@@ -2416,6 +2557,7 @@ def agenda():
             quick_client_phone = clean_text(request.form.get("quick_client_phone"), 40)
             staff_id           = clean_optional_id(request.form.get("staff_id"))
             
+            # Servicios elegidos (puede ser uno o varios)
             selected_service_ids = [
                 clean_optional_id(value)
                 for value in request.form.getlist("service_ids")
@@ -2424,7 +2566,7 @@ def agenda():
             service_id_from_picker = clean_optional_id(request.form.get("service_id"))
             if not selected_service_ids and service_id_from_picker:
                 selected_service_ids = [service_id_from_picker]
-            service_id         = selected_service_ids[0] if selected_service_ids else None
+            service_id         = selected_service_ids[0] if selected_service_ids else None  # Servicio principal
             
             appointment_date   = clean_text(request.form.get("appointment_date"))
             start_time         = clean_text(request.form.get("start_time"))
@@ -2435,6 +2577,7 @@ def agenda():
 
             # ── Validaciones según el tipo de registro ──────────
             if appointment_type == "block":
+                # Bloqueo de día completo: de 00:00 a 23:59
                 if all_day_block:
                     start_time = "00:00"
                     end_time_raw = "23:59"
@@ -2466,6 +2609,7 @@ def agenda():
 
                 deposit_amount = parse_positive_float(deposit_amount_raw)
 
+                # La clienta elegida debe pertenecer a este salón
                 if client_id and not row_belongs_to_business(cur, "nails_clients", client_id, business["id"]):
                     flash("La clienta seleccionada no pertenece a este salón.", "warning")
                     return redirect(url_for("nails.agenda"))
@@ -2507,6 +2651,7 @@ def agenda():
                 total_duration = 0
                 estimated_total = 0
 
+                # Acumula precio y duración de cada servicio elegido
                 for index, selected_service_id in enumerate(selected_service_ids):
                     service = service_map[selected_service_id]
                     service_price = float(service["base_price"] or 0)
@@ -2523,6 +2668,7 @@ def agenda():
 
                 extras_to_insert = []
 
+                # Valida y suma cada extra seleccionado
                 for extra_id in selected_extras:
                     cur.execute(
                         """
@@ -2540,6 +2686,7 @@ def agenda():
                     if extra:
                         extra_price    = float(extra["price"]            or 0)
                         extra_duration = int(extra["duration_minutes"]   or 0)
+                        # Solo los extras con allow_quantity aceptan cantidades > 1
                         extra_quantity = parse_positive_int(
                             request.form.get(f"qty_{extra_id}", 1),
                             default=1,
@@ -2559,6 +2706,7 @@ def agenda():
                             "duration_minutes": total_extra_duration,
                         })
 
+                # Título de la cita: hasta 3 servicios unidos con " + "
                 appointment_title = " + ".join(item["name"] for item in services_to_insert[:3])
 
             # ── Validaciones comunes (Staff y Fechas) ──
@@ -2579,6 +2727,7 @@ def agenda():
             start_datetime_str = f"{appointment_date} {start_time}:00"
 
             if appointment_type == "block":
+                # Bloqueo: fin = hora indicada por el usuario
                 end_datetime_str = f"{appointment_date} {end_time_raw}:00"
                 cur.execute(
                     """
@@ -2589,6 +2738,7 @@ def agenda():
                     (start_datetime_str, business_timezone, end_datetime_str, business_timezone),
                 )
             else:
+                # Cita: fin = inicio + duración total
                 cur.execute(
                     """
                     SELECT
@@ -2611,6 +2761,7 @@ def agenda():
                 flash("La hora de fin debe ser posterior a la hora de inicio.", "warning")
                 return redirect(url_for("nails.agenda"))
 
+            # Verifica que no se empalme con otra cita o bloqueo
             overlap = find_overlapping_appointment(
                 cur,
                 business["id"],
@@ -2653,6 +2804,7 @@ def agenda():
 
             # ── Solo insertar detalles y venta si es CITA ──
             if appointment_type != "block":
+                # Servicios de la cita
                 for service_item in services_to_insert:
                     cur.execute(
                         """
@@ -2671,6 +2823,7 @@ def agenda():
                         ),
                     )
 
+                # Extras de la cita
                 for extra in extras_to_insert:
                     cur.execute(
                         """
@@ -2689,6 +2842,7 @@ def agenda():
                         ),
                     )
 
+                # Líneas de detalle para la venta ligada a la cita
                 sale_detail_items = [
                     {
                         "item_type": "service",
@@ -2714,6 +2868,7 @@ def agenda():
                     for extra in extras_to_insert
                 )
                 
+                # Crea la venta pendiente ligada a la cita
                 sync_sale_for_appointment(
                     cur,
                     business["id"],
@@ -2726,6 +2881,7 @@ def agenda():
                     notes=notes,
                 )
 
+                # Si la cita nace cancelada, su venta también se cancela
                 if status == "cancelada":
                     cur.execute(
                         """
@@ -2751,6 +2907,7 @@ def agenda():
             return redirect(url_for("nails.agenda"))
 
         # ── GET: cargar datos para renderizar la vista ─────
+        # Clientas activas (para selects/autocomplete)
         cur.execute(
             """
             SELECT * FROM nails_clients
@@ -2761,6 +2918,7 @@ def agenda():
         )
         clients = cur.fetchall()
 
+        # Personal activo
         cur.execute(
             """
             SELECT * FROM nails_staff
@@ -2771,6 +2929,7 @@ def agenda():
         )
         staff = cur.fetchall()
 
+        # Servicios activos con su categoría
         cur.execute(
             """
             SELECT s.*, c.name AS category_name
@@ -2783,6 +2942,7 @@ def agenda():
         )
         services = cur.fetchall()
 
+        # Extras activos
         cur.execute(
             """
             SELECT * FROM nails_extras
@@ -2825,6 +2985,7 @@ def agenda():
         )
         appointments = cur.fetchall()
 
+        # KPIs de la agenda: citas hoy, pendientes y anticipos (sin contar bloqueos)
         cur.execute(
             """
             SELECT
@@ -2850,6 +3011,7 @@ def agenda():
         )
         agenda_stats_row = cur.fetchone()
 
+        # Ventas totales del día
         cur.execute(
             """
             SELECT COALESCE(SUM(total), 0) AS today_sales_total
@@ -2862,6 +3024,7 @@ def agenda():
         )
         today_sales = cur.fetchone()
 
+        # Próxima cita real (sin bloqueos)
         cur.execute(
             """
             SELECT
@@ -2908,6 +3071,7 @@ def agenda():
             aid = row["appointment_id"]
             appointment_extras.setdefault(aid, []).append(row)
 
+        # Servicios de todas las citas, agrupados por appointment_id
         cur.execute(
             """
             SELECT aps.appointment_id, aps.service_id, aps.name, aps.price, aps.duration_minutes
@@ -2976,6 +3140,7 @@ def clientes():
         business_timezone = business["timezone"] or "America/Monterrey"
 
         if request.method == "POST":
+            # ── Alta de clienta: leer y sanitizar campos ──
             name             = clean_text(request.form.get("name"), 120)
             phone            = clean_text(request.form.get("phone"), 40)
             email            = clean_text(request.form.get("email"), 120).lower()
@@ -2989,6 +3154,7 @@ def clientes():
                 flash("El nombre de la clienta es obligatorio.", "warning")
                 return redirect(url_for("nails.clientes"))
 
+            # Validación simple de formato de correo
             if email and not re.fullmatch(r"[^@\s]+@[^@\s]+\.[^@\s]+", email):
                 flash("El correo de la clienta no es válido.", "warning")
                 return redirect(url_for("nails.clientes"))
@@ -3015,12 +3181,14 @@ def clientes():
             flash("Clienta agregada correctamente.", "success")
             return redirect(url_for("nails.clientes"))
 
+        # ── GET: filtros, búsqueda y paginación ────────────
         q = clean_text(request.args.get("q"), 80)
         client_filter = clean_text(request.args.get("filter"), 40)
         frequency_filter = clean_text(request.args.get("frequency"), 40)
         valid_client_filters = {"frecuentes", "cumpleanos", "primera_visita", "saldo_pendiente", "por_volver"}
         valid_frequency_filters = {"sin_visitas", "primera_visita", "frecuentes"}
 
+        # Filtros no reconocidos se ignoran
         if client_filter not in valid_client_filters:
             client_filter = ""
         if frequency_filter not in valid_frequency_filters:
@@ -3033,6 +3201,7 @@ def clientes():
         where_sql = "WHERE c.business_id = %s AND c.is_active = TRUE"
         params = [business["id"]]
 
+        # Búsqueda por nombre (sin acentos), teléfono, correo o instagram
         if q:
             where_sql += """
                 AND (
@@ -3044,6 +3213,7 @@ def clientes():
             """
             params.extend([like, like, like, like])
 
+        # Filtro rápido seleccionado
         if client_filter == "frecuentes":
             where_sql += " AND COALESCE(a.appointments_count, c.total_visits, 0) >= 2"
         elif client_filter == "cumpleanos":
@@ -3063,6 +3233,7 @@ def clientes():
                 AND next_appt.next_visit IS NULL
             """
 
+        # Filtro por frecuencia de visitas
         if frequency_filter == "sin_visitas":
             where_sql += " AND COALESCE(a.appointments_count, c.total_visits, 0) = 0"
         elif frequency_filter == "primera_visita":
@@ -3070,6 +3241,7 @@ def clientes():
         elif frequency_filter == "frecuentes":
             where_sql += " AND COALESCE(a.appointments_count, c.total_visits, 0) >= 2"
 
+        # Lista paginada de clientas con métricas calculadas (ventas, visitas, próxima visita…)
         cur.execute(
             f"""
             SELECT
@@ -3148,9 +3320,11 @@ def clientes():
             ],
         )
         clients = cur.fetchall()
+        # total_filtered viene en cada fila gracias a COUNT(*) OVER()
         total_filtered = clients[0]["total_filtered"] if clients else 0
         total_pages = max(1, (total_filtered + per_page - 1) // per_page)
 
+        # KPIs globales de clientas (no dependen de los filtros)
         cur.execute(
             """
             WITH visit_stats AS (
@@ -3249,6 +3423,7 @@ def servicios():
     cur  = conn.cursor()
 
     try:
+        # Asegura columnas nuevas antes de operar
         ensure_nails_service_icon_column(cur)
         ensure_nails_extra_quantity_columns(cur)
         conn.commit()
@@ -3352,6 +3527,7 @@ def servicios():
         service_offset = (service_page - 1) * services_per_page
         extra_offset = (extra_page - 1) * extras_per_page
 
+        # Total de servicios activos (para calcular páginas)
         cur.execute(
             """
             SELECT COUNT(*) AS total
@@ -3363,6 +3539,7 @@ def servicios():
         services_total = cur.fetchone()["total"] or 0
         services_total_pages = max(1, (services_total + services_per_page - 1) // services_per_page)
 
+        # Total de extras activos
         cur.execute(
             """
             SELECT COUNT(*) AS total
@@ -3374,6 +3551,7 @@ def servicios():
         extras_total = cur.fetchone()["total"] or 0
         extras_total_pages = max(1, (extras_total + extras_per_page - 1) // extras_per_page)
 
+        # Página actual de servicios
         cur.execute(
             """
             SELECT s.*, c.name AS category_name
@@ -3387,6 +3565,7 @@ def servicios():
         )
         services = cur.fetchall()
 
+        # Página actual de extras
         cur.execute(
             """
             SELECT * FROM nails_extras
@@ -3398,6 +3577,7 @@ def servicios():
         )
         extras = cur.fetchall()
 
+        # Categorías activas (para el datalist/select del formulario)
         cur.execute(
             """
             SELECT name
@@ -3438,6 +3618,7 @@ def servicios():
 
 @nails_bp.route("/servicios/<int:service_id>/editar", methods=["POST"])
 def editar_servicio(service_id):
+    """Edita un servicio existente (y crea su categoría si es nueva)."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -3455,6 +3636,7 @@ def editar_servicio(service_id):
         ensure_nails_extra_quantity_columns(cur)
         conn.commit()
 
+        # El servicio debe existir, estar activo y ser de este salón
         cur.execute(
             """
             SELECT id
@@ -3480,6 +3662,7 @@ def editar_servicio(service_id):
             flash("El nombre del servicio es obligatorio.", "warning")
             return redirect(url_for("nails.servicios"))
 
+        # Buscar o crear la categoría indicada
         category_id = None
         if category_name:
             cur.execute(
@@ -3541,6 +3724,7 @@ def editar_servicio(service_id):
 
 @nails_bp.route("/servicios/<int:service_id>/eliminar", methods=["POST"])
 def eliminar_servicio(service_id):
+    """Elimina (soft delete) un servicio: lo desactiva y lo oculta del catálogo."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -3566,6 +3750,7 @@ def eliminar_servicio(service_id):
         )
         conn.commit()
 
+        # rowcount indica si realmente se desactivó algo
         if cur.rowcount:
             flash("Servicio eliminado correctamente.", "success")
         else:
@@ -3585,6 +3770,7 @@ def eliminar_servicio(service_id):
 
 @nails_bp.route("/extras/<int:extra_id>/editar", methods=["POST"])
 def editar_extra(extra_id):
+    """Edita un extra existente."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -3601,6 +3787,7 @@ def editar_extra(extra_id):
         ensure_nails_extra_quantity_columns(cur)
         conn.commit()
 
+        # El extra debe existir, estar activo y ser de este salón
         cur.execute(
             """
             SELECT id
@@ -3654,6 +3841,7 @@ def editar_extra(extra_id):
 
 @nails_bp.route("/extras/<int:extra_id>/eliminar", methods=["POST"])
 def eliminar_extra(extra_id):
+    """Elimina (soft delete) un extra: lo marca como inactivo."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -3723,6 +3911,7 @@ def ventas():
         ensure_nails_extra_quantity_columns(cur)
         conn.commit()
 
+        # Registro de staff del usuario logueado (se usa como técnica por defecto)
         cur.execute(
             """
             SELECT id
@@ -3771,6 +3960,7 @@ def ventas():
                     client_id = appointment_data["client_id"] or client_id
                     staff_id  = appointment_data["staff_id"]  or staff_id
 
+            # Sin técnica elegida: usar la del usuario logueado
             if not staff_id:
                 staff_id = current_staff_id
 
@@ -3826,6 +4016,7 @@ def ventas():
             subtotal = 0
             detail_items = []
 
+            # Una línea de detalle por servicio
             for service in service_rows:
                 service_price = float(service["base_price"] or 0)
                 subtotal += service_price
@@ -3893,6 +4084,7 @@ def ventas():
             else:
                 status = "pagada"
 
+            # ¿Ya existe una venta ligada a esta cita? (se actualiza en vez de duplicar)
             existing_sale = None
             if appointment_id:
                 cur.execute(
@@ -3910,6 +4102,7 @@ def ventas():
             previous_paid_amount = 0
 
             if existing_sale:
+                # ── Actualizar la venta existente de la cita ──
                 sale_id = existing_sale["id"]
                 previous_paid_amount = float(existing_sale["paid_amount"] or 0)
 
@@ -3937,6 +4130,7 @@ def ventas():
                         payment_method, status, notes, sale_id, business["id"],
                     ),
                 )
+                # Se reconstruye el detalle desde cero
                 cur.execute("DELETE FROM nails_sale_details WHERE sale_id = %s", (sale_id,))
             else:
                 # ── Insertar venta ─────────────────────────────
@@ -3959,7 +4153,7 @@ def ventas():
                     ),
                 )
                 sale_id     = cur.fetchone()["id"]
-                sale_number = f"N-{sale_id:06d}"
+                sale_number = f"N-{sale_id:06d}"  # Folio N-000123
 
                 cur.execute(
                     "UPDATE nails_sales SET sale_number = %s WHERE id = %s",
@@ -4009,6 +4203,7 @@ def ventas():
                 )
 
             # ── Actualizar contadores de la clienta ────────
+            # Solo cuando la venta es nueva o acaba de pasar a 'pagada'
             should_update_client_totals = (
                 client_id
                 and (
@@ -4030,6 +4225,7 @@ def ventas():
 
             conn.commit()
             flash("Venta registrada correctamente.", "success")
+            # Si el usuario pidió ver el ticket, se redirige a él
             if after_save_action == "ticket":
                 return redirect(url_for("nails.ticket", sale_id=sale_id))
             return redirect(url_for("nails.ventas", sale_id=sale_id))
@@ -4047,6 +4243,7 @@ def ventas():
         selected_extra_quantities   = {}
 
         if appointment_id:
+            # Datos de la cita (con clienta, servicio y técnica)
             cur.execute(
                 """
                 SELECT
@@ -4068,6 +4265,7 @@ def ventas():
             selected_appointment = cur.fetchone()
 
             if selected_appointment:
+                # Servicios de la cita
                 cur.execute(
                     """
                     SELECT service_id, name, price, duration_minutes
@@ -4084,9 +4282,11 @@ def ventas():
                     if row["service_id"]
                 ]
 
+                # Compatibilidad: citas antiguas con un solo service_id
                 if not selected_service_ids and selected_appointment["service_id"]:
                     selected_service_ids = [selected_appointment["service_id"]]
 
+                # Extras de la cita
                 cur.execute(
                     """
                     SELECT extra_id, name, price, quantity
@@ -4107,6 +4307,7 @@ def ventas():
                     if row["extra_id"]
                 }
 
+                # Venta ya ligada a la cita (si existe)
                 cur.execute(
                     """
                     SELECT *
@@ -4119,6 +4320,7 @@ def ventas():
                 )
                 selected_appointment_sale = cur.fetchone()
 
+        # Listas para los selects del formulario
         cur.execute(
             """
             SELECT * FROM nails_clients
@@ -4159,6 +4361,7 @@ def ventas():
         )
         extras = cur.fetchall()
 
+        # ── Historial de ventas con búsqueda, fecha y paginación ──
         business_timezone = business["timezone"] or "America/Monterrey"
         sales_q = clean_text(request.args.get("sales_q"), 120)
         sales_date = parse_date_value(request.args.get("sales_date"))
@@ -4169,6 +4372,7 @@ def ventas():
         sales_where = ["v.business_id = %s"]
         sales_params = [business["id"]]
 
+        # Búsqueda por folio, clienta, teléfono o técnica
         if sales_q:
             sales_where.append(
                 """
@@ -4183,12 +4387,14 @@ def ventas():
             like_q = f"%{sales_q}%"
             sales_params.extend([like_q, like_q, like_q, like_q])
 
+        # Filtro por fecha de la venta (en la zona horaria del salón)
         if sales_date:
             sales_where.append("DATE(v.created_at AT TIME ZONE %s) = %s")
             sales_params.extend([business_timezone, sales_date])
 
         sales_where_sql = " AND ".join(sales_where)
 
+        # Total de ventas filtradas (para paginar)
         cur.execute(
             f"""
             SELECT COUNT(*) AS total
@@ -4201,6 +4407,7 @@ def ventas():
         )
         sales_total = cur.fetchone()["total"] or 0
         sales_total_pages = max(1, (sales_total + sales_per_page - 1) // sales_per_page)
+        # Si la página pedida excede el total, se ajusta a la última
         if sales_page > sales_total_pages:
             sales_page = sales_total_pages
             sales_offset = (sales_page - 1) * sales_per_page
@@ -4224,7 +4431,9 @@ def ventas():
         )
         sales = cur.fetchall()
 
+        # Venta a resaltar en la tabla (la recién creada/editada)
         highlight_sale_id = request.args.get("sale_id")
+        # Solo la dueña puede anular ventas
         can_cancel_sales = user_is_nails_owner(cur, user_id, business)
 
         return render_template(
@@ -4268,6 +4477,7 @@ def ventas():
 
 @nails_bp.route("/ventas/<int:sale_id>/editar", methods=["POST"])
 def editar_venta(sale_id):
+    """Edita cliente, técnica, descuento, pagado y método de una venta no cerrada."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -4281,6 +4491,7 @@ def editar_venta(sale_id):
     cur  = conn.cursor()
 
     try:
+        # La venta debe pertenecer a este salón
         cur.execute(
             """
             SELECT *
@@ -4296,6 +4507,7 @@ def editar_venta(sale_id):
             flash("La venta no existe o no pertenece a este salón.", "warning")
             return redirect(url_for("nails.ventas"))
 
+        # Ventas cerradas (pagadas/canceladas) son solo de consulta
         if sale["status"] in ("pagada", "cancelada"):
             flash("Las ventas pagadas o canceladas solo se pueden consultar.", "info")
             return redirect(url_for("nails.ventas", sale_id=sale_id))
@@ -4322,6 +4534,7 @@ def editar_venta(sale_id):
             flash("La técnica seleccionada no pertenece a este salón.", "warning")
             return redirect(url_for("nails.ventas", sale_id=sale_id))
 
+        # Recalcula totales con el nuevo descuento y lo pagado
         subtotal        = float(sale["subtotal"] or 0)
         tax_amount      = float(sale["tax_amount"] or 0)
         discount_amount = parse_positive_float(
@@ -4335,6 +4548,7 @@ def editar_venta(sale_id):
         )
         balance_due     = max(total - paid_amount, 0)
 
+        # El estado se deriva de los montos (salvo que se cancele)
         if status != "cancelada":
             if total <= 0 or paid_amount >= total:
                 status = "pagada"
@@ -4364,10 +4578,12 @@ def editar_venta(sale_id):
             ),
         )
 
+        # Diferencia contra lo que ya estaba pagado
         previous_paid_amount = float(sale["paid_amount"] or 0)
         paid_difference = round(paid_amount - previous_paid_amount, 2)
 
         if paid_difference > 0 and status != "cancelada":
+            # Se pagó más: se registra el pago incremental
             cur.execute(
                 """
                 INSERT INTO nails_payments (sale_id, amount, payment_method, payment_type, notes)
@@ -4382,6 +4598,7 @@ def editar_venta(sale_id):
                 ),
             )
         elif paid_difference < 0:
+            # Se redujo lo pagado: se registra un reembolso
             cur.execute(
                 """
                 INSERT INTO nails_payments (sale_id, amount, payment_method, payment_type, notes)
@@ -4412,6 +4629,7 @@ def editar_venta(sale_id):
 
 @nails_bp.route("/ventas/<int:sale_id>/anular", methods=["POST"])
 def anular_venta(sale_id):
+    """Anula una venta (solo la Jefa). Conserva el historial y revierte contadores de la clienta."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -4425,6 +4643,7 @@ def anular_venta(sale_id):
     cur = conn.cursor()
 
     try:
+        # Solo la dueña puede anular
         if not user_is_nails_owner(cur, user_id, business):
             flash("Solo la Jefa puede anular ventas.", "warning")
             return redirect(url_for("nails.ventas"))
@@ -4448,6 +4667,7 @@ def anular_venta(sale_id):
             flash("Esta venta ya estaba anulada.", "info")
             return redirect(url_for("nails.ventas", sale_id=sale_id))
 
+        # Datos originales para revertir contadores y dejar nota de la anulación
         original_status = sale["status"]
         original_total = float(sale["total"] or 0)
         client_id = sale["client_id"]
@@ -4467,6 +4687,7 @@ def anular_venta(sale_id):
             (notes, sale_id, business["id"]),
         )
 
+        # Si estaba pagada, se descuenta la visita y lo gastado de la clienta
         if client_id and original_status == "pagada":
             cur.execute(
                 """
@@ -4479,6 +4700,7 @@ def anular_venta(sale_id):
                 (original_total, client_id, business["id"]),
             )
 
+        # Auditoría de la anulación
         cur.execute(
             """
             INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
@@ -4528,6 +4750,7 @@ def gastos():
     conn = get_db_connection()
     cur = conn.cursor()
 
+    # Etiquetas legibles para la interfaz
     category_labels = {
         "materiales": "Materiales",
         "renta": "Renta",
@@ -4562,6 +4785,7 @@ def gastos():
         default_month = today.strftime("%Y-%m")
 
         if request.method == "POST":
+            # ── Alta de gasto: leer y sanitizar campos ──
             title = clean_text(request.form.get("title"), 160)
             category = clean_text(request.form.get("category"), 40) or "otros"
             amount = parse_positive_float(request.form.get("amount"), default=0)
@@ -4584,6 +4808,7 @@ def gastos():
                 flash("Método de pago inválido.", "warning")
                 return redirect(url_for("nails.gastos"))
 
+            # Si es recurrente, la frecuencia es obligatoria y el día se autocompleta
             if is_recurring:
                 if recurring_frequency not in EXPENSE_FREQUENCIES:
                     flash("Selecciona una frecuencia válida para el gasto recurrente.", "warning")
@@ -4612,10 +4837,12 @@ def gastos():
             flash("Gasto registrado correctamente.", "success")
             return redirect(url_for("nails.gastos", month=expense_date.strftime("%Y-%m")))
 
+        # ── GET: mes seleccionado (YYYY-MM) ──
         selected_month = clean_text(request.args.get("month"), 7) or default_month
         if not re.fullmatch(r"\d{4}-\d{2}", selected_month):
             selected_month = default_month
 
+        # Primer y último día del mes seleccionado
         month_start = datetime.strptime(f"{selected_month}-01", "%Y-%m-%d").date()
         if month_start.month == 12:
             month_end = month_start.replace(year=month_start.year + 1, month=1, day=1) - timedelta(days=1)
@@ -4637,6 +4864,7 @@ def gastos():
         """
         params = [business["id"], month_start, month_end]
 
+        # Búsqueda por título (sin acentos), notas o categoría
         if q:
             like = f"%{q}%"
             where_sql += """
@@ -4648,6 +4876,7 @@ def gastos():
             """
             params.extend([like, like, like])
 
+        # Filtro por estado del gasto
         if filter_status == "activos":
             where_sql += " AND status = 'activo'"
         elif filter_status == "recurrentes":
@@ -4655,10 +4884,12 @@ def gastos():
         elif filter_status == "cancelados":
             where_sql += " AND status = 'cancelado'"
 
+        # Total filtrado (para paginar)
         cur.execute(f"SELECT COUNT(*) AS total FROM nails_expenses {where_sql}", params)
         total_filtered = cur.fetchone()["total"] or 0
         total_pages = max(1, (total_filtered + per_page - 1) // per_page)
 
+        # Página actual de gastos
         cur.execute(
             f"""
             SELECT
@@ -4673,6 +4904,7 @@ def gastos():
         )
         expenses = cur.fetchall()
 
+        # KPIs del mes
         cur.execute(
             """
             SELECT
@@ -4688,6 +4920,7 @@ def gastos():
         )
         stats_row = cur.fetchone()
 
+        # Gastos recurrentes activos (máx. 6)
         cur.execute(
             """
             SELECT
@@ -4706,6 +4939,7 @@ def gastos():
         )
         recurring_expenses = cur.fetchall()
 
+        # Próximo gasto programado
         cur.execute(
             """
             SELECT
@@ -4763,6 +4997,7 @@ def gastos():
 
 @nails_bp.route("/gastos/<int:expense_id>/editar", methods=["POST"])
 def editar_gasto(expense_id):
+    """Edita un gasto existente (valida categoría, método, estado y recurrencia)."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -4829,6 +5064,7 @@ def editar_gasto(expense_id):
             ),
         )
 
+        # 0 filas = el gasto no existe o es de otro salón
         if cur.rowcount == 0:
             flash("El gasto no existe o no pertenece a este salón.", "warning")
             conn.rollback()
@@ -4850,6 +5086,7 @@ def editar_gasto(expense_id):
 
 @nails_bp.route("/gastos/<int:expense_id>/cancelar", methods=["POST"])
 def cancelar_gasto(expense_id):
+    """Cancela un gasto (no lo borra: cambia su estado a 'cancelado')."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -5127,6 +5364,7 @@ def reportes():
         )
         pending_sales = cur.fetchall()
 
+        # ── Cálculos derivados para la vista ──────────────
         status_labels = {
             "pagada": "Pagada",
             "anticipo": "Anticipo",
@@ -5136,6 +5374,7 @@ def reportes():
         status_map = {row["status"]: row for row in sales_by_status}
         status_total = sum(float(row["total"] or 0) for row in sales_by_status) or 0
         sales_status_rows = []
+        # Siempre se muestran los 4 estados, aunque no tengan ventas
         for status_key in ("pagada", "anticipo", "pendiente", "cancelada"):
             row = status_map.get(status_key, {})
             amount = float(row.get("total", 0) or 0)
@@ -5149,6 +5388,7 @@ def reportes():
                 "percent": percent,
             })
 
+        # Día de mayor venta (para escalar las barras del gráfico)
         max_day_total = max([float(day["total_sales"] or 0) for day in sales_by_day] or [0])
         expense_category_labels = {
             "materiales": "Materiales",
@@ -5173,6 +5413,7 @@ def reportes():
                 "percent": round((amount / total_expenses_value) * 100) if total_expenses_value else 0,
             })
 
+        # Rangos rápidos (hoy, últimos 7 y 30 días) para los botones de la vista
         today_link = today.strftime("%Y-%m-%d")
         quick_ranges = {
             "today": {
@@ -5197,9 +5438,11 @@ def reportes():
         cancelled_count_value = int(appointments_summary["cancelled_count"] or 0)
         no_show_count_value = int(appointments_summary["no_show_count"] or 0)
         attended_count_value = int(appointments_summary["attended_count"] or 0)
+        # Citas efectivas = total menos canceladas
         effective_appointments = max(appointment_count_value - cancelled_count_value, 0)
         biggest_expense = expenses_by_category[0] if expenses_by_category else None
 
+        # KPIs finales entregados a la plantilla
         stats = {
             "sales_count":        sales_summary["sales_count"]          or 0,
             "total_sales":        sales_summary["total_sales"]           or 0,
@@ -5256,6 +5499,7 @@ def reportes():
 
 @nails_bp.route("/reportes/excel")
 def reportes_excel():
+    """Exporta a Excel (.xlsx) las ventas, gastos y citas del periodo seleccionado."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -5269,6 +5513,7 @@ def reportes_excel():
     cur  = conn.cursor()
 
     try:
+        # openpyxl se importa aquí para no cargarlo si nadie exporta
         from openpyxl import Workbook
         from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
         from openpyxl.utils import get_column_letter
@@ -5277,6 +5522,7 @@ def reportes_excel():
         ensure_nails_expenses_table(cur)
         conn.commit()
 
+        # Rango de fechas (mes actual por defecto), ordenado si viene invertido
         today        = date.today()
         default_from = today.replace(day=1)
         date_from    = request.args.get("date_from") or default_from.strftime("%Y-%m-%d")
@@ -5290,6 +5536,7 @@ def reportes_excel():
         date_from = date_from_obj.strftime("%Y-%m-%d")
         date_to   = date_to_obj.strftime("%Y-%m-%d")
 
+        # Resumen de ventas
         cur.execute(
             """
             SELECT
@@ -5307,6 +5554,7 @@ def reportes_excel():
         )
         sales_summary = cur.fetchone()
 
+        # Resumen de gastos
         cur.execute(
             """
             SELECT
@@ -5321,6 +5569,7 @@ def reportes_excel():
         )
         expenses_summary = cur.fetchone()
 
+        # Hoja "Ventas": una fila por venta
         cur.execute(
             """
             SELECT
@@ -5349,6 +5598,7 @@ def reportes_excel():
         )
         sales_rows = cur.fetchall()
 
+        # Hoja "Detalle ventas": una fila por concepto vendido
         cur.execute(
             """
             SELECT
@@ -5373,6 +5623,7 @@ def reportes_excel():
         )
         sale_details_rows = cur.fetchall()
 
+        # Hoja "Gastos"
         cur.execute(
             """
             SELECT
@@ -5395,6 +5646,7 @@ def reportes_excel():
         )
         expense_rows = cur.fetchall()
 
+        # Hoja "Gastos por categoría"
         cur.execute(
             """
             SELECT
@@ -5412,6 +5664,7 @@ def reportes_excel():
         )
         expense_category_rows = cur.fetchall()
 
+        # Hoja "Citas": una fila por cita con sus servicios concatenados
         cur.execute(
             """
             SELECT
@@ -5444,17 +5697,20 @@ def reportes_excel():
         )
         appointment_rows = cur.fetchall()
 
+        # ── Construcción del libro de Excel ──
         wb = Workbook()
-        wb.remove(wb.active)
+        wb.remove(wb.active)  # Quita la hoja vacía por defecto
         header_fill = PatternFill("solid", fgColor="8F4AA0")
         header_font = Font(color="FFFFFF", bold=True)
         soft_fill = PatternFill("solid", fgColor="F8E7F7")
         border = Border(bottom=Side(style="thin", color="E7D9E9"))
 
         def money_value(value):
+            """Convierte Decimal/None a float para escribir en Excel."""
             return float(value or 0)
 
         def add_sheet(title, headers, rows):
+            """Crea una hoja con encabezado estilizado, filas, anchos automáticos y fila fija."""
             ws = wb.create_sheet(title)
             ws.append(headers)
             for cell in ws[1]:
@@ -5467,6 +5723,7 @@ def reportes_excel():
                 for cell in row:
                     cell.border = border
                     cell.alignment = Alignment(vertical="top", wrap_text=True)
+            # Ancho de columna según el contenido (entre 12 y 36)
             for column_cells in ws.columns:
                 max_length = max(len(str(cell.value or "")) for cell in column_cells)
                 ws.column_dimensions[get_column_letter(column_cells[0].column)].width = min(max(max_length + 2, 12), 36)
@@ -5478,6 +5735,7 @@ def reportes_excel():
         sales_count = int(sales_summary["ventas"] or 0)
         avg_ticket = total_sales / sales_count if sales_count else 0
 
+        # Hoja "Resumen" con los indicadores principales
         summary_ws = wb.create_sheet("Resumen")
         summary_ws.append(["Salón", business["name"] or "Sianeffects Nails"])
         summary_ws.append(["Periodo", f"{date_from} a {date_to}"])
@@ -5502,6 +5760,7 @@ def reportes_excel():
         summary_ws.column_dimensions["A"].width = 22
         summary_ws.column_dimensions["B"].width = 30
 
+        # Demás hojas del libro
         add_sheet("Ventas", [
             "folio", "fecha", "clienta", "telefono", "tecnica", "estado", "metodo_pago",
             "subtotal", "descuento", "impuestos", "total", "pagado", "saldo", "notas",
@@ -5522,10 +5781,12 @@ def reportes_excel():
             "servicios", "total_estimado", "anticipo", "notas",
         ], [dict(row) for row in appointment_rows])
 
+        # Se guarda en memoria y se envía como descarga
         output = io.BytesIO()
         wb.save(output)
         output.seek(0)
 
+        # Nombre de archivo seguro: reporte_nails_<slug>_<desde>_a_<hasta>.xlsx
         safe_slug = re.sub(r"[^a-zA-Z0-9_-]+", "-", business.get("slug") or business.get("name") or "nails").strip("-").lower()
         filename = f"reporte_nails_{safe_slug}_{date_from}_a_{date_to}.xlsx"
 
@@ -5568,6 +5829,7 @@ def personal():
     try:
         is_owner = user_is_nails_owner(cur, user_id, business)
 
+        # Lista de personal con su usuario, total de citas y total vendido
         cur.execute(
             """
             SELECT
@@ -5606,6 +5868,7 @@ def personal():
 
         business_timezone = business["timezone"] or "America/Monterrey"
         activity_logs = []
+        # La bitácora de actividad solo la ve la dueña
         if is_owner:
             cur.execute(
                 """
@@ -5651,6 +5914,7 @@ def personal():
 
 @nails_bp.route("/personal/<int:staff_id>/editar", methods=["POST"])
 def editar_personal(staff_id):
+    """Edita nombre, correo, teléfono, rol y color de un miembro del personal (solo la jefa)."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -5673,7 +5937,7 @@ def editar_personal(staff_id):
         phone = clean_text(request.form.get("phone"), 40)
         role = clean_text(request.form.get("role"), 40) or "staff"
         color = clean_hex_color(request.form.get("color"), DEFAULT_PRIMARY_COLOR)
-        commission_type = "none"
+        commission_type = "none"   # Las comisiones están deshabilitadas por ahora
         commission_value = 0
         # Eliminamos is_active de aquí para que solo se controle con los botones
 
@@ -5681,6 +5945,7 @@ def editar_personal(staff_id):
             flash("Revisa nombre y rol.", "warning")
             return redirect(url_for("nails.personal"))
 
+        # Datos actuales del miembro (para validar cambios de rol)
         cur.execute(
             """
             SELECT role, user_id, is_active
@@ -5697,10 +5962,12 @@ def editar_personal(staff_id):
 
         editing_self = current_staff["user_id"] and int(current_staff["user_id"]) == int(user_id)
 
+        # Una jefa no puede quitarse a sí misma el rol de jefa
         if editing_self and current_staff["role"] == "owner" and role != "owner":
             flash("No puedes quitarte tu propio rol de jefa.", "warning")
             return redirect(url_for("nails.personal"))
 
+        # El salón siempre debe conservar al menos una jefa activa
         if (
             current_staff["role"] == "owner"
             and current_staff["is_active"]
@@ -5744,6 +6011,7 @@ def editar_personal(staff_id):
 
 @nails_bp.route("/personal/<int:staff_id>/desactivar", methods=["POST"])
 def desactivar_personal(staff_id):
+    """Desactiva (soft delete) a un miembro del personal (solo la jefa)."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -5775,10 +6043,12 @@ def desactivar_personal(staff_id):
             flash("No se encontró ese miembro del personal.", "warning")
             return redirect(url_for("nails.personal"))
 
+        # No se puede auto-desactivar
         if staff["user_id"] and int(staff["user_id"]) == int(user_id):
             flash("No puedes desactivarte a ti misma.", "warning")
             return redirect(url_for("nails.personal"))
 
+        # No se puede desactivar a la única jefa activa
         if (
             staff["role"] == "owner"
             and staff["is_active"]
@@ -5812,6 +6082,7 @@ def desactivar_personal(staff_id):
 
 @nails_bp.route("/personal/<int:staff_id>/reactivar", methods=["POST"])
 def reactivar_personal(staff_id):
+    """Reactiva a un miembro del personal desactivado (solo la jefa)."""
     if not require_login():
         return redirect(url_for("auth.login"))
 
@@ -5875,11 +6146,12 @@ def configuracion():
 
     try:
         if request.method == "POST":
+            # ── Leer y sanitizar campos del formulario ──
             name                = clean_text(request.form.get("name"), 120).upper()
             whatsapp            = clean_text(request.form.get("whatsapp"), 40)
             instagram           = clean_text(request.form.get("instagram"), 80)
             address             = clean_text(request.form.get("address"), 240)
-            logo_url            = business["logo_url"] or ""
+            logo_url            = business["logo_url"] or ""  # Se conserva el logo actual si no se sube otro
             primary_color       = clean_hex_color(request.form.get("primary_color"),   DEFAULT_PRIMARY_COLOR)
             secondary_color     = clean_hex_color(request.form.get("secondary_color"), DEFAULT_SECONDARY_COLOR)
             accent_color        = clean_hex_color(request.form.get("accent_color"),    DEFAULT_ACCENT_COLOR)
@@ -5898,9 +6170,11 @@ def configuracion():
                                  "America/Cancun", "America/Tijuana"}:
                 timezone = "America/Monterrey"
 
+            # Solo MXN o USD
             if currency not in {"MXN", "USD"}:
                 currency = "MXN"
 
+            # Validar y normalizar horarios
             try:
                 business_hours_json = normalize_business_hours_from_form(request.form)
             except ValueError as e:
@@ -5916,6 +6190,7 @@ def configuracion():
                         flash("El logo debe ser PNG, JPG, JPEG, SVG o WEBP.", "warning")
                         return redirect(url_for("nails.configuracion"))
 
+                    # Medir el tamaño del archivo y regresar el cursor al inicio
                     file.seek(0, os.SEEK_END)
                     file_size = file.tell()
                     file.seek(0)
@@ -5935,6 +6210,7 @@ def configuracion():
                                 f"de negocio {business['id']} - {e}"
                             )
 
+                    # Nombre único: nails/business_<id>/logo/<uuid>_<archivo>
                     base_filename   = secure_filename(file.filename)
                     unique_filename = (
                         f"nails/business_{business['id']}/logo/"
@@ -6026,6 +6302,7 @@ def configuracion():
             except Exception:
                 business_hours = {}
 
+        # Correo con el que se registró el usuario dueño
         cur.execute(
             """
             SELECT email
@@ -6081,6 +6358,7 @@ def ticket(sale_id):
     try:
         business_timezone = business["timezone"] or "America/Monterrey"
 
+        # Venta con datos de clienta y técnica (solo si pertenece a este salón)
         cur.execute(
             """
             SELECT
@@ -6103,12 +6381,14 @@ def ticket(sale_id):
         if not sale:
             return "Ticket no encontrado", 404
 
+        # Líneas de detalle del ticket
         cur.execute(
             "SELECT * FROM nails_sale_details WHERE sale_id = %s ORDER BY id ASC",
             (sale_id,),
         )
         details = cur.fetchall()
 
+        # Pagos registrados de la venta
         cur.execute(
             """
             SELECT
@@ -6185,6 +6465,7 @@ def cambiar_estado_cita(appointment_id):
 
     nuevo_estado = request.form.get("status", "").strip()
 
+    # El estado debe ser uno de los permitidos
     if nuevo_estado not in APPOINTMENT_STATUSES:
         flash("Estado de cita inválido.", "warning")
         return redirect(url_for("nails.agenda"))
@@ -6211,6 +6492,7 @@ def cambiar_estado_cita(appointment_id):
             flash("No se encontró la cita.", "warning")
             return redirect(url_for("nails.agenda"))
 
+        # Si la cita se cancela, su venta ligada también se cancela
         if nuevo_estado == "cancelada":
             cur.execute(
                 """
@@ -6225,6 +6507,7 @@ def cambiar_estado_cita(appointment_id):
                 (appointment_id, business["id"]),
             )
 
+        # Auditoría del cambio de estado
         cur.execute(
             """
             INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
@@ -6287,15 +6570,18 @@ def editar_cita(appointment_id):
         deposit_amount_raw = request.form.get("deposit_amount", "0")
         notes              = clean_text(request.form.get("notes"), 1000)
 
+        # Servicios elegidos (uno o varios) y servicio principal
         selected_service_ids = [clean_optional_id(value) for value in request.form.getlist("service_ids")]
         selected_service_ids = [value for value in selected_service_ids if value]
         service_id = selected_service_ids[0] if selected_service_ids else None
 
+        # Extras elegidos
         selected_extra_ids = [clean_optional_id(value) for value in request.form.getlist("extras")]
         selected_extra_ids = [value for value in selected_extra_ids if value]
 
         # ── Validaciones según el tipo de registro ──────────
         if appointment_type == "block":
+            # Bloqueo de día completo
             if all_day_block:
                 start_time = "00:00"
                 end_time_raw = "23:59"
@@ -6332,6 +6618,7 @@ def editar_cita(appointment_id):
 
             unique_service_ids = list(dict.fromkeys(selected_service_ids))
 
+            # Servicios activos del salón con sus precios/duraciones
             cur.execute(
                 """
                 SELECT id, name, base_price, duration_minutes
@@ -6352,6 +6639,7 @@ def editar_cita(appointment_id):
             estimated_total = 0
             total_duration = 0
 
+            # Acumula precio y duración por servicio
             for index, selected_service_id in enumerate(selected_service_ids):
                 service = service_map[selected_service_id]
                 service_price = float(service["base_price"] or 0)
@@ -6368,6 +6656,7 @@ def editar_cita(appointment_id):
 
             extras_to_insert = []
 
+            # Valida y suma cada extra
             for extra_id in selected_extra_ids:
                 cur.execute(
                     "SELECT id, name, price, duration_minutes, allow_quantity FROM nails_extras WHERE id = %s AND business_id = %s AND is_active = TRUE LIMIT 1",
@@ -6397,6 +6686,7 @@ def editar_cita(appointment_id):
 
             appointment_title = " + ".join(item["name"] for item in services_to_insert[:3])
 
+        # La cita a editar debe existir y ser de este salón
         cur.execute("SELECT id FROM nails_appointments WHERE id = %s AND business_id = %s LIMIT 1", (appointment_id, business["id"]))
         if not cur.fetchone():
             flash("No se encontró la cita.", "warning")
@@ -6414,6 +6704,7 @@ def editar_cita(appointment_id):
             flash("Hora de fin inválida.", "warning")
             return redirect(url_for("nails.agenda"))
 
+        # Convierte fecha/hora local a timestamptz usando PostgreSQL
         business_timezone = business["timezone"] or "America/Monterrey"
         start_datetime_str = f"{appointment_date} {start_time}:00"
 
@@ -6437,6 +6728,7 @@ def editar_cita(appointment_id):
             flash("La hora de fin debe ser posterior a la hora de inicio.", "warning")
             return redirect(url_for("nails.agenda"))
 
+        # Empalmes (excluyendo la propia cita que se edita)
         overlap = find_overlapping_appointment(
             cur, business["id"], start_time_db, end_time_db, business_timezone,
             staff_id=staff_id, exclude_appointment_id=appointment_id,
@@ -6446,6 +6738,7 @@ def editar_cita(appointment_id):
             flash(build_overlap_message(overlap, staff_id=staff_id), "warning")
             return redirect(url_for("nails.agenda"))
 
+        # Actualiza la cita/bloqueo
         cur.execute(
             """
             UPDATE nails_appointments
@@ -6462,6 +6755,7 @@ def editar_cita(appointment_id):
             ),
         )
 
+        # Se reconstruyen servicios y extras desde cero
         cur.execute("DELETE FROM nails_appointment_services WHERE appointment_id = %s", (appointment_id,))
         cur.execute("DELETE FROM nails_appointment_extras WHERE appointment_id = %s", (appointment_id,))
 
@@ -6478,6 +6772,7 @@ def editar_cita(appointment_id):
                     (appointment_id, extra["id"], extra["name"], extra["price"], extra["duration_minutes"], extra["quantity"]),
                 )
 
+            # Detalle para sincronizar la venta ligada
             sale_detail_items = [{"item_type": "service", "item_id": item["id"], "name": item["name"], "description": None, "quantity": 1, "unit_price": item["price"], "total": item["price"]} for item in services_to_insert]
             sale_detail_items.extend([{"item_type": "extra", "item_id": extra["id"], "name": extra["name"], "description": None, "quantity": extra["quantity"], "unit_price": extra["unit_price"], "total": extra["price"]} for extra in extras_to_insert])
             
@@ -6485,12 +6780,14 @@ def editar_cita(appointment_id):
                 cur, business["id"], appointment_id, client_id, staff_id, sale_detail_items, estimated_total, initial_paid_amount=deposit_amount, notes=notes,
             )
 
+            # Si queda cancelada, su venta también
             if status == "cancelada":
                 cur.execute("UPDATE nails_sales SET status = 'cancelada', balance_due = 0, updated_at = CURRENT_TIMESTAMP WHERE appointment_id = %s AND business_id = %s AND status != 'cancelada'", (appointment_id, business["id"]))
         else:
             # Si lo convertimos a bloqueo, cancelamos la venta si existía
             cur.execute("UPDATE nails_sales SET status = 'cancelada', balance_due = 0, updated_at = CURRENT_TIMESTAMP WHERE appointment_id = %s AND business_id = %s AND status != 'cancelada'", (appointment_id, business["id"]))
 
+        # Auditoría de la edición
         cur.execute("INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail) VALUES (%s, %s, %s, %s, %s)", (business["id"], user_id, "appointment_update", "Agenda", f"Editó la cita/bloqueo #{appointment_id}"))
 
         conn.commit()
@@ -6530,11 +6827,13 @@ def eliminar_cita(appointment_id):
     cur  = conn.cursor()
 
     try:
+        # Solo la dueña puede eliminar
         if not user_is_nails_owner(cur, user_id, business):
             conn.rollback()
             flash("Solo la dueña del salón puede eliminar citas.", "warning")
             return redirect(url_for("nails.agenda"))
 
+        # Datos de la cita antes de borrarla (para el log y los mensajes)
         cur.execute(
             """
             SELECT
@@ -6557,6 +6856,7 @@ def eliminar_cita(appointment_id):
             flash("No se encontró la cita.", "warning")
             return redirect(url_for("nails.agenda"))
 
+        # La venta ligada se cancela (se conserva el historial)
         cur.execute(
             """
             UPDATE nails_sales
@@ -6570,6 +6870,7 @@ def eliminar_cita(appointment_id):
             (appointment_id, business["id"]),
         )
 
+        # Se borran servicios, extras y la cita
         cur.execute("DELETE FROM nails_appointment_services WHERE appointment_id = %s", (appointment_id,))
         cur.execute("DELETE FROM nails_appointment_extras WHERE appointment_id = %s", (appointment_id,))
         cur.execute(
@@ -6580,6 +6881,7 @@ def eliminar_cita(appointment_id):
             (appointment_id, business["id"]),
         )
 
+        # Auditoría de la eliminación (distingue bloqueo de cita)
         cur.execute(
             """
             INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
@@ -6629,6 +6931,7 @@ def catalogo_publico(slug):
         ensure_nails_extra_quantity_columns(cur)
         conn.commit()
 
+        # Negocio activo según el slug de la URL
         cur.execute(
             """
             SELECT * FROM nails_businesses
@@ -6643,6 +6946,7 @@ def catalogo_publico(slug):
             return "Catálogo no encontrado", 404
 
         if request.method == "POST":
+            # ── Rate limit por IP + negocio para evitar spam de reservas ──
             rate_key = (
                 request.headers.get("X-Forwarded-For", request.remote_addr or "unknown").split(",")[0].strip(),
                 public_business["id"],
@@ -6654,6 +6958,7 @@ def catalogo_publico(slug):
             ensure_nails_appointment_services_table(cur)
             ensure_nails_extra_quantity_columns(cur)
 
+            # ── Leer y sanitizar datos de la reserva ──
             client_name = clean_text(request.form.get("client_name"), 120)
             client_phone = clean_text(request.form.get("client_phone"), 40)
             selected_service_ids = [
@@ -6670,6 +6975,7 @@ def catalogo_publico(slug):
                 for value in request.form.getlist("extras")
             ]
             selected_extra_ids = [value for value in selected_extra_ids if value]
+            # Cantidad elegida por cada extra (máx. 50)
             selected_extra_quantities = {
                 extra_id: parse_positive_int(request.form.get(f"qty_{extra_id}", 1), default=1, max_value=50)
                 for extra_id in selected_extra_ids
@@ -6686,6 +6992,7 @@ def catalogo_publico(slug):
                 flash("Fecha u hora inválida.", "warning")
                 return redirect(url_for("nails.catalogo_publico", slug=slug, agendar="1"))
 
+            # Recalcula los horarios libres para validar que el elegido siga disponible
             available_slots, services_selected, extras_selected, slots_message = get_public_available_slots(
                 cur,
                 public_business,
@@ -6703,6 +7010,7 @@ def catalogo_publico(slug):
                 flash(slots_message or "Ese horario ya no está disponible. Elige otra hora para agendar tu cita.", "warning")
                 return redirect(url_for("nails.catalogo_publico", slug=slug, agendar="1"))
 
+            # Duración y total estimado de la reserva
             appointment_date_value = parse_date_value(appointment_date)
             business_timezone = public_business["timezone"] or "America/Monterrey"
             start_datetime_str = f"{appointment_date} {start_time}:00"
@@ -6712,6 +7020,7 @@ def catalogo_publico(slug):
             estimated_total += sum(float(extra["price"] or 0) for extra in extras_selected)
             appointment_title = " + ".join(service["name"] for service in services_selected[:3])
 
+            # Convierte a timestamptz y verifica que no sea una fecha pasada
             cur.execute(
                 """
                 SELECT
@@ -6736,6 +7045,7 @@ def catalogo_publico(slug):
                 flash("Elige una fecha y hora futura para tu cita.", "warning")
                 return redirect(url_for("nails.catalogo_publico", slug=slug, agendar="1"))
 
+            # Busca una técnica libre para asignarle la cita
             public_staff = find_available_public_booking_staff(
                 cur,
                 public_business["id"],
@@ -6746,6 +7056,7 @@ def catalogo_publico(slug):
                 flash("Ese horario ya no está disponible. Elige otra hora para agendar tu cita.", "warning")
                 return redirect(url_for("nails.catalogo_publico", slug=slug, agendar="1"))
 
+            # Crea la clienta (salvo que use el nombre genérico)
             client_id = None
             if not is_general_customer_name(client_name):
                 cur.execute(
@@ -6763,6 +7074,7 @@ def catalogo_publico(slug):
                 )
                 client_id = cur.fetchone()["id"]
 
+            # Inserta la cita en estado 'pendiente' (el salón la confirma después)
             cur.execute(
                 """
                 INSERT INTO nails_appointments (
@@ -6787,6 +7099,7 @@ def catalogo_publico(slug):
             )
             appointment_id = cur.fetchone()["id"]
 
+            # Servicios de la cita
             for index, service in enumerate(services_selected):
                 cur.execute(
                     """
@@ -6805,6 +7118,7 @@ def catalogo_publico(slug):
                     ),
                 )
 
+            # Extras de la cita
             for extra in extras_selected:
                 cur.execute(
                     """
@@ -6823,6 +7137,7 @@ def catalogo_publico(slug):
                     ),
                 )
 
+            # Detalle para la venta pendiente ligada a la cita
             sale_detail_items = [
                 {
                     "item_type": "service",
@@ -6860,6 +7175,7 @@ def catalogo_publico(slug):
                 notes=notes,
             )
 
+            # Auditoría de la reserva pública (sin usuario: user_id NULL)
             cur.execute(
                 """
                 INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
@@ -6877,7 +7193,7 @@ def catalogo_publico(slug):
             flash("Tu cita fue solicitada correctamente. El salón podrá confirmarla pronto.", "success")
             return redirect(url_for("nails.catalogo_publico", slug=slug, agendada="1"))
 
-        # Solo servicios marcados como públicos
+        # ── GET: solo servicios marcados como públicos ──
         cur.execute(
             """
             SELECT s.*, c.name AS category_name
@@ -6892,6 +7208,7 @@ def catalogo_publico(slug):
         )
         services = cur.fetchall()
 
+        # Extras activos
         cur.execute(
             """
             SELECT * FROM nails_extras
@@ -6942,6 +7259,7 @@ def catalogo_publico(slug):
 
 @nails_bp.route("/catalogo/<slug>/horarios")
 def catalogo_horarios_disponibles(slug):
+    """Endpoint JSON del catálogo: devuelve horarios libres y resumen (duración/total) de la selección."""
     conn = get_db_connection()
     cur  = conn.cursor()
 
@@ -6963,11 +7281,13 @@ def catalogo_horarios_disponibles(slug):
                 "message": "Catálogo no encontrado.",
             }), 404
 
+        # Servicios elegidos (acepta service_ids múltiples o un service_id suelto)
         service_ids = request.args.getlist("service_ids")
         if not service_ids:
             service_id = request.args.get("service_id")
             service_ids = [service_id] if service_id else []
         extra_ids = request.args.getlist("extras")
+        # Cantidad por extra (clave = id del extra)
         extra_quantities = {
             clean_optional_id(extra_id): parse_positive_int(request.args.get(f"qty_{extra_id}", 1), default=1, max_value=50)
             for extra_id in extra_ids
@@ -6983,6 +7303,7 @@ def catalogo_horarios_disponibles(slug):
             extra_ids,
             extra_quantities,
         )
+        # Resumen de duración y precio de la selección
         total_duration = sum(int(service["duration_minutes"] or 60) for service in services_selected)
         total_duration += sum(int(extra["duration_minutes"] or 0) for extra in extras_selected)
         total_price = sum(float(service["base_price"] or 0) for service in services_selected)
@@ -7043,6 +7364,7 @@ def upload_r2_nails():
     if not business:
         return jsonify({"success": False, "error": "No se encontró negocio Nails"}), 404
 
+    # Archivo recibido
     file = request.files.get("file")
 
     if not file:
@@ -7051,6 +7373,7 @@ def upload_r2_nails():
     if not allowed_image_file(file.filename or ""):
         return jsonify({"success": False, "error": "Formato de imagen no permitido"}), 400
 
+    # Medir tamaño (máx. 8 MB) y regresar el cursor al inicio
     file.seek(0, os.SEEK_END)
     file_size = file.tell()
     file.seek(0)
@@ -7068,10 +7391,12 @@ def upload_r2_nails():
     }
     folder_name = allowed_folder_types.get(folder_type, "general")
 
+    # El tipo MIME debe ser de imagen
     mime_type = file.content_type or ""
     if not mime_type.startswith("image/"):
         return jsonify({"success": False, "error": "Solo se permiten imágenes"}), 400
 
+    # Ruta final en R2: nails/business_<id>/<carpeta>/<uuid>_<archivo>
     base_filename   = secure_filename(file.filename or "imagen")
     unique_filename = f"{uuid.uuid4().hex}_{base_filename}"
     ruta_r2         = f"nails/business_{business['id']}/{folder_name}/{unique_filename}"
@@ -7154,6 +7479,7 @@ def galeria():
 
     try:
         if request.method == "POST":
+            # ── Alta de imagen en la galería ──
             title      = clean_text(request.form.get("title"), 160)
             description = clean_text(request.form.get("description"), 1200)
             image_url  = clean_text(request.form.get("image_url"), 1000)
@@ -7165,6 +7491,7 @@ def galeria():
                 flash("Primero sube una imagen.", "warning")
                 return redirect(url_for("nails.galeria"))
 
+            # El servicio relacionado (opcional) debe ser de este salón
             if service_id and not row_belongs_to_business(cur, "nails_services", service_id, business["id"]):
                 flash("El servicio relacionado no pertenece a este salón.", "warning")
                 return redirect(url_for("nails.galeria"))
@@ -7223,6 +7550,7 @@ def galeria():
         )
         gallery_items = cur.fetchall()
 
+        # Estadísticas de la galería (solo imágenes activas)
         gallery_active_items = [item for item in gallery_items if item["is_active"]]
         gallery_public_count = sum(1 for item in gallery_active_items if item["is_public"])
         gallery_hidden_count = len(gallery_active_items) - gallery_public_count
@@ -7293,6 +7621,7 @@ def eliminar_imagen_galeria(image_id):
             flash("No se encontró la imagen.", "warning")
             return redirect(url_for("nails.galeria"))
 
+        # Auditoría del ocultamiento
         cur.execute(
             """
             INSERT INTO nails_activity_logs (business_id, user_id, action, module, detail)
@@ -7338,6 +7667,7 @@ def toggle_public_galeria(image_id):
     cur  = conn.cursor()
 
     try:
+        # Invierte is_public y devuelve el nuevo valor
         cur.execute(
             """
             UPDATE nails_gallery
