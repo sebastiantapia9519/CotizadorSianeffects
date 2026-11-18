@@ -43,6 +43,16 @@ from utils.module_activation import (
 # Registramos el Blueprint de autenticación (sin prefijo de URL, rutas directas)
 auth_bp = Blueprint('auth', __name__)
 
+def _trial_days():
+    """Obtiene la duración configurable de la prueba gratuita."""
+    try:
+        return max(1, int(current_app.config.get('TRIAL_DAYS', 7)))
+    except (TypeError, ValueError):
+        current_app.logger.warning(
+            "TRIAL_DAYS inválido. Se utilizarán 7 días por defecto."
+        )
+        return 7
+
 
 def _auth_email_profile(active_module):
     """Devuelve asunto y template de verificacion/bienvenida segun modulo."""
@@ -79,7 +89,7 @@ def _module_access_end(module):
     status = (module.get('status') or '').strip().lower()
     access_end = module.get('subscription_end') or module.get('trial_ends_at')
     if not access_end and status == 'trial' and module.get('created_at'):
-        access_end = module['created_at'] + timedelta(days=7)
+        access_end = module['created_at'] + timedelta(days=_trial_days())
     return access_end
 
 
@@ -664,7 +674,7 @@ def registro():
     # ----------------------------------------------------------------
     hashed_pw = generate_password_hash(password)  # Nunca guardamos contraseñas en texto plano
     created_at = now_utc()
-    subscription_end = created_at + timedelta(days=7)  # 7 días de prueba gratuita
+    subscription_end = created_at + timedelta(days=_trial_days())  # días de prueba gratuita
 
     conn = get_db()
     cursor = conn.cursor()
@@ -838,7 +848,7 @@ def registro_nails():
 
     hashed_pw = generate_password_hash(password)
     created_at = now_utc()
-    subscription_end = created_at + timedelta(days=7)
+    subscription_end = created_at + timedelta(days=_trial_days()) # días de prueba gratuita
     conn = get_db()
     cursor = conn.cursor()
 

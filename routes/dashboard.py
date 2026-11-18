@@ -535,7 +535,6 @@ def index():
                 for row in churn_reciente[:10]
             ],
         }
-
         return render_template(
             'dashboard/index.html',
             total_usuarios=total_usuarios,

@@ -70,6 +70,16 @@ app.secret_key = os.getenv('SECRET_KEY', 'dev_key_fallback_insegura')
 # Debug solo si FLASK_DEBUG=1 en el .env (siempre False en producción)
 app.config['DEBUG'] = os.getenv('FLASK_DEBUG') == '1'
 
+# =============================================================================
+# CONFIGURACIÓN DE PRUEBA GRATUITA
+# =============================================================================
+
+app.config['TRIAL_DAYS'] = int(os.getenv('TRIAL_DAYS', '7'))
+
+print("VALOR TRIAL_DAYS:", app.config['TRIAL_DAYS'])
+print("TRIAL_DAYS EN APP:", app.config.get('TRIAL_DAYS'))
+print("APP:", app.name)
+print("ARCHIVO:", app.root_path)
 
 # =============================================================================
 # CONFIGURACIÓN DE LOGGING CON ZONA HORARIA DE MONTERREY
@@ -718,7 +728,9 @@ def inject_user_config():
         'nombre_empresa': 'Cotizador Sianeffects',
         'slogan': '',
         'website': '',
-        'margen_ganancia': 100
+        'margen_ganancia': 100,
+        'TRIAL_DAYS': app.config.get('TRIAL_DAYS', 7)
+
     }
 
     # Validamos PRIMERO que estemos dentro de una petición HTTP
@@ -735,7 +747,12 @@ def inject_user_config():
                 cursor.close()
 
             if user_config:
-                return {'config': dict(user_config)}
+                user_config_dict = dict(user_config)
+
+                # Conservamos la duración de prueba configurada en la aplicación
+                user_config_dict['TRIAL_DAYS'] = app.config.get('TRIAL_DAYS', 7)
+
+                return {'config': user_config_dict}
         except Exception as e:
             app.logger.error(
                 f"CONTEXT_ERROR: Fallo al inyectar config para usuario {session.get('user_id')}: {e}"
