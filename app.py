@@ -52,6 +52,8 @@ from services.mail_service import enviar_correo_sian
 from utils.datetime_utils import now_utc
 from db import get_db_connection
 
+
+
 # =============================================================================
 # INICIALIZACIÓN DE FLASK
 # =============================================================================
@@ -76,10 +78,6 @@ app.config['DEBUG'] = os.getenv('FLASK_DEBUG') == '1'
 
 app.config['TRIAL_DAYS'] = int(os.getenv('TRIAL_DAYS', '7'))
 
-print("VALOR TRIAL_DAYS:", app.config['TRIAL_DAYS'])
-print("TRIAL_DAYS EN APP:", app.config.get('TRIAL_DAYS'))
-print("APP:", app.name)
-print("ARCHIVO:", app.root_path)
 
 # =============================================================================
 # CONFIGURACIÓN DE LOGGING CON ZONA HORARIA DE MONTERREY
@@ -845,6 +843,8 @@ from routes.configuracion_bp import config_bp
 from routes.user_dashboard import user_dash_bp
 from routes.chatbot import chatbot_bp
 from routes.payments import payments_bp
+from routes.embajadoras import embajadoras_bp
+
 
 #Nails
 from routes.nails.nails import nails_bp
@@ -864,6 +864,7 @@ app.register_blueprint(config_bp)
 app.register_blueprint(user_dash_bp)
 app.register_blueprint(chatbot_bp)
 app.register_blueprint(payments_bp, url_prefix='/payments')
+app.register_blueprint(embajadoras_bp)
 
 #Nails
 app.register_blueprint(nails_bp)

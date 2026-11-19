@@ -1,0 +1,347 @@
+{% extends "layout.html" %}
+
+{% block title %}{{ amb.name }} | Embajadoras{% endblock %}
+
+{% block extra_css %}
+<style>
+    .code-chip {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: .04em;
+    }
+
+    .stat-box .num {
+        font-size: 1.7rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+
+    .btn-pink {
+        background-color: var(--sian-pink);
+        border: none;
+        color: #fff;
+        font-weight: 700;
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .btn-pink:hover {
+        color: #fff;
+        background-color: #ff4a5a;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(255, 107, 129, .35);
+    }
+
+    .btn-pink:focus-visible {
+        outline: 3px solid rgba(255, 107, 129, .4);
+        outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .btn-pink { transition: none; }
+        .btn-pink:hover { transform: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mt-4 mb-3">
+    <a href="{{ url_for('embajadoras.admin_lista') }}" class="text-decoration-none small text-body-secondary">
+        <i class="fas fa-arrow-left me-1"></i> Volver a embajadoras
+    </a>
+</div>
+
+<div class="d-flex flex-wrap justify-content-between align-items-start gap-3 mb-4">
+    <div>
+        <h2 class="fw-bold mb-1">{{ amb.name }}</h2>
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <span class="code-chip fw-bold fs-5">{{ amb.code }}</span>
+            {% if amb.status == 'active' %}
+            <span class="badge text-bg-success">Activa</span>
+            {% else %}
+            <span class="badge text-bg-secondary">En pausa</span>
+            {% endif %}
+            {% if not amb.user_id %}
+            <span class="badge text-bg-warning">Sin cuenta vinculada</span>
+            {% endif %}
+        </div>
+        <div class="text-body-secondary small mt-1">{{ amb.email }} · Alta: {{ amb.creada }}</div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-outline-primary rounded-pill px-3"
+            data-bs-toggle="modal" data-bs-target="#modalEditarEmbajadora">
+            <i class="fas fa-pen me-1"></i> Editar
+        </button>
+
+        {% if amb.user_id %}
+        <form action="{{ url_for('embajadoras.admin_reintentar', amb_id=amb.id) }}" method="POST">
+            <button type="submit" class="btn btn-outline-secondary rounded-pill px-3"
+                title="Intenta aplicar las recompensas que están pendientes">
+                <i class="fas fa-rotate me-1"></i> Aplicar pendientes
+            </button>
+        </form>
+        {% endif %}
+
+        {% if amb.status == 'active' %}
+        <form action="{{ url_for('embajadoras.admin_estado', amb_id=amb.id) }}" method="POST"
+            onsubmit="return confirm('¿Pausar el código {{ amb.code }}? No aceptará nuevos registros ni descuentos en Stripe, pero sus recompensas se siguen aplicando.');">
+            <input type="hidden" name="status" value="paused">
+            <button type="submit" class="btn btn-outline-danger rounded-pill px-3">
+                <i class="fas fa-pause me-1"></i> Pausar código
+            </button>
+        </form>
+        {% else %}
+        <form action="{{ url_for('embajadoras.admin_estado', amb_id=amb.id) }}" method="POST">
+            <input type="hidden" name="status" value="active">
+            <button type="submit" class="btn btn-pink rounded-pill px-3">
+                <i class="fas fa-play me-1"></i> Reactivar código
+            </button>
+        </form>
+        {% endif %}
+
+        <form action="{{ url_for('embajadoras.admin_eliminar', amb_id=amb.id) }}" method="POST"
+            onsubmit="return confirm('¿Eliminar permanentemente a {{ amb.name }}? Solo es posible si no tiene referidos ni recompensas.');">
+            <button type="submit" class="btn btn-outline-dark rounded-pill px-3" title="Eliminar embajadora">
+                <i class="fas fa-trash me-1"></i> Eliminar
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Modal: Editar Embajadora + Cupón Stripe -->
+<div class="modal fade" id="modalEditarEmbajadora" tabindex="-1" aria-labelledby="modalEditarEmbajadoraLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4 shadow">
+            <form action="{{ url_for('embajadoras.admin_editar', amb_id=amb.id) }}" method="POST">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="modalEditarEmbajadoraLabel">Editar embajadora</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editName" class="form-label small fw-bold">Nombre</label>
+                        <input type="text" class="form-control" id="editName" name="name"
+                            value="{{ amb.name }}" maxlength="150" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editEmail" class="form-label small fw-bold">Correo</label>
+                        <input type="email" class="form-control" id="editEmail" name="email"
+                            value="{{ amb.email }}" maxlength="150" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editCode" class="form-label small fw-bold">Código de referido y descuento</label>
+                        <input type="text" class="form-control code-chip text-uppercase" id="editCode" name="code"
+                            value="{{ amb.code }}" minlength="4" maxlength="40" required
+                            oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '');">
+                    </div>
+
+                    <hr class="my-3">
+                    <div class="small fw-bold mb-2">Crear / actualizar cupón en Stripe (opcional)</div>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <label for="editDiscType" class="form-label small">Tipo de descuento</label>
+                            <select class="form-select" id="editDiscType" name="discount_type"
+                                onchange="actualizarEtiquetaDescuentoEdit()">
+                                <option value="percent" selected>Porcentaje (%)</option>
+                                <option value="amount">Monto fijo ($ MXN)</option>
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <label for="editDiscValue" class="form-label small" id="editDiscValueLabel">Porcentaje (%)</label>
+                            <input type="number" step="0.01" min="0.01" class="form-control" id="editDiscValue"
+                                name="discount_value" placeholder="Déjalo vacío si no cambia">
+                        </div>
+                    </div>
+
+                    <div class="row g-2">
+                        <div class="col-7">
+                            <label for="editDiscDuration" class="form-label small">Duración del cupón</label>
+                            <select class="form-select" id="editDiscDuration" name="discount_duration"
+                                onchange="alternarMesesDuracionEdit()">
+                                <option value="once" selected>Una sola vez (primer pago)</option>
+                                <option value="repeating">Varios meses</option>
+                                <option value="forever">Para siempre</option>
+                            </select>
+                        </div>
+                        <div class="col-5" id="editMonthsGroup" style="display: none;">
+                            <label for="editMonths" class="form-label small">Meses</label>
+                            <input type="number" min="1" max="120" class="form-control" id="editMonths"
+                                name="duration_in_months" placeholder="Ej. 3">
+                        </div>
+                    </div>
+                    <div class="form-text mt-2">
+                        Si escribes un valor aquí, se creará un nuevo cupón en Stripe y se actualizará su Promotion Code.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-pink rounded-pill px-4">Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% if not amb.user_id %}
+<div class="card-custom p-4 mb-4 border border-warning">
+    <h5 class="fw-bold mb-1">Vincula su cuenta de Sianeffects</h5>
+    <p class="text-body-secondary small mb-3">
+        Sin una cuenta vinculada, sus recompensas quedan pendientes. Al vincularla, se aplican de inmediato.
+    </p>
+    <form action="{{ url_for('embajadoras.admin_vincular', amb_id=amb.id) }}" method="POST" class="row g-2">
+        <div class="col-md-8">
+            <input type="email" class="form-control" name="email" placeholder="Correo de su cuenta"
+                aria-label="Correo de la cuenta" required>
+        </div>
+        <div class="col-md-4 d-grid">
+            <button type="submit" class="btn btn-pink rounded-pill">Vincular cuenta</button>
+        </div>
+    </form>
+</div>
+{% else %}
+<div class="card-custom p-3 mb-4">
+    <div class="row g-3 small">
+        <div class="col-md-4">
+            <div class="text-body-secondary">Cuenta vinculada</div>
+            <div class="fw-bold">{{ amb.username }}</div>
+            <div class="text-body-secondary">{{ amb.user_email }}</div>
+        </div>
+        <div class="col-md-4">
+            <div class="text-body-secondary">Estado de su suscripción</div>
+            <div class="fw-bold">{{ amb.estado_suscripcion or '—' }}</div>
+            <div class="text-body-secondary">
+                {% if amb.stripe_subscription_id %}Cobro en Stripe activo{% else %}Sin cobro en Stripe{% endif %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="text-body-secondary">Vigente hasta / próximo cobro</div>
+            <div class="fw-bold">{{ amb.vigente_hasta }}</div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Registros</div>
+            <div class="num">{{ resumen.registrados }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Pagaron</div>
+            <div class="num">{{ resumen.convertidos }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Días ganados</div>
+            <div class="num">{{ resumen.dias_ganados }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 stat-box h-100 {% if resumen.dias_pendientes %}border border-warning{% endif %}">
+            <div class="text-body-secondary small">Días pendientes</div>
+            <div class="num">{{ resumen.dias_pendientes }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-custom p-3 p-md-4 h-100">
+            <h5 class="fw-bold mb-3">Personas registradas con su código</h5>
+            {% if referidos %}
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead>
+                        <tr class="small text-body-secondary">
+                            <th>Usuario</th>
+                            <th>Estado</th>
+                            <th>Registro</th>
+                            <th>Primer pago</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in referidos %}
+                        <tr>
+                            <td>
+                                {% if r.username %}
+                                <div class="fw-bold">{{ r.username }}</div>
+                                <div class="small text-body-secondary">{{ r.email }}</div>
+                                {% else %}
+                                <span class="text-body-secondary">Cuenta eliminada</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.status == 'converted' %}
+                                <span class="badge text-bg-success">Pagó</span>
+                                {% elif r.status == 'rejected' %}
+                                <span class="badge text-bg-secondary">No aplica</span>
+                                {% else %}
+                                <span class="badge text-bg-info">Registrado</span>
+                                {% endif %}
+                            </td>
+                            <td class="small">{{ r.registrado }}</td>
+                            <td class="small">{{ r.primer_pago }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-body-secondary small">Todavía nadie se registra con este código.</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card-custom p-3 p-md-4 h-100">
+            <h5 class="fw-bold mb-3">Historial de recompensas</h5>
+            {% if recompensas %}
+            <ul class="list-group list-group-flush">
+                {% for w in recompensas %}
+                <li class="list-group-item bg-transparent px-0">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="fw-bold">+{{ w.days_awarded }} días</div>
+                        <span class="badge text-bg-{{ w.estado_clase }}">{{ w.estado_txt }}</span>
+                    </div>
+                    <div class="small text-body-secondary">{{ w.otorgada }}</div>
+                    <div class="small text-body-secondary text-break">Pago: {{ w.payment_reference }}</div>
+                    {% if w.trasladada %}
+                    <div class="small text-body-secondary">Trasladada al cobro de PRO</div>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <div class="text-center py-4 text-body-secondary small">Aún no hay recompensas.</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+    function actualizarEtiquetaDescuentoEdit() {
+        const tipo = document.getElementById('editDiscType').value;
+        const lbl = document.getElementById('editDiscValueLabel');
+        const inp = document.getElementById('editDiscValue');
+        if (tipo === 'percent') {
+            lbl.textContent = 'Porcentaje (%)';
+            inp.max = '100';
+            inp.placeholder = 'Déjalo vacío si no cambia';
+        } else {
+            lbl.textContent = 'Monto fijo ($ MXN)';
+            inp.removeAttribute('max');
+            inp.placeholder = 'Déjalo vacío si no cambia';
+        }
+    }
+
+    function alternarMesesDuracionEdit() {
+        const dur = document.getElementById('editDiscDuration').value;
+        const grp = document.getElementById('editMonthsGroup');
+        grp.style.display = (dur === 'repeating') ? 'block' : 'none';
+    }
+</script>
+{% endblock %}

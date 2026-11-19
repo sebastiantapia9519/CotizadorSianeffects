@@ -1,0 +1,1346 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <title>Embajadoras Sianeffects | Programa Oficial de Colaboración</title>
+    <meta name="description" content="Ayuda a tu comunidad a cotizar con claridad y usa Sianeffects gratis. Programa de embajadoras: gana días de uso de la app por cada persona que se suscriba con tu código.">
+    <meta name="theme-color" content="#2b2135">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='images/iconSianeffects512x512.png') }}" type="image/png">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/apple-touch-icon.png') }}">
+
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Sacramento&display=swap" rel="stylesheet">
+
+    <style>
+        /* =====================================================
+           1. VARIABLES
+           ===================================================== */
+        :root {
+            --plum: #2b2135;
+            --plum-2: #3b2f48;
+            --cream: #fff9f5;
+            --paper: #ffffff;
+            --ink: #2b2135;
+            --muted: #6b6475;
+            --line: #efe2dd;
+
+            --salmon: #f2a29b;
+            --salmon-deep: #c4443a;
+            --salmon-soft: #fdece9;
+            --lilac: #c9b8e8;
+            --lilac-deep: #6a50b3;
+            --lilac-soft: #f1ecfa;
+            --mint: #9eddd2;
+            --mint-deep: #17766a;
+            --mint-soft: #e6f7f4;
+
+            --wrap: 1040px;
+            --gutter: clamp(18px, 5vw, 32px);
+        }
+
+        /* =====================================================
+           2. BASE
+           ===================================================== */
+        *, *::before, *::after { box-sizing: border-box; }
+
+        html {
+            scroll-behavior: smooth;
+            scroll-padding-top: 76px;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Inter', system-ui, sans-serif;
+            font-size: 1rem;
+            line-height: 1.65;
+            color: var(--ink);
+            background: var(--cream);
+            padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px));
+        }
+
+        h1, h2, h3 {
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 600;
+            line-height: 1.15;
+            margin: 0;
+        }
+
+        p { margin: 0; }
+        a { color: inherit; }
+
+        .wrap {
+            width: 100%;
+            max-width: var(--wrap);
+            margin-inline: auto;
+            padding-inline: var(--gutter);
+        }
+
+        :focus-visible {
+            outline: 3px solid var(--lilac-deep);
+            outline-offset: 3px;
+            border-radius: 6px;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            html { scroll-behavior: auto; }
+            *, *::before, *::after { transition: none !important; animation: none !important; }
+        }
+
+        /* =====================================================
+           3. BOTONES
+           ===================================================== */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            min-height: 50px;
+            padding: 12px 26px;
+            border-radius: 999px;
+            border: 2px solid transparent;
+            font: 600 0.95rem/1.2 'Inter', sans-serif;
+            text-decoration: none;
+            cursor: pointer;
+            transition: transform .2s, background .2s, border-color .2s;
+        }
+
+        .btn:hover { transform: translateY(-2px); }
+
+        .btn-salmon { background: var(--salmon); color: var(--plum); }
+        .btn-salmon:hover { background: #f6b7b1; }
+
+        .btn-whatsapp { background: #25d366; color: #0b2e1a; }
+        .btn-whatsapp:hover { background: #3be07b; }
+
+        .btn-ghost-light { border-color: rgba(255, 255, 255, .35); color: #fff; background: transparent; }
+        .btn-ghost-light:hover { border-color: #fff; background: rgba(255, 255, 255, .08); }
+
+        .btn-outline { border-color: var(--plum); color: var(--plum); background: transparent; }
+        .btn-outline:hover { background: var(--plum); color: #fff; }
+
+        .btn-sm { min-height: 42px; padding: 8px 18px; font-size: .85rem; }
+
+        /* =====================================================
+           4. HEADER Y BARRA FIJA MÓVIL
+           ===================================================== */
+        .site-header {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: var(--plum);
+        }
+
+        .header-inner {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            min-height: 64px;
+        }
+
+        .header-inner .btn { display: none; }
+
+        .brand {
+            display: inline-flex;
+            align-items: baseline;
+            gap: 4px;
+            text-decoration: none;
+            line-height: 1;
+        }
+
+        .brand-sian {
+            font-family: 'Fredoka', sans-serif;
+            font-weight: 600;
+            font-size: 1.7rem;
+            letter-spacing: 1px;
+        }
+
+        .brand-sian .c1, .brand-sian .c4 { color: var(--salmon); }
+        .brand-sian .c2 { color: var(--lilac); }
+        .brand-sian .c3 { color: var(--mint); }
+
+        .brand-script { font-family: 'Sacramento', cursive; font-size: 1.6rem; color: #fff; }
+
+        .sticky-cta {
+            position: fixed;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            z-index: 60;
+            padding: 12px var(--gutter) calc(12px + env(safe-area-inset-bottom, 0px));
+            background: rgba(255, 249, 245, .96);
+            border-top: 1px solid var(--line);
+            backdrop-filter: blur(8px);
+        }
+
+        .sticky-cta .btn { width: 100%; }
+
+        /* =====================================================
+           5. HERO
+           ===================================================== */
+        .hero {
+            background: var(--plum);
+            color: #fff;
+            padding: 36px 0 56px;
+            border-radius: 0 0 36px 36px;
+        }
+
+        .hero-grid { display: grid; gap: 36px; }
+
+        .tag {
+            display: inline-block;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: var(--plum-2);
+            color: var(--mint);
+            font-size: .82rem;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .hero h1 {
+            font-size: clamp(2rem, 7.5vw, 3.4rem);
+            margin-bottom: 16px;
+        }
+
+        .hero-text {
+            color: #d9d2e2;
+            max-width: 540px;
+            margin-bottom: 20px;
+        }
+
+        .hero-text strong { color: #fff; }
+
+        .checks {
+            list-style: none;
+            margin: 0 0 28px;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            font-size: .92rem;
+            font-weight: 500;
+        }
+
+        .checks li { display: flex; gap: 10px; align-items: center; }
+        .checks i { color: var(--mint); font-size: .85rem; }
+
+        .hero-cta { display: flex; flex-direction: column; gap: 12px; }
+
+        .stripbox {
+            background: var(--plum-2);
+            border-radius: 24px;
+            padding: 22px 20px 20px;
+        }
+
+        .stripbox-title {
+            font: 500 .9rem/1.3 'Inter', sans-serif;
+            color: #d9d2e2;
+            margin-bottom: 14px;
+        }
+
+        .strip { display: flex; gap: 6px; height: 76px; }
+
+        .seg {
+            min-width: 0;
+            border-radius: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-family: 'Fredoka', sans-serif;
+            color: var(--plum);
+        }
+
+        .seg.base { flex: 30 1 0; background: var(--salmon); }
+        .seg.base b { font-size: 1.7rem; font-weight: 600; line-height: 1; }
+        .seg.base span { font: 600 .72rem/1.2 'Inter', sans-serif; margin-top: 3px; }
+        .seg.add { flex: 7 1 0; background: var(--mint); font-size: 1rem; font-weight: 600; }
+        .seg.ghost { flex: 7 1 0; border: 2px dashed rgba(255, 255, 255, .35); color: rgba(255, 255, 255, .6); font-size: 1rem; }
+
+        .strip-legend {
+            display: flex;
+            gap: 6px;
+            margin-top: 10px;
+            font-size: .76rem;
+            color: #bdb4c9;
+            line-height: 1.35;
+        }
+
+        .strip-legend span:first-child { flex: 30 1 0; }
+        .strip-legend span:last-child { flex: 21 1 0; }
+
+        .strip-hook {
+            margin-top: 16px;
+            padding-top: 14px;
+            border-top: 1px solid rgba(255, 255, 255, .12);
+            font-size: .92rem;
+            color: #fff;
+            font-weight: 500;
+        }
+
+        .strip-hook strong { color: var(--mint); }
+
+        /* =====================================================
+           6. SECCIONES
+           ===================================================== */
+        section.block { padding: 56px 0 0; }
+
+        .block h2 {
+            font-size: clamp(1.6rem, 5.5vw, 2.3rem);
+            margin-bottom: 14px;
+        }
+
+        .lead { color: var(--muted); max-width: 620px; }
+        .lead + .lead { margin-top: 12px; }
+        .lead strong { color: var(--ink); }
+
+        /* Qué es + qué gana tu comunidad */
+        .about { display: grid; gap: 24px; }
+
+        .community {
+            background: var(--lilac-soft);
+            border-radius: 22px;
+            padding: 22px;
+        }
+
+        .community h3 { font-size: 1.1rem; margin-bottom: 14px; }
+
+        .community ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+            font-size: .93rem;
+        }
+
+        .community li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+        .community li i { color: var(--lilac-deep); margin-top: 5px; font-size: .85rem; }
+
+        /* Por qué vale la pena */
+        .why {
+            list-style: none;
+            margin: 26px 0 0;
+            padding: 0;
+            display: grid;
+            gap: 14px;
+        }
+
+        .why li {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 22px;
+        }
+
+        .why-ico {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.1rem;
+            color: var(--plum);
+            margin-bottom: 14px;
+        }
+
+        .why li:nth-child(1) .why-ico { background: var(--salmon); }
+        .why li:nth-child(2) .why-ico { background: var(--lilac); }
+        .why li:nth-child(3) .why-ico { background: var(--mint); }
+        .why li:nth-child(4) .why-ico { background: var(--salmon-soft); }
+
+        .why h3 { font-size: 1.12rem; margin-bottom: 6px; }
+        .why p { font-size: .92rem; color: var(--muted); line-height: 1.55; }
+
+        /* Simulador */
+        .sim {
+            margin-top: 26px;
+            background: var(--plum);
+            color: #fff;
+            border-radius: 28px;
+            padding: 28px 22px;
+        }
+
+        .sim h2 { color: #fff; margin-bottom: 8px; }
+        .sim .lead { color: #d9d2e2; }
+
+        .sim-ctrl { margin: 24px 0 18px; }
+
+        .sim-label {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+
+        .sim-label output { font: 600 1.6rem/1 'Fredoka', sans-serif; color: var(--salmon); }
+
+        .sim input[type=range] {
+            width: 100%;
+            height: 36px;
+            accent-color: var(--salmon);
+            cursor: pointer;
+        }
+
+        .sim-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            min-height: 36px;
+            margin-bottom: 18px;
+        }
+
+        .sim-chips span {
+            background: var(--mint);
+            color: var(--plum);
+            font: 600 .8rem/1 'Fredoka', sans-serif;
+            padding: 9px 11px;
+            border-radius: 10px;
+        }
+
+        .sim-result {
+            background: var(--plum-2);
+            border-radius: 18px;
+            padding: 18px 20px;
+        }
+
+        .sim-days { font: 600 2.2rem/1.1 'Fredoka', sans-serif; color: var(--mint); }
+        .sim-eq { color: #d9d2e2; font-size: .95rem; margin-top: 4px; }
+        .sim-note { margin-top: 14px; font-size: .8rem; color: #bdb4c9; }
+
+        /* Qué recibes */
+        .gets {
+            list-style: none;
+            margin: 26px 0 0;
+            padding: 0;
+            display: grid;
+            gap: 14px;
+        }
+
+        .gets li {
+            display: grid;
+            grid-template-columns: 92px 1fr;
+            gap: 16px;
+            align-items: center;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 18px;
+        }
+
+        .get-fig {
+            height: 72px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font: 600 1.35rem/1 'Fredoka', sans-serif;
+            color: var(--plum);
+        }
+
+        .get-fig.f1 { background: var(--salmon); }
+        .get-fig.f2 { background: var(--lilac); }
+        .get-fig.f3 { background: var(--mint); }
+        .get-fig i { font-size: 1.5rem; }
+
+        .gets h3 { font-size: 1.1rem; margin-bottom: 4px; }
+        .gets p { font-size: .9rem; color: var(--muted); line-height: 1.55; }
+
+        /* Pasos */
+        .steps { list-style: none; margin: 26px 0 0; padding: 0; }
+
+        .steps li {
+            position: relative;
+            display: grid;
+            grid-template-columns: 44px 1fr;
+            gap: 16px;
+            padding-bottom: 26px;
+        }
+
+        .steps li:last-child { padding-bottom: 0; }
+
+        .steps li::before {
+            content: '';
+            position: absolute;
+            left: 21px;
+            top: 44px;
+            bottom: 0;
+            width: 2px;
+            background: var(--line);
+        }
+
+        .steps li:last-child::before { display: none; }
+
+        .step-n {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font: 600 1.1rem/1 'Fredoka', sans-serif;
+            background: var(--plum);
+            color: #fff;
+        }
+
+        .steps h3 { font-size: 1.12rem; margin: 6px 0 4px; }
+        .steps p { font-size: .92rem; color: var(--muted); max-width: 560px; }
+
+        /* Cómo compartirla */
+        .share-grid { display: grid; gap: 14px; margin-top: 26px; }
+
+        .ideas {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+        }
+
+        .ideas li {
+            display: grid;
+            grid-template-columns: 34px 1fr;
+            gap: 12px;
+            align-items: start;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            padding: 14px 16px;
+            font-size: .93rem;
+        }
+
+        .ideas i {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--mint-soft);
+            color: var(--mint-deep);
+            font-size: .85rem;
+        }
+
+        .ideas strong { display: block; font-weight: 600; }
+        .ideas span { color: var(--muted); font-size: .88rem; }
+
+        .msg {
+            background: var(--salmon-soft);
+            border-radius: 22px;
+            padding: 22px;
+        }
+
+        .msg h3 { font-size: 1.1rem; margin-bottom: 4px; }
+        .msg .hint { font-size: .85rem; color: var(--muted); margin-bottom: 14px; }
+
+        .msg-bubble {
+            background: #fff;
+            border-radius: 18px 18px 18px 4px;
+            padding: 16px 18px;
+            font-size: .93rem;
+            line-height: 1.6;
+            margin-bottom: 14px;
+        }
+
+        .msg-bubble mark {
+            background: var(--salmon);
+            color: var(--plum);
+            border-radius: 5px;
+            padding: 0 5px;
+            font-weight: 600;
+        }
+
+        .msg .btn { width: 100%; }
+
+        .tip {
+            margin-top: 14px;
+            display: flex;
+            gap: 12px;
+            padding: 16px 18px;
+            border-radius: 18px;
+            border: 2px dashed var(--lilac);
+            font-size: .9rem;
+            color: var(--muted);
+        }
+
+        .tip i { color: var(--lilac-deep); margin-top: 4px; }
+        .tip strong { color: var(--ink); }
+
+        /* Sí / No */
+        .yesno { display: grid; gap: 14px; margin-top: 26px; }
+
+        .yn-card { border-radius: 22px; padding: 24px 22px; }
+        .yn-card.yes { background: var(--mint-soft); }
+        .yn-card.no { background: var(--salmon-soft); }
+        .yn-card h3 { font-size: 1.15rem; margin-bottom: 14px; }
+
+        .yn-card ul {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: grid;
+            gap: 10px;
+            font-size: .93rem;
+        }
+
+        .yn-card li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+        .yn-card.yes i { color: var(--mint-deep); }
+        .yn-card.no i { color: var(--salmon-deep); }
+        .yn-card li i { margin-top: 5px; font-size: .85rem; }
+
+        .callout {
+            margin-top: 14px;
+            padding: 16px 20px;
+            border-radius: 18px;
+            border: 2px dashed var(--lilac);
+            font-size: .9rem;
+            color: var(--muted);
+        }
+
+        .callout strong { color: var(--ink); }
+
+        /* Preguntas */
+        .faq { margin-top: 24px; display: grid; gap: 10px; }
+
+        .faq details {
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 18px;
+            padding: 0 20px;
+        }
+
+        .faq summary {
+            list-style: none;
+            cursor: pointer;
+            padding: 16px 0;
+            font: 600 1rem/1.35 'Fredoka', sans-serif;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .faq summary::-webkit-details-marker { display: none; }
+        .faq summary::after { content: '+'; font-size: 1.4rem; color: var(--salmon-deep); line-height: 1; }
+        .faq details[open] summary::after { content: '–'; }
+        .faq details p { padding-bottom: 18px; font-size: .92rem; color: var(--muted); }
+
+        /* Reglas */
+        .rules {
+            margin: 24px 0 0;
+            background: var(--paper);
+            border: 1px solid var(--line);
+            border-radius: 22px;
+            overflow: hidden;
+        }
+
+        .rule { display: grid; gap: 4px; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+        .rule:last-child { border-bottom: 0; }
+        .rule dt { font: 600 1rem/1.3 'Fredoka', sans-serif; }
+        .rule dd { margin: 0; font-size: .92rem; color: var(--muted); line-height: 1.55; }
+
+        /* CTA final */
+        .final {
+            margin-top: 56px;
+            background: var(--plum);
+            color: #fff;
+            border-radius: 28px;
+            padding: 40px 24px;
+            text-align: center;
+        }
+
+        .final h2 { font-size: clamp(1.7rem, 6vw, 2.4rem); margin-bottom: 10px; }
+        .final p { color: #d9d2e2; max-width: 500px; margin: 0 auto 24px; }
+
+        .final-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 340px;
+            margin-inline: auto;
+        }
+
+        /* =====================================================
+           7. FOOTER
+           ===================================================== */
+        .site-footer {
+            margin-top: 48px;
+            padding: 0 0 32px;
+            text-align: center;
+            font-size: .85rem;
+            color: var(--muted);
+        }
+
+        .site-footer .brand { margin-bottom: 8px; }
+        .site-footer .brand-script { color: var(--ink); }
+        .site-footer .tagline { font: 500 1rem/1.4 'Fredoka', sans-serif; color: var(--ink); margin-bottom: 14px; }
+        .site-footer .legal { font-size: .78rem; }
+        .site-footer .legal strong { color: var(--salmon-deep); letter-spacing: .05em; }
+
+        /* =====================================================
+           8. RESPONSIVO (móvil primero)
+           ===================================================== */
+        @media (min-width: 640px) {
+            .hero-cta { flex-direction: row; }
+            .final-actions { flex-direction: row; max-width: none; justify-content: center; }
+            .yesno { grid-template-columns: 1fr 1fr; }
+            .why { grid-template-columns: 1fr 1fr; }
+            .gets li { grid-template-columns: 110px 1fr; padding: 20px 22px; }
+            .rule { grid-template-columns: 230px 1fr; gap: 24px; align-items: baseline; }
+            .sim { padding: 36px 32px; }
+        }
+
+        @media (min-width: 900px) {
+            body { padding-bottom: 0; }
+            .sticky-cta { display: none; }
+            .header-inner .btn { display: inline-flex; }
+            .hero { padding: 64px 0 80px; border-radius: 0 0 48px 48px; }
+            .hero-grid { grid-template-columns: 1.1fr 1fr; align-items: center; gap: 56px; }
+            .about { grid-template-columns: 1.2fr 1fr; gap: 40px; align-items: start; }
+            .why { grid-template-columns: repeat(4, 1fr); }
+            .gets { grid-template-columns: repeat(3, 1fr); }
+            .gets li { grid-template-columns: 1fr; }
+            .get-fig { height: 84px; }
+            .share-grid { grid-template-columns: 1.1fr 1fr; gap: 28px; align-items: start; }
+            section.block { padding-top: 80px; }
+            .sim { margin-top: 32px; padding: 44px 48px; }
+            .final { padding: 56px 40px; margin-top: 80px; }
+        }
+
+        @media (max-width: 360px) {
+            .brand-sian { font-size: 1.5rem; }
+            .gets li { grid-template-columns: 76px 1fr; gap: 12px; padding: 14px; }
+            .get-fig { height: 64px; font-size: 1.15rem; }
+        }
+
+        /* =====================================================
+           8b. ANIMACIONES Y TRANSICIONES
+           ===================================================== */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(22px); }
+            to { opacity: 1; transform: none; }
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(.6); }
+            to { opacity: 1; transform: none; }
+        }
+
+        @keyframes growIn {
+            from { opacity: 0; transform: scaleY(.25); }
+            to { opacity: 1; transform: none; }
+        }
+
+        .site-header { transition: box-shadow .3s ease; }
+        .site-header.scrolled { box-shadow: 0 8px 22px rgba(43, 33, 53, .28); }
+
+        /* Entrada del hero (al cargar la página) */
+        .hero-grid > div:first-child > * { animation: fadeUp .7s cubic-bezier(.2, .7, .2, 1) both; }
+        .hero-grid > div:first-child > *:nth-child(1) { animation-delay: .05s; }
+        .hero-grid > div:first-child > *:nth-child(2) { animation-delay: .15s; }
+        .hero-grid > div:first-child > *:nth-child(3) { animation-delay: .25s; }
+        .hero-grid > div:first-child > *:nth-child(4) { animation-delay: .35s; }
+        .hero-grid > div:first-child > *:nth-child(5) { animation-delay: .45s; }
+
+        .stripbox { animation: fadeUp .8s cubic-bezier(.2, .7, .2, 1) .3s both; }
+        .seg { transform-origin: bottom; animation: growIn .6s cubic-bezier(.2, .8, .3, 1.2) both; }
+        .seg:nth-child(1) { animation-delay: .6s; }
+        .seg:nth-child(2) { animation-delay: .75s; }
+        .seg:nth-child(3) { animation-delay: .85s; }
+        .seg:nth-child(4) { animation-delay: .95s; }
+        .seg:nth-child(5) { animation-delay: 1.05s; }
+        .strip-legend, .strip-hook { animation: fadeUp .6s ease 1.2s both; }
+
+        /* Entrada al hacer scroll (la clase .js y .reveal las agrega el script) */
+        .js .reveal {
+            opacity: 0;
+            transform: translateY(28px);
+            transition: opacity .7s cubic-bezier(.2, .7, .2, 1), transform .7s cubic-bezier(.2, .7, .2, 1);
+            transition-delay: var(--d, 0s);
+        }
+
+        .js .reveal.in { opacity: 1; transform: none; }
+
+        /* La línea que une los pasos se dibuja */
+        .js .steps li.reveal::before {
+            transform: scaleY(0);
+            transform-origin: top;
+            transition: transform .7s ease calc(var(--d, 0s) + .35s);
+        }
+
+        .js .steps li.reveal.in::before { transform: scaleY(1); }
+
+        /* Simulador y preguntas */
+        .sim-chips span { animation: popIn .3s cubic-bezier(.2, .8, .3, 1.3) both; }
+        .faq details[open] p { animation: fadeUp .35s ease both; }
+
+        /* =====================================================
+           9. IMPRESIÓN / PDF
+           ===================================================== */
+        @media print {
+            @page { size: A4 portrait; margin: 12mm; }
+
+            body { background: #fff; padding-bottom: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+            .site-header, .sticky-cta, .no-print { display: none !important; }
+
+            .hero { border-radius: 20px; padding: 28px 0; margin: 0 12px; }
+            section.block { padding-top: 28px; }
+            .why li, .gets li, .steps li, .yn-card, .rule, .callout, .tip, .ideas li, .msg, .sim, .faq details, .final { break-inside: avoid; }
+            .final { margin-top: 28px; }
+            .sim input[type=range] { display: none; }
+            .reveal { opacity: 1 !important; transform: none !important; transition: none !important; }
+            *, *::before, *::after { animation: none !important; }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- =====================================================
+         HEADER
+         ===================================================== -->
+    <header class="site-header">
+        <div class="wrap header-inner">
+            <a href="#inicio" class="brand" aria-label="Sianeffects, ir al inicio">
+                <span class="brand-sian" aria-hidden="true"><span class="c1">S</span><span class="c2">i</span><span class="c3">A</span><span class="c4">N</span></span>
+                <span class="brand-script" aria-hidden="true">Effects</span>
+            </a>
+
+            <a class="btn btn-salmon btn-sm" target="_blank" rel="noopener"
+               href="https://wa.me/528135831923?text=Hola%20Sianeffects!%20%F0%9F%91%8B%20Me%20gustar%C3%ADa%20unirme%20al%20programa%20de%20Embajadoras%20Sianeffects.">
+                Quiero unirme
+            </a>
+        </div>
+    </header>
+
+    <main id="inicio">
+
+        <!-- =====================================================
+             1. HERO
+             ===================================================== -->
+        <section class="hero">
+            <div class="wrap hero-grid">
+                <div>
+                    <span class="tag">Programa Embajadoras Sianeffects</span>
+                    <h1>Ayuda a tu comunidad a cotizar mejor y usa Sianeffects gratis</h1>
+                    <p class="hero-text">
+                        Si enseñas, creas o vendes en el mundo creativo, tu comunidad te escucha. Recomienda una herramienta que les ayuda a saber <strong>cuánto cobrar y cuánto ganan de verdad</strong>, y recibe días extra de acceso por cada persona que se suscriba con tu código.
+                    </p>
+
+                    <ul class="checks">
+                        <li><i class="fas fa-check"></i> 30 días de Sianeffects gratis desde que te unes</li>
+                        <li><i class="fas fa-check"></i> Sin publicaciones obligatorias ni mínimo de referidos</li>
+                        <li><i class="fas fa-check"></i> Sin inversión de tu parte</li>
+                    </ul>
+
+                    <div class="hero-cta no-print">
+                        <a class="btn btn-salmon" target="_blank" rel="noopener"
+                           href="https://wa.me/528135831923?text=Hola%20Sianeffects!%20%F0%9F%91%8B%20Me%20gustar%C3%ADa%20unirme%20al%20programa%20de%20Embajadoras%20Sianeffects.">
+                            Quiero ser embajadora
+                        </a>
+                        <a class="btn btn-ghost-light" href="#que-ganas">Ver cuánto puedo ganar</a>
+                    </div>
+                </div>
+
+                <div class="stripbox">
+                    <p class="stripbox-title">Así crece tu acceso a Sianeffects</p>
+                    <div class="strip" role="img" aria-label="30 días de inicio más 7 días por cada cliente que confirma su primer pago">
+                        <div class="seg base"><b>30</b><span>días de inicio</span></div>
+                        <div class="seg add">+7</div>
+                        <div class="seg add">+7</div>
+                        <div class="seg add">+7</div>
+                        <div class="seg ghost">…</div>
+                    </div>
+                    <div class="strip-legend" aria-hidden="true">
+                        <span>Gratis al unirte</span>
+                        <span>+7 por cada cliente que paga</span>
+                    </div>
+                    <p class="strip-hook"><strong>Con solo 4 clientes</strong> sumas 28 días: casi un mes más de Sianeffects, sin pagar.</p>
+                </div>
+            </div>
+        </section>
+
+        <div class="wrap">
+
+            <!-- =====================================================
+                 2. QUÉ ES + QUÉ GANA TU COMUNIDAD
+                 ===================================================== -->
+            <section id="que-es" class="block">
+                <div class="about">
+                    <div>
+                        <h2>Emprender no debería ser trabajar mucho sin saber cuánto ganas</h2>
+                        <p class="lead">
+                            Muchos emprendedores creativos ponen precio por intuición y se les pierden en el camino los materiales, la mano de obra y los gastos.
+                        </p>
+                        <p class="lead">
+                            <strong>Sianeffects</strong> es una plataforma de cotización que lleva el control de <strong>costos, materiales, mano de obra, gastos y utilidades</strong>. Ahora queremos que llegue a más emprendedores, de la mano de personas como tú, que ya comparten, enseñan e inspiran.
+                        </p>
+                    </div>
+
+                    <div class="community">
+                        <h3>Lo que tu comunidad gana contigo</h3>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Cotizaciones claras para presentar a sus clientes</li>
+                            <li><i class="fas fa-check"></i> Costos reales, sin cálculos improvisados</li>
+                            <li><i class="fas fa-check"></i> Su utilidad bajo control</li>
+                            <li><i class="fas fa-check"></i> 7 días de prueba gratuita para conocerla</li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 3. POR QUÉ VALE LA PENA
+                 ===================================================== -->
+            <section id="por-que" class="block">
+                <h2>Por qué vale la pena compartirla</h2>
+                <p class="lead">Recomendar algo útil no te cuesta nada. Aquí, además, te regresa.</p>
+
+                <ul class="why">
+                    <li>
+                        <div class="why-ico"><i class="fas fa-hand-holding-heart"></i></div>
+                        <h3>Les ayudas de verdad</h3>
+                        <p>Quien cotiza con claridad deja de regalar su trabajo y empieza a saber cuánto gana. Eso se nota en su negocio.</p>
+                    </li>
+                    <li>
+                        <div class="why-ico"><i class="fas fa-laptop"></i></div>
+                        <h3>La recomiendas con experiencia</h3>
+                        <p>Con tus 30 días gratis la usas primero en tu propio negocio. Compartes lo que ya probaste.</p>
+                    </li>
+                    <li>
+                        <div class="why-ico"><i class="fas fa-calendar-plus"></i></div>
+                        <h3>Tu recompensa se acumula</h3>
+                        <p>Cada cliente suma 7 días y no hay tope. Quien comparte con constancia puede usar Sianeffects durante meses sin pagar.</p>
+                    </li>
+                    <li>
+                        <div class="why-ico"><i class="fas fa-seedling"></i></div>
+                        <h3>Tu comunidad crece contigo</h3>
+                        <p>Eres quien les presentó la herramienta que ordenó sus números. Eso construye confianza.</p>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- =====================================================
+                 4. SIMULADOR
+                 ===================================================== -->
+            <section id="que-ganas" class="sim">
+                <h2>¿Cuánto tiempo puedes ganar?</h2>
+                <p class="lead">Mueve la barra y calcula cuántos días de Sianeffects sumas según cuántas personas se suscriban con tu código.</p>
+
+                <div class="sim-ctrl">
+                    <label class="sim-label" for="simRange">
+                        <span>Clientes que se suscriben</span>
+                        <output id="simCount" for="simRange">4</output>
+                    </label>
+                    <input type="range" id="simRange" min="1" max="20" value="4">
+                </div>
+
+                <div class="sim-chips" id="simChips" aria-hidden="true"></div>
+
+                <div class="sim-result" aria-live="polite">
+                    <div class="sim-days" id="simDays">28 días</div>
+                    <div class="sim-eq" id="simEq">4 semanas de uso</div>
+                </div>
+
+                <p class="sim-note">Ejemplo ilustrativo. Son días de uso de la app: no se convierten en dinero.</p>
+            </section>
+
+            <!-- =====================================================
+                 5. QUÉ RECIBES
+                 ===================================================== -->
+            <section id="beneficios" class="block">
+                <h2>¿Qué recibes al unirte?</h2>
+
+                <ul class="gets">
+                    <li>
+                        <div class="get-fig f1">30 días</div>
+                        <div>
+                            <h3>Acceso gratis inicial</h3>
+                            <p>Por única ocasión, para usar toda la plataforma en tu propio negocio.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="get-fig f2"><i class="fas fa-ticket"></i></div>
+                        <div>
+                            <h3>Tu código de embajadora</h3>
+                            <p>Personal, con tu nombre o marca, fácil de compartir con tu comunidad.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <div class="get-fig f3">+7 días</div>
+                        <div>
+                            <h3>Por cada cliente</h3>
+                            <p>Cuando alguien se suscribe con tu código. Se acumulan sin límite.</p>
+                        </div>
+                    </li>
+                </ul>
+            </section>
+
+            <!-- =====================================================
+                 6. CÓMO FUNCIONA
+                 ===================================================== -->
+            <section id="como-funciona" class="block">
+                <h2>¿Cómo funciona?</h2>
+
+                <ol class="steps">
+                    <li>
+                        <span class="step-n">1</span>
+                        <div>
+                            <h3>Solicitas tu lugar</h3>
+                            <p>Nos escribes por WhatsApp. Vinculamos tu cuenta, activamos tus 30 días y creamos tu código.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-n">2</span>
+                        <div>
+                            <h3>La pruebas en tu negocio</h3>
+                            <p>Cotiza tus propios trabajos y comprueba cómo te ayuda antes de recomendarla.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-n">3</span>
+                        <div>
+                            <h3>Compartes tu código</h3>
+                            <p>Quien se registre lo escribe al crear su cuenta y disfruta sus 7 días de prueba gratuita normales.</p>
+                        </div>
+                    </li>
+                    <li>
+                        <span class="step-n">4</span>
+                        <div>
+                            <h3>Ganas 7 días por cliente</h3>
+                            <p>Cuando esa persona confirma su primer pago en un plan de suscripción, se suman 7 días a tu cuenta.</p>
+                        </div>
+                    </li>
+                </ol>
+            </section>
+
+            <!-- =====================================================
+                 7. CÓMO COMPARTIRLA
+                 ===================================================== -->
+            <section id="compartir" class="block">
+                <h2>Cómo compartirla sin forzar nada</h2>
+                <p class="lead">Las mejores recomendaciones son las naturales. Estas son algunas formas que funcionan en una comunidad creativa.</p>
+
+                <div class="share-grid">
+                    <ul class="ideas">
+                        <li>
+                            <i class="fas fa-comments"></i>
+                            <div>
+                                <strong>Responde cuando pregunten por precios</strong>
+                                <span>"¿Cuánto cobro por esto?" es la pregunta perfecta para mencionar Sianeffects.</span>
+                            </div>
+                        </li>
+                        <li>
+                            <i class="fas fa-eye"></i>
+                            <div>
+                                <strong>Enséñala en uso</strong>
+                                <span>Muestra cómo cotizas un pedido real, en una historia, una clase o un taller.</span>
+                            </div>
+                        </li>
+                        <li>
+                            <i class="fab fa-whatsapp"></i>
+                            <div>
+                                <strong>Envía tu código por mensaje</strong>
+                                <span>A quien ya te dijo que le cuesta calcular costos o ganancias.</span>
+                            </div>
+                        </li>
+                    </ul>
+
+                    <div class="msg">
+                        <h3>Mensaje listo para enviar</h3>
+                        <p class="hint">Cambia el texto resaltado por tu código y compártelo donde quieras.</p>
+                        <div class="msg-bubble" id="msgText">
+                            ¡Hola! Yo cotizo mis trabajos con Sianeffects y me ha ayudado a ver mis costos y mi utilidad con claridad. Si te registras con mi código <mark>TU CÓDIGO</mark> tienes 7 días de prueba gratis. Soy embajadora del programa de Sianeffects.
+                        </div>
+                        <button type="button" class="btn btn-outline no-print" id="copyBtn">
+                            <i class="fas fa-copy"></i> <span id="copyLabel">Copiar mensaje</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="tip">
+                    <i class="fas fa-lightbulb"></i>
+                    <p><strong>Un detalle importante:</strong> quien se una debe escribir tu código al crear su cuenta nueva. Recuérdaselo al compartirlo para que tu recompensa se registre.</p>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 8. SÍ / NO
+                 ===================================================== -->
+            <section id="alcance" class="block">
+                <h2>Una recompensa en tiempo, no en dinero</h2>
+                <p class="lead">Queremos que sea claro desde el inicio qué incluye el programa y qué no.</p>
+
+                <div class="yesno">
+                    <div class="yn-card yes">
+                        <h3>Sí incluye</h3>
+                        <ul>
+                            <li><i class="fas fa-check"></i> Tiempo de uso de Sianeffects</li>
+                            <li><i class="fas fa-check"></i> Acumulación sin límite de días</li>
+                            <li><i class="fas fa-check"></i> Compartir a tu ritmo, cuando lo consideres útil</li>
+                        </ul>
+                    </div>
+
+                    <div class="yn-card no">
+                        <h3>No incluye</h3>
+                        <ul>
+                            <li><i class="fas fa-xmark"></i> Pagos, comisiones ni remuneración económica</li>
+                            <li><i class="fas fa-xmark"></i> Canje de días por dinero</li>
+                            <li><i class="fas fa-xmark"></i> Publicaciones, historias o mínimo de referidos</li>
+                            <li><i class="fas fa-xmark"></i> Inversión de tu parte</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p class="callout">
+                    <strong>Cómo se aplican los días:</strong> extendemos tu acceso o, si ya tienes una suscripción activa, recorremos tu fecha de cobro.
+                </p>
+            </section>
+
+            <!-- =====================================================
+                 9. PREGUNTAS
+                 ===================================================== -->
+            <section id="preguntas" class="block">
+                <h2>Lo que quizá te estás preguntando</h2>
+
+                <div class="faq">
+                    <details>
+                        <summary>¿Necesito muchos seguidores?</summary>
+                        <p>No. Lo importante es que tu comunidad, grande o pequeña, tenga interés en los negocios creativos y que la herramienta les aporte valor.</p>
+                    </details>
+                    <details>
+                        <summary>¿Y si nadie se suscribe?</summary>
+                        <p>No pasa nada. Tus 30 días son tuyos y no hay mínimo de referidos que cumplir.</p>
+                    </details>
+                    <details>
+                        <summary>¿Tengo que publicar o hacer contenido?</summary>
+                        <p>No. No exigimos publicaciones, historias ni menciones. Compartes cuando consideres que puede ayudar a alguien.</p>
+                    </details>
+                    <details>
+                        <summary>¿Me van a pagar dinero?</summary>
+                        <p>No. El programa no tiene remuneración económica: tu recompensa es tiempo de uso de Sianeffects.</p>
+                    </details>
+                </div>
+            </section>
+
+            <!-- =====================================================
+                 10. REGLAS
+                 ===================================================== -->
+            <section id="reglas" class="block">
+                <h2>Reglas y términos oficiales</h2>
+
+                <dl class="rules">
+                    <div class="rule">
+                        <dt>Uso del código</dt>
+                        <dd>Debe ingresarse en el registro inicial de una cuenta nueva. No se atribuyen cuentas ya existentes.</dd>
+                    </div>
+                    <div class="rule">
+                        <dt>Conversión válida</dt>
+                        <dd>Solo cuenta el primer pago confirmado de un plan de suscripción. El simple registro no genera recompensa.</dd>
+                    </div>
+                    <div class="rule">
+                        <dt>Recompensa</dt>
+                        <dd>7 días adicionales por cada conversión válida, sin tope de referidos ni de tiempo acumulado.</dd>
+                    </div>
+                    <div class="rule">
+                        <dt>Canje</dt>
+                        <dd>Exclusivamente tiempo de uso en Sianeffects. No existe pago ni equivalente en dinero.</dd>
+                    </div>
+                    <div class="rule">
+                        <dt>Pagos revertidos</dt>
+                        <dd>Un pago devuelto, cancelado o fraudulento no genera recompensa; si ya se acreditó, puede revertirse.</dd>
+                    </div>
+                    <div class="rule">
+                        <dt>Transparencia</dt>
+                        <dd>Al recomendar Sianeffects, indica de forma clara y honesta que participas en un programa de colaboración.</dd>
+                    </div>
+                    <div class="rule">
+                        <dt>Permanencia</dt>
+                        <dd>Sujeta al cumplimiento de estas reglas y al uso legítimo del programa.</dd>
+                    </div>
+                </dl>
+            </section>
+
+            <!-- =====================================================
+                 11. CTA FINAL
+                 ===================================================== -->
+            <section class="final">
+                <h2>Tu comunidad puede cotizar mejor. Tú puedes empezar hoy.</h2>
+                <p>Escríbenos por WhatsApp para activar tus 30 días gratis y crear tu código personalizado. En un mensaje ya estás dentro.</p>
+
+                <div class="final-actions no-print">
+                    <a class="btn btn-whatsapp" target="_blank" rel="noopener"
+                       href="https://wa.me/528135831923?text=Hola%20Sianeffects!%20%F0%9F%91%8B%20Ya%20revis%C3%A9%20las%20bases%20y%20quiero%20solicitar%20mi%20c%C3%B3digo%20de%20Embajadora%20Sianeffects.">
+                        <i class="fab fa-whatsapp"></i> Solicitar mi código
+                    </a>
+                    <button type="button" class="btn btn-ghost-light" onclick="window.print()">
+                        <i class="fas fa-file-pdf"></i> Guardar en PDF
+                    </button>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- =====================================================
+         FOOTER
+         ===================================================== -->
+    <footer class="site-footer">
+        <div class="wrap">
+            <a href="#inicio" class="brand" aria-label="Sianeffects, ir al inicio">
+                <span class="brand-sian" aria-hidden="true"><span class="c1">S</span><span class="c2">i</span><span class="c3">A</span><span class="c4">N</span></span>
+                <span class="brand-script" aria-hidden="true">Effects</span>
+            </a>
+            <div class="tagline">Cotiza con claridad. Emprende con confianza.</div>
+            <div class="legal">
+                <div>© 2026 Sianeffects. Todos los derechos reservados.</div>
+                <div style="margin-top: 6px;">Diseñado y administrado por <strong>ST.</strong></div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Barra fija solo en móvil -->
+    <div class="sticky-cta no-print">
+        <a class="btn btn-salmon" target="_blank" rel="noopener"
+           href="https://wa.me/528135831923?text=Hola%20Sianeffects!%20%F0%9F%91%8B%20Me%20gustar%C3%ADa%20unirme%20al%20programa%20de%20Embajadoras%20Sianeffects.">
+            Quiero ser embajadora
+        </a>
+    </div>
+
+    <script>
+        'use strict';
+
+        // Simulador de días ganados
+        (function () {
+            var range = document.getElementById('simRange');
+            var count = document.getElementById('simCount');
+            var chips = document.getElementById('simChips');
+            var days = document.getElementById('simDays');
+            var eq = document.getElementById('simEq');
+            if (!range) return;
+
+            function render() {
+                var n = parseInt(range.value, 10);
+                var d = n * 7;
+                count.textContent = n;
+                days.textContent = d + ' días';
+
+                var txt = n + (n === 1 ? ' semana' : ' semanas') + ' de uso';
+                if (d >= 90) txt += ' · más de tres meses';
+                else if (d >= 60) txt += ' · más de dos meses';
+                else if (d >= 30) txt += ' · más de un mes';
+                eq.textContent = txt;
+
+                while (chips.children.length < n) {
+                    var s = document.createElement('span');
+                    s.textContent = '+7';
+                    chips.appendChild(s);
+                }
+                while (chips.children.length > n) chips.removeChild(chips.lastChild);
+            }
+
+            range.addEventListener('input', render);
+            render();
+        })();
+
+        // Copiar mensaje para compartir
+        (function () {
+            var btn = document.getElementById('copyBtn');
+            var label = document.getElementById('copyLabel');
+            var msg = document.getElementById('msgText');
+            if (!btn || !msg) return;
+
+            btn.addEventListener('click', function () {
+                var text = msg.textContent.replace(/\s+/g, ' ').trim();
+                var done = function () {
+                    label.textContent = '¡Copiado!';
+                    setTimeout(function () { label.textContent = 'Copiar mensaje'; }, 2000);
+                };
+
+                try {
+                    if (navigator.clipboard && navigator.clipboard.writeText) {
+                        navigator.clipboard.writeText(text).then(done);
+                    } else {
+                        var area = document.createElement('textarea');
+                        area.value = text;
+                        document.body.appendChild(area);
+                        area.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(area);
+                        done();
+                    }
+                } catch (e) {
+                    label.textContent = 'Selecciona y copia el texto';
+                }
+            });
+        })();
+
+        // Sombra del header al hacer scroll
+        (function () {
+            var header = document.querySelector('.site-header');
+            if (!header) return;
+            window.addEventListener('scroll', function () {
+                header.classList.toggle('scrolled', window.scrollY > 8);
+            }, { passive: true });
+        })();
+
+        // Entrada suave de las secciones al hacer scroll
+        (function () {
+            var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            if (reduce || !('IntersectionObserver' in window)) return;
+
+            document.documentElement.classList.add('js');
+
+            // Elementos que entran solos
+            var singles = '.block > h2, .block > .lead, .about > *, .sim, .tip, .callout, .rules, .final';
+            // Grupos que entran uno tras otro
+            var groups = ['.why', '.gets', '.steps', '.ideas', '.yesno', '.faq', '.share-grid'];
+
+            var items = [];
+
+            document.querySelectorAll(singles).forEach(function (el) {
+                el.classList.add('reveal');
+                items.push(el);
+            });
+
+            groups.forEach(function (sel) {
+                document.querySelectorAll(sel).forEach(function (group) {
+                    Array.prototype.forEach.call(group.children, function (child, i) {
+                        child.classList.add('reveal');
+                        child.style.setProperty('--d', Math.min(i * 0.09, 0.45) + 's');
+                        items.push(child);
+                    });
+                });
+            });
+
+            var io = new IntersectionObserver(function (entries) {
+                entries.forEach(function (entry) {
+                    if (entry.isIntersecting) {
+                        entry.target.classList.add('in');
+                        io.unobserve(entry.target);
+                    }
+                });
+            }, { threshold: 0.12, rootMargin: '0px 0px -6% 0px' });
+
+            items.forEach(function (el) { io.observe(el); });
+        })();
+
+        // Mostrar todo y abrir preguntas al imprimir / guardar PDF
+        window.addEventListener('beforeprint', function () {
+            document.querySelectorAll('.faq details').forEach(function (d) { d.open = true; });
+            document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('in'); });
+        });
+    </script>
+</body>
+
+</html>

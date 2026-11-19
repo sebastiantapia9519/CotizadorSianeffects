@@ -1,0 +1,232 @@
+{% extends "layout.html" %}
+
+{% block title %}Panel de embajadora | Sianeffects{% endblock %}
+
+{% block extra_css %}
+<style>
+    .code-display {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: clamp(1.8rem, 6vw, 2.6rem);
+        font-weight: 800;
+        letter-spacing: .08em;
+        color: var(--sian-pink);
+        line-height: 1.1;
+        word-break: break-all;
+    }
+
+    .link-box {
+        background-color: var(--bs-tertiary-bg);
+        border: 1px dashed var(--bs-border-color);
+        border-radius: 12px;
+        padding: .6rem .9rem;
+        font-size: .85rem;
+        word-break: break-all;
+    }
+
+    .stat-box .num {
+        font-size: 1.8rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+
+    .btn-pink {
+        background-color: var(--sian-pink);
+        border: none;
+        color: #fff;
+        font-weight: 700;
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .btn-pink:hover {
+        color: #fff;
+        background-color: #ff4a5a;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(255, 107, 129, .35);
+    }
+
+    .btn-pink:active {
+        transform: translateY(0) scale(.98);
+    }
+
+    .btn-pink:focus-visible {
+        outline: 3px solid rgba(255, 107, 129, .4);
+        outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .btn-pink { transition: none; }
+        .btn-pink:hover,
+        .btn-pink:active { transform: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mt-4 mb-4">
+    <h2 class="fw-bold mb-1">Panel de embajadora</h2>
+    <div class="text-body-secondary">
+        Ganas {{ dias_por_referido }} días de Sianeffects por cada persona que se registre con tu código y contrate PRO.
+    </div>
+</div>
+
+{% if amb.status != 'active' %}
+<div class="alert alert-warning border-0 rounded-4 shadow-sm">
+    <i class="fas fa-pause-circle me-2"></i>
+    Tu código está en pausa y no acepta nuevos registros. Las recompensas que ya ganaste se siguen aplicando.
+</div>
+{% endif %}
+
+<div class="card-custom p-4 p-md-5 mb-4">
+    <div class="text-body-secondary small mb-1">Tu código</div>
+    <div class="code-display mb-3" id="codigoTexto">{{ amb.code }}</div>
+
+    <div class="text-body-secondary small mb-1">Tu enlace de invitación</div>
+    <div class="link-box mb-3">{{ enlace }}</div>
+
+    <div class="d-flex flex-wrap gap-2">
+        <button type="button" class="btn btn-pink rounded-pill px-4" data-copy="{{ enlace }}">
+            <i class="fas fa-link me-1"></i> Copiar enlace
+        </button>
+        <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-copy="{{ amb.code }}">
+            <i class="fas fa-copy me-1"></i> Copiar código
+        </button>
+        <a class="btn btn-outline-success rounded-pill px-4" href="{{ wa_url }}" target="_blank"
+            rel="noopener noreferrer">
+            <i class="fab fa-whatsapp me-1"></i> Compartir por WhatsApp
+        </a>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Se registraron</div>
+            <div class="num">{{ resumen.registrados }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Contrataron PRO</div>
+            <div class="num">{{ resumen.convertidos }}</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Días ganados</div>
+            <div class="num">{{ resumen.dias_ganados }}</div>
+            {% if resumen.dias_en_proceso %}
+            <div class="small text-body-secondary">{{ resumen.dias_en_proceso }} en proceso</div>
+            {% endif %}
+        </div>
+    </div>
+    <div class="col-6 col-md-3">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">
+                {% if con_cobro %}Tu siguiente cobro{% else %}Tu acceso llega hasta{% endif %}
+            </div>
+            <div class="num" style="font-size: 1.3rem;">{{ vigente_hasta }}</div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-7">
+        <div class="card-custom p-3 p-md-4 h-100">
+            <h5 class="fw-bold mb-1">Tus invitaciones</h5>
+            <div class="text-body-secondary small mb-3">
+                Por privacidad, no mostramos los datos de las personas que invitas.
+            </div>
+            {% if invitaciones %}
+            <div class="table-responsive">
+                <table class="table align-middle mb-0">
+                    <thead>
+                        <tr class="small text-body-secondary">
+                            <th>Invitación</th>
+                            <th>Estado</th>
+                            <th>Registro</th>
+                            <th>Primer pago</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for i in invitaciones %}
+                        <tr>
+                            <td>#{{ i.numero }}</td>
+                            <td><span class="badge text-bg-{{ i.estado_clase }}">{{ i.estado_txt }}</span></td>
+                            <td class="small">{{ i.registrado }}</td>
+                            <td class="small">{{ i.primer_pago }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-body-secondary">
+                <i class="fas fa-paper-plane fa-2x mb-2 opacity-50"></i>
+                <div class="small">Comparte tu enlace y aquí verás quién se registra.</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card-custom p-3 p-md-4 h-100">
+            <h5 class="fw-bold mb-3">Tus recompensas</h5>
+            {% if recompensas %}
+            <ul class="list-group list-group-flush">
+                {% for r in recompensas %}
+                <li class="list-group-item bg-transparent px-0 d-flex justify-content-between align-items-center">
+                    <div>
+                        <div class="fw-bold">+{{ r.dias }} días</div>
+                        <div class="small text-body-secondary">{{ r.fecha }}</div>
+                    </div>
+                    {% if r.aplicada %}
+                    <span class="badge text-bg-success">Sumados a tu cuenta</span>
+                    {% else %}
+                    <span class="badge text-bg-warning">En proceso</span>
+                    {% endif %}
+                </li>
+                {% endfor %}
+            </ul>
+            <div class="small text-body-secondary mt-3">
+                Si tienes PRO activo, tu siguiente cobro se mueve la misma cantidad de días.
+            </div>
+            {% else %}
+            <div class="text-center py-4 text-body-secondary">
+                <i class="fas fa-gift fa-2x mb-2 opacity-50"></i>
+                <div class="small">Cuando alguien que invitaste contrate PRO, ganas {{ dias_por_referido }} días.</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    (function () {
+        document.querySelectorAll('[data-copy]').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var texto = btn.getAttribute('data-copy');
+                var original = btn.innerHTML;
+
+                function listo() {
+                    btn.innerHTML = '<i class="fas fa-check me-1"></i> ¡Copiado!';
+                    setTimeout(function () { btn.innerHTML = original; }, 1600);
+                }
+
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(texto).then(listo);
+                } else {
+                    var area = document.createElement('textarea');
+                    area.value = texto;
+                    document.body.appendChild(area);
+                    area.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(area);
+                    listo();
+                }
+            });
+        });
+    })();
+</script>
+{% endblock %}

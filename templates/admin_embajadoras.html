@@ -1,0 +1,379 @@
+{% extends "layout.html" %}
+
+{% block title %}Embajadoras | Admin Sianeffects{% endblock %}
+
+{% block extra_css %}
+<style>
+    .code-chip {
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        letter-spacing: .04em;
+    }
+
+    .stat-box .num {
+        font-size: 1.7rem;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+
+    .btn-pink {
+        background-color: var(--sian-pink);
+        border: none;
+        color: #fff;
+        font-weight: 700;
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+
+    .btn-pink:hover {
+        color: #fff;
+        background-color: #ff4a5a;
+        transform: translateY(-1px);
+        box-shadow: 0 6px 14px rgba(255, 107, 129, .35);
+    }
+
+    .btn-pink:focus-visible {
+        outline: 3px solid rgba(255, 107, 129, .4);
+        outline-offset: 2px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        .btn-pink { transition: none; }
+        .btn-pink:hover { transform: none; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4 mt-4">
+    <div>
+        <h2 class="fw-bold mb-0">Embajadoras</h2>
+        <div class="text-body-secondary small">Códigos, registros, clientes que pagan y días ganados.</div>
+    </div>
+    <button class="btn btn-pink rounded-pill px-4" type="button" data-bs-toggle="collapse"
+        data-bs-target="#nuevaEmbajadora" aria-expanded="false" aria-controls="nuevaEmbajadora">
+        <i class="fas fa-plus me-1"></i> Nueva embajadora
+    </button>
+</div>
+
+<div class="collapse mb-4" id="nuevaEmbajadora">
+    <div class="card-custom p-4">
+        <h5 class="fw-bold mb-1">Dar de alta una embajadora</h5>
+        <p class="text-body-secondary small mb-3">
+            Busca y selecciona una cuenta existente en Sianeffects. El código se guarda en mayúsculas;
+            si lo dejas vacío, se genera uno a partir de su nombre.
+        </p>
+        <form action="{{ url_for('embajadoras.admin_crear') }}" method="POST" class="row g-3" id="formNuevaEmbajadora">
+            <div class="col-md-4 position-relative">
+                <label for="amb_email" class="form-label small fw-bold">Buscar cuenta en Sianeffects</label>
+                <div class="input-group">
+                    <span class="input-group-text bg-transparent"><i class="fas fa-search text-body-secondary"></i></span>
+                    <input type="email" class="form-control" id="amb_email" name="email"
+                        placeholder="Escribe correo o usuario (mín. 2 letras)" autocomplete="off" required>
+                </div>
+                <input type="hidden" id="amb_user_id" name="user_id" value="">
+
+                <div id="userAutocompleteList"
+                    class="list-group shadow-sm position-absolute w-100 mt-1"
+                    style="z-index: 1060; display: none; max-height: 220px; overflow-y: auto; left: 0;">
+                </div>
+
+                <div id="userSelectionStatus" class="form-text mt-1">
+                    Selecciona una cuenta registrada de la lista para habilitar el alta.
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <label for="amb_name" class="form-label small fw-bold">Nombre (opcional)</label>
+                <input type="text" class="form-control" id="amb_name" name="name" maxlength="150"
+                    placeholder="Se toma de su cuenta si lo dejas vacío">
+            </div>
+
+            <div class="col-md-4">
+                <label for="amb_code" class="form-label small fw-bold">Código (opcional)</label>
+                <input type="text" class="form-control code-chip text-uppercase" id="amb_code" name="code" maxlength="40"
+                    placeholder="Ej. ANA2026" autocomplete="off"
+                    oninput="this.value = this.value.toUpperCase().replace(/[^A-Z0-9_-]/g, '');">
+            </div>
+
+            <div class="col-12">
+                <hr class="my-1">
+                <div class="small fw-bold mb-2">Cupón de descuento en Stripe (opcional)</div>
+                <div class="row g-2">
+                    <div class="col-sm-6 col-md-3">
+                        <label for="amb_disc_type" class="form-label small">Tipo de descuento</label>
+                        <select class="form-select" id="amb_disc_type" name="discount_type"
+                            onchange="actualizarEtiquetaDescuento()">
+                            <option value="percent" selected>Porcentaje (%)</option>
+                            <option value="amount">Monto fijo ($ MXN)</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <label for="amb_disc_value" class="form-label small" id="amb_disc_value_label">Porcentaje (%)</label>
+                        <input type="number" step="0.01" min="0.01" max="100" class="form-control" id="amb_disc_value"
+                            name="discount_value" placeholder="Ej. 10">
+                    </div>
+                    <div class="col-sm-6 col-md-3">
+                        <label for="amb_disc_duration" class="form-label small">Duración</label>
+                        <select class="form-select" id="amb_disc_duration" name="discount_duration"
+                            onchange="alternarMesesDuracion()">
+                            <option value="once" selected>Una sola vez (primer pago)</option>
+                            <option value="repeating">Varios meses</option>
+                            <option value="forever">Para siempre</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-md-3" id="amb_months_group" style="display: none;">
+                        <label for="amb_months" class="form-label small">Meses</label>
+                        <input type="number" min="1" max="120" class="form-control" id="amb_months"
+                            name="duration_in_months" placeholder="Ej. 3">
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 text-end">
+                <button type="submit" class="btn btn-pink rounded-pill px-4" id="btnCrearEmbajadora" disabled>
+                    Crear embajadora
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Embajadoras</div>
+            <div class="num">{{ stats.total }}</div>
+            <div class="small text-body-secondary">{{ stats.activas }} activas</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Registros</div>
+            <div class="num">{{ stats.registros }}</div>
+            <div class="small text-body-secondary">con código</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Contrataron PRO</div>
+            <div class="num">{{ stats.convertidos }}</div>
+            <div class="small text-body-secondary">
+                {% if stats.registros %}{{ ((stats.convertidos / stats.registros) * 100)|round|int }}% de los registros{% else %}—{% endif %}
+            </div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-custom p-3 stat-box h-100">
+            <div class="text-body-secondary small">Días otorgados</div>
+            <div class="num">{{ stats.dias_ganados }}</div>
+            <div class="small text-body-secondary">en total</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-custom p-3 stat-box h-100 {% if stats.pendientes %}border border-warning{% endif %}">
+            <div class="text-body-secondary small">Recompensas pendientes</div>
+            <div class="num">{{ stats.pendientes }}</div>
+            <div class="small text-body-secondary">por aplicar</div>
+        </div>
+    </div>
+    <div class="col-6 col-md-4 col-xl-2">
+        <div class="card-custom p-3 stat-box h-100 {% if stats.sin_cuenta %}border border-warning{% endif %}">
+            <div class="text-body-secondary small">Sin cuenta vinculada</div>
+            <div class="num">{{ stats.sin_cuenta }}</div>
+            <div class="small text-body-secondary">embajadoras</div>
+        </div>
+    </div>
+</div>
+
+<div class="card-custom p-3 p-md-4">
+    <form method="GET" action="{{ url_for('embajadoras.admin_lista') }}" class="row g-2 mb-3">
+        <div class="col-md-6">
+            <input type="search" class="form-control" name="q" value="{{ q }}"
+                placeholder="Buscar por nombre, correo o código" aria-label="Buscar embajadora">
+        </div>
+        <div class="col-md-3">
+            <select class="form-select" name="estado" aria-label="Filtrar por estado">
+                <option value="all" {% if estado == 'all' %}selected{% endif %}>Todas</option>
+                <option value="active" {% if estado == 'active' %}selected{% endif %}>Activas</option>
+                <option value="paused" {% if estado == 'paused' %}selected{% endif %}>En pausa</option>
+                <option value="sin_cuenta" {% if estado == 'sin_cuenta' %}selected{% endif %}>Sin cuenta vinculada</option>
+            </select>
+        </div>
+        <div class="col-md-3 d-grid">
+            <button type="submit" class="btn btn-outline-secondary">Filtrar</button>
+        </div>
+    </form>
+
+    {% if embajadoras %}
+    <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+            <thead>
+                <tr class="small text-body-secondary">
+                    <th>Embajadora</th>
+                    <th>Código</th>
+                    <th class="text-center">Registros</th>
+                    <th class="text-center">Pagaron</th>
+                    <th class="text-center">Días ganados</th>
+                    <th>Vigente hasta</th>
+                    <th class="text-end"></th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for a in embajadoras %}
+                <tr>
+                    <td>
+                        <div class="fw-bold">{{ a.name }}</div>
+                        <div class="small text-body-secondary">{{ a.email }}</div>
+                        {% if not a.user_id %}
+                        <span class="badge text-bg-warning mt-1">Sin cuenta vinculada</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="code-chip fw-bold">{{ a.code }}</span><br>
+                        {% if a.status == 'active' %}
+                        <span class="badge text-bg-success">Activa</span>
+                        {% else %}
+                        <span class="badge text-bg-secondary">En pausa</span>
+                        {% endif %}
+                    </td>
+                    <td class="text-center">{{ a.registrados }}</td>
+                    <td class="text-center">{{ a.convertidos }}</td>
+                    <td class="text-center">
+                        {{ a.dias_ganados }}
+                        {% if a.dias_pendientes %}
+                        <div><span class="badge text-bg-warning" title="Días sin aplicar a su cuenta">{{ a.dias_pendientes }} pendientes</span></div>
+                        {% endif %}
+                    </td>
+                    <td>{{ a.vigente_hasta }}</td>
+                    <td class="text-end">
+                        <a class="btn btn-sm btn-outline-secondary rounded-pill px-3"
+                            href="{{ url_for('embajadoras.admin_detalle', amb_id=a.id) }}">Ver detalle</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-body-secondary">
+        <i class="fas fa-gift fa-2x mb-3 opacity-50"></i>
+        <div class="fw-bold">No hay embajadoras con estos filtros</div>
+        <div class="small">Crea la primera con el botón "Nueva embajadora".</div>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    function actualizarEtiquetaDescuento() {
+        const tipo = document.getElementById('amb_disc_type').value;
+        const lbl = document.getElementById('amb_disc_value_label');
+        const inp = document.getElementById('amb_disc_value');
+        if (tipo === 'percent') {
+            lbl.textContent = 'Porcentaje (%)';
+            inp.max = '100';
+            inp.placeholder = 'Ej. 10';
+        } else {
+            lbl.textContent = 'Monto fijo ($ MXN)';
+            inp.removeAttribute('max');
+            inp.placeholder = 'Ej. 50';
+        }
+    }
+
+    function alternarMesesDuracion() {
+        const dur = document.getElementById('amb_disc_duration').value;
+        const grp = document.getElementById('amb_months_group');
+        grp.style.display = (dur === 'repeating') ? 'block' : 'none';
+    }
+
+    (function () {
+        const emailInput = document.getElementById('amb_email');
+        const nameInput = document.getElementById('amb_name');
+        const userIdInput = document.getElementById('amb_user_id');
+        const listBox = document.getElementById('userAutocompleteList');
+        const statusText = document.getElementById('userSelectionStatus');
+        const submitBtn = document.getElementById('btnCrearEmbajadora');
+        const searchUrl = "{{ url_for('embajadoras.admin_buscar_usuarios') }}";
+
+        let debounceTimer = null;
+        let selectedEmail = '';
+
+        function resetSelection(msg, isError) {
+            userIdInput.value = '';
+            selectedEmail = '';
+            submitBtn.disabled = true;
+            statusText.textContent = msg;
+            statusText.className = isError
+                ? 'form-text mt-1 text-danger fw-semibold'
+                : 'form-text mt-1 text-body-secondary';
+        }
+
+        function selectUser(u) {
+            emailInput.value = u.email;
+            userIdInput.value = u.id;
+            selectedEmail = u.email.toLowerCase();
+            if (!nameInput.value.trim() && u.nombre_sugerido) {
+                nameInput.value = u.nombre_sugerido;
+            }
+            submitBtn.disabled = false;
+            listBox.style.display = 'none';
+            statusText.innerHTML = '<i class="fas fa-check-circle text-success me-1"></i>Cuenta verificada: <strong>' + u.username + '</strong>';
+            statusText.className = 'form-text mt-1 text-success';
+        }
+
+        emailInput.addEventListener('input', function () {
+            const val = this.value.trim();
+            if (val.toLowerCase() !== selectedEmail) {
+                resetSelection('Selecciona una cuenta registrada de la lista para habilitar el alta.', false);
+            }
+
+            clearTimeout(debounceTimer);
+            if (val.length < 2) {
+                listBox.style.display = 'none';
+                return;
+            }
+
+            debounceTimer = setTimeout(async () => {
+                try {
+                    const resp = await fetch(`${searchUrl}?q=${encodeURIComponent(val)}`);
+                    const data = await resp.json();
+                    const users = data.usuarios || [];
+                    listBox.innerHTML = '';
+
+                    if (users.length === 0) {
+                        const empty = document.createElement('div');
+                        empty.className = 'list-group-item small text-danger';
+                        empty.innerHTML = '<i class="fas fa-circle-exclamation me-1"></i>No hay cuentas disponibles con ese correo o usuario (o ya es embajadora).';
+                        listBox.appendChild(empty);
+                        listBox.style.display = 'block';
+                        resetSelection('La cuenta debe existir en Sianeffects y no ser embajadora aún.', true);
+                        return;
+                    }
+
+                    users.forEach(u => {
+                        const item = document.createElement('button');
+                        item.type = 'button';
+                        item.className = 'list-group-item list-group-item-action py-2 text-start';
+                        item.innerHTML = `
+                            <div class="fw-bold small">${u.email}</div>
+                            <div class="text-body-secondary" style="font-size: .78rem;">
+                                Usuario: ${u.username}${u.nombre_sugerido ? ' · ' + u.nombre_sugerido : ''}
+                            </div>
+                        `;
+                        item.addEventListener('click', () => selectUser(u));
+                        listBox.appendChild(item);
+                    });
+
+                    listBox.style.display = 'block';
+                } catch (e) {
+                    listBox.style.display = 'none';
+                }
+            }, 220);
+        });
+
+        document.addEventListener('click', function (e) {
+            if (!emailInput.contains(e.target) && !listBox.contains(e.target)) {
+                listBox.style.display = 'none';
+            }
+        });
+    })();
+</script>
+{% endblock %}

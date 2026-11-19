@@ -644,6 +644,10 @@ def registro():
     telefono = request.form.get('phone', '')
     company_name = request.form.get('company_name', 'Mi Negocio')
 
+    codigo_embajadora = (
+        request.form.get('ambassador_code') or ''
+    ).strip().upper()
+
     # Tomamos los UTMs de la sesión y los eliminamos (solo se usan una vez)
     origen_registro = session.pop('utm_source', 'desconocido')
     utm_campaign = session.pop('utm_campaign', None)
@@ -701,6 +705,31 @@ def registro():
             flash('Te enviamos un código para activar Cotizador en tu cuenta Sianeffects.', 'info')
             return redirect(url_for('auth.activar_modulo'))
 
+
+                # Validar código de embajadora
+        ambassador_id = None
+
+        if codigo_embajadora:
+            cursor.execute("""
+                SELECT id
+                FROM ambassadors
+                WHERE UPPER(code) = %s
+                  AND status = 'active'
+                LIMIT 1
+            """, (codigo_embajadora,))
+
+            ambassador = cursor.fetchone()
+
+            if not ambassador:
+                flash(
+                    'El código de embajadora no existe o no está activo.',
+                    'error'
+                )
+                return render_template('registro.html')
+
+            ambassador_id = ambassador['id']
+
+        
         # ----------------------------------------------------------------
         # INSERCIÓN DEL USUARIO
         # RETURNING id → psycopg2 requiere esto para obtener el ID recién creado.
@@ -724,6 +753,16 @@ def registro():
 
         user_id = cursor.fetchone()['id']  # ID del usuario recién creado
         ensure_user_module(user_id, 'cotizador', status='trial', plan_type='Free', cursor=cursor)
+
+        # Registrar atribución de embajadora
+        if ambassador_id:
+            cursor.execute("""
+                INSERT INTO ambassador_referrals (
+                    ambassador_id,
+                    referred_user_id
+                )
+                VALUES (%s, %s)
+            """, (ambassador_id, user_id))
 
         # ----------------------------------------------------------------
         # INICIALIZACIÓN DE SERVICIOS POR DEFECTO
