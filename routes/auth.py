@@ -22,8 +22,13 @@ from flask import (
 from werkzeug.security import generate_password_hash, check_password_hash
 from db import get_db_connection as get_db
 from datetime import timedelta
+import json
+import os
 import re
 import secrets
+import time
+import urllib.parse
+import urllib.request
 
 # Utilidades y servicios del proyecto
 from utils.email_validators import is_disposable_email
@@ -615,6 +620,76 @@ def seleccionar_modulo():
 # =============================================================================
 # REGISTRO
 # =============================================================================
+# ================================================================
+# ANTI-BOTS DEL REGISTRO
+# ================================================================
+# Capas, de la más barata a la más fuerte:
+#   1. Campo trampa "website" (invisible): las personas no lo ven, los bots lo llenan.
+#   2. Tiempo mínimo: un formulario enviado en menos de 3 s no lo llenó una persona.
+#   3. "No soy un robot":
+#      - Con TURNSTILE_SITE_KEY y TURNSTILE_SECRET_KEY en el entorno: widget de
+#        Cloudflare Turnstile (gratis, casi siempre se resuelve solo).
+#      - Sin esas llaves: una casilla que solo funciona con JavaScript (escribe un
+#        valor derivado de un nonce de sesión), así que los bots que mandan el
+#        formulario directo no pasan.
+
+REGISTRO_TIEMPO_MINIMO = 3  # segundos
+
+
+def _turnstile_keys():
+    return os.getenv('TURNSTILE_SITE_KEY', '').strip(), os.getenv('TURNSTILE_SECRET_KEY', '').strip()
+
+
+def _render_registro():
+    """Muestra el registro y prepara las marcas anti-bots para el siguiente envío."""
+    session['registro_ts'] = time.time()
+    session['registro_nonce'] = secrets.token_urlsafe(12)
+    site_key, secret = _turnstile_keys()
+    return render_template(
+        'registro.html',
+        turnstile_site_key=site_key if secret else '',
+        humano_nonce=session['registro_nonce'],
+    )
+
+
+def _verificar_turnstile(token, secret):
+    if not token:
+        return False
+    datos = urllib.parse.urlencode({
+        'secret': secret,
+        'response': token,
+        'remoteip': request.headers.get('X-Forwarded-For', request.remote_addr or '').split(',')[0].strip(),
+    }).encode()
+    try:
+        with urllib.request.urlopen(
+            'https://challenges.cloudflare.com/turnstile/v0/siteverify', data=datos, timeout=8
+        ) as resp:
+            return bool(json.loads(resp.read().decode()).get('success'))
+    except Exception as e:
+        # Si Cloudflare no responde, no bloqueamos a una persona real.
+        current_app.logger.warning(f"TURNSTILE: no se pudo verificar ({e}); se permite el registro.")
+        return True
+
+
+def _es_humano():
+    """True si el envío del registro parece de una persona. Consume las marcas de sesión."""
+    inicio = session.pop('registro_ts', None)
+    nonce = session.pop('registro_nonce', None)
+
+    if (request.form.get('website') or '').strip():
+        return False, 'campo_trampa'
+    if not inicio or time.time() - float(inicio) < REGISTRO_TIEMPO_MINIMO:
+        return False, 'demasiado_rapido'
+
+    site_key, secret = _turnstile_keys()
+    if site_key and secret:
+        ok = _verificar_turnstile(request.form.get('cf-turnstile-response', ''), secret)
+        return ok, 'turnstile'
+
+    esperado = nonce[::-1] if nonce else None
+    return bool(esperado) and request.form.get('humano') == esperado, 'casilla'
+
+
 @auth_bp.route('/registro', methods=['GET', 'POST'])
 def registro():
     """
@@ -634,7 +709,7 @@ def registro():
             session['utm_source'] = request.args.get('utm_source').lower()
         if request.args.get('utm_campaign'):
             session['utm_campaign'] = request.args.get('utm_campaign').lower()
-        return render_template('registro.html')
+        return _render_registro()
 
     # --- POST: Procesamiento del registro ---
 
@@ -649,6 +724,15 @@ def registro():
     codigo_embajadora = (
         request.form.get('ambassador_code') or ''
     ).strip().upper()
+
+    # ¿Es una persona? Si no, cortamos antes de tocar la base de datos.
+    es_humano, motivo = _es_humano()
+    if not es_humano:
+        current_app.logger.warning(
+            f"REGISTRO_BOT: envío rechazado ({motivo}) desde {request.headers.get('X-Forwarded-For', request.remote_addr)}"
+        )
+        flash('Confirma que no eres un robot y vuelve a intentarlo.', 'error')
+        return _render_registro()
 
     # Tomamos los UTMs de la sesión y los eliminamos (solo se usan una vez)
     origen_registro = session.pop('utm_source', 'desconocido')
@@ -667,13 +751,13 @@ def registro():
     # Validación de contraseña: mínimo 6 caracteres y que coincidan los campos
     if len(password) < 6 or password != confirm_password:
         flash('Revisa que la contraseña sea válida y coincida en ambos campos.', 'error')
-        return render_template('registro.html')
+        return _render_registro()
 
     # Validación de email: formato correcto y que no sea de un dominio desechable
     # (ej: mailinator.com, tempmail.com, etc.)
     if not re.match(r"[^@]+@[^@]+\.[^@]+", email) or is_disposable_email(email):
         flash('Por favor usa un correo electrónico real y válido.', 'error')
-        return render_template('registro.html')
+        return _render_registro()
 
     # ----------------------------------------------------------------
     # PREPARACIÓN DE DATOS
@@ -727,7 +811,7 @@ def registro():
                     'El código de embajadora no existe o no está activo.',
                     'error'
                 )
-                return render_template('registro.html')
+                return _render_registro()
 
             ambassador_id = ambassador['id']
 
@@ -845,7 +929,7 @@ def registro():
         cursor.close()
         conn.close()
 
-    return render_template('registro.html')
+    return _render_registro()
 
 
 @auth_bp.route('/registro-nails', methods=['GET', 'POST'])

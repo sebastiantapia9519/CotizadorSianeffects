@@ -381,7 +381,7 @@ def init_db():
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS usuarios (
         id SERIAL PRIMARY KEY,
-        username TEXT UNIQUE,
+        username TEXT,  -- se puede repetir; lo único es el email
         email TEXT UNIQUE,
         password TEXT,
         telefono TEXT,
