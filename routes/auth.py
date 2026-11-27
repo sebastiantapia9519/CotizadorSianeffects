@@ -460,7 +460,9 @@ def login():
                 # lo use para acceder con los datos del usuario recién autenticado.
                 nails_onboarding_prefill = session.get('nails_onboarding_prefill')
                 session.clear()
-                session.permanent = True  # La sesión dura lo configurado en PERMANENT_SESSION_LIFETIME
+                # "Recordarme" (marcado por defecto): la sesión dura PERMANENT_SESSION_LIFETIME.
+                # Si lo desmarcan, la cookie es de sesión y se borra al cerrar el navegador.
+                session.permanent = request.form.get('remember') == '1'
                 if nails_onboarding_prefill and (user.get('active_module') or '').strip().lower() == 'nails':
                     session['nails_onboarding_prefill'] = nails_onboarding_prefill
 

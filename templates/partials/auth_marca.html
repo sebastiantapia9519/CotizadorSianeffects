@@ -1,7 +1,7 @@
 {# Columna de marca compartida por login y registro (solo escritorio). #}
 <aside class="auth-marca" aria-hidden="true">
     <a href="{{ url_for('main.index') }}" tabindex="-1">
-        <img class="logo" src="{{ url_for('static', filename='images/cotizador/logo-horizontal.png') }}" alt="">
+        <img class="logo" src="{{ url_for('static', filename='images/cotizador/logo-horizontal.png') }}" alt="Sianeffects Cotizador">
     </a>
 
     <div>
@@ -13,8 +13,49 @@
         </ul>
     </div>
 
-    <div class="cita">
-        <div class="avatar"><i class="fas fa-quote-left"></i></div>
-        <p>“Ya no me da pena cobrar: sé de dónde sale mi precio.”<small>Diana · emprendedora crafter</small></p>
+    <div class="cita" id="citaRotativa">
+        <div class="avatar"><i class="fas fa-quote-left" id="citaIcono"></i></div>
+        <p><span id="citaTexto">“Ya no me da pena cobrar: sé de dónde sale mi precio.”</span><small id="citaAutor">Diana · emprendedora crafter</small></p>
     </div>
 </aside>
+
+<script>
+(function () {
+    // Frases que van rotando. Testimonios: solo de personas reales y con su permiso.
+    // Para agregar uno: { texto: '“...”', autor: 'Nombre · su negocio', icono: 'fa-quote-left' }
+    var CITAS = [
+        { texto: '“Ya no me da pena cobrar: sé de dónde sale mi precio.”', autor: 'Diana · emprendedora crafter', icono: 'fa-quote-left' },
+        { texto: 'Una taza cobrada al doble del material te deja unos $13. Con precio justo, $33.', autor: 'Dato del cotizador', icono: 'fa-mug-hot' },
+        { texto: 'Sumar 30% al costo no es ganar 30%: la ganancia real queda en 23%.', autor: 'Dato del cotizador', icono: 'fa-calculator' },
+        { texto: 'Con 5% de merma, de cada 20 piezas una puede salir mal sin que pierdas dinero.', autor: 'Dato del cotizador', icono: 'fa-circle-check' },
+        { texto: 'Tu plancha también cobra: $3,200 entre 8,000 usos son $0.40 por taza.', autor: 'Dato del cotizador', icono: 'fa-gears' },
+        { texto: 'Sin anticipo no se compra material: el 50% cubre tus insumos desde el día uno.', autor: 'Dato del cotizador', icono: 'fa-receipt' }
+    ];
+
+    var caja = document.getElementById('citaRotativa');
+    if (!caja || !window.matchMedia('(min-width: 901px)').matches) return;
+
+    var texto = document.getElementById('citaTexto');
+    var autor = document.getElementById('citaAutor');
+    var icono = document.getElementById('citaIcono');
+    var quieto = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var i = Math.floor(Math.random() * CITAS.length);
+
+    function mostrar(n) {
+        var c = CITAS[n];
+        texto.textContent = c.texto;
+        autor.textContent = c.autor;
+        icono.className = 'fas ' + c.icono;
+    }
+
+    caja.style.transition = quieto ? 'none' : 'opacity .4s ease';
+    mostrar(i);
+
+    setInterval(function () {
+        i = (i + 1) % CITAS.length;
+        if (quieto) { mostrar(i); return; }
+        caja.style.opacity = 0;
+        setTimeout(function () { mostrar(i); caja.style.opacity = 1; }, 400);
+    }, 7000);
+})();
+</script>
