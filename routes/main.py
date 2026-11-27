@@ -87,6 +87,13 @@ def index():
 def landing_cotizador():
     return render_template('landing_promos.html')
 
+@main_bp.route('/calculadora')
+def calculadora_publica():
+    """Link corto para redes (ej. DM de Instagram): lleva a la calculadora de ejemplo de la landing."""
+    if 'user_id' in session:
+        return redirect(url_for('main.landing_cotizador') + '#calculadora')
+    return redirect(url_for('main.index') + '#calculadora')
+
 # ========================================================
 # SISTEMA DE ALERTAS (PARA EL MENÚ Y NOTIFICACIONES)
 # ========================================================
