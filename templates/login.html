@@ -12,101 +12,11 @@
 
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Iniciar Sesión - Sianeffects</title>
+    <title>Iniciar sesión | Sianeffects Cotizador</title>
     <link rel="shortcut icon" href="{{ url_for('static', filename='images/cotizador/icono-512.png') }}" type="image/png">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='images/cotizador/apple-touch-icon.png') }}">
     <link rel="manifest" href="{{ url_for('static', filename='manifest.json') }}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-    <style>
-        :root {
-            --sian-pink: #ff6b81;
-            --sian-pink-dark: #ff4765;
-            --sian-teal: #2ec4b6;
-            --sian-bg: #ffeef0;
-        }
-
-        body {
-            background-color: var(--sian-bg);
-            font-family: 'Nunito', sans-serif;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-        }
-
-        .card-login {
-            border: none;
-            border-radius: 25px;
-            box-shadow: 0 15px 35px rgba(255, 107, 129, 0.15);
-            width: 100%;
-            max-width: 420px;
-            background: white;
-        }
-
-        .brand {
-            color: var(--sian-pink);
-            font-weight: 900;
-            font-size: 2.2rem;
-            margin-bottom: 0;
-        }
-
-        .form-control {
-            border-radius: 15px;
-            padding: 12px 15px;
-            border: 2px solid #f0f0f0;
-            transition: all 0.3s ease;
-        }
-
-        .form-control:focus {
-            border-color: var(--sian-pink);
-            box-shadow: 0 0 0 0.25rem rgba(255, 107, 129, 0.1);
-        }
-
-        .password-wrapper {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
-
-        .toggle-password {
-            position: absolute;
-            right: 15px;
-            top: 50%;
-            transform: translateY(-50%);
-            cursor: pointer;
-            z-index: 10;
-            color: #ccc;
-            transition: color 0.3s;
-            font-size: 1.1rem;
-            padding: 10px;
-        }
-
-        .btn-primary {
-            background-color: var(--sian-pink);
-            border: none;
-            border-radius: 50px;
-            padding: 14px;
-            font-weight: 800;
-            letter-spacing: 1px;
-            transition: transform 0.2s;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--sian-pink-dark);
-            transform: translateY(-2px);
-        }
-
-        .btn-outline-custom {
-            border: 2px solid var(--sian-pink);
-            color: var(--sian-pink);
-            border-radius: 50px;
-            font-weight: 700;
-        }
-    </style>
+    {% include 'partials/auth_estilos.html' %}
 </head>
 
 <body>
@@ -115,82 +25,72 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <!-- End Google Tag Manager (noscript) -->
 
-    <div class="card card-login p-4">
-        <div class="text-center mt-3 mb-4">
-            <h1 class="m-0"><img src="{{ url_for('static', filename='images/cotizador/logo-horizontal.png') }}" alt="Sianeffects Cotizador" style="height:64px;width:auto;max-width:100%" class="mb-2"></h1>
-            <p class="text-muted fw-bold">Gestión Creativa & Costos</p>
-        </div>
+    <main class="auth">
+        {% include 'partials/auth_marca.html' %}
 
-        <div class="card-body">
-            {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                <div class="alert alert-{{ category }} border-0 small text-center rounded-pill mb-3">
-                    {{ message }}
-                </div>
-                {% endfor %}
-            {% endif %}
-            {% endwith %}
+        <section class="auth-form">
+            <div class="auth-card">
+                <img class="logo-movil" src="{{ url_for('static', filename='images/cotizador/logo-horizontal.png') }}" alt="Sianeffects Cotizador">
 
-            <form method="post">
-                <div class="form-floating mb-3">
-                    <input type="email" name="email_or_user" class="form-control" id="emailInput"
-                        placeholder="tu@email.com" required autocomplete="email" 
-                        autocapitalize="off" spellcheck="false">
-                    <label for="emailInput" class="text-muted">Correo Electrónico</label>
-                </div>
+                <h1>Qué gusto verte</h1>
+                <p class="sub">Entra a tu cotizador.</p>
 
-                <div class="mb-2">
-                    <div class="password-wrapper">
-                        <div class="form-floating flex-grow-1">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                    <div class="alert alert-{{ category }} mb-3">{{ message }}</div>
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+
+                <form method="post">
+                    <div class="form-floating mb-3">
+                        <input type="email" name="email_or_user" class="form-control" id="emailInput"
+                            placeholder="tu@email.com" required autocomplete="email"
+                            autocapitalize="off" spellcheck="false">
+                        <label for="emailInput">Correo electrónico</label>
+                    </div>
+
+                    <div class="campo-clave">
+                        <div class="form-floating">
                             <input type="password" name="password" class="form-control" id="passwordInput"
                                 placeholder="Contraseña" required autocomplete="current-password">
-                            <label for="passwordInput" class="text-muted">Contraseña</label>
+                            <label for="passwordInput">Contraseña</label>
                         </div>
-                        <i class="fa-solid fa-eye toggle-password" id="togglePassword"></i>
+                        <button type="button" class="ver-clave" data-target="passwordInput" aria-label="Mostrar contraseña" aria-pressed="false">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
                     </div>
-                    
-                    <div class="text-end mt-2">
-                        <a href="{{ url_for('auth.forgot_password') }}" class="text-decoration-none small fw-bold" style="color: var(--sian-teal);">
-                            ¿Olvidaste tu contraseña?
-                        </a>
-                    </div>
-                </div>
 
-                <div class="d-grid gap-2 mt-4 text-center">
-                    <button type="submit" class="btn btn-primary shadow">
-                        ENTRAR
-                    </button>
-                    <a href="{{ url_for('auth.registro') }}" class="btn btn-link text-decoration-none text-muted small mt-1">
-                        ¿No tienes cuenta? <span style="color: #0d6efd; font-weight: bold;">Regístrate</span>
+                    <div class="text-end mt-2 mb-4">
+                        <a href="{{ url_for('auth.forgot_password') }}" class="link-sian small">¿Olvidaste tu contraseña?</a>
+                    </div>
+
+                    <button type="submit" class="btn btn-sian">Entrar</button>
+                </form>
+
+                <div class="separador">¿Todavía no tienes cuenta?</div>
+                <a href="{{ url_for('auth.registro') }}" class="btn-secundario">Crear cuenta gratis</a>
+
+                <div class="pie-auth">
+                    <a href="{{ url_for('catalogo.ver_catalogo') }}" class="link-sian">
+                        <i class="fas fa-store me-1"></i> Catálogo Sianeffects
                     </a>
                 </div>
-            </form>
-
-            <div class="mt-4 pt-3 border-top text-center">
-                <a href="{{ url_for('catalogo.ver_catalogo') }}" class="btn btn-link text-decoration-none text-muted small fw-bold">
-                    <i class="fas fa-store me-1"></i> Catálogo Sianeffects
-                </a>
             </div>
-        </div>
-    </div>
+        </section>
+    </main>
 
     <script>
-        const togglePassword = document.querySelector('#togglePassword');
-        const passwordInput = document.querySelector('#passwordInput');
-
-        togglePassword.addEventListener('click', function () {
-            const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
-            passwordInput.setAttribute('type', type);
-            
-            this.classList.toggle('fa-eye');
-            this.classList.toggle('fa-eye-slash');
-            
-            if(type === 'text') {
-                this.style.color = 'var(--sian-pink)';
-            } else {
-                this.style.color = '#ccc';
-            }
+        document.querySelectorAll('.ver-clave').forEach(function (btn) {
+            btn.addEventListener('click', function () {
+                var input = document.getElementById(btn.dataset.target);
+                var mostrar = input.type === 'password';
+                input.type = mostrar ? 'text' : 'password';
+                btn.setAttribute('aria-pressed', mostrar);
+                btn.setAttribute('aria-label', mostrar ? 'Ocultar contraseña' : 'Mostrar contraseña');
+                btn.querySelector('i').className = mostrar ? 'fa-solid fa-eye-slash' : 'fa-solid fa-eye';
+            });
         });
     </script>
 </body>
